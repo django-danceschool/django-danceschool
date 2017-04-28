@@ -1,0 +1,37 @@
+{% extends "easy_pdf/base.html" %}
+{% load static %}
+{% comment %}
+	This template can be used to render a PDF of a gift cerfiticate. 
+{% endcomment %}
+
+{% block extra_style %}
+    <style type="text/css">
+	    @page {
+	    	margin: 1in;
+	    }
+
+    	#logo {
+    		display: block;
+    		margin: 0em auto 1em auto;
+    		width: 200px;
+	    	text-align: center;
+    	}
+
+ 		h1 {
+ 			font-size:28px;
+ 			text-align: center;
+ 		}
+
+ 		.content_block {
+ 			display: block;
+	    	font-size: 18px;
+ 		}
+
+    </style>
+{% endblock %}
+
+{% block content %}
+<h1>{{ header }}</h1>
+
+{{ content }}
+{% endblock %}

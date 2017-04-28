@@ -1,0 +1,23 @@
+{% extends "cms/home.html" %}
+{% load cms_tags %}
+
+{% block content %}
+	<div class="row" id="main_row">
+	    {# Two columns, plus a full-width top section #}
+
+	    <div class="col-md-12 top-col">
+	    {% placeholder "top" %}
+	    </div>
+
+	    <div class="col-md-8 content-col">
+	    {% placeholder "content" %}
+	    </div>
+
+	    <div class="col-md-4 sidebar-col sidebar-col-right">
+	    {% placeholder "sidebar" %}
+	    </div>
+    </div>
+
+    {% block footer %}{{ block.super }}{% endblock %}
+
+{% endblock %}

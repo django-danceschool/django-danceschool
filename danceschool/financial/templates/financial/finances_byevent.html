@@ -1,0 +1,80 @@
+{% extends "cms/admin_home.html" %}
+
+{% block content %}
+<div class="row">
+<div class="pull-left col-sm-8">
+	<dl>
+		<dt>School Revenues (YTD):</dt><dd>{{ statement.revenues_ytd|floatformat:2 }}</dd>
+		<dt>School Expenses (YTD):</dt><dd>{{ statement.expenses_ytd|floatformat:2 }}</dd>
+		<dt>Pending Expenses:</dt>
+		<dd>Awaiting Approval and Payment: {{ statement.expenses_awaiting_approval|floatformat:2 }}</dd>
+		{% if statement.expenses_awaiting_payment > 0 %}
+			<dd>Approved, Awaiting Payment: {{ statement.expenses_awaiting_payment|floatformat:2 }}</dd>
+		{% endif %}
+		{% if statement.expenses_paid_notapproved > 0 %}
+			<dd>Paid, Not Approved: {{ statement.expenses_paid_notapproved|floatformat:2 }}</dd>
+		{% endif %}
+		<dt>Current Balance:</dt><dd>{{ statement.current_balance|floatformat:2 }}</dd>
+	</dl>
+</div>
+
+{% if perms.financial.export_financial_data %}
+<div class="col-sm-4">
+	<h4>Export Financial Data (CSV)</h4>
+	<div class="btn-group" role="group" aria-label="...">
+	  <a href="{% url 'financesByEventCSV' %}" class="btn btn-default">This View</a>
+	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-default">All Expenses</a>
+	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-default">All Revenues</a>
+	</div>
+</div>
+{% endif %}
+</div>
+
+
+<h3>Details By Event</h3>
+
+<table class="table">
+<thead>
+	<tr>
+		<td rowspan="2" colspan="2">Series</td><td colspan="3"># Registrations</td><td colspan="2">Series Revenue</td><td colspan="3">Series Expenses</td><td rowspan="2">Net Profit</td>
+	</tr>
+	<tr>
+		<td>Leads</td><td>Follows</td><td>Total</td><td>Gross</td><td>Net of Discounts</td><td>Instruction</td><td>Venue Rental</td><td>Total</td>
+	</tr>
+</thead>
+<tbody>
+{% for this_event in statement.statementByEvent %}
+	<tr>
+		<td>{{ this_event.month_name }}</td>
+		<td>{{ this_event.series_name }}</td>
+		<td>{{ this_event.registrations.leads }}</td>
+		<td>{{ this_event.registrations.follows }}</td>
+		<td>{{ this_event.registrations.total }}</td>
+		<td>{{ this_event.revenues.gross|floatformat:2 }}</td>
+		<td>{{ this_event.revenues.net|floatformat:2 }}</td>
+		<td>{{ this_event.expenses.instruction|floatformat:2 }}</td>
+		<td>{{ this_event.expenses.venue|floatformat:2 }}</td>
+		<td>{{ this_event.expenses.total|floatformat:2 }}</td>
+		<td>{{ this_event.net_profit|floatformat:2 }}</td>
+	</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% if is_paginated %}
+    <div class="pagination">
+        <span class="page-links">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+            {% endif %}
+            <span class="page-current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+            </span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">next</a>
+            {% endif %}
+        </span>
+    </div>
+{% endif %}
+
+{% endblock %}

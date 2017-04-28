@@ -1,0 +1,115 @@
+{% extends "cms/home.html" %}
+{% load cms_tags danceschool_tags sekizai_tags thumbnail %}
+
+{% block title %}
+	{{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} Class Series - {{ seriesset.0.classDescription.title }}
+{% endblock %}
+
+{% block meta_title %}
+	{{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} Class Series - {{ seriesset.0.classDescription.title }}
+{% endblock %}
+
+{% block meta_description %}
+	Learn more through our {{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} class, {{ seriesset.0.classDescription.title }}. Classes begin {{ seriesset.0.startTime|date:'l, F jS' }} at {{ seriesset.0.location }}.
+{% endblock %}
+
+{% block facebook_og_description %}
+	Learn more through our {{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} class, {{ seriesset.0.classDescription.title }}. Classes begin {{ seriesset.0.startTime|date:'l, F jS' }} at {{ seriesset.0.location }}.
+{% endblock %}
+
+{% block body_id %}classes{% endblock %}
+
+{% block content %}
+	<div class='post'>
+	<div class="individualseries">
+	<h2>{{ seriesset.0.month|readable_month }} {{ seriesset.0.year }}: {{ seriesset.0.classDescription.title }}</h2>
+
+	{% for series in seriesset %}
+		{% if series.teachers %}
+			<div class="col-sm-4 hidden-xs pull-right">
+			{% for teacher in series.teachers %}
+				<img src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="pull-right" style="margin: 5px;" /> 
+			{% endfor %}
+			</div>
+		{% endif %}
+
+		{% if not series.special %}
+			<h3>{{ series.startTime|date:'l' }}s, {{ series.startTime|date:'h:i A' }} at {{ series.location }}, Beginning {{ series.startTime|date:'F jS' }}</h3>
+		{% else %}
+			<h3>Begins {{ series.startTime|date:'l, F jS, h:i A' }} at {{ series.location }}</h3>
+		{% endif %}
+
+		{% if series.teachers %}
+			<h3 class="instructor-names">With 
+			{% for teacher in series.teachers %}
+					{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} and {% endif %}
+			{% endfor %}
+			</h3>
+			<div class="visible-xs col-xs-12">
+			{% for teacher in series.teachers %}
+				{% if not teacher.assistant %}
+					<img src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" style="margin: 5px auto;" />
+				{% endif %}
+			{% endfor %}
+			</div>
+		{% endif %}
+
+		<p class='schedule'>
+		<strong>Class Schedule:</strong><br />
+		{% for class in series.eventoccurrence_set.all %}
+			{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
+		{% endfor %}
+		</p>
+
+		<p class='address'>
+		<strong>{{ series.location.name }}</strong><br />
+		{{ series.location.address }}<br />
+		{{ series.location.city }}, {{ series.location.state }} {{ series.location.zip }}<br />
+		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ series.location.name|slugify }}">More Info</a>
+		</p>
+
+	    {% if series.pricingTier.id != default_pricingtier_id %}
+	    <p class="pricinginfo">
+	    	<strong>Pricing:</strong>&nbsp;
+			<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong" data-html="true" data-content="<em>Pre-Registered</em><br />General: {{ currencySymbol }}{{ series.pricingTier.onlineGeneralPrice|floatformat:2 }}<br />Students: {{ currencySymbol }}{{ series.pricingTier.onlineStudentPrice|floatformat:2 }}<br /><br /><em>At the Door</em><br />General: {{ currencySymbol }}{{ series.pricingTier.doorGeneralPrice|floatformat:2 }}<br />Students: {{ currencySymbol }}{{ series.pricingTier.doorStudentPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }} pricing</a>
+		</p>
+		{% endif %}
+
+		<p>
+		{% if not series.soldOut and not series.registrationClosed %}
+			<a class="btn btn-primary" href="{% url 'registration' %}">Register for this class!</a>
+		{% elif series.soldOut %}
+			Sold out!
+		{% else %}
+			Registration closed!
+		{% endif %}
+		</p>
+
+		{% if 'core.change_series' in perms %}
+		<p><a class="btn btn-default" href="{% url 'admin:core_series_change' series.id %}">Edit Class Details</a></p>
+		{% endif %}
+		{% if 'core.view_registration_summary' in perms %}
+		<p><a class="btn btn-default" href="{% url 'viewregistrations' series.id %}">View Registrations</a></p>
+		{% endif %}
+
+		<hr />
+	{% endfor %}
+	</div>
+
+		<h3>Class Description</h3>
+		<div class='classDescription'>
+			<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
+		</div>
+	</div>
+
+	{% addtoblock "js" %}
+		<script type="text/javascript">
+		$( document ).ready(function() {
+			$('.pricingPopover').popover();	
+		});
+		</script>
+	{% endaddtoblock %}
+
+    {% block footer %}{{ block.super }}{% endblock %}
+	
+{% endblock %}

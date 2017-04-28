@@ -1,0 +1,509 @@
+{% extends "cms/admin_home.html" %}
+{% load sekizai_tags static %}
+
+{% block content %}
+
+{% addtoblock "css" %}
+  <style type="text/css" scoped>
+    .c3-line-MonthlyAverage {
+        stroke-width: 3px;
+    }
+  </style>
+{% endaddtoblock %}
+
+<h2>Some General Statistics</h2>
+
+<table class="classregsummary table">
+<tr>
+    <td>Total # Students:</td><td> {{ totalStudents }}</td>
+    <td>Number of students was determined by number of unique emails in our database.</td>
+</tr>
+<tr>
+  <td>Total # Series taught:</td><td> {{ numSeries }} </td>
+<td>Series are usually four weeks of classes.</td>
+</tr>
+<tr>
+  <td>Total # Series Registrations: </td><td> {{ totalSeriesRegs }} </td>
+  <td>Multiple this by four and you get the approx number of student hours spent in classes</td>
+</tr>
+<tr>
+    <td>Total Time Studio Around:</td> <td>{{ totalTime }}</td>
+    <td>Calculated by subtracting the first class date in our database from now.</td>
+</tr>
+</table>
+
+<hr />
+<h2>Student Retention</h2>
+
+<p>How many people decide to progress beyond beginner and how many students stick with us a while?
+Note that students are not classified as leaders or follower in the data, so a student who takes
+classes in both roles will show up in both series depending on the number of series they've taken in
+each.</p>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" class="btn btn-default active studentRetentionButton">All Students</button>
+  {% for prior_year in recentYears %}
+    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-default studentRetentionButton">{{ prior_year }} Cohort</button>
+  {% endfor %}
+</div>
+
+
+<div id="totalClassesTaken"></div>
+
+<hr />
+<h2>Students By Month of the Year
+  <a class="btn btn-xs btn-default" href="{% url 'MonthlyPerformanceCSV' %}">Download Data</a>
+</h2>
+
+<p>Which months of the year are the most successful for us?  Click the legend at the bottom to show/hide previous years.</p>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" data-series="SeriesRegistrations" class="btn btn-default active monthlyPerformanceButton">Total Series Registrations</button>
+  <button type="button" data-series="Registrations" class="btn btn-default monthlyPerformanceButton">Total Registrations (unique students)</button>
+  <button type="button" data-series="Hours" class="btn btn-default monthlyPerformanceButton">Total Hours of Class</button>
+  <button type="button" data-series="StudentHours" class="btn btn-default monthlyPerformanceButton">Total Student-Hours</button>  
+  <button type="button" data-series="AvgStudents" class="btn btn-default monthlyPerformanceButton">Avg. Students/Hour</button>
+</div>
+
+
+<div id="MonthlyPerformance"></div>
+
+<hr />
+
+
+
+<h2>Performance by Class Type
+  <a class="btn btn-xs btn-default" href="{% url 'AveragesByClassTypeCSV' %}">Download Data</a>
+</h2>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active classTypeButton">Last 12 Months</button>
+  <button type="button" class="btn btn-default classTypeButton">All Time</button>
+</div>
+
+<div id="ClassTypePerformance"></div>
+
+<hr />
+
+
+
+<h2>Performance by Class Type and Month (Student-Hours)</h2>
+
+<div class="btn-group" role="group" aria-label="...">
+  {% for prior_year in recentYears reversed %}
+    <button type="button" data-year="{{ prior_year }}" class="btn btn-default {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
+  {% endfor %}
+</div>
+
+<div id="ClassTypeMonthlyPerformance"></div>
+
+<hr />
+
+
+
+<h2>Performance By Location
+  <a class="btn btn-xs btn-default" href="{% url 'LocationPerformanceCSV' %}">Download Data</a>
+</h2>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active showLocationButton">Last 12 Months</button>
+  <button type="button" class="btn btn-default showLocationButton">All Time</button>
+</div>
+
+
+<div id="LocationPerformance"></div>
+
+<hr />
+
+<h2>Characteristics of Series Registrations</h2>
+
+<p>This chart indicates the proportion of series registrations that receive the student discount, the proportion of series registrations that are paid for at the door, etc.</p>
+
+<div id="RegistrationTypeAverages"></div>
+
+
+<hr />
+
+<h2>Website Referrals</h2>
+
+<p>When a customer clicks on a Facebook link, a mailing list link, etc., we can send them to a special URL that allows us to track where they came from.  When those customers register for classes, that referral information gets attached to their registration.  This graph shows how many
+registrations have used each referral code (i.e. how many students are registering by clicking on Facebook pages, etc.)</p>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" data-startDate="{{ limitMonthDates.1 }}" class="btn btn-default active showReferralCountsButton">Last Month</button>
+  <button type="button" data-startDate="{{ limitMonthDates.3 }}" class="btn btn-default showReferralCountsButton">Last 3 Months</button>
+  <button type="button" data-startDate="{{ limitMonthDates.6 }}" class="btn btn-default showReferralCountsButton">Last 6 Months</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default showReferralCountsButton">Last 12 Months</button>
+  <button type="button" class="btn btn-default showReferralCountsButton">All Time</button>
+</div>
+
+
+<div id="ReferralCounts"></div>
+
+
+<h2>Top Students and Teachers</h2>
+
+<div class="row">
+<div class="col-sm-4">
+  <table class="table">
+    <caption>All Time Top Customers</caption>
+  <thead>
+    <tr><td>Name</td><td># Classes Taken</td></tr>
+  </thead>
+  <tbody>
+    {% for customer in bestCustomersAllTime %}
+    <tr>
+      <td>{{ customer.user__first_name }} {{ customer.user__last_name}}</td>
+      <td>{{ customer.eventregistration__count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+</div>
+
+<div class="col-sm-4">
+  <table class="table">
+    <caption>Top Customers of the Last 12 Months</caption>
+  <thead>
+    <tr><td>Name</td><td># Classes Taken</td></tr>
+  </thead>
+  <tbody>
+    {% for customer in bestCustomersLastTwelveMonths %}
+    <tr>
+      <td>{{ customer.user__first_name }} {{ customer.user__last_name}}</td>
+      <td>{{ customer.eventregistration__count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+</div>
+
+<div class="col-sm-4">
+  <table class="table">
+    <caption>Most Active Teachers of This Calendar Year</caption>
+  <thead>
+    <tr><td>Name</td><td># Classes Taught</td></tr>
+  </thead>
+  <tbody>
+    {% for teacher in mostActiveTeachersThisYear %}
+    <tr>
+      <td>{{ teacher.0 }} {{ teacher.1 }}</td>
+      <td>{{ teacher.2 }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+</div>
+
+</div>
+
+<hr />
+
+{% addtoblock "css" %}
+  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  // Create the base monthly performance chart, then load the JSON data in
+  var monthlyPerformanceChart = c3.generate({
+    bindto: '#MonthlyPerformance',
+    data: {
+      url: "{% url 'MonthlyPerformanceJSON' %}",
+      mimeType: 'json',
+      hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
+      keys: {
+        x: 'month_name',
+        value: ['MonthlyAverage',{{ allYears|join:"," }}]
+      }
+    },
+    axis: {
+      x: {
+        type: 'category' // this needed to load string x value
+      }
+    }
+  });
+
+
+  $('.monthlyPerformanceButton').click(function(){
+    var series = $(this).attr('data-series')
+
+    monthlyPerformanceChart.load({
+        unload: true,
+        url: "{% url 'MonthlyPerformanceJSON' %}?series=" + series,
+        mimeType: 'json',
+        hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
+        keys: {
+          x: 'month_name',
+          value: ['MonthlyAverage',{{ allYears|join:"," }}]
+        }
+    });
+
+    $('.monthlyPerformanceButton').removeClass('active');
+    $(this).addClass('active');
+
+  });
+
+
+  var avgAttendanceChart = c3.generate({
+      bindto: '#ClassTypePerformance',
+    data: {
+      url: "{% url 'AveragesByClassTypeJSON' %}?startDate={{ limitMonthDates.12 }}",
+      mimeType: 'json',
+      type: 'bar',
+      hide: ['registrations','leads','follows','avgLeads','avgFollows'],
+      keys: {
+        x: 'type',
+        value: ['series','registrations','leads','follows','avgRegistrations','avgLeads','avgFollows'],
+      }
+    },
+    axis: {
+        x: {
+            type: 'category' // this needed to load string x value
+        }
+    }
+  });
+
+  $('.classTypeButton').click(function(){
+      var startDate = $(this).attr('data-startDate');
+
+      avgAttendanceChart.load({
+        url: "{% url 'AveragesByClassTypeJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        type: 'bar',
+        hide: ['registrations','leads','follows','avgLeads','avgFollows'],
+        keys: {
+          x: 'type',
+          value: ['series','registrations','leads','follows','avgRegistrations','avgLeads','avgFollows'],
+        }
+      });
+
+      $('.classTypeButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+  // This function allows the classTypeMonthly chart to dynamically
+  // update which series are displayed.
+  function getClassTypeMonthlyJSON(url) {
+    d3.json(url, function(data) {
+        var keys = Object.keys(data[0]);
+        keys.splice(keys.indexOf("month_name"),1);
+        keys.splice(keys.indexOf("month"),1);
+
+        // Get totals for sorting of keys
+        var totals = $.grep(data, function(e){ 
+             return e.month == "Totals"; 
+        });
+
+        // Remove Totals from final data
+        var data = $.grep(data, function(e){ 
+             return e.month != "Totals"; 
+        });
+
+        // Sort the keys in reverse by the annual totals
+        keys.sort(function(a,b) {
+            var totalA = totals[0][a];
+            var totalB = totals[0][b];
+
+            if (totalA > totalB) return -1;
+            if (totalA < totalB) return 1;
+            return 0;
+        });
+
+        var classTypeMonthlyChart = c3.generate({
+            bindto: '#ClassTypeMonthlyPerformance',
+          data: {
+            json: data,
+            type: 'bar',
+            keys: {
+              x: 'month_name',
+                value: keys,
+            }
+          },
+          axis: {
+              x: {
+                  type: 'category' // this needed to load string x value
+              }
+          }
+        });
+    });
+
+  }
+
+  getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours");
+
+  $('.classTypeMonthlyButton').click(function(){
+      var year = $(this).attr('data-year');
+      
+      getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours&year=" + year);
+
+      $('.classTypeMonthlyButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+
+  var totalClassesTakenChart = c3.generate({
+      bindto: '#totalClassesTaken',
+    data: {
+      url: "{% url 'ClassCountHistogramJSON' %}",
+      mimeType: 'json',
+      x: '# of Classes',
+      type: 'bar',
+      hide: ['# Students','# Leaders','# Followers'],
+      keys: {
+        x: 'bin_label',
+        value: ['# Students','# Leaders','# Followers', 'Pct. Students','Pct. Leaders','Pct. Followers'],
+      }
+    },
+    axis: {
+        x: {
+            type: 'category' // this needed to load string x value
+        }
+    },
+    bar: {
+    width: {
+      ratio: 0.8
+    }
+  }
+  });
+
+  $('.studentRetentionButton').click(function() {
+      var cohortStart = $(this).attr('data-cohortStart');
+      var cohortEnd = $(this).attr('data-cohortEnd');
+
+      totalClassesTakenChart.load({
+        unload: true,
+        url: "{% url 'ClassCountHistogramJSON' %}?cohortStart=" + cohortStart + "&cohortEnd=" + cohortEnd,
+        mimeType: 'json',
+        x: '# of Classes',
+        type: 'bar',
+        hide: ['# Students','# Leaders','# Followers'],
+        keys: {
+          x: 'bin_label',
+          value: ['# Students','# Leaders','# Followers', 'Pct. Students','Pct. Leaders','Pct. Followers'],
+        }
+      });
+
+      $('.studentRetentionButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+  var locationPerformanceChart = c3.generate({
+      bindto: '#LocationPerformance',
+    data: {
+      url: "{% url 'LocationPerformanceJSON' %}?startDate={{ limitMonthDates.12 }}",
+      mimeType: 'json',
+      type: 'bar',
+      keys: {
+        x: 'name',
+        value: ['series','registrations']
+      },
+      axes: {
+        series: 'y',
+        registrations: 'y2',
+      }
+    },
+    axis: {
+        labels: {
+          y: '# Series',
+          y2: '# Registrations',
+        },
+        x: {
+            type: 'category' // this needed to load string x value
+        },
+        y2: {
+          show: true,
+        },
+    },
+  });
+
+
+
+  $(".showLocationButton").click(function(event) {
+      var startDate = $(this).attr('data-startDate');
+
+      locationPerformanceChart.load({
+        url: "{% url 'LocationPerformanceJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        unload: true,
+        type: 'bar',
+        keys: {
+          x: 'name',
+          value: ['series','registrations']
+        },
+        axes: {
+          series: 'y',
+          registrations: 'y2',
+        },
+      });
+      $('.showLocationButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+  var registrationTypeAveragesChart = c3.generate({
+      bindto: '#RegistrationTypeAverages',
+    data: {
+      url: "{% url 'RegistrationTypeAveragesJSON' %}",
+      mimeType: 'json',
+      type: 'bar',
+      hide: ['DropIn','Cancelled'],
+      keys: {
+        x: 'year',
+        value: ['Student','Door','DropIn','Cancelled']
+      }
+    },
+    axis: {
+        x: {
+            type: 'category', // this needed to load string x value
+        },
+    }
+  });
+
+  var referralCountsChart = c3.generate({
+      bindto: '#ReferralCounts',
+    data: {
+      url: "{% url 'RegistrationReferralCountsJSON' %}?startDate={{ limitMonthDates.1 }}",
+      mimeType: 'json',
+      type: 'bar',
+      keys: {
+        x: 'code',
+        value: ['count']
+      }
+    },
+    axis: {
+        x: {
+            type: 'category', // this needed to load string x value
+        },
+    }
+  });
+
+  $('.showReferralCountsButton').click(function() {
+      var startDate = $(this).attr('data-startDate');
+
+      referralCountsChart.load({
+      url: "{% url 'RegistrationReferralCountsJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        type: 'bar',
+        keys: {
+          x: 'code',
+          value: ['count'],
+        }
+      });
+
+      $('.showReferralCountsButton').removeClass('active');
+      $(this).addClass('active');
+
+  });
+
+});
+</script>
+{% endaddtoblock %}
+
+{% endblock %}

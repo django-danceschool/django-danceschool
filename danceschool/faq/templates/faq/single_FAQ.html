@@ -1,0 +1,16 @@
+{% load cms_tags %}
+
+{% for faq in faq_list %}
+	<div class="post">
+		{% if this_block.pageRegion == 'sidebar' %}
+			<a name="faq_item_{{ faq.id }}"></a>
+			<h3 class='faq-question post-title'>{% render_model faq "question" %}</h3>
+		{% else %}
+			<a name="faq_item_{{ faq.id }}"></a>
+			<h2 class='faq-question post-title'>{% render_model faq "question" %}</h2>
+		{% endif %}
+		<div class='faq-answer post-body'>
+			{% render_model faq "answer" "" "" "safe" %}
+		</div>
+	</div>
+{% endfor %}

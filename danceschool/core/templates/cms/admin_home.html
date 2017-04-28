@@ -1,0 +1,14 @@
+{% extends "cms/site_base.html" %}
+{% load sekizai_tags static %}
+
+{% block extra_head %}
+	{# Used inline by certain admin page scripts #}
+	<script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
+
+	{% addtoblock "meta" %}
+		<meta name="robots" content="noindex, nofollow">
+	{% endaddtoblock %}
+
+{% endblock %}
+
+{% block navbar %}{% endblock %}

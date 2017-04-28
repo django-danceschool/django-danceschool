@@ -1,0 +1,66 @@
+{% extends "cms/home.html" %}
+{% load cms_tags danceschool_tags thumbnail %}
+
+{% block title %}
+	{{ eventset.0.name }}
+{% endblock %}
+
+{% block meta_title %}
+	{{ eventset.0.name }}
+{% endblock %}
+
+{% block meta_description %}
+	Join us for our event, {{ eventset.0.name }}, held {{ eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' }} at {{ eventset.0.location.name %}.
+{% endblock %}
+
+{% block facebook_og_description %}
+	Join us for our event, {{ eventset.0.name }}, held {{ eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' }} at {{ eventset.0.location.name %}.
+{% endblock %}
+
+{% block body_id %}classes{% endblock %}
+
+{% block content %}
+	<div class='post'>
+	<div class="individualevent">
+	<h2>{{ eventset.0.name }}</h2>
+
+	{% for event in eventset %}
+		<h3>{{ event.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ event.eventoccurrence_set.all.first.endTime|date:'h:i A' }}</h3>
+
+		<p class='address'>
+		<strong>{{ event.location.name }}</strong><br />
+		{{ event.location.address }}<br />
+		{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
+		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ event.location.name|slugify }}">Map this</a>
+		</p>
+
+		<p>
+		{% if event.registrationOpen %}
+			<a class="btn btn-primary" href="{% url 'registration' %}">Register for this event!</a>
+		{% else %}
+			Registration for this event is not required.</a>
+		{% endif %}
+		</p>
+
+		{% if 'core.change_event' in perms %}
+		<p><a class="btn btn-default" href="{% url 'admin:core_event_change' event.id %}">Edit Event Details</a></p>
+		{% endif %}
+		{% if 'core.view_registration_summary' in perms and event.registrationEnabled %}
+		<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">View Registrations</a></p>
+		{% endif %}
+
+
+		<hr />
+	{% endfor %}
+	</div>
+
+	<h3>About this Event</h3>
+	<div class='eventDescription'>
+		{{ eventset.0.description|safe }}
+	</div>
+
+	</div>
+
+    {% block footer %}{{ block.super }}{% endblock %}
+	
+{% endblock %}

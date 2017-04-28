@@ -1,0 +1,14 @@
+Dear {{ name }},
+
+This is an automatically generated email is to remind you of the following event/task:
+
+{{ event.name }}
+
+{% if occurrence.allDay %}{{ occurrence.startTime|date:"D., F j, Y" }}{% if occurrence.startTime.date != occurrence.endTime.date %} to {{ occurrence.endTime|date:"D., F j, Y" }}{% endif %}{% else %}{{ occurrence.startTime|date:"D., F j, Y, P" }}{% if occurrence.startTime.date != occurrence.endTime.date %} to {{ occurrence.endTime|date:"D., F j, Y P" }}{% else %} - {{ occurrence.endTime|date:"P" }}{% endif %}{% endif %}
+
+{% if event.description %}Description: {{ event.description }}
+{% endif %}{% if event.location %}Location: {{ event.location }}
+{% endif %}{% if event.category %}Category: {{ event.category }}{% endif %}
+
+Thanks!
+The BLH Team

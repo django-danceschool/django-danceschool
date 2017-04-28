@@ -1,0 +1,148 @@
+{% extends "cms/admin_home.html" %}
+{% load sekizai_tags static %}
+
+{% block content %}
+
+<h1>Calendar For {{ staffMember.fullName }}</h1>
+
+<dl>
+<dt>Link To Your Calendar Feeds:</dt>
+<dd>
+    <a class="btn btn-default btn-sm" href="{{ privateFeeds.publicEvents }}">Your Classes &amp; Events</a>
+    <a class="btn btn-default btn-sm" href="{{ privateFeeds.privateEvents }}">Private Events &amp; Reminders</a>
+<a class="btn btn-default btn-sm" href="{{ publicFeed }}">Public Calendar Feed</a>
+(copy and paste these URLs to add them to Google Calendar, etc.)</dd>
+</dl>
+
+<div id="calendarbox">&nbsp;</div>
+
+
+<!-- Modal for existing events -->
+<div aria-labelledby="eventDetails" class="modal fade" id="eventContent" role="dialog" tabindex="-1" title="Event Details">
+<div class="modal-dialog" role="document">
+<div class="modal-content">
+<div class="modal-header"><button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
+
+<h3 class="modal-title" id="eventTitle">&nbsp;</h3>
+</div>
+
+<div class="modal-body">
+<dl>
+	<dt>Start:</dt>
+	<dd id="startTime">&nbsp;</dd>
+	<dt>End:</dt>
+	<dd id="endTime">&nbsp;</dd>
+</dl>
+
+<div id="eventInfo">&nbsp;</div>
+</div>
+
+<div class="modal-footer">{% if 'core.change_series' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="eventEditLink" type="button">Edit Details</a>{% endif %}<a class="btn btn-default" href="" id="eventLink" type="button">Read More</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">Close</button></div>
+</div>
+</div>
+</div>
+
+<!-- Modal to create new events -->
+<div aria-labelledby="eventNew" class="modal fade" id="eventNew" role="dialog" tabindex="-1" title="Add Event">
+<div class="modal-dialog" role="document">
+<div class="modal-content">
+<div class="modal-header"><button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
+
+<h3 class="modal-title" id="eventNewTitle">&nbsp;</h3>
+</div>
+
+<div class="modal-body">
+<div id="eventNewInfo">&nbsp;</div>
+</div>
+
+<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">Add A Class</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">Add A Public Event</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">Add A Private Event/Reminder</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">Close</button></div>
+</div>
+</div>
+</div>
+
+{% addtoblock "css" %}
+    <link rel='stylesheet' type="text/css" href='{% static 'css/fullcalendar.min.css' %}' />
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style media="screen" type="text/css">
+        .fc-day-grid-event > .fc-content {
+            white-space: normal;
+        }
+    </style>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'js/jquery-ui.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'js/moment.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'js/fullcalendar.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+    // page is now ready, initialize the calendar...
+
+    $('#calendarbox').fullCalendar({
+        // put your options and callbacks here
+        eventSources: [
+            {% for key,value in jsonPrivateFeeds.items %}
+                {url: '{{ value }}'},
+            {% endfor %}
+        ],
+        eventTextColor: '#ffffff',
+        height: "auto",
+        aspectRatio: 1,
+        header: {right: 'month,agendaWeek,listMonth prev,next today'},
+        eventRender: function (event, element) {
+            element.attr('href', 'javascript:void(0);');
+            element.click(function() {
+                $("#startTime").html(moment(event.start).format('MMM Do h:mm A'));
+                $("#endTime").html(moment(event.end).format('MMM Do h:mm A'));
+                var titleBox = event.title;
+                if (event.category) {
+                    titleBox += '&nbsp;&nbsp;<span class="label label-default"';
+                    if (event.color) {
+                        titleBox += 'style="background-color: ' + event.color + '"';
+                    }
+                    titleBox += '>' + event.category +'</span>';
+                }
+                $("#eventTitle").html(titleBox);
+                $("#eventInfo").html(event.description);
+                if (event.type == "privateEvent") {
+                    $("#eventEditLink").attr('href', event.url);
+                }
+                else if (event.type == "event") {
+                    $("#eventEditLink").attr('href', '{% url 'admin:core_event_changelist' %}' + event.id_number + '/change/');
+                }
+                else if (event.type == "series") {
+                    $("#eventEditLink").attr('href', '{% url 'admin:core_series_changelist' %}' + event.id_number + '/change/');          
+                }
+
+                if (event.type == "privateEvent") {
+                    $("#eventLink").hide();
+                }
+                else {
+                    $("#eventLink").show();
+                    $("#eventLink").attr('href', event.url);
+                }
+                $("#eventContent").modal();
+            });
+        },
+        {% if 'private_events.add_privateevent' in perms or user.is_superuser %}
+        dayClick: function (date, jsEvent, view) {
+            $('#eventNewTitle').html(date.format('dddd, MMMM Do YYYY'));
+            $('#privateEventNewLink').attr('href', "{% url 'addPrivateEvent' %}?startTime=" + date.format('YYYY-MM-DD'));
+            $("#eventNew").modal();
+        }
+        {% endif %}
+    });
+    $("#closeLink").click(function() {
+        $("#eventContent").hide();
+    });
+});
+</script>
+{% endaddtoblock %}
+{% endblock %}

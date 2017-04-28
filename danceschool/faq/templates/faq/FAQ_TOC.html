@@ -1,0 +1,43 @@
+{% load sekizai_tags static %}
+
+<div class="toc panel panel-default">
+	<div class="panel-heading">
+		<h3>Table of Contents</h3>
+	</div>
+	<div class="list-group" id="toc">
+	</div>
+</div>
+
+{% addtoblock "js" %}
+	<script type="text/javascript" charset="utf-8" src="{% static 'js/jquery.tableofcontents.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script type="text/javascript" charset="utf-8">
+	$( document ).ready(function() {
+	    $("#toc").tableOfContents(
+		$('.content-col'),			// Scoped to content block
+		{
+			startLevel: 2,
+			depth: 1,
+			topLinks: false,
+			levelClass: "list-group-item",
+		}
+		);
+	        function ChangeDiv(width){
+	            if (width < 992) {
+	                $('.toc:first').parent('div.contentblock').detach().insertBefore('.content-col div.contentblock:first');
+	            } else {
+	                $('.sidebar-col').prepend($('.toc:first').parent('div.contentblock'));
+	            }
+	        }
+
+	        var onLoadWidth = $(window).width();
+	        ChangeDiv(onLoadWidth);
+	    
+	        $(window).resize(function () {
+	            var resizeWidth = $(window).width();
+	            ChangeDiv(resizeWidth);
+	        });
+	    });
+	</script>
+{% endaddtoblock %}

@@ -1,0 +1,85 @@
+{% extends "cms/admin_home.html" %}
+
+{% load danceschool_tags thumbnail %}
+
+{% block content %}
+<h1>Instructor Teaching Stats for {{ instructor.fullName }}</h1>
+
+<div class="panel panel-default">
+<div class="panel-heading"><h3 class="panel-title">Basic Info</h3></div>
+
+<div class="panel-body">
+	<img class="pull-left" style="margin: 0 1em 1em 0;" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
+
+	<dl>
+		<dt>Teaching Since:</dt><dd>{{ teaching_since }}</dd>
+		<dt>Classes Taught:</dt><dd>{{ series_count }}</dd>
+		<dt>Total Students Taught:</dt><dd>{{ student_count }}</dd>
+		{% if instructor.feedKey %}
+		<dt>Link To Your Calendar Feeds:</dt>
+			<dd>
+				<a class="btn btn-default btn-sm" href="{% url 'calendarFeed' instructor.feedKey %}">Your Classes</a>
+				{% url 'privateCalendarFeed' instructor.feedKey as private_feed %}{% if private_feed %}<a class="btn btn-default btn-sm" href="{{ private_feed }}">Private Events &amp; Reminders</a>{% endif %} (copy and paste these URLs to add them to Google Calendar, etc.)</dd>
+		{% endif %}
+
+	</dl>
+</div>
+</div>
+
+<h3>Upcoming Series</h3>
+
+<table class="table">
+<thead>
+	<tr>
+		<td>Month</td><td>Series Name</td><td>Teaching Partner</td><td>Location</td><td>Class Time</td><td>Students Registered</td>
+	</tr>
+</thead>
+<tbody>
+{% for series in upcoming_series %}
+	<tr>
+		<td>{{ series.month|readable_month }} {{ series.year }}</td>
+		<td>{{ series.classDescription.title }}</td>
+		<td>
+		{% for this_instructor in series.teachers %}
+			{% if this_instructor.fullName != instructor.fullName %}
+				{{ this_instructor.fullName }}&nbsp;
+			{% endif %}
+		{% endfor %}
+		</td>
+		<td>{{ series.location.name }}</td>
+		<td>{{ series.startTime|date:'l, h:i A' }}</td>
+		<td>{{ series.numRegistered }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h3>Prior Series</h3>
+
+<table class="table">
+<thead>
+	<tr>
+		<td>Month</td><td>Series Name</td><td>Teaching Partner</td><td>Location</td><td>Class Time</td><td>Students Registered</td>
+	</tr>
+</thead>
+<tbody>
+{% for series in prior_series %}
+	<tr>
+		<td>{{ series.month|readable_month }} {{ series.year }}</td>
+		<td>{{ series.classDescription.title }}</td>
+		<td>
+		{% for this_instructor in series.teachers %}
+			{% if this_instructor.fullName != instructor.fullName %}
+				{{ this_instructor.fullName }}&nbsp;
+			{% endif %}
+		{% endfor %}
+		</td>
+		<td>{{ series.location.name }}</td>
+		<td>{{ series.startTime|date:'l, h:i A' }}</td>
+		<td>{{ series.numRegistered }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

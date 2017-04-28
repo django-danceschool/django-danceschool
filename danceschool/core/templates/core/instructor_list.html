@@ -1,0 +1,32 @@
+{% load thumbnail cms_tags %}
+
+{% if instructor_list and "core.change_instructor" in perms %}<p><a class="btn btn-default" href="{% url 'admin:core_instructor_changelist' %}">Edit Instructor Bios</a></p>{% endif %}
+
+{% if instructor_list and list_title %}
+    <h2>{{ list_title|default:"Instructors" }}</h2>
+
+    {% if list_intro %}
+        <p>{{ list_intro|safe }}</p>
+    {% endif %}
+
+    <hr />
+{% endif %}
+{% for teacher in instructor_list %}
+<a name="{{ teacher.firstName }}-{{ teacher.lastName }}"></a>
+<div class="bio">
+    <h3>
+        {{ teacher.firstName }} {{ teacher.lastName }}
+        {% if teacher.availableForPrivates %}<small><a href="mailto:{{ teacher.publicEmail }}">schedule a private</a></small>{% endif %}
+    </h3>
+    <img class="pull-left instructor-bio-photo" src="{% if teacher.image %}{% thumbnail teacher.image 133x133 crop %}{% endif %}" width="133" />
+    <div class="post-body">
+        {% render_model teacher "bio" "" "" "safe" %}
+    </div>
+    <div class="video">
+        {{ teacher.video }}
+    </div>
+</div>
+{% if not forloop.last %}
+<hr />
+{% endif %}
+{% endfor %}

@@ -1,0 +1,170 @@
+{% extends "cms/admin_home.html" %}
+{% load sekizai_tags static %}
+
+{% block content %}
+<div class="row">
+<div class="col-md-12 col-sm-12">
+	<h4>Choose Financial Basis</h4>
+
+	<div class="btn-group" role="group" aria-label="Financial Bases">
+	  <a href="{% url 'financesByMonth' current_year %}" type="button" class="btn btn-default {% if basis == 'accrualDate' %}active{% endif %}">Accrual Date (Default)</a>
+	  <a href="{% url 'financesByMonth' current_year %}?basis=paymentDate" type="button" class="btn btn-default {% if basis == 'paymentDate' %}active{% endif %}">Payment/Receipt Date</a>
+	  <a href="{% url 'financesByMonth' current_year %}?basis=submissionDate" type="button" class="btn btn-default {% if basis == 'submissionDate' %}active{% endif %}">Submission Date</a>
+	</div>
+
+</div>
+<div class="pull-left col-sm-8">
+	<dl>
+		<dt>School Revenues (YTD):</dt><dd>{{ statement.revenues_ytd|floatformat:2 }}</dd>
+		<dt>School Expenses (YTD):</dt><dd>{{ statement.expenses_ytd|floatformat:2 }}</dd>
+		<dt>Pending Expenses:</dt>
+		<dd>Awaiting Approval and Payment: {{ statement.expenses_awaiting_approval|floatformat:2 }}</dd>
+		{% if statement.expenses_awaiting_payment > 0 %}
+			<dd>Approved, Awaiting Payment: {{ statement.expenses_awaiting_payment|floatformat:2 }}</dd>
+		{% endif %}
+		{% if statement.expenses_paid_notapproved > 0 %}
+			<dd>Paid, Not Approved: {{ statement.expenses_paid_notapproved|floatformat:2 }}</dd>
+		{% endif %}
+		<dt>Current Balance:</dt><dd>{{ statement.current_balance|floatformat:2 }}</dd>
+	</dl>
+</div>
+
+{% if perms.financial.export_financial_data %}
+<div class="col-sm-4">
+	<h4>Export Financial Data (CSV)</h4>
+	<div class="btn-group" role="group" aria-label="...">
+	  <a href="{% url 'financesByMonthCSV' %}" class="btn btn-default">This View</a>
+	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-default">All Expenses</a>
+	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-default">All Revenues</a>
+	</div>
+</div>
+{% endif %}
+</div>
+
+<div class="panel panel-default">
+<div class="panel-heading">
+	<h3 class="panel-title">School Performance Over Time</h3>
+</div>
+<div class="panel-body">
+	<div id="monthlychart"></div>
+	<div class="btn-group" role="group" aria-label="..." id='chartselector_buttons'>
+	  <button type="button" class="btn btn-default active" data-y-accessor='profit'>Profits</button>
+	  <button type="button" class="btn btn-default" data-y-accessor='registrations'>Registrations</button>
+	  <button type="button" class="btn btn-default" data-y-accessor='revenues'>Revenues</button>
+	  <button type="button" class="btn btn-default" data-y-accessor='expenses'>Expenses</button>
+	</div>
+</div>
+</div>
+
+
+<div class="panel panel-default">
+<div class="panel-heading">
+	<h3 class="panel-title">Details By Month</h3>
+</div>
+<div class="panel-body">
+	<table class="table">
+	<thead>
+		<tr>
+			<td rowspan="2">Month</td><td rowspan="2"># Registrations</td><td rowspan="2">Total Revenue</td><td colspan="4">Total Expenses</td><td rowspan="2">Net Profit</td>
+		</tr>
+		<tr>
+			<td>Instruction</td><td>Venue Rental</td><td>Other</td><td>Total</td>
+		</tr>
+	</thead>
+	<tbody>
+	{% for this_month in statement.statementByMonth %}
+		<tr>
+			<td>{% if perms.financial.view_finances_detail %}<a href="{% url 'financialDetailView' this_month.month.0 this_month.month.1 %}{% if basis != 'accrualDate' %}?basis={{ basis }}{% endif %}">{{ this_month.month_name }}</a>{% else %}{{ this_month.month_name }}{% endif %}</td>
+			<td>{{ this_month.registrations }}</td>
+			<td>{{ this_month.revenues|floatformat:2 }}</td>
+			<td>{{ this_month.expenses.instruction|floatformat:2 }}</td>
+			<td>{{ this_month.expenses.venue|floatformat:2 }}</td>
+			<td>{{ this_month.expenses.other|floatformat:2 }}</td>
+			<td>{{ this_month.expenses.total|floatformat:2 }}</td>
+			<td>{{ this_month.net_profit|floatformat:2 }}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+	</table>
+
+	{% if is_paginated %}
+	    <div class="pagination">
+	        <span class="page-links">
+	            {% if page_obj.has_previous %}
+	                <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+	            {% endif %}
+	            <span class="page-current">
+	                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+	            </span>
+	            {% if page_obj.has_next %}
+	                <a href="?page={{ page_obj.next_page_number }}">next</a>
+	            {% endif %}
+	        </span>
+	    </div>
+	{% endif %}
+	
+</div>
+</div>
+
+{% addtoblock "css" %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/metricsgraphics.css' %}"/>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script src="{% static 'js/moment.min.js' %}"></script>	
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script src="{% static 'js/Chart.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script src="{% static 'js/metricsgraphics.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script type="text/javascript">
+	var monthly_data = [
+	{% for this_month in statement.statementByMonth reversed %}
+		{
+			'date': new Date('{{ this_month.month_date|date:"Y-m-d" }}'),
+			'profit': {{ this_month.net_profit }},
+			'registrations': {{ this_month.registrations }},
+			'revenues': {{ this_month.revenues }},
+			'expenses': {{ this_month.expenses.total }},
+		},
+	{% endfor %}
+	]
+
+	var chart_params = {
+	  title: "School Performance By Month",
+	  description: "Monthly Profits, Revenues, Expenses, and Total Registrations",
+	  data: monthly_data,
+	  full_width: true,
+	  height: 300,
+	  target: "#monthlychart",
+	  x_accessor: "date",
+	  y_accessor: "profit",
+	  interpolate: "monotone",
+	  area: false
+	}
+
+	$(document).ready(function() {
+
+		MG.data_graphic(chart_params);
+
+		$('#chartselector_buttons button').click(function() {
+		    var new_y_accessor = $(this).data('y-accessor');
+		    chart_params.y_accessor = new_y_accessor;
+
+		    // change button state
+		    $(this).addClass('active').siblings().removeClass('active');
+
+		    // update data
+		    delete chart_params.xax_format;
+		    MG.data_graphic(chart_params);
+		});
+
+	});
+	</script>
+{% endaddtoblock %}
+{% endblock %}

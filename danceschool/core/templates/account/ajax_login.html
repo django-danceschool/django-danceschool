@@ -1,0 +1,169 @@
+{% load i18n %}
+{% load account socialaccount sekizai_tags crispy_forms_tags %}
+
+<div class="panel panel-default" id="returning-customers-panel">
+  {% get_providers as socialaccount_providers %}
+
+  <div class="panel-heading"><h4 class="panel-title">{% trans "Returning Customers" %}</h4></div>
+
+  {# Offer Sign-in or Signup #}
+  <div class="panel-body" id="ajax_login_choice">
+
+    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signin_form" aria-expanded="false" aria-controls="#signin_form" >Sign In</a>
+    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signup_form" aria-expanded="false" aria-controls="#signup_form">Create An Account</a>
+  </div>
+
+  {# Sign-in Form #}
+  <div class="panel-body panel-collapse collapse" id="signin_form">
+    {% if socialaccount_providers %}
+    <p>{% blocktrans with site.name as site_name %}Please sign in with one
+    of your existing third party accounts. Or, <a href="#ajax_login_choice" id="signup_switch">sign up</a>
+    for a {{ site_name }} account and sign in below:{% endblocktrans %}</p>
+
+    <div class="socialaccount_ballot">
+
+      <ul class="socialaccount_providers">
+        {% include "socialaccount/snippets/provider_list.html" with process="login" %}
+      </ul>
+
+      <div class="login-or">{% trans 'or' %}</div>
+
+    </div>
+
+    {% include "socialaccount/snippets/login_extra.html" %}
+
+    {% else %}
+    <p>{% blocktrans %}If you have not created an account yet, then please
+    <a href="#ajax_login_choice" id="signup_switch">sign up</a> first.{% endblocktrans %}</p>
+    {% endif %}
+
+    <form id="ajax_login_form" class="login" method="POST" action="{% url 'account_login' %}">
+      {% csrf_token %}
+      {{ login_form|crispy }}
+      <a class="button secondaryAction" href="{% url 'account_reset_password' %}">{% trans "Forgot Password?" %}</a>
+      <button class="primaryAction btn btn-primary" type="submit">{% trans "Sign In" %}</button>
+    </form>
+  </div>
+
+  {# Signup Form #}
+  <div class="panel-body panel-collapse collapse" id="signup_form">
+    <p>{% blocktrans %}Already have an account? Then please <a href="#ajax_login_choice" id="signin_switch">sign in</a>.{% endblocktrans %}</p>
+
+    <form class="signup" id="ajax_signup_form" method="post" action="{% url 'account_signup' %}">
+      {% csrf_token %}
+      {{ signup_form|crispy }}
+      <button class="primaryAction btn btn-primary" type="submit">{% trans "Create An Account" %} &raquo;</button>
+    </form>
+  </div>
+</div>
+
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+  // Once the user has made a choice, no need for the buttons at the top of the panel
+  $('#ajax_login_choice a.btn').click(function() {
+      $('#ajax_login_choice').fadeOut();
+  });
+
+  // Switch from sign-in to signup
+  $('#signup_switch').click(function() {
+    $('#signin_form').slideUp();
+    $('#signup_form').slideDown();
+  });
+
+  // Switch from sign-up to signin
+  $('#signin_switch').click(function() {
+    $('#signup_form').slideUp();
+    $('#signin_form').slideDown();
+  });
+
+  function getUserData() {
+     var info_url = "{% url 'getUserAccountInfo' %}";
+
+     // Pass the logged in user's information to the form and hide the forms
+     $.ajax({
+         type: "GET",
+         url: info_url,
+         success: function(data) {
+            console.log(data);
+            $('#id_firstName').val(data['first_name']);
+            $('#id_lastName').val(data['last_name']);
+            $('input[name=email]').val(data['email']);
+            $('#id_phone').val(data['phone']);
+
+            for (var x in data['messages']) {
+                var this_msg = data['messages'][x];
+                console.log(this_msg);
+                var this_alert_html = '<div class="alert ';
+                if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.ERROR }}) {
+                  this_alert_html += 'alert-danger';
+                }
+                else if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.WARNING }}) {
+                  this_alert_html += 'alert-warning';
+                }
+                else if (this_msg['extra_tags'] == "success") {
+                  this_alert_html += 'alert-success';
+                }
+                else {
+                  this_alert_html += 'alert-info'; 
+                }
+                this_alert_html += '">' + this_msg['message'] + '</div>';
+
+                $('#message-alerts').append(this_alert_html);
+                $('.alert-login-error').hide();
+            };
+            $('#returning-customers-panel').slideUp();
+         }
+     })
+  }
+
+  function showAjaxErrors(errorObject) {
+    // Show the form error as an alert (and hide old errors)
+    $('.alert-login-error').hide();
+
+    for (var key in errorObject) {
+      // skip loop if the property is from prototype
+      if (!errorObject.hasOwnProperty(key)) continue;
+
+      var obj = errorObject[key];
+      for (var msg in obj) {
+        var this_alert_html = '<div class="alert alert-danger alert-login-error">' +
+            obj[msg] +
+            '</div>'
+        $('#message-alerts').append(this_alert_html);
+      }
+    }
+  }
+
+  $("#ajax_login_form").submit(function(event) {
+      var url = "{% url 'account_login' %}";
+
+      $.ajax({
+             type: "POST",
+             url: url,
+             data: $("#ajax_login_form").serialize(), // serializes the form's elements.
+             success: function(data) {getUserData();},
+             error: function (data) { showAjaxErrors(data.responseJSON['form_errors'])},
+           });
+
+      event.preventDefault(); // do not execute the actual submit of the form.
+  });
+
+  $("#ajax_signup_form").submit(function(event) {
+      var url = "{% url 'account_signup' %}";
+
+      $.ajax({
+             type: "POST",
+             url: url,
+             data: $("#ajax_signup_form").serialize(), // serializes the form's elements.
+             success: function(data) {getUserData();},
+             error: function (data) { showAjaxErrors(data.responseJSON['form_errors'])},
+           });
+
+      event.preventDefault(); // do not execute the actual submit of the form.
+  });
+
+});
+</script>
+{% endaddtoblock %}

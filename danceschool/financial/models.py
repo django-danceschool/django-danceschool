@@ -1,0 +1,354 @@
+from django.db import models
+from datetime import datetime
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.utils.encoding import python_2_unicode_compatible
+from django.core.validators import MinValueValidator
+from django.utils.translation import ugettext_lazy as _
+
+from filer.fields.file import FilerFileField
+from filer.models import Folder
+
+from danceschool.core.models import EventStaffMember, Event, Registration, EventRegistration, Location
+from danceschool.core.constants import getConstant
+from danceschool.vouchers.models import Voucher
+
+from . import constants
+
+
+@python_2_unicode_compatible
+class ExpenseCategory(models.Model):
+    '''
+    These are the different available categories of payment
+    '''
+
+    name = models.CharField(max_length=50,unique=True,help_text=_('Different types of tasks and payments should have different category names'))
+    defaultRate = models.FloatField(help_text=_('This is the default hourly payment rate for this type of task.  For staff expenses and venue rentals, this will be overridden by the rate specified as default for the venue or staff type.'),null=True,blank=True,validators=[MinValueValidator(0)])
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = _('Expense categories')
+
+
+@python_2_unicode_compatible
+class ExpenseItem(models.Model):
+    '''
+    Expenses may be associated with EventStaff or with Events, or they may be associated with nothing
+    '''
+
+    submissionUser = models.ForeignKey(User, related_name='expensessubmittedby',null=True, blank=True)
+    submissionDate = models.DateTimeField(default=datetime.now)
+
+    category = models.ForeignKey(ExpenseCategory)
+
+    description = models.CharField(max_length=200,null=True,blank=True)
+
+    hours = models.FloatField(help_text=_('Please indicate the number of hours to be paid for.'),null=True,blank=True,validators=[MinValueValidator(0)])
+    wageRate = models.FloatField(help_text=_('This should be filled automatically, but can be changed as needed.'),null=True,blank=True,validators=[MinValueValidator(0)])
+    total = models.FloatField(null=True,blank=True,validators=[MinValueValidator(0)])
+    adjustments = models.FloatField(help_text=_('Record any ex-post adjustments to the amount (e.g. refunds) in this field. A positive amount increases the netExpense, a negative amount reduces the netExpense.'),default=0)
+    fees = models.FloatField(help_text=_('The sum of any transaction fees (e.g. Paypal fees) that were paid <strong>by us</strong>, and should therefore be added to net expense.'),default=0)
+
+    paymentMethod = models.IntegerField(_('Payment Method'),choices=constants.EXPENSE_PAYMENTMETHOD_CHOICES,null=True,blank=True)
+
+    comments = models.TextField(_('Comments/Notes'),null=True,blank=True)
+    # attachment = models.FileField('Attach File (optional)',null=True,blank=True,max_length=200,storage=PrivateMediaStorage(),upload_to='board/expenses/%Y/%m/')
+    attachment = FilerFileField(verbose_name=_('Attach File (optional)'),null=True,blank=True,related_name='expense_attachment')
+
+    # These are foreign key relations for the things that expenses can be be related to.
+    # An expense item should only be populated by one of eventstaffmember
+    # or eventvenue.  However, an event will automatically be populated by the associated
+    # event if it is a determined event expense.  This allows for simpler lookups,
+    # like, "get all expenses associated with this event."
+    eventstaffmember = models.OneToOneField(EventStaffMember,null=True,blank=True)
+
+    eventvenue = models.ForeignKey(Event,null=True,blank=True,related_name='venueexpense')
+    event = models.ForeignKey(Event,null=True,blank=True,help_text=_('If this item is associated with an Event, enter it here.'))
+
+    payToUser = models.ForeignKey(User,null=True,blank=True,related_name='payToUser')
+    payToLocation = models.ForeignKey(Location,null=True,blank=True)
+    payToName = models.CharField(max_length=30, null=True,blank=True)
+
+    reimbursement = models.BooleanField(help_text=_('Check to indicate that this is a reimbursement expense (i.e. not compensation).'),default=False)
+
+    approved = models.BooleanField(help_text=_('Check to indicate that expense is approved for payment.'),default=False)
+    paid = models.BooleanField(help_text=_('Check to indicate that payment has been made.'),default=False)
+
+    approvalDate = models.DateTimeField(null=True,blank=True)
+    paymentDate = models.DateTimeField(null=True,blank=True)
+
+    # This field is used to aggregate expenses over time (e.g. by month).
+    # The value of this field is auto-updated using pre-save methods. If
+    # there is a class series or an event associated with this expense,
+    # then the value is taken from that.  Otherwise, the submission date
+    # is used.
+    accrualDate = models.DateTimeField()
+
+    @property
+    def netExpense(self):
+        return self.total + self.adjustments + self.fees
+
+    @property
+    def payTo(self):
+        '''
+        Returns a string indicating who the expense is to be paid to.
+        For more convenient references of miscellaneous expenses.
+        '''
+        if self.payToUser:
+            return ' '.join([self.payToUser.first_name,self.payToUser.last_name])
+        elif self.payToLocation:
+            return self.payToLocation.name
+        else:
+            return self.payToName or ''
+
+    def save(self, *args, **kwargs):
+        '''
+        This custom save method ensures that an expense is not attributed to multiple categories.
+        It also ensures that the series and event properties are always associated with any
+        type of expense of that series or event.
+        '''
+        # Set the approval and payment dates if they have just been approved/paid.
+        if not hasattr(self,'__paid') or not hasattr(self,'__approved'):
+            if self.approved and not self.approvalDate:
+                self.approvalDate = datetime.now()
+            if self.paid and not self.paymentDate:
+                self.paymentDate = datetime.now()
+        else:
+            if self.approved and not self.approvalDate and not self.__approvalDate:
+                self.approvalDate = datetime.now()
+            if self.paid and not self.paymentDate and not self.__paymentDate:
+                self.paymentDate = datetime.now()
+
+        # Ensure that each expense is attribued to only one series or event.
+        if len([x for x in [
+                self.eventstaffmember,
+                self.eventvenue,] if x]) > 1:
+            raise ValidationError(_('This expense cannot be attributed to multiple categories.'),code='invalid')
+
+        # Fill out the series and event properties to permit easy calculation of
+        # revenues and expenses by series or by event.
+        if self.eventstaffmember:
+            self.event = self.eventstaffmember.event
+            if hasattr(self.eventstaffmember.staffMember,'userAccount'):
+                self.payToUser = self.eventstaffmember.staffMember.userAccount
+        if self.eventvenue:
+            self.event = self.eventvenue
+            self.payToLocation = self.eventvenue.location
+
+        # Set the accrual date.  The method for events ensures that the accrualDate month
+        # is the same as the reported month of the series/event by accruing to the end date of the last
+        # class or occurrence in that month.
+        if not self.accrualDate:
+            if self.event and self.event.month:
+                self.accrualDate = self.event.eventoccurrence_set.order_by('endTime').filter(**{'endTime__month': self.event.month}).last().endTime
+            else:
+                self.accrualDate = self.submissionDate
+
+        # Set the total for hourly work
+        if self.hours and not self.wageRate and not self.total and not self.payToLocation and self.category:
+            self.wageRate = self.category.defaultRate
+        elif self.hours and not self.wageRate and not self.total and self.payToLocation:
+            self.wageRate = self.payToLocation.rentalRate
+
+        if self.hours and self.wageRate and not self.total:
+            self.total = self.hours * self.wageRate
+
+        super(ExpenseItem, self).save(*args, **kwargs)
+        self.__approved = self.approved
+        self.__paid = self.paid
+        self.__approvalDate = self.approvalDate
+        self.__paymentDate = self.paymentDate
+
+        # If a file is attached, ensure that it is not public, and that it is saved in the 'Expense Receipts' folder
+        if self.attachment:
+            try:
+                self.attachment.folder = Folder.objects.get(name=_('Expense Receipts'))
+            except:
+                pass
+            self.attachment.is_public = False
+            self.attachment.save()
+
+    def __str__(self):
+        if self.accrualDate:
+            return '%s %s: %s = %s%s' % (self.category.name, self.accrualDate.strftime('%B %Y'),self.description, getConstant('general__currencySymbol'), self.total)
+        else:
+            return '%s: %s = %s%s' % (self.category.name, self.description, getConstant('general__currencySymbol'), self.total)
+
+    def __init__(self, *args, **kwargs):
+        '''
+        Permit easy checking to determine if the object
+        already exists and has changed on saving
+        '''
+        super(self.__class__, self).__init__(*args, **kwargs)
+        self.__approved = self.approved
+        self.__paid = self.paid
+        self.__approvalDate = self.approvalDate
+        self.__paymentDate = self.paymentDate
+
+    class Meta:
+        ordering = ['-accrualDate',]
+
+        permissions = (
+            ('mark_expenses_paid',_('Mark expenses as paid at the time of submission')),
+        )
+
+
+@python_2_unicode_compatible
+class RevenueCategory(models.Model):
+    '''
+    These are the different available categories of payment
+    '''
+
+    name = models.CharField(max_length=50,unique=True,help_text=_('Different types of revenue fall under different categories.'))
+    defaultAmount = models.FloatField(help_text=_('This is the default amount of revenue for items in this category.'),null=True,blank=True,validators=[MinValueValidator(0)])
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = _('Revenue categories')
+
+
+@python_2_unicode_compatible
+class RevenueItem(models.Model):
+    '''
+    All revenue-producing transactions (e.g. class payments, other payments) should have an associated RevenueItem
+    '''
+
+    submissionUser = models.ForeignKey(User,null=True,blank=True,related_name='revenuessubmittedby')
+    submissionDate = models.DateTimeField(default=datetime.now)
+
+    category = models.ForeignKey(RevenueCategory)
+    description = models.CharField(max_length=200,null=True,blank=True)
+    total = models.FloatField(help_text=_('The total revenue received, net of any discounts or voucher uses.  This is what we actually receive.'),validators=[MinValueValidator(0)])
+    grossTotal = models.FloatField(_('Gross Total'),help_text=_('The gross total billed before the application of any discounts, or the use of any vouchers.'),validators=[MinValueValidator(0)])
+    adjustments = models.FloatField(help_text=_('Record any ex-post adjustments to the amount (e.g. refunds) in this field.  A positive amount increases the netRevenue, a negative amount reduces the netRevenue.'),default=0)
+    fees = models.FloatField(help_text=_('The sum of any transaction fees (e.g. Paypal fees) that were paid <strong>by us</strong>, and should therefore be subtracted from net revenue.'),default=0)
+
+    paymentMethod = models.IntegerField(_('Payment Method'),choices=constants.REVENUE_PAYMENTMETHOD_CHOICES,default=constants.CASH_PAYMENTMETHOD_ID)
+    invoiceNumber = models.CharField(_('Invoice Number'),help_text=_('For Paypal payments, this will be the txn_id.  For cash payments, this will be automatically generated by the submission form.  More than one revenue item may have the same invoice number, because multiple events are paid for in one Paypal transaction.'),null=True,blank=True,max_length=80)
+
+    comments = models.TextField(_('Comments/Notes'),null=True,blank=True)
+    attachment = FilerFileField(verbose_name=_('Attach File (optional)'),null=True,blank=True,related_name='revenue_attachment')
+
+    eventregistration = models.ForeignKey(EventRegistration, null=True, blank=True)
+
+    # A small number of Registration objects have no event associated with them.  This allows us to account for those.
+    registration = models.ForeignKey(Registration,null=True,blank=True)
+
+    # Purchased gift certificates receive revenue items as well.
+    purchasedVoucher = models.OneToOneField(Voucher,null=True,blank=True,verbose_name=_('Purchased voucher/gift certificate'))
+
+    event = models.ForeignKey(Event,null=True,blank=True,help_text=_('If this item is associated with an Event, enter it here.'))
+    receivedFromName = models.CharField(max_length=50,null=True,blank=True,verbose_name=_('Received From'),help_text=_('Enter who this revenue item was received from, if it is not associated with an existing registration.'))
+
+    currentlyHeldBy = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Cash currently in possession of'),help_text=_('If cash has not yet been deposited, this indicates who to contact in order to collect the cash for deposit.'),related_name='revenuesheldby')
+    received = models.BooleanField(help_text=_('Check to indicate that payment has been received. Non-received payments are considered pending.'),default=False)
+    receivedDate = models.DateTimeField(null=True,blank=True)
+
+    # This field is used to aggregate expenses over time (e.g. by month).
+    # The value of this field is auto-updated using pre-save methods. If
+    # there is a registration or an event associated with this expense,
+    # then the value is taken from that.  Otherwise, the submission date
+    # is used.
+    accrualDate = models.DateTimeField()
+
+    @property
+    def relatedItems(self):
+        '''
+        If this item is associated with a registration, then return all other items associated with
+        the same registration.
+        '''
+        if self.registration:
+            return self.registration.revenueitem_set.exclude(pk=self.pk)
+
+    @property
+    def netRevenue(self):
+        return self.total + self.adjustments - self.fees
+
+    def save(self, *args, **kwargs):
+        '''
+        This custom save method ensures that a revenue item is not attributed to multiple categories.
+        It also ensures that the series and event properties are always associated with any
+        type of revenue of that series or event.
+        '''
+
+        # Set the received date if the payment was just marked received
+        if not hasattr(self,'__received'):
+            if self.received and not self.receivedDate:
+                self.receivedDate = datetime.now()
+        else:
+            if self.received and not self.receivedDate and not self.__receivedDate:
+                self.receivedDate = datetime.now()
+
+        # Set the accrual date.  The method for series/events ensures that the accrualDate month
+        # is the same as the reported month of the event/series by accruing to the start date of the first
+        # occurrence in that month.
+        if not self.accrualDate:
+            if self.eventregistration:
+                min_event_time = self.eventregistration.event.eventoccurrence_set.filter(**{'startTime__month':self.eventregistration.event.month}).first().startTime
+                self.accrualDate = min_event_time
+            elif self.registration and self.registration.dateTime:
+                self.accrualDate = self.registration.dateTime
+            elif self.event:
+                self.accrualDate = self.event.eventoccurrence_set.order_by('startTime').filter(**{'startTime__month': self.event.month}).last().startTime
+            elif self.receivedDate:
+                self.accrualDate = self.receivedDate
+            else:
+                self.accrualDate = self.submissionDate
+
+        # Now, set the registration property and check that this item is not attributed
+        # to multiple categories.
+        if self.eventregistration:
+            self.event = self.eventregistration.event
+            self.registration = self.eventregistration.registration
+
+        if self.purchasedVoucher and self.event:
+            raise ValueError(_('This revenue item cannot be for both a voucher and a series or event.'))
+
+        # If no grossTotal is reported, use the net total.  If no net total is reported, use the grossTotal
+        if self.grossTotal is None and self.total:
+            self.grossTotal = self.total
+        if self.total is None and self.grossTotal:
+            self.total = self.grossTotal
+
+        super(RevenueItem, self).save(*args, **kwargs)
+        self.__received = self.received
+        self.__receivedDate = self.receivedDate
+
+        # If a file is attached, ensure that it is not public, and that it is saved in the 'Expense Receipts' folder
+        if self.attachment:
+            try:
+                self.attachment.folder = Folder.objects.get(name=_('Revenue Receipts'))
+            except:
+                pass
+            self.attachment.is_public = False
+            self.attachment.save()
+
+    def __str__(self):
+        if self.accrualDate:
+            return '%s %s: %s = %s%s' % (self.category.name, self.accrualDate.strftime('%B %Y'),self.description, getConstant('general__currencySymbol'), self.total)
+        else:
+            return '%s: %s = %s%s' % (self.category.name, self.description, getConstant('general__currencySymbol'), self.total)
+
+    def __init__(self,*args,**kwargs):
+        '''
+        Permit easy checking to determine if the object
+        already exists and has changed on saving
+        '''
+        super(self.__class__, self).__init__(*args, **kwargs)
+        self.__received = self.received
+        self.__receivedDate = self.receivedDate
+
+    class Meta:
+        ordering = ['-accrualDate',]
+
+        permissions = (
+            ('export_financial_data',_('Export detailed financial transaction information to CSV')),
+            ('view_finances_bymonth',_('View school finances month-by-month')),
+            ('view_finances_byevent',_('View school finances by Event')),
+            ('view_finances_detail',_('View school finances as detailed statement')),
+            ('process_registration_refunds',_('Process registration refunds')),
+        )

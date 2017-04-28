@@ -1,0 +1,13 @@
+{% extends "cms/admin_home.html" %}
+{% load crispy_forms_tags sekizai_tags %}
+
+{% block content %}
+{% if form_title %}<h1>{{ form_title }}</h1>{% endif %}
+{% if form_description %}<p>{{ form_description }}</p>{% endif %}
+
+{% crispy form %}
+
+{% addtoblock "js" %}
+	{{ form.media }}
+{% endaddtoblock %}
+{% endblock %}

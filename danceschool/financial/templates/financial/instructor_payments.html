@@ -1,0 +1,154 @@
+{% extends "cms/admin_home.html" %}
+{% load thumbnail sekizai_tags danceschool_tags %}
+
+{% block content %}
+
+<h1>Payment History for {{ instructor.fullName }}</h1>
+
+<img class="pull-left" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
+
+<dl>
+	<dt>Total Pending Payments:</dt><dd>{{ total_awaiting_payment }}</dd>
+	<dt>Total Paid (All Time, excludes reimbursements):</dt><dd>{{ total_paid_alltime }}</dd>
+	<dt>Total Paid (This Year, excludes reimbursements):</dt><dd>{{ total_paid_this_year }}</dd>
+	<dt>Total Costs Reimbursements (This Year):</dt><dd>{{ total_reimbursements }}</dd>
+</dl>
+
+<h4>Filter By Year</h4>
+<div class="btn-group" role="group" aria-label="...">
+  <a type="button" class="btn btn-default" {% if current_year == 'all' or not current_year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' 'all' %}{% elif instructor %}{% url 'instructorPayments' 'all' instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">All</a>
+  {% for year in eligible_years %}
+  <a type="button" class="btn btn-default" {% if current_year|add:'0' == year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' year %}{% elif instructor %}{% url 'instructorPayments' year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{{ year }}</a>
+  {% endfor %}
+</div>
+
+{% if current_year and not current_year == 'all' %}
+<h4>Reporting Basis</h4>
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" class="btn btn-default" id="button_accrual_basis">Accrual Date</button>
+  <button type="button" class="btn btn-default" id="button_payment_basis">Payment Date</button>
+  <button type="button" class="btn btn-default" id="button_submission_basis">Submission Date</button>
+</div>
+{% endif %}
+
+<h3>Pending Payments</h3>
+
+<table class="table">
+<thead>
+	<tr>
+		<td>Submission Date</td><td>Category</td><td>Description</td><td>Hours</td><td>Total Amount</td><td>Reimbursement</td><td>Approved</td>{% if 'financial.change_expenseitem' in perms %}<td>Edit</td>{% endif %}
+
+	</tr>
+</thead>
+<tbody>
+{% for this_item in unpaid_items %}
+	<tr class="unpaid {% if current_year and not current_year == 'all' %}{% if this_item.submissionDate.year == current_year|add:'0' %}submitted_thisyear{% endif %} {% if this_item.paymentDate.year == current_year|add:'0' %}paid_thisyear{% endif %} {% if this_item.accrualDate.year == current_year|add:'0' %}accrued_thisyear {% endif %}{% endif %}">
+		<td>{{ this_item.submissionDate|date:'N j, Y' }}</td>
+		<td>{{ this_item.category }}</td>
+		<td>{{ this_item.description }}</td>
+		<td>{{ this_item.hours }}</td>
+		<td>{{ this_item.total }}</td>
+		<td>{{ this_item.reimbursement|yesno }}</td>
+		<td>{{ this_item.approved|yesno }}</td>
+		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-default btn-xs" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">Edit</a></td>{% endif %}
+	</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h3>Prior Payments</h3>
+
+<table class="table">
+<thead>
+	<tr>
+		<td>Payment Date</td><td>Category</td><td>Description</td><td>Hours</td><td>Total Amount</td><td>Submission Date</td>{% if 'financial.change_expenseitem' in perms %}<td>Edit</td>{% endif %}
+	</tr>
+</thead>
+<tbody>
+{% for this_item in paid_items %}
+	<tr class="paid {% if current_year and not current_year == 'all' %}{% if this_item.submissionDate.year == current_year|add:'0' %}submitted_thisyear{% endif %} {% if this_item.paymentDate.year == current_year|add:'0' %}paid_thisyear{% endif %} {% if this_item.accrualDate.year == current_year|add:'0' %}accrued_thisyear {% endif %}{% endif %}">
+		<td>{{ this_item.paymentDate|date:'N j, Y' }}</td>
+		<td>{{ this_item.category }}</td>
+		<td>{{ this_item.description }}</td>
+		<td>{{ this_item.hours }}</td>
+		<td>{{ this_item.total }}</td>
+		<td>{{ this_item.submissionDate|date:'N j, Y' }}</td>
+		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-default btn-xs" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">Edit</a></td>{% endif %}
+	</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h3>Reimbursements</h3>
+
+<table class="table">
+<thead>
+	<tr>
+		<td>Payment Date</td><td>Category</td><td>Description</td><td>Hours</td><td>Total Amount</td><td>Submission Date</td>{% if 'financial.change_expenseitem' in perms %}<td>Edit</td>{% endif %}
+	</tr>
+</thead>
+<tbody>
+{% for this_item in reimbursement_items %}
+	<tr class="paid {% if current_year and not current_year == 'all' %}{% if this_item.submissionDate.year == current_year|add:'0' %}submitted_thisyear{% endif %} {% if this_item.paymentDate.year == current_year|add:'0' %}paid_thisyear{% endif %} {% if this_item.accrualDate.year == current_year|add:'0' %}accrued_thisyear {% endif %}{% endif %}">
+		<td>{{ this_item.paymentDate|date:'N j, Y' }}</td>
+		<td>{{ this_item.category }}</td>
+		<td>{{ this_item.description }}</td>
+		<td>{{ this_item.hours }}</td>
+		<td>{{ this_item.total }}</td>
+		<td>{{ this_item.submissionDate|date:'N j, Y' }}</td>
+		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-default btn-xs" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">Edit</a></td>{% endif %}
+	</tr>
+{% endfor %}
+</tbody>
+</table>
+
+
+<div class='btn btn-default btn-sm'><a href="{% if request.user == instructor.userAccount %}{% url 'instructorPaymentsCSV' current_year %}{% elif instructor %}{% url 'instructorPaymentsCSV' current_year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">Download Expense History{% if current_year != "all" %} for this year{% endif %} (CSV)</a></div>
+<div style="display:block; width: 100%">&nbsp;</div>
+
+{% addtoblock "js" %}
+	<script type="text/javascript">
+	$(document).ready(function () {
+
+		$('#button_accrual_basis').on('click', function () {
+			$('#button_accrual_basis').css('font-weight','bold');
+			$('#button_payment_basis').css('font-weight','normal');
+			$('#button_submission_basis').css('font-weight','normal');
+
+			$('tr.accrued_thisyear').hide();
+			$('tr.paid_thisyear').hide();
+			$('tr.submitted_thisyear').hide();
+
+			$('tr.accrued_thisyear').fadeIn('slow');
+	    });
+
+		$('#button_payment_basis').on('click', function () {
+			$('#button_accrual_basis').css('font-weight','normal');
+			$('#button_payment_basis').css('font-weight','bold');
+			$('#button_submission_basis').css('font-weight','normal');
+
+			$('tr.accrued_thisyear').hide();
+			$('tr.paid_thisyear').hide();
+			$('tr.submitted_thisyear').hide();
+
+			$('tr.paid_thisyear').fadeIn('slow');
+	    });
+
+		$('#button_submission_basis').on('click', function () {
+			$('#button_accrual_basis').css('font-weight','normal');
+			$('#button_payment_basis').css('font-weight','normal');
+			$('#button_submission_basis').css('font-weight','bold');
+
+			$('tr.accrued_thisyear').hide();
+			$('tr.paid_thisyear').hide();
+			$('tr.submitted_thisyear').hide();
+
+			$('tr.submitted_thisyear').fadeIn('slow');
+	    });
+
+		$('#button_payment_basis').click();
+
+	 });
+	</script>
+{% endaddtoblock %}
+{% endblock %}

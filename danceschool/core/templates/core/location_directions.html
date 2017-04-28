@@ -1,0 +1,10 @@
+{% for location in location_list %}
+<a name="{{ location.name|slugify }}" ></a>
+<div class="post">
+    <h2>{{ location.name }}</h2>
+	
+	<p>{{ location.address_string }}</p>
+
+    <div class="embed-responsive embed-responsive-16by9">{{ location.directions|safe }}</div>
+</div>
+{% endfor %}
