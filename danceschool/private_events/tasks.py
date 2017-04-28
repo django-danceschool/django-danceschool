@@ -1,9 +1,9 @@
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
-from huey.contrib.djhuey import crontab, db_periodic_task
+from huey import crontab
+from huey.contrib.djhuey import db_periodic_task
 from datetime import datetime
 import logging
 

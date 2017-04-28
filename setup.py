@@ -1,0 +1,69 @@
+import os
+from setuptools import setup
+
+README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
+
+# Allow setup.py to be run from any path
+os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+
+setup(
+    name='django-danceschool',
+    version='0.0.1',
+    packages=['danceschool'],
+    include_package_data=True,
+    license='BSD License',
+    description='The Django Dance School project:'
+    ' a modular, reusable set of designed to integrate'
+    ' all of the regular functions of a social dance school'
+    ' with the Django CMS content management system',
+    long_description=README,
+    url='https://github.com/leetucker/django-danceschool',
+    author='Lee Tucker',
+    author_email='lee.c.tucker@gmail.com',
+    install_requires=[
+        'Django>=1.10,<1.11',
+        'django-admin-sortable2>=0.6.10',
+        'django-allauth>=0.31.0',
+        'django-autocomplete-light>=3.2.0',
+        'django-braces>=1.8.1',
+        'django-choices>=1.5.0',
+        'django-ckeditor>=5.0.0',
+        'django-ckeditor-filebrowser-filer>=0.2.1',
+        'django-cms>=3.4.0',
+        'django-colorfield>=0.1.12',
+        'django-crispy-forms>=1.6.0',
+        'django-daterange-filter>=1.2.0',
+        'django-dynamic-preferences>=1.1',
+        'django-easy-pdf>=0.1.0',
+        'django-filer>=1.2.7',
+        'django-ical>=1.4',
+        'django-imagekit>=3.3',
+        'django-multiselectfield>=0.1.5',
+        'django-polymorphic>=1.0.2',
+        'django-sekizai>=0.10.0',
+        'djangocms-admin-style>=1.2.6.2',
+        'djangocms-forms>=0.2.5',
+        'djangocms-text-ckeditor>=3.4.0',
+        'easy-thumbnails>=2.3',
+        'huey>=1.2.1',
+        'icalendar>=3.9.0',
+        'Pillow>=3.4.2',
+        'python-dateutil>=2.4.1',
+        'redis>=2.10.5',
+        'requests>=2.6.0',
+        'six>=1.10.0',
+        'unicodecsv>=0.14.1',
+    ],
+    classifiers=[
+        'Environment :: Web Environment',
+        'Framework :: Django',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Internet :: WWW/HTTP :: Dynamic Content'
+    ]
+)

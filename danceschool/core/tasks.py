@@ -1,7 +1,8 @@
 from django.conf import settings
 from django.core.mail import get_connection, EmailMessage
 
-from huey.contrib.djhuey import crontab, task, db_periodic_task
+from huey import crontab
+from huey.contrib.djhuey import task, db_periodic_task
 
 import logging
 

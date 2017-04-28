@@ -1,4 +1,5 @@
-from huey.contrib.djhuey import crontab, db_periodic_task
+from huey import crontab
+from huey.contrib.djhuey import db_periodic_task
 import logging
 
 from danceschool.core.constants import getConstant
