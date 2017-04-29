@@ -140,18 +140,24 @@ What you need:
 Basic Installation Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Create a subfolder for the project, and enter it:
+1. Download this repository (you will be
+   prompted for username and password)
+
+   ::
+       git clone https://github.com/leetucker/django-danceschool
+
+2. Create a subfolder for the project, and enter it:
 
    ::
 
        mkdir django
        cd django
 
-2. Create a new virtual environment and enter it:
+3. Create a new virtual environment and enter it:
 
    ::
 
-       python3 -m venv .
+       python3 -m virtualenv .
        source bin/activate
 
    -  *Note:* Depending on your system, you may need to follow slightly
@@ -159,18 +165,11 @@ Basic Installation Process
       matter which method you use, be sure that your environment is set
       to use Python 3 by default.
 
-3. Download this repository and enter the repo directory (you will be
-   prompted for username and password)
-
-   ::
-
-       git clone https://bitbucket.org/newschoolswing/newschoolswing
-       cd newschoolswing
-
-4. Install all Python packages from ``requirements.txt`` (this may take
+4. Install the django-danceschool package that you downloaded, which will
+   also install all of the necessary dependencies (this may take
    awhile & you may have to use sudo)
 
-   ``pip install -r requirements.txt``
+   ``pip install /path/to/django-danceschool``
 
    *Note:* Additionally, depending on your operating system, you may
    need to install certain program dependencies in order to install the
@@ -178,20 +177,29 @@ Basic Installation Process
    requirements.txt). If you run into issues at this step of the
    installation, look for these issues first.
 
-5. Perform initial database migrations
+5. Start your Django project, using the ``django-admin`` command.  To avoid
+   having to set a large number of settings manually, we strongly recommend
+   that you use the preexisting installation template as follows.  Make sure
+   that you are in the folder where you would like your project to be located when you do this.
+
+   ::
+
+      django-admin startproject --template http://leetucker.net/django-danceschool/danceschool_default_setup.zip <your_project_name>
+
+6. Perform initial database migrations
 
    ::
 
        python manage.py migrate
 
-6. Create a superuser so that you can log into the admin interface (you
+7. Create a superuser so that you can log into the admin interface (you
    will be prompted for username and password)
 
    ::
 
        python manage.py createsuperuser
 
-7. Run the server and try to log in!
+8. Run the server and try to log in!
 
    ::
 
@@ -200,7 +208,7 @@ Basic Installation Process
 Settings Customization and Production Deployment
 ------------------------------------------------
 
-After performing steps 1-7 above, you should have a working instance of
+After performing steps 1-8 above, you should have a working instance of
 the danceschool project. However, in order to make the site usable for
 your purposes, you will, at a minimum, need to do some basic setting of
 settings and preferences
