@@ -372,9 +372,9 @@ def prepareStatementByMonth(**kwargs):
         venueExpenseList = valueOf(venueExpensesByMonth,this_month,values=3)
 
         thisMonthlyStatement['expenses'] = {
-            'total': totalExpenseList[0] + totalExpenseList[1] - totalExpenseList[2],
-            'instruction': instructionExpenseList[0] + instructionExpenseList[1] - instructionExpenseList[2],
-            'venue': venueExpenseList[0] + venueExpenseList[1] - venueExpenseList[2],
+            'total': (totalExpenseList[0] or 0) + (totalExpenseList[1] or 0) - (totalExpenseList[2] or 0),
+            'instruction': (instructionExpenseList[0] or 0) + (instructionExpenseList[1] or 0) - (instructionExpenseList[2] or 0),
+            'venue': (venueExpenseList[0] or 0) + (venueExpenseList[1] or 0) - (venueExpenseList[2] or 0),
         }
         thisMonthlyStatement['expenses']['other'] = thisMonthlyStatement['expenses']['total'] - thisMonthlyStatement['expenses']['instruction'] - thisMonthlyStatement['expenses']['venue']
 
