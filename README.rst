@@ -144,6 +144,7 @@ Basic Installation Process
    prompted for username and password)
 
    ::
+
        git clone https://github.com/leetucker/django-danceschool
 
 2. Create a subfolder for the project, and enter it:
