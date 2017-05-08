@@ -103,7 +103,7 @@
 		
 		{% if series.allowDropins %}<td>{{ reg.dropIn }}</td>{% endif %}
 		<td>{{ reg.registration.customer.isStudent }}</td>
-		<td>{{ reg.registration.customer.user.email }}</td>
+		<td>{{ reg.registration.customer.email }}</td>
 		<td>{{ reg.registration.customer.numClassSeries }}</td>
 		{% if 'core.change_registration' in perms or 'paypal.change_ipnmessage' in perms or 'financial.change_revenueitem' in perms or 'financial.process_registration_refunds' in perms %}
 			<td>

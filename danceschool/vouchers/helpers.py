@@ -59,7 +59,7 @@ def createReferrerVoucher(customer):
     forFirstTimeCustomersOnly = False
     expirationDate = None
     disabled = False
-    name = _("Referral Bonus for %s, %s" % (customer.fullName,customer.user.email))
+    name = _("Referral Bonus for %s, %s" % (customer.fullName,customer.email))
 
     voucher = Voucher(
         voucherId=voucherId,name=name,

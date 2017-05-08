@@ -153,7 +153,7 @@ registrations have used each referral code (i.e. how many students are registeri
   <tbody>
     {% for customer in bestCustomersAllTime %}
     <tr>
-      <td>{{ customer.user__first_name }} {{ customer.user__last_name}}</td>
+      <td>{{ customer.first_name }} {{ customer.last_name}}</td>
       <td>{{ customer.eventregistration__count }}</td>
     </tr>
     {% endfor %}
@@ -170,7 +170,7 @@ registrations have used each referral code (i.e. how many students are registeri
   <tbody>
     {% for customer in bestCustomersLastTwelveMonths %}
     <tr>
-      <td>{{ customer.user__first_name }} {{ customer.user__last_name}}</td>
+      <td>{{ customer.first_name }} {{ customer.last_name}}</td>
       <td>{{ customer.eventregistration__count }}</td>
     </tr>
     {% endfor %}

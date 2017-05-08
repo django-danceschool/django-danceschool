@@ -269,7 +269,7 @@ class SendEmailView(CsrfExemptMixin, AdminSuccessURLMixin, PermissionRequiredMix
 
             regs = EventRegistration.objects.filter(event=s)
             for r in regs:
-                emails.append(r.customer.user.email)
+                emails.append(r.customer.email)
 
             bcc = [getConstant('email__defaultEmailFrom')]
 

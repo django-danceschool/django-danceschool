@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<h3>Registration #{{ registration.id }} for {{ registration.customer.user.first_name }} {{ registration.customer.user.last_name }}</h3>
+<h3>Registration #{{ registration.id }} for {{ registration.customer.first_name }} {{ registration.customer.last_name }}</h3>
 
 <dl>
 	<dt>Date &amp; Time:</dt><dd>{{ registration.dateTime|date:'DATETIME_FORMAT' }}</dd>
