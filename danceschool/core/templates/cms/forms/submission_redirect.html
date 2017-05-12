@@ -1,0 +1,21 @@
+{% extends "cms/admin_home.html" %}
+
+{% block extra_head %}
+	{{ block.super }}
+
+	<meta http-equiv="Refresh" content="{{ seconds|default:5 }}; url={{ redirect_url }}">
+
+{% endblock %}
+
+{% block content %}
+
+	{# Display any warning or error messages associated with the previous form submission #}
+	<div id="message-alerts">
+    {% for message in messages %}
+	    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% elif message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}alert-success{% else %}alert-info{% endif %}">{{ message }}</div>
+    {% endfor %}
+    </div>
+
+	<p>You will be redirected automatically in {{ seconds|default:5 }} seconds.  If for some reason you are not redirected, please <a href="{{ redirect_url }}">click here</a>.</p>
+
+{% endblock %}

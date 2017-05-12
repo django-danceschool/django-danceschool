@@ -4,6 +4,7 @@ from django.http import HttpResponse, Http404
 from django.db.models import Q, Sum, F, Min
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.messages.views import SuccessMessageMixin
 
 from datetime import datetime
 import unicodecsv as csv
@@ -47,16 +48,18 @@ def getIntFromGet(request,key):
         return None
 
 
-class RefundProcessingView(FinancialContextMixin, AdminSuccessURLMixin, PermissionRequiredMixin, StaffuserRequiredMixin, UpdateView):
+class RefundProcessingView(FinancialContextMixin, AdminSuccessURLMixin, PermissionRequiredMixin, StaffuserRequiredMixin, SuccessMessageMixin, UpdateView):
     template_name = 'financial/process_refund.html'
     form_class = RegistrationRefundForm
     permission_required = 'financial.process_registration_refunds'
     model = Registration
+    success_message = _('Refund successfully submitted.')
 
 
-class ExpenseReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, CreateView):
+class ExpenseReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, SuccessMessageMixin, CreateView):
     template_name = 'cms/forms/display_crispy_form_classbased_admin.html'
     form_class = ExpenseReportingForm
+    success_message = _('Expense item successfully submitted.')
 
     def get_context_data(self,**kwargs):
         context = super(ExpenseReportingView,self).get_context_data(**kwargs)
@@ -68,9 +71,10 @@ class ExpenseReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFor
         return context
 
 
-class RevenueReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, CreateView):
+class RevenueReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, SuccessMessageMixin, CreateView):
     template_name = 'cms/forms/display_crispy_form_classbased_admin.html'
     form_class = RevenueReportingForm
+    success_message = _('Revenue item successfully submitted.')
 
     def get_context_data(self,**kwargs):
         context = super(RevenueReportingView,self).get_context_data(**kwargs)

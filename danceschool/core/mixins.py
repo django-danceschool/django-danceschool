@@ -1,13 +1,12 @@
-from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
-from django.core.exceptions import PermissionDenied, ObjectDoesNotExist, ImproperlyConfigured, ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template
 
 from braces.views import GroupRequiredMixin
-from cms.models import Page
+from urllib.parse import quote
 
 from .constants import getConstant
 
@@ -105,18 +104,11 @@ class AdminSuccessURLMixin(object):
     success_list_url = None  # Default the success url to none
 
     def get_success_url(self):
-        # Return the reversed success url.
-        if self.success_list_url is None:
-            try:
-                return Page.objects.get(pk=getConstant('general__defaultAdminSuccessPage')).get_absolute_url(settings.LANGUAGE_CODE)
-            except ObjectDoesNotExist:
-                raise ImproperlyConfigured(
-                    "%(cls)s is missing a success_list_url "
-                    "name to reverse and redirect to. Define "
-                    "%(cls)s.success_list_url or override "
-                    "%(cls)s.get_success_url()"
-                    "." % {"cls": self.__class__.__name__})
-        return reverse(self.success_list_url)
+        if self.success_list_url:
+            return '%s?redirect_url=%s' % (reverse('submissionRedirect'), quote(self.success_list_url))
+        else:
+            # If no URL specified, then the redirect view will use the default from the runtime preferences.
+            return reverse('submissionRedirect')
 
 
 class TemplateChoiceField(ChoiceField):

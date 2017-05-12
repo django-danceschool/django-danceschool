@@ -1,18 +1,22 @@
 from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, RedirectView, ListView
 from django.db.models import Min, Q
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import User
+from django.contrib import messages
+from django.contrib.messages.views import SuccessMessageMixin
 
 from calendar import month_name
 from datetime import datetime, timedelta
 import json
-from urllib.parse import unquote_plus
+from urllib.parse import unquote_plus, unquote
 from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin
 from cms.constants import RIGHT
+from cms.models import Page
 
 from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, Instructor
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, EmailContactForm, ClassChoiceForm
@@ -186,12 +190,38 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 
 
 #################################
+# Used for various form submission redirects (called by the AdminSuccessURLMixin)
+
+
+class SubmissionRedirectView(TemplateView):
+    template_name = 'cms/forms/submission_redirect.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(SubmissionRedirectView,self).get_context_data(**kwargs)
+
+        try:
+            redirect_url = unquote(self.request.GET.get('redirect_url',''))
+            if not redirect_url:
+                redirect_url = Page.objects.get(pk=getConstant('general__defaultAdminSuccessPage')).get_absolute_url(settings.LANGUAGE_CODE)
+        except ObjectDoesNotExist:
+            redirect_url = '/'
+
+        context.update({
+            'redirect_url': redirect_url,
+            'seconds': self.request.GET.get('seconds',5),
+        })
+
+        return context
+
+
+#################################
 # Email view function and form
 
 
 class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, TemplateView):
     permission_required = 'core.send_email'
     template_name = 'core/email_confirmation_page.html'
+    success_message = _('Email sent successfully.')
 
     def get(self, request, *args, **kwargs):
         self.form_data = request.session.get(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),{}).get('form_data',{})
@@ -240,6 +270,8 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             renderEmail(subject,message,from_address,from_name,cc=cc,to=[],bcc=bcc,eventregistrations=regs,event=s)
 
         self.request.session.pop(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),None)
+        messages.success(self.request, self.success_message)
+
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self,**kwargs):
@@ -532,13 +564,14 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
 # View for instructors to report that they substitute taught
 #
 
-class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, UserFormKwargsMixin, CreateView):
+class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, UserFormKwargsMixin, SuccessMessageMixin, CreateView):
     '''
     This view is used to report substitute teaching.
     '''
     template_name = 'cms/forms/display_form_classbased_admin.html'
     form_class = SubstituteReportingForm
     permission_required = 'core.report_substitute_teaching'
+    success_message = _('Substitute teaching reported successfully.')
 
     def get_context_data(self,**kwargs):
         context = super(SubstituteReportingView,self).get_context_data(**kwargs)
@@ -555,7 +588,7 @@ class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, Use
 #
 
 
-class InstructorBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, PermissionRequiredMixin, UpdateView):
+class InstructorBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     '''
     This view now permits changing the instructor's bio information.
     '''
@@ -563,6 +596,7 @@ class InstructorBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, Perm
     template_name = 'cms/forms/display_form_classbased_admin.html'
     form_class = InstructorBioChangeForm
     permission_required = 'core.update_instructor_bio'
+    success_message = _('Instructor information updated successfully.')
 
     def get_context_data(self,**kwargs):
         context = super(InstructorBioChangeView,self).get_context_data(**kwargs)
