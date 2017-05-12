@@ -66,8 +66,8 @@ class VoucherAppConfig(AppConfig):
                     defaults={
                         'subject': _('Gift Certificate Purchase Confirmation'),
                         'content': '',
-                        'defaultFromAddress': get_defaultEmailFrom,
-                        'defaultFromName': get_defaultEmailName,
+                        'defaultFromAddress': get_defaultEmailFrom(),
+                        'defaultFromName': get_defaultEmailName(),
                         'defaultCC': '',
                         'hideFromForm': True,}
                 )
@@ -80,8 +80,8 @@ class VoucherAppConfig(AppConfig):
                     defaults={
                         'subject': _('You\'ve Been Given the Gift of Dance!'),
                         'content': _('Insert HTML here.'),
-                        'defaultFromAddress': get_defaultEmailFrom,
-                        'defaultFromName': get_defaultEmailName,
+                        'defaultFromAddress': get_defaultEmailFrom(),
+                        'defaultFromName': get_defaultEmailName(),
                         'defaultCC': '',
                         'hideFromForm': True,}
                 )

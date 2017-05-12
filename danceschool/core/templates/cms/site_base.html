@@ -66,13 +66,11 @@
 
       {% cms_toolbar %}
 
-      <div class="container" id="wrapper">
+      {% block navbar %}
+          {% show_menu 0 100 100 100 "cms/navbar.html" %}
+      {% endblock %}
 
-          {% block navbar %}
-            <ul>
-                {% show_menu 0 100 100 100 "cms/navbar.html" %}
-            </ul>
-          {% endblock %}
+      <div class="container" id="wrapper">
 
           {% block main %}
             {# Default to a single column page #}
@@ -81,6 +79,9 @@
             {% placeholder "content" %}
             </div>
             {% endblock %}
+
+            {% block footer %}{% endblock %}
+
           {% endblock %}
 
       </div>
