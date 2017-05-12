@@ -12,7 +12,6 @@ import readline
 from six.moves import input
 from importlib import import_module
 
-
 class Command(BaseCommand):
     help = 'Easy-install setup script for new dance schools'
 
@@ -233,6 +232,7 @@ Remember, you can always rename these initial values or add/delete dance levels 
 
         self.stdout.write(
             """
+
 ROLES
 -----
 
@@ -314,6 +314,7 @@ in an automated way. In particular, it is possible for expense items related to 
 and venue rental to be automatically generated when a series ends, and it is possible for
 revenue items related to registrations to be automatically generated as well.  However,
 if you do not want these features, then you may disable them below.
+
                 """
             )
 
