@@ -18,7 +18,7 @@
         {{ teacher.firstName }} {{ teacher.lastName }}
         {% if teacher.availableForPrivates %}<small><a href="mailto:{{ teacher.publicEmail }}">schedule a private</a></small>{% endif %}
     </h3>
-    <img class="pull-left instructor-bio-photo" src="{% if teacher.image %}{% thumbnail teacher.image 133x133 crop %}{% endif %}" width="133" />
+    <img class="pull-left instructor-bio-photo" src="{% if teacher.image %}{% if thumbnail %}{{ teacher.image|thumbnail_url:thumbnail.name }}{% else %}{% thumbnail teacher.image 133x133 crop %}{% endif %}{% endif %}" width="{{ thumbnail.width|default:'133' }}" />
     <div class="post-body">
         {% render_model teacher "bio" "" "" "safe" %}
     </div>

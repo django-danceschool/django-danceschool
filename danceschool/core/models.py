@@ -1518,18 +1518,19 @@ class InstructorListPluginModel(CMSPlugin):
     photoRequired = models.BooleanField(verbose_name=_('Exclude instructors with no photo'),default=False)
     activeUpcomingOnly = models.BooleanField(verbose_name=_('Include only instructors with upcoming classes'),default=False)
 
-    template = models.CharField(max_length=250,null=True,blank=True)
+    title = models.CharField(verbose_name=_('Listing Title'),max_length=200,null=True,blank=True)
+    template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
 
 
 class LocationListPluginModel(CMSPlugin):
     ''' A model for listing of all active locations '''
-    template = models.CharField(max_length=250,null=True,blank=True)
+    template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
 
 
 class LocationPluginModel(CMSPlugin):
     ''' Individual location directions, etc. use this view '''
-    location = models.ForeignKey(Location)
-    template = models.CharField(max_length=250,null=True,blank=True)
+    location = models.ForeignKey(Location,verbose_name=_('Location'))
+    template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
 
 
 class EventListPluginModel(CMSPlugin):

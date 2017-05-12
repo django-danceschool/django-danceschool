@@ -54,8 +54,11 @@ class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
             listing = listing.order_by('lastName','firstName')
 
         context.update({
+            'list_title': instance.title,
             'instructor_list': listing,
+            'thumbnail': instance.imageThumbnail,
         })
+
         return context
 
 
