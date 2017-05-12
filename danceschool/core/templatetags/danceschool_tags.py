@@ -6,6 +6,7 @@ from calendar import month_name, day_name
 from polymorphic.query import PolymorphicQuerySet
 
 from danceschool.core.models import Event, DanceRole, Instructor, Location
+from danceschool.core.constants import getConstant
 
 # This is needed to register all the tags
 register = template.Library()
@@ -36,6 +37,14 @@ def readable_weekday(weekday):
     except:
         return None
 
+
+@register.simple_tag
+def getSchoolName():
+    '''
+    For easily retrieving the school name without overriding templates,
+    such as in the default navbar template.
+    '''
+    return getConstant('contact__businessName')
 
 # This one is only used for the series registration check-in page
 @register.simple_tag

@@ -200,7 +200,18 @@ Basic Installation Process
 
        python manage.py createsuperuser
 
-8. Run the server and try to log in!
+8. **Optional, but strongly recommended:** Run the easy-installer setup
+   script, and follow all prompts.  This script will guide you through
+   the process of setting initial values for many things, creating a few
+   initial pages that many school use, and setting up user groups and
+   permissions that will make it easier for you to get started running
+   your dance school right away.
+
+   ::
+
+       python manage.py setupschool
+
+9. Run the server and try to log in!
 
    ::
 
@@ -209,7 +220,7 @@ Basic Installation Process
 Settings Customization and Production Deployment
 ------------------------------------------------
 
-After performing steps 1-8 above, you should have a working instance of
+After performing steps 1-7 above, you should have a working instance of
 the danceschool project. However, in order to make the site usable for
 your purposes, you will, at a minimum, need to do some basic setting of
 settings and preferences
@@ -249,7 +260,9 @@ Customizing runtime settings is even easier. Simply log in as the
 superuser account that you previously created, and go to
 http://yoursite/settings/global/. There, you will see organized pages in
 which you can change runtime settings associated with various functions
-of the site.
+of the site.  If you have run the ``setupschool`` command as instructed
+in step 8 above, you will find that all of the most important runtime
+settings have already been put into place for you.
 
 Email Settings
 ~~~~~~~~~~~~~~
