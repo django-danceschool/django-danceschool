@@ -11,7 +11,7 @@ from calendar import month_name
 from datetime import datetime, timedelta
 import json
 from urllib.parse import unquote_plus
-from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, CsrfExemptMixin, LoginRequiredMixin
+from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin
 from cms.constants import RIGHT
 
 from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, Instructor
@@ -189,9 +189,96 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 # Email view function and form
 
 
-class SendEmailView(CsrfExemptMixin, AdminSuccessURLMixin, PermissionRequiredMixin, UserFormKwargsMixin, FormView):
+class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, TemplateView):
+    permission_required = 'core.send_email'
+    template_name = 'core/email_confirmation_page.html'
+
+    def get(self, request, *args, **kwargs):
+        self.form_data = request.session.get(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),{}).get('form_data',{})
+        if not self.form_data:
+            return HttpResponseRedirect(reverse('emailStudents'))
+        if request.GET.get('confirmed','').lower() == 'true':
+            return self.send_email()
+        return super(EmailConfirmationView,self).get(request, *args, **kwargs)
+
+    def send_email(self):
+        subject = self.form_data['subject']
+        message = self.form_data['message']
+        from_name = self.form_data['from_name']
+        from_address = self.form_data['from_address']
+        cc_myself = self.form_data['cc_myself']
+        month = self.form_data['month']
+        series = self.form_data['series']
+        testemail = self.form_data['testemail']
+
+        events_to_send = []
+        if month is not None and month != '':
+            events_to_send += Series.objects.filter(month=datetime.strptime(month,'%m-%Y').month, year=datetime.strptime(month,'%m-%Y').year)
+        if series not in [None,'',[],['']]:
+            events_to_send += [Event.objects.get(id=x) for x in series]
+
+        # We always call one email per series so that the series-level tags
+        # can be passed.
+        for s in events_to_send:
+            emails = []
+            cc = []
+            if cc_myself:
+                cc.append(from_address)
+
+            regs = EventRegistration.objects.filter(event=s)
+            for r in regs:
+                emails.append(r.customer.email)
+
+            bcc = [getConstant('email__defaultEmailFrom')]
+
+            if testemail:
+                message = str(_('Test email from %s to be sent to: ' % from_address)) + '\n\n'
+                message += ', '.join(bcc) + ', '.join(emails) + '\n\n'
+                message += str(_('Email body:')) + '\n\n' + message
+                bcc = []
+
+            renderEmail(subject,message,from_address,from_name,cc=cc,to=[],bcc=bcc,eventregistrations=regs,event=s)
+
+        self.request.session.pop(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),None)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_context_data(self,**kwargs):
+        context = super(EmailConfirmationView,self).get_context_data(**kwargs)
+        context.update(self.form_data)
+
+        month = self.form_data['month']
+        series = self.form_data['series']
+        from_address = self.form_data['from_address']
+        cc_myself = self.form_data['cc_myself']
+
+        events_to_send = []
+        if month is not None and month != '':
+            events_to_send += Series.objects.filter(month=datetime.strptime(month,'%m-%Y').month, year=datetime.strptime(month,'%m-%Y').year)
+        if series not in [None,'',[],['']]:
+            events_to_send += [Event.objects.get(id=x) for x in series]
+
+        # We always call one email per series so that the series-level tags
+        # can be passed.
+        regs = EventRegistration.objects.filter(event__in=events_to_send)
+
+        emails = [r.customer.email for r in regs]
+        cc = []
+        if cc_myself:
+            cc = from_address
+        bcc = [getConstant('email__defaultEmailFrom')]
+
+        context.update({
+            'events_to_send': events_to_send,
+            'to': emails,
+            'cc': cc,
+            'bcc': bcc,
+        })
+
+        return context
+
+
+class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
     form_class = EmailContactForm
-    error_url = '/admin/'
     permission_required = 'core.send_email'
     template_name = 'cms/forms/display_form_classbased_admin.html'
 
@@ -234,6 +321,18 @@ class SendEmailView(CsrfExemptMixin, AdminSuccessURLMixin, PermissionRequiredMix
         kwargs.update({"months": self.months, "recentseries": self.recentseries})
         return kwargs
 
+    def get_initial(self):
+        '''
+        If the user already submitted the form and decided to return from the
+        confirmation page, then re-populate the form
+        '''
+        initial = super(SendEmailView,self).get_initial()
+
+        form_data = self.request.session.get(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),{}).get('form_data',{})
+        if form_data:
+            initial.update(form_data)
+        return initial
+
     def get_context_data(self,**kwargs):
         context = super(SendEmailView,self).get_context_data(**kwargs)
 
@@ -244,44 +343,9 @@ class SendEmailView(CsrfExemptMixin, AdminSuccessURLMixin, PermissionRequiredMix
         return context
 
     def form_valid(self, form):
-        subject = form.cleaned_data['subject']
-        message = form.cleaned_data['message']
-        from_name = form.cleaned_data['from_name']
-        from_address = form.cleaned_data['from_address']
-        cc_myself = form.cleaned_data['cc_myself']
-        month = form.cleaned_data['month']
-        series = form.cleaned_data['series']
-        testemail = form.cleaned_data['testemail']
-
-        events_to_send = []
-        if month is not None and month != '':
-            events_to_send += Series.objects.filter(month=datetime.strptime(month,'%m-%Y').month, year=datetime.strptime(month,'%m-%Y').year)
-        if series not in [None,'',[],['']]:
-            events_to_send += [Event.objects.get(id=x) for x in series]
-
-        # We always call one email per series so that the series-level tags
-        # can be passed.
-        for s in events_to_send:
-            emails = []
-            cc = []
-            if cc_myself:
-                cc.append(from_address)
-
-            regs = EventRegistration.objects.filter(event=s)
-            for r in regs:
-                emails.append(r.customer.email)
-
-            bcc = [getConstant('email__defaultEmailFrom')]
-
-            if testemail:
-                message = str(_('Test email from %s to be sent to: ' % from_address)) + '\n\n'
-                message += ', '.join(bcc) + ', '.join(emails) + '\n\n'
-                message += str(_('Email body:')) + '\n\n' + message
-                bcc = []
-
-            renderEmail(subject,message,from_address,from_name,cc=cc,to=[],bcc=bcc,eventregistrations=regs,event=s)
-
-        return HttpResponseRedirect(self.get_success_url())
+        ''' Pass form data to the confirmation view '''
+        self.request.session[getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView')] = {'form_data': form.cleaned_data}
+        return HttpResponseRedirect(reverse('emailConfirmation'))
 
 
 ############################################

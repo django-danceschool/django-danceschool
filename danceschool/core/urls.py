@@ -2,7 +2,7 @@ from django.conf.urls import url
 from django.contrib import admin
 
 from .feeds import EventFeed, json_event_feed
-from .views import InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, SendEmailView, SubstituteReportingView, InstructorBioChangeView, AccountProfileView, OtherAccountProfileView
+from .views import InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, EmailConfirmationView, SendEmailView, SubstituteReportingView, InstructorBioChangeView, AccountProfileView, OtherAccountProfileView
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
 from .autocomplete_light_registry import CustomerAutoComplete, UserAutoComplete
 
@@ -18,6 +18,7 @@ urlpatterns = [
 
     url(r'^staff/directory/$',StaffDirectoryView.as_view(),name='staffDirectory'),
     url(r'^staff/sendemail/$', SendEmailView.as_view(),name='emailStudents'),
+    url(r'^staff/sendemail/confirm/$', EmailConfirmationView.as_view(),name='emailConfirmation'),
     url(r'^staff/substitute/$', SubstituteReportingView.as_view(),name='substituteTeacherForm'),
 
     # These provide the ability to view one's own stats or another instructor's stats
