@@ -59,6 +59,8 @@ class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
             'thumbnail': instance.imageThumbnail,
         })
 
+        if instance.imageThumbnail:
+            context['thumbnail_dimensions'] = '%sx%s' % (instance.imageThumbnail.width, instance.imageThumbnail.height)
         return context
 
 
