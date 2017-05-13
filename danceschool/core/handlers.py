@@ -70,7 +70,7 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
 
     customer = registration.customer
 
-    verified_email = EmailAddress.filter(
+    verified_email = EmailAddress.objects.filter(
         email=customer.email,
         verified=True,
         primary=True,

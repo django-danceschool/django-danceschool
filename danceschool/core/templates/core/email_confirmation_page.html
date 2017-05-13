@@ -6,13 +6,13 @@
 
 	<p>Please confirm the following before sending:</p>
 
-	<div class="panel pabel-default">
+	<div class="panel panel-default">
 	<div class="panel-heading">Content</div>
 	<div class="panel-body">
 
 		{% if testemail %}<h3>Test Email (No Recipients)</h3> <hr />{% endif %}
-		<h4>From: {{ from_name }} &lt;{{ from_address }}&gt;</h4>
-		<h4>Subject: {{ subject }}</h4>
+		<h3>From: {{ from_name }} &lt;{{ from_address }}&gt;</h3>
+		<h3>Subject: {{ subject }}</h3>
 
 		<h4>Message:</h4>
 		<div class="well">{{ message }}</div>
@@ -21,33 +21,45 @@
 	<div class="panel-heading">Recipients</div>
 	<div class="panel-body">
 
-		<h5>
+		<h4>
 			{% if month and not series %}
 				Events in {{ month }}:
 			{% else %}
 				Students Registered for Events:
 			{% endif %}
-		</h5>
-		{% for s in events_to_send %}
-			{{ s.name }}<br />
-		{% endfor %}
-
+		</h4>
+		<ul>
+			{% for s in events_to_send %}
+				<li>{{ s.name }}</li>
+			{% endfor %}
+		</ul>
 		<a class="btn btn-default" data-toggle="collapse" href="#recipients_detail">Show Detailed Recipients &raquo;</a>
 
 	</div>
 	<div class="panel-body panel-collapse collapse" id="recipients_detail">
 				
-		<h5>CC:</h5>
-		{{ cc|join:"<br />" }}
+		<h4>CC:</h4>
+		<ul>
+		{% for item in cc %}
+			<li>{{ item }}</li>
+		{% endfor %}
+		</ul>
 
-		<h5>BCC:</h5>
-		{{ bcc|join:"<br />" }}
-		{{ emails|join:"<br />" }}
+		<h4>BCC:</h4>
+		<ul>
+		{% for item in bcc %}
+			<li>{{ item }}</li>
+		{% endfor %}
+		{% for item in emails %}
+			<li>{{ item }}</li>
+		{% endfor %}
+		</ul>
+
 
 	</div>
 	</div>
 
 	<a class="btn btn-success" href="?confirmed=True">Send Emails</a>
-	<a class="btn btn-success" href="{% url 'emailStudents' %}">Return To Form</a>
+	<a class="btn btn-default" href="{% url 'emailStudents' %}">Return To Form</a>
 
 {% endblock %}

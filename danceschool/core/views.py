@@ -296,12 +296,12 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         emails = [r.customer.email for r in regs]
         cc = []
         if cc_myself:
-            cc = from_address
+            cc.append(from_address)
         bcc = [getConstant('email__defaultEmailFrom')]
 
         context.update({
             'events_to_send': events_to_send,
-            'to': emails,
+            'emails': emails,
             'cc': cc,
             'bcc': bcc,
         })

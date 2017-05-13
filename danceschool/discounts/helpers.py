@@ -44,8 +44,9 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
     # of cart items with one entry per point, not just one entry per cart item
     pointbased_cart_object_list = []
     for cart_item in cart_object_list:
-        for y in range(0,cart_item.event.pricingTier.pricingtiergroup.points or 0):
-            pointbased_cart_object_list += [cart_item]
+        if hasattr(cart_item.event.pricingTier,'pricingtiergroup'):
+            for y in range(0,cart_item.event.pricingTier.pricingtiergroup.points or 0):
+                pointbased_cart_object_list += [cart_item]
     pointbased_cart_object_list.sort(key=lambda x: x.event.pricingTier.pricingtiergroup.points, reverse=True)
 
     # Look for exact match. If multiple are found, return them all.
