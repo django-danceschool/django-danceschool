@@ -1,0 +1,45 @@
+{% load sekizai_tags static %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+<h2>Characteristics of Series Registrations</h2>
+
+<p>This chart indicates the proportion of series registrations that receive the student discount, the proportion of series registrations that are paid for at the door, etc.</p>
+
+<div id="RegistrationTypeAverages"></div>
+
+
+{% addtoblock "js" %}
+  <script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  var registrationTypeAveragesChart = c3.generate({
+      bindto: '#RegistrationTypeAverages',
+    data: {
+      url: "{% url 'RegistrationTypeAveragesJSON' %}",
+      mimeType: 'json',
+      type: 'bar',
+      hide: ['DropIn','Cancelled'],
+      keys: {
+        x: 'year',
+        value: ['Student','Door','DropIn','Cancelled']
+      }
+    },
+    axis: {
+        x: {
+            type: 'category', // this needed to load string x value
+        },
+    }
+  });
+
+});
+</script>
+{% endaddtoblock %}

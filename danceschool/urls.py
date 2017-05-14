@@ -1,6 +1,7 @@
 from django.conf.urls import include, url
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.sitemaps.views import sitemap
+from django.apps import apps
 
 from cms.sitemaps import CMSSitemap
 
@@ -32,12 +33,20 @@ urlpatterns = [
     # For better authentication
     url(r'^accounts/', include('allauth.urls')),
 
-    # The URLS associated with all built-in functionality. Notice that the CMS URLs go last,
-    # because they will match any pattern that has not already been matched.
+    # The URLS associated with all built-in core functionality.
     url(r'^', include('danceschool.core.urls')),
     url(r'^register/', include('danceschool.core.urls_registration')),
-    url(r'^paypal/', include('danceschool.paypal.urls')),
-    url(r'^financial/', include('danceschool.financial.urls')),
-    url(r'^private_events/', include('danceschool.private_events.urls')),
-    url(r'^', include('cms.urls')),
 ]
+
+# If additional danceschool apps are installed, automatically add those URLs as well.
+if apps.is_installed('danceschool.paypal'):
+    urlpatterns.append(url(r'^paypal/', include('danceschool.paypal.urls')),)
+
+if apps.is_installed('danceschool.financial'):
+    urlpatterns.append(url(r'^financial/', include('danceschool.financial.urls')),)
+
+if apps.is_installed('danceschool.private_events'):
+    urlpatterns.append(url(r'^private_events/', include('danceschool.private_events.urls')),)
+
+# CMS URLs always go last because they will match any pattern that has not already been matched.
+urlpatterns.append(url(r'^', include('cms.urls')),)

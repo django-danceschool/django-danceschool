@@ -12,6 +12,7 @@ import readline
 from six.moves import input
 from importlib import import_module
 
+
 class Command(BaseCommand):
     help = 'Easy-install setup script for new dance schools'
 
@@ -77,7 +78,7 @@ class Command(BaseCommand):
 
         from cms.api import create_page, add_plugin, publish_page
         from cms.constants import VISIBILITY_ANONYMOUS
-        from cms.models import Page
+        from cms.models import Page, StaticPlaceholder
 
         prefs = global_preferences_registry.manager()
 
@@ -270,6 +271,9 @@ an automatic discount of $10, so prices are $40 and $50, respectively.  Then, we
 use the discounts app to provide further discounts for students who register for
 more than one class at a time, etc.
 
+Remember, you can always modify, add or delete pricing tiers from the admin
+interface after completing this setup.
+
             """
         )
 
@@ -315,13 +319,39 @@ and venue rental to be automatically generated when a series ends, and it is pos
 revenue items related to registrations to be automatically generated as well.  However,
 if you do not want these features, then you may disable them below.
 
+If you enable auto-generation of staff expenses, you will also be asked about default
+rates of compensation for instructors and other staff.  You may always change these
+values by editing the rate in the appropriate Expense Category in the admin interface.
+
                 """
             )
 
             generate_staff = self.boolean_input('Auto-generate staff expense items for completed events [Y/n]', True)
             prefs['financial__autoGenerateExpensesCompletedEvents'] = generate_staff
 
-            generate_venue = self.boolean_input('Auto-generate venue expense items for completed events [Y/n]', True)
+            if generate_staff:
+                instruction_cat_id = prefs.get('financial__classInstructionExpenseCatID',None)
+                assistant_cat_id = prefs.get('financial__assistantClassInstructionExpenseCatID',None)
+                other_cat_id = prefs.get('financial__otherStaffExpenseCatID',None)
+
+                financial_models = import_module('danceschool.financial.models')
+
+                if instruction_cat_id:
+                    instruction_cat = financial_models.ExpenseCategory.objects.get(pk=instruction_cat_id)
+                    instruction_cat.defaultRate = self.float_input('Default compensation rate for class instruction [0]',default=0)
+                    instruction_cat.save()
+
+                if assistant_cat_id:
+                    assistant_cat = financial_models.ExpenseCategory.objects.get(pk=assistant_cat_id)
+                    assistant_cat.defaultRate = self.float_input('Default compensation rate for assistant instructors [0]',default=0)
+                    assistant_cat.save()
+
+                if other_cat_id:
+                    other_cat = financial_models.ExpenseCategory.objects.get(pk=other_cat_id)
+                    other_cat.defaultRate = self.float_input('Default compensation rate for other event-related staff expenses [0]',default=0)
+                    other_cat.save()
+
+            generate_venue = self.boolean_input('Auto-generate hourly venue rental expense items for completed events [Y/n]', True)
             prefs['financial__autoGenerateExpensesVenueRental'] = generate_venue
 
             generate_registration = self.boolean_input('Auto-generate registration revenue items for registrations [Y/n]', True)
@@ -357,7 +387,7 @@ Remember, all page settings and content can be changed later via the admin inter
 
         add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
         if add_registration_link:
-            create_page(
+            registration_link_page = create_page(
                 'Registration', 'cms/home.html', initial_language,
                 menu_title='Register', slug='register', overwrite_url=reverse('registration'), in_navigation=True, published=True
             )
@@ -415,6 +445,31 @@ Remember, all page settings and content can be changed later via the admin inter
                     menu_title='News', apphook='NewsApphook', in_navigation=True, published=True)
                 self.stdout.write('News page added.\n')
 
+        if apps.is_installed('danceschool.stats'):
+            add_stats_page = self.boolean_input('Add a private school stats page and add default graphs [Y/n]', True)
+            if add_stats_page:
+                stats_page = create_page(
+                    'School Performance Stats', 'cms/admin_home.html', initial_language,
+                    menu_title='Stats', slug='stats', apphook='StatsApphook', in_navigation=False, published=False)
+                sp = StaticPlaceholder.objects.get_or_create(code='stats_graphs')
+                stats_placeholder = sp[0].draft
+                stats_placeholder_public = sp[0].public
+
+                template_list = [
+                    'stats/schoolstats_timeseriesbymonth.html',
+                    'stats/schoolstats_averagebyclasstype.html',
+                    'stats/schoolstats_averagebyclasstypemonth.html',
+                    'stats/schoolstats_cohortretention.html',
+                    'stats/schoolstats_averagesbylocation.html',
+                    'stats/schoolstats_registrationtypes.html',
+                    'stats/schoolstats_referralcounts.html',
+                ]
+                for template in template_list:
+                    add_plugin(stats_placeholder, 'StatsGraphPlugin', initial_language, template=template)
+                    add_plugin(stats_placeholder_public, 'StatsGraphPlugin', initial_language, template=template)
+                publish_page(stats_page, this_user, initial_language)
+                self.stdout.write('School performance stats page added.\n')
+
         add_login_link = self.boolean_input('Add login link to the main navigation bar [Y/n]', True)
         if add_login_link:
             create_page(
@@ -423,6 +478,24 @@ Remember, all page settings and content can be changed later via the admin inter
                 in_navigation=True, limit_visibility_in_menu=VISIBILITY_ANONYMOUS, published=True
             )
             self.stdout.write('Login link added.\n')
+
+        if apps.is_installed('danceschool.paypal'):
+            add_paypal_paynow = self.boolean_input('Add Paypal Pay Now link to the registration summary view to allow students to pay [Y/n]', True)
+            if add_paypal_paynow:
+                paynow_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
+                paynow_p_draft = paynow_sp[0].draft
+                paynow_p_public = paynow_sp[0].public
+                add_plugin(
+                    paynow_p_draft, 'CartPaymentFormPlugin', initial_language,
+                    successPage=home_page,
+                    cancellationPage=registration_link_page,
+                )
+                add_plugin(
+                    paynow_p_public, 'CartPaymentFormPlugin', initial_language,
+                    successPage=home_page,
+                    cancellationPage=registration_link_page,
+                )
+            self.stdout.write('Paypal Pay Now link added.  You will still need to add Paypal credentials to settings before use.')
 
         self.stdout.write(
             """

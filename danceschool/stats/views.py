@@ -3,10 +3,9 @@ from django.db.models import Count
 
 from datetime import datetime
 import six
-from dateutil.relativedelta import relativedelta
 from braces.views import PermissionRequiredMixin
 
-from danceschool.core.models import Series, Instructor, SeriesTeacher, Customer
+from danceschool.core.models import Instructor, SeriesTeacher, Customer
 
 if six.PY3:
     # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
@@ -30,24 +29,6 @@ class SchoolStatsView(PermissionRequiredMixin, TemplateView):
 
         mostActiveTeachersThisYear = SeriesTeacher.objects.filter(event__year=datetime.now().year).exclude(staffMember__instructor__status=Instructor.InstructorStatus.guest).values_list('staffMember__firstName','staffMember__lastName').annotate(Count('staffMember')).order_by('-staffMember__count')
 
-        # Javascript makes it difficult to calculate date/time differences, so instead
-        # pass the most useful ones to the template context in a dictionary.  These are used
-        # to show stats over different time ranges.
-        limitMonthDates = {}
-        for m in range(0,25):
-            limitMonthDates[m] = (datetime.now() - relativedelta(months=m)).strftime('%Y-%m-%d')
-
-        # The same for graphs that allow one to choose different years.
-        recentYears = [datetime.now().year + x for x in range(-5,1)]
-
-        series_by_year = Series.objects.order_by('year')
-
-        if series_by_year.count() > 0:
-            first_year = series_by_year.first().year
-            allYears = [x for x in range(first_year,datetime.now().year + 1)]
-        else:
-            allYears = []
-
         context_data.update({
             'totalStudents':totalStudents,
             'numSeries':numSeries,
@@ -56,8 +37,5 @@ class SchoolStatsView(PermissionRequiredMixin, TemplateView):
             'bestCustomersAllTime': bestCustomersAllTime,
             'bestCustomersLastTwelveMonths': bestCustomersLastTwelveMonths,
             'mostActiveTeachersThisYear': mostActiveTeachersThisYear,
-            'limitMonthDates': limitMonthDates,
-            'recentYears': recentYears,
-            'allYears': allYears,
         })
         return context_data

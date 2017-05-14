@@ -1,0 +1,69 @@
+{% load sekizai_tags static %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+
+<h2>Performance by Class Type
+  <a class="btn btn-xs btn-default" href="{% url 'AveragesByClassTypeCSV' %}">Download Data</a>
+</h2>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active classTypeButton">Last 12 Months</button>
+  <button type="button" class="btn btn-default classTypeButton">All Time</button>
+</div>
+
+<div id="ClassTypePerformance"></div>
+
+
+{% addtoblock "js" %}
+  <script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  var avgAttendanceChart = c3.generate({
+      bindto: '#ClassTypePerformance',
+    data: {
+      url: "{% url 'AveragesByClassTypeJSON' %}?startDate={{ limitMonthDates.12 }}",
+      mimeType: 'json',
+      type: 'bar',
+      hide: ['registrations','leads','follows','avgLeads','avgFollows'],
+      keys: {
+        x: 'type',
+        value: ['series','registrations','leads','follows','avgRegistrations','avgLeads','avgFollows'],
+      }
+    },
+    axis: {
+        x: {
+            type: 'category' // this needed to load string x value
+        }
+    }
+  });
+
+  $('.classTypeButton').click(function(){
+      var startDate = $(this).attr('data-startDate');
+
+      avgAttendanceChart.load({
+        url: "{% url 'AveragesByClassTypeJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        type: 'bar',
+        hide: ['registrations','leads','follows','avgLeads','avgFollows'],
+        keys: {
+          x: 'type',
+          value: ['series','registrations','leads','follows','avgRegistrations','avgLeads','avgFollows'],
+        }
+      });
+
+      $('.classTypeButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+});
+</script>
+{% endaddtoblock %}

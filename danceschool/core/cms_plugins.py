@@ -1,4 +1,3 @@
-from django.forms import ModelForm, ChoiceField
 from django.utils.translation import ugettext_lazy as _
 
 from cms.plugin_base import CMSPluginBase

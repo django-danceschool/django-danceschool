@@ -1,0 +1,82 @@
+{% load sekizai_tags static %}
+
+{% addtoblock "css" %}
+  <style type="text/css" scoped>
+    .c3-line-MonthlyAverage {
+        stroke-width: 3px;
+    }
+  </style>
+{% endaddtoblock %}
+{% addtoblock "css" %}
+  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+<h2>Students By Month of the Year
+  <a class="btn btn-xs btn-default" href="{% url 'MonthlyPerformanceCSV' %}">Download Data</a>
+</h2>
+
+<p>Which months of the year are the most successful for us?  Click the legend at the bottom to show/hide previous years.</p>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" data-series="SeriesRegistrations" class="btn btn-default active monthlyPerformanceButton">Total Series Registrations</button>
+  <button type="button" data-series="Registrations" class="btn btn-default monthlyPerformanceButton">Total Registrations (unique students)</button>
+  <button type="button" data-series="Hours" class="btn btn-default monthlyPerformanceButton">Total Hours of Class</button>
+  <button type="button" data-series="StudentHours" class="btn btn-default monthlyPerformanceButton">Total Student-Hours</button>  
+  <button type="button" data-series="AvgStudents" class="btn btn-default monthlyPerformanceButton">Avg. Students/Hour</button>
+</div>
+
+
+<div id="MonthlyPerformance"></div>
+
+
+{% addtoblock "js" %}
+  <script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  // Create the base monthly performance chart, then load the JSON data in
+  var monthlyPerformanceChart = c3.generate({
+    bindto: '#MonthlyPerformance',
+    data: {
+      url: "{% url 'MonthlyPerformanceJSON' %}",
+      mimeType: 'json',
+      hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
+      keys: {
+        x: 'month_name',
+        value: ['MonthlyAverage',{{ allYears|join:"," }}]
+      }
+    },
+    axis: {
+      x: {
+        type: 'category' // this needed to load string x value
+      }
+    }
+  });
+
+
+  $('.monthlyPerformanceButton').click(function(){
+    var series = $(this).attr('data-series')
+
+    monthlyPerformanceChart.load({
+        unload: true,
+        url: "{% url 'MonthlyPerformanceJSON' %}?series=" + series,
+        mimeType: 'json',
+        hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
+        keys: {
+          x: 'month_name',
+          value: ['MonthlyAverage',{{ allYears|join:"," }}]
+        }
+    });
+
+    $('.monthlyPerformanceButton').removeClass('active');
+    $(this).addClass('active');
+
+  });
+});
+</script>
+{% endaddtoblock %}

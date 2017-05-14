@@ -1,0 +1,90 @@
+{% load sekizai_tags static %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+
+<h2>Performance by Class Type and Month (Student-Hours)</h2>
+
+<div class="btn-group" role="group" aria-label="...">
+  {% for prior_year in recentYears reversed %}
+    <button type="button" data-year="{{ prior_year }}" class="btn btn-default {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
+  {% endfor %}
+</div>
+
+<div id="ClassTypeMonthlyPerformance"></div>
+
+
+{% addtoblock "js" %}
+  <script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  // This function allows the classTypeMonthly chart to dynamically
+  // update which series are displayed.
+  function getClassTypeMonthlyJSON(url) {
+    d3.json(url, function(data) {
+        var keys = Object.keys(data[0]);
+        keys.splice(keys.indexOf("month_name"),1);
+        keys.splice(keys.indexOf("month"),1);
+
+        // Get totals for sorting of keys
+        var totals = $.grep(data, function(e){ 
+             return e.month == "Totals"; 
+        });
+
+        // Remove Totals from final data
+        var data = $.grep(data, function(e){ 
+             return e.month != "Totals"; 
+        });
+
+        // Sort the keys in reverse by the annual totals
+        keys.sort(function(a,b) {
+            var totalA = totals[0][a];
+            var totalB = totals[0][b];
+
+            if (totalA > totalB) return -1;
+            if (totalA < totalB) return 1;
+            return 0;
+        });
+
+        var classTypeMonthlyChart = c3.generate({
+            bindto: '#ClassTypeMonthlyPerformance',
+          data: {
+            json: data,
+            type: 'bar',
+            keys: {
+              x: 'month_name',
+                value: keys,
+            }
+          },
+          axis: {
+              x: {
+                  type: 'category' // this needed to load string x value
+              }
+          }
+        });
+    });
+
+  }
+
+  getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours");
+
+  $('.classTypeMonthlyButton').click(function(){
+      var year = $(this).attr('data-year');
+      
+      getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours&year=" + year);
+
+      $('.classTypeMonthlyButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+});
+</script>
+{% endaddtoblock %}

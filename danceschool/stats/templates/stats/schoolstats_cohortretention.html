@@ -1,0 +1,82 @@
+{% load sekizai_tags static %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+<h2>Number of Classes Taken By Starting Cohort</h2>
+
+<p>How many people decide to progress beyond beginner and how many students stick with us a while?
+Note that students are not classified as leaders or follower in the data, so a student who takes
+classes in both roles will show up in both series depending on the number of series they've taken in
+each.</p>
+
+<div class="btn-group" role="group" aria-label="...">
+  <button type="button" class="btn btn-default active studentRetentionButton">All Students</button>
+  {% for prior_year in recentYears %}
+    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-default studentRetentionButton">{{ prior_year }} Cohort</button>
+  {% endfor %}
+</div>
+
+<div id="totalClassesTaken"></div>
+
+
+{% addtoblock "js" %}
+  <script src="{% static 'js/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'js/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  var totalClassesTakenChart = c3.generate({
+      bindto: '#totalClassesTaken',
+    data: {
+      url: "{% url 'ClassCountHistogramJSON' %}",
+      mimeType: 'json',
+      x: '# of Classes',
+      type: 'bar',
+      hide: ['# Students','# Leaders','# Followers'],
+      keys: {
+        x: 'bin_label',
+        value: ['# Students','# Leaders','# Followers', 'Pct. Students','Pct. Leaders','Pct. Followers'],
+      }
+    },
+    axis: {
+        x: {
+            type: 'category' // this needed to load string x value
+        }
+    },
+    bar: {
+    width: {
+      ratio: 0.8
+    }
+  }
+  });
+
+  $('.studentRetentionButton').click(function() {
+      var cohortStart = $(this).attr('data-cohortStart');
+      var cohortEnd = $(this).attr('data-cohortEnd');
+
+      totalClassesTakenChart.load({
+        unload: true,
+        url: "{% url 'ClassCountHistogramJSON' %}?cohortStart=" + cohortStart + "&cohortEnd=" + cohortEnd,
+        mimeType: 'json',
+        x: '# of Classes',
+        type: 'bar',
+        hide: ['# Students','# Leaders','# Followers'],
+        keys: {
+          x: 'bin_label',
+          value: ['# Students','# Leaders','# Followers', 'Pct. Students','Pct. Leaders','Pct. Followers'],
+        }
+      });
+
+      $('.studentRetentionButton').removeClass('active');
+      $(this).addClass('active');
+  });
+
+});
+</script>
+{% endaddtoblock %}
