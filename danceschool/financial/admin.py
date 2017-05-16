@@ -45,7 +45,7 @@ class ExpenseItemAdmin(admin.ModelAdmin):
 
     list_display = ('category','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
-    search_fields = ('description','comments','payToUser__first_name','payToUser__last_name')
+    search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name')
     list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter))
     readonly_fields = ('submissionUser',)
 

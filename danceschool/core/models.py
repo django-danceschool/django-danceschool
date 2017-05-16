@@ -223,6 +223,10 @@ class Instructor(StaffMember):
             self.activeUpcoming
         )
 
+    @property
+    def statusLabel(self):
+        return self.InstructorStatus.values.get(self.status,'')
+
     class Meta:
         permissions = (
             ('update_instructor_bio',_('Can update instructors\' bio information')),
@@ -400,10 +404,14 @@ class Event(PolymorphicModel):
         enabled = ChoiceItem('O',_('Registration enabled'))
         heldClosed = ChoiceItem('K',_('Registration held closed (override default behavior)'))
         heldOpen = ChoiceItem('H',_('Registration held open (override default)'))
+        linkOnly = ChoiceItem('L',_('Registration open, but hidden from registration page and calendar (link required to register)'))
         regHidden = ChoiceItem('C',_('Hidden from registration page and registration closed, but visible on calendar.'))
         hidden = ChoiceItem('X',_('Event hidden and registration closed'))
 
     status = models.CharField(max_length=1,choices=RegStatus.choices,help_text=_('Set the registration status and visibility status of this event.'))
+
+    # The UUID field is used for private registration links
+    uuid = models.UUIDField(_('Unique Link ID'), default=uuid.uuid4, editable=False)
 
     # Although this can be inferred from status, this field is set in the database
     # to allow simpler queryset operations
@@ -695,6 +703,13 @@ class Event(PolymorphicModel):
             self.RegStatus.heldOpen,
         ]
 
+        # If set to these codes, then registration will be open or closed
+        # automatically depending on the value of closeAfterDays
+        automatic_codes = [
+            self.RegStatus.enabled,
+            self.RegStatus.linkOnly,
+        ]
+
         if self.status in force_closed_codes and open is True:
             open = False
             modified = True
@@ -702,12 +717,12 @@ class Event(PolymorphicModel):
             open = True
             modified = True
         elif (
-            startTime and self.status == self.RegStatus.enabled and ((
+            startTime and self.status in automatic_codes and ((
                 self.closeAfterDays and datetime.now() > startTime + timedelta(days=self.closeAfterDays)) or
                 datetime.now() > endTime) and open is True):
                     open = False
                     modified = True
-        elif startTime and self.status == self.RegStatus.enabled and ((
+        elif startTime and self.status in automatic_codes and ((
             datetime.now() < endTime and not self.closeAfterDays) or (
                 self.closeAfterDays and datetime.now() < startTime + timedelta(days=self.closeAfterDays))) and open is False:
                     open = True
@@ -722,7 +737,7 @@ class Event(PolymorphicModel):
         return (modified, open)
 
     def clean(self):
-        if self.status in [Event.RegStatus.enabled, Event.RegStatus.heldOpen] and not self.capacity:
+        if self.status in [Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen] and not self.capacity:
             raise ValidationError(_('If registration is enabled then a capacity must be set.'))
 
     def save(self, fromUpdateRegistrationStatus=False, *args, **kwargs):
@@ -953,6 +968,7 @@ class Series(Event):
 
     @property
     def url(self):
+        if not self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
             return reverse('classView',args=[self.year,month_name[self.month],self.classDescription.slug])
 
     def clean(self):
@@ -1110,6 +1126,7 @@ class PublicEvent(Event):
 
     @property
     def url(self):
+        if not self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
             return reverse('eventView',args=[self.year,month_name[self.month],self.slug])
 
     def __str__(self):

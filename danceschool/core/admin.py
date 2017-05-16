@@ -178,7 +178,7 @@ class RegistrationAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
     list_display = ['customer','dateTime','priceWithDiscount','student','paidOnline']
     list_filter = ['dateTime','student','paidOnline']
-    search_fields = ['customer__first_name','customer__last_name','customer__email']
+    search_fields = ['=customer__first_name','=customer__last_name','customer__email']
     ordering = ('-dateTime',)
     fields = ('customer_link','amountPaid','priceWithDiscount','processingFee','student','paidOnline','dateTime','comments','howHeardAboutUs')
     readonly_fields = ('customer_link',)
@@ -219,7 +219,7 @@ class TemporaryRegistrationAdmin(admin.ModelAdmin):
     inlines = [TemporaryEventRegistrationInline]
 
     list_display = ('__str__','student','dateTime')
-    search_fields = ('firstName','lastName','email')
+    search_fields = ('=firstName','=lastName','email')
     list_filter = ('dateTime',)
 
 
@@ -284,7 +284,7 @@ class CustomerRegistrationInline(admin.StackedInline):
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('__str__','numClassSeries','numPublicEvents')
-    search_fields = ('first_name','last_name','email')
+    search_fields = ('=first_name','=last_name','email')
     readonly_fields = ('data','numClassSeries','numPublicEvents')
 
     fieldsets = (
@@ -350,6 +350,7 @@ class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
     list_display_links = ('fullName',)
     list_editable = ('availableForPrivates','privateEmail','status')
     list_filter = ('status','availableForPrivates')
+    search_fields = ('=firstName','=lastName','publicEmail','privateEmail')
 
     ordering = ('status','lastName','firstName')
 
@@ -376,6 +377,14 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
     Base admin class for all child models
     '''
     base_model = Event
+
+    readonly_fields = ['uuidLink',]
+
+    def uuidLink(self,obj):
+        address = reverse('singleClassRegistration', args=[obj.uuid,])
+        return mark_safe('<a href="%s">%s</a>' % (address, address))
+    uuidLink.short_description = _('Individual Class Registration Link')
+    uuidLink.allow_tags = True
 
     # This is needed so that when an event is created, the year and month
     # are properly set right away.
@@ -455,11 +464,11 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription','location','pricingTier',('special','allowDropins'),)
+            'fields': ('classDescription','location','pricingTier',('special','allowDropins'))
         }),
         (_('Override Display/Registration'), {
             'classes': ('collapse',),
-            'fields': ('status','closeAfterDays'),
+            'fields': ('status','closeAfterDays','uuidLink',),
         }),
         (_('Override Default Capacity/Drop-In Price'), {
             'classes': ('collapse',),

@@ -62,8 +62,10 @@ class EventFeed(ICalFeed):
         item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
 
         if not obj:
-            return [EventFeedItem(x) for x in item_set]
+            # Public calendar does not show hidden Events _or_ link-only registration Events
+            return [EventFeedItem(x) for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
         else:
+            # Private calendars do show link-only registration Events
             return [EventFeedItem(x) for x in item_set.filter(event__eventstaffmember__staffmember__feedKey=obj)]
 
     def item_guid(self,item):
@@ -110,8 +112,10 @@ def json_event_feed(request,instructorFeedKey=''):
     item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(**time_filter_dict_events).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
 
     if not instructorFeedKey:
-        eventlist = [EventFeedItem(x).__dict__ for x in item_set]
+        # Public calendar does not show hidden Events _or_ link-only registration Events
+        eventlist = [EventFeedItem(x).__dict__ for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
     else:
+        # Private calendars do show link-only registration Events
         eventlist = [EventFeedItem(x).__dict__ for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)]
 
     return JsonResponse(eventlist,safe=False)

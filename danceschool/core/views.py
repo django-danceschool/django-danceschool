@@ -64,7 +64,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
             ).order_by('registration__customer__user__first_name','registration__customer__user__last_name'),
         }
         context.update(kwargs)
-        return super(self.__class__,self).get_context_data(**context)
+        return super(EventRegistrationSummaryView,self).get_context_data(**context)
 
 
 class ClassRegistrationReferralView(RedirectView):
@@ -87,7 +87,7 @@ class ClassRegistrationReferralView(RedirectView):
             regSession['marketing_id'] = marketing_id or regSession.get('marketing_id',None)
             self.request.session[settings.REG_VALIDATION_STR] = regSession
 
-        return super(self.__class__,self).get(request,*args,**kwargs)
+        return super(ClassRegistrationReferralView,self).get(request,*args,**kwargs)
 
 
 class ClassRegistrationView(FinancialContextMixin, FormView):
@@ -105,14 +105,14 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
         if not regonline:
             return HttpResponseRedirect(reverse('registrationOffline'))
 
-        return super(self.__class__,self).get(request,*args,**kwargs)
+        return super(ClassRegistrationView,self).get(request,*args,**kwargs)
 
     def get_context_data(self,**kwargs):
         ''' Add the event and series listing data '''
         context = self.get_listing()
         context.update(kwargs)
 
-        return super(self.__class__,self).get_context_data(**context)
+        return super(ClassRegistrationView,self).get_context_data(**context)
 
     def get_form_kwargs(self, **kwargs):
         ''' Tell the form which fields to render '''
@@ -161,32 +161,75 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
     def get_success_url(self):
         return reverse('getStudentInfo')
 
+    def get_allEvents(self):
+        '''
+        Splitting this method out to get the set of events to filter allows
+        one to subclass for different subsets of events without copying other
+        logic 
+        '''
+
+        if not hasattr(self,'allEvents'):
+            # Get the Event listing here to avoid duplicate queries
+            self.allEvents = Event.objects.filter(
+                endTime__gte=datetime.now()
+            ).filter(
+                Q(instance_of=PublicEvent) |
+                Q(instance_of=Series)
+            ).exclude(
+                Q(status=Event.RegStatus.hidden) |
+                Q(status=Event.RegStatus.regHidden) |
+                Q(status=Event.RegStatus.linkOnly)
+            ).order_by('year','month','startTime')
+        return self.allEvents
+
     def get_listing(self):
         '''
-        This function gets all of the information that we need to either render or validate the form
+        This function gets all of the information that we need to either render or
+        validate the form.  It is structured to avoid duplicate DB queries
         '''
-        allEvents = Event.objects.filter(endTime__gte=datetime.now()).filter(Q(instance_of=PublicEvent) | Q(instance_of=Series)).exclude(Q(status=Event.RegStatus.hidden) | Q(status=Event.RegStatus.regHidden)).order_by('year','month','startTime')
+        if not hasattr(self,'listing'):
+            allEvents = self.get_allEvents()
 
-        openEvents = allEvents.filter(registrationOpen=True)
-        closedEvents = allEvents.filter(registrationOpen=False)
+            openEvents = allEvents.filter(registrationOpen=True)
+            closedEvents = allEvents.filter(registrationOpen=False)
 
-        publicEvents = allEvents.instance_of(PublicEvent)
-        allSeries = allEvents.instance_of(Series)
-        regularSeries = allSeries.filter(series__special=False)
+            publicEvents = allEvents.instance_of(PublicEvent)
+            allSeries = allEvents.instance_of(Series)
+            regularSeries = allSeries.filter(series__special=False)
 
-        return {
-            'allEvents': allEvents,
-            'openEvents': openEvents,
-            'closedEvents': closedEvents,
-            'publicEvents': publicEvents,
-            'allSeries': allSeries,
-            'regularSeries': regularSeries,
-            'regOpenEvents': publicEvents.filter(registrationOpen=True),
-            'regClosedEvents': publicEvents.filter(registrationOpen=False),
-            'regOpenSeries': regularSeries.filter(registrationOpen=True),
-            'regClosedSeries': regularSeries.filter(registrationOpen=False),
-            'specialSeries': allSeries.filter(series__special=True,registrationOpen=True),
-        }
+            self.listing = {
+                'allEvents': allEvents,
+                'openEvents': openEvents,
+                'closedEvents': closedEvents,
+                'publicEvents': publicEvents,
+                'allSeries': allSeries,
+                'regularSeries': regularSeries,
+                'regOpenEvents': publicEvents.filter(registrationOpen=True),
+                'regClosedEvents': publicEvents.filter(registrationOpen=False),
+                'regOpenSeries': regularSeries.filter(registrationOpen=True),
+                'regClosedSeries': regularSeries.filter(registrationOpen=False),
+                'specialSeries': allSeries.filter(series__special=True,registrationOpen=True),
+            }
+        return self.listing
+
+
+class SingleClassRegistrationView(ClassRegistrationView):
+    '''
+    This view is called only via a link, and it allows a person to register for a single
+    class without seeing all other classes.
+    '''
+    template_name = 'core/single_event_registration.html'
+
+    def get_allEvents(self):
+        try:
+            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid',''))
+        except ValueError:
+            raise Http404()
+
+        if not self.allEvents:
+            raise Http404()
+
+        return self.allEvents
 
 
 #################################
@@ -509,7 +552,7 @@ class IndividualClassView(FinancialContextMixin, TemplateView):
         except:
             return Http404(_('Invalid month.'))
 
-        seriesset = get_list_or_404(Series,~Q(status=Event.RegStatus.hidden),year=year,month=month_number,classDescription__slug=slug)
+        seriesset = get_list_or_404(Series,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,classDescription__slug=slug)
 
         # This will pass through to the context data by default
         kwargs.update({'seriesset': seriesset})
@@ -539,7 +582,7 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
         except:
             return Http404(_('Invalid month.'))
 
-        eventset = get_list_or_404(PublicEvent,~Q(status=Event.RegStatus.hidden),year=year,month=month_number,slug=slug)
+        eventset = get_list_or_404(PublicEvent,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,slug=slug)
 
         # If an alternative link is given by one or more of these events, then redirect to that.
         overrideLinks = [x.link for x in eventset if x.link]
