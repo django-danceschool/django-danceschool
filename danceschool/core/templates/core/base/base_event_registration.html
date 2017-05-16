@@ -490,236 +490,241 @@
 </div>
 </div>
 
-{% addtoblock "js" %}
-<script type="text/javascript" src="{% static 'js/ekko-lightbox.min.js' %}"></script>
-<script type="text/javascript">
-$(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {
-    event.preventDefault();
-    $(this).ekkoLightbox();
-});
-</script>
-{% endaddtoblock %}
-
-{% addtoblock "js" %}
+{% block content_js %}
+	{% addtoblock "js" %}
+	<script type="text/javascript" src="{% static 'js/ekko-lightbox.min.js' %}"></script>
 	<script type="text/javascript">
-	$( document ).ready(function() {
-		$('.pricingPopover').popover();	
+	$(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {
+	    event.preventDefault();
+	    $(this).ekkoLightbox();
 	});
 	</script>
-{% endaddtoblock %}
-{% addtoblock "css" %}
-	<style type="text/css">
-	/* This CSS is used (and included) only on the class registration page */
+	{% endaddtoblock %}
 
-	/* Registration stuff */
+	{% addtoblock "js" %}
+		<script type="text/javascript">
+		$( document ).ready(function() {
+			$('.pricingPopover').popover();	
+		});
+		</script>
+	{% endaddtoblock %}
+{% endblock %}
 
-	#classes #validation {
-	    color: #db2d25;
-	    font-size: large;
-	}
+{% block content_css %}
+	{% addtoblock "css" %}
+		<style type="text/css">
+		/* This CSS is used (and included) only on the class registration page */
 
-	#classes .classmonth {
-	    position: relative;
-	}
+		/* Registration stuff */
 
-	#classes .classmonth>.btn {
-	    position: absolute;
-	    top: 0px;
-	    right: 0px;
-	}
+		#classes #validation {
+		    color: #db2d25;
+		    font-size: large;
+		}
 
-	#classes .series {
-	    margin-bottom: 12px;
-	    display: inline-block;
-	    padding-left: 15px;
-	    width: 100%;
-	}
+		#classes .classmonth {
+		    position: relative;
+		}
 
-	#classes .series div, #classes .series div {
-	    border: 0;
-	    padding: 0;
-	    margin: 0;
-	    vertical-align: top;
-	}
+		#classes .classmonth>.btn {
+		    position: absolute;
+		    top: 0px;
+		    right: 0px;
+		}
 
-	#classes .series .time {
-	    vertical-align: top;
-	    white-space: nowrap;
-	    width: 1px;
-	}
+		#classes .series {
+		    margin-bottom: 12px;
+		    display: inline-block;
+		    padding-left: 15px;
+		    width: 100%;
+		}
 
-	#classes .series .seriestype {
-	    font-weight: 700;
-	    font-size: 1.15em;
-	    border-bottom: 1px dotted #ccc;
-	}
+		#classes .series div, #classes .series div {
+		    border: 0;
+		    padding: 0;
+		    margin: 0;
+		    vertical-align: top;
+		}
 
-	#classes .series .dates {
-	    float: left;
-	}
+		#classes .series .time {
+		    vertical-align: top;
+		    white-space: nowrap;
+		    width: 1px;
+		}
 
-	#classes .series .leadfollow {
-	    float: right;
-	    margin-top: 10px;
-	    width: 200px;
-	    font-size: 16px;
-	}
+		#classes .series .seriestype {
+		    font-weight: 700;
+		    font-size: 1.15em;
+		    border-bottom: 1px dotted #ccc;
+		}
 
-	.leadfollow-options {
-	    padding-left: 20px;
-	}
+		#classes .series .dates {
+		    float: left;
+		}
 
-	.leadfollow-options ul {
-	    list-style-type: none;
-	    padding-left: 0;
-	}
+		#classes .series .leadfollow {
+		    float: right;
+		    margin-top: 10px;
+		    width: 200px;
+		    font-size: 16px;
+		}
 
-	#classes .series .checkboxvalidation {
-	    color: #db2d25;
-	    clear: both;
-	    float: right;
-	}
-	/* Class summary */
+		.leadfollow-options {
+		    padding-left: 20px;
+		}
 
-	.classregsummary {
-	    width: 100%;
-	}
+		.leadfollow-options ul {
+		    list-style-type: none;
+		    padding-left: 0;
+		}
 
-	#classes .weekdaygroup {
-	    display: inline-table;
-	    width: 100%;
-	}
+		#classes .series .checkboxvalidation {
+		    color: #db2d25;
+		    clear: both;
+		    float: right;
+		}
+		/* Class summary */
 
-	#classes .weekday {
-	    width: 28px;
-	    padding: 0;
-	    margin: 0;
-	    border: 0;
-	    background-color: #85a2b2;
-	    border-left: 1px solid #477087;
-	    border-bottom: 1px dotted #ddd;
-	    display: table-cell;
-	}
+		.classregsummary {
+		    width: 100%;
+		}
 
-	#classes .weekday div {
-	    position: relative;
-	    min-height: 165px;
-	}
+		#classes .weekdaygroup {
+		    display: inline-table;
+		    width: 100%;
+		}
 
-	#classes .weekday div h3 {
-	    -webkit-transform: rotate(-90deg);
-	    -moz-transform: rotate(-90deg);
-	    position: absolute;
-	    display: block;
-	    width: 75px;
-	    top: 30px;
-	    left: -25px;
-	    direction: rtl;
-	    color: white;
-	    font-size: 20px;
-	    font-weight: bold;
-	    white-space: nowrap;
-	}
+		#classes .weekday {
+		    width: 28px;
+		    padding: 0;
+		    margin: 0;
+		    border: 0;
+		    background-color: #85a2b2;
+		    border-left: 1px solid #477087;
+		    border-bottom: 1px dotted #ddd;
+		    display: table-cell;
+		}
 
-	#classes .weekdaycontents {
-	    display: table-cell;
-	    vertical-align: top;
-	    border-top: 1px dotted #ddd;
-	}
+		#classes .weekday div {
+		    position: relative;
+		    min-height: 165px;
+		}
 
-	#classes .weekdaycontents h3 {
-	    margin-top: 5px;
-	}
+		#classes .weekday div h3 {
+		    -webkit-transform: rotate(-90deg);
+		    -moz-transform: rotate(-90deg);
+		    position: absolute;
+		    display: block;
+		    width: 75px;
+		    top: 30px;
+		    left: -25px;
+		    direction: rtl;
+		    color: white;
+		    font-size: 20px;
+		    font-weight: bold;
+		    white-space: nowrap;
+		}
 
-	#classes .series .info {
-	    width: 100%;
-	}
+		#classes .weekdaycontents {
+		    display: table-cell;
+		    vertical-align: top;
+		    border-top: 1px dotted #ddd;
+		}
 
+		#classes .weekdaycontents h3 {
+		    margin-top: 5px;
+		}
 
-	#aboutus .bio img, #retired .bio img {
-	    padding-right: 7px;
-	    padding-bottom: 3px;
-	    float: left;
-	}
-
-	.SoldOut {
-	     text-align: center;
-	     color:red; 
-	     font-size: large;
-	}
-	.SoldOutSub {
-	     text-align: center;
-	     color:red; 
-	}
-
-	#classregform h4 {
-	    font-size: 18px;
-	}
-
-	#classregform h3.title {
-	    font-size: 22px;
-	}
+		#classes .series .info {
+		    width: 100%;
+		}
 
 
-	@media screen and (max-width:767px) {
-	    #classes .weekdaygroup {
-	        border-left: 1px dotted #ddd;
-	        border-right: 1px dotted #ddd;
-	        border-bottom: 1px dotted #ddd;
-	    }
+		#aboutus .bio img, #retired .bio img {
+		    padding-right: 7px;
+		    padding-bottom: 3px;
+		    float: left;
+		}
 
-	    #classes .weekday {
-	        width: 100%;
-	        border-bottom: 1px solid #477087;
-	        border-left: none;
-	        display: table-row;
-	    }
-	    #classes .weekday div {
-	        position: relative;
-	        height: 28px;
-	        min-height: 0;
-	        display: table-cell;
-	    }
+		.SoldOut {
+		     text-align: center;
+		     color:red; 
+		     font-size: large;
+		}
+		.SoldOutSub {
+		     text-align: center;
+		     color:red; 
+		}
 
-	    #classes .weekday div h3 {
-	        -webkit-transform: none;
-	        -moz-transform: none;
-	        direction: inherit;
-	        position: inherit;
-	        display: block;
-	        top: inherit;
-	        left: inherit;
-	        font-size: 20px;
-	        margin: 5px 10px;
+		#classregform h4 {
+		    font-size: 18px;
+		}
 
-	    }
+		#classregform h3.title {
+		    font-size: 22px;
+		}
 
-	    #classes .weekdaycontents {
-	        display: table-row;
-	    }
 
-	    #classes .series {
-	        width: 100%;
-	        margin-bottom: 10px;
-	        padding-left: 10px;
-	    }
+		@media screen and (max-width:767px) {
+		    #classes .weekdaygroup {
+		        border-left: 1px dotted #ddd;
+		        border-right: 1px dotted #ddd;
+		        border-bottom: 1px dotted #ddd;
+		    }
 
-	    #classes .series .time {
-	        padding-left: 0;
-	    }
+		    #classes .weekday {
+		        width: 100%;
+		        border-bottom: 1px solid #477087;
+		        border-left: none;
+		        display: table-row;
+		    }
+		    #classes .weekday div {
+		        position: relative;
+		        height: 28px;
+		        min-height: 0;
+		        display: table-cell;
+		    }
 
-	    #classes .series .info {
-	        padding-right: 10px;
-	    }
-	}
+		    #classes .weekday div h3 {
+		        -webkit-transform: none;
+		        -moz-transform: none;
+		        direction: inherit;
+		        position: inherit;
+		        display: block;
+		        top: inherit;
+		        left: inherit;
+		        font-size: 20px;
+		        margin: 5px 10px;
 
-	@media screen and (max-width:479px) {
-	    #classes .series .leadfollow {
-	        float: left;
-	    }
-	}
-</style>
-{% endaddtoblock %}
+		    }
+
+		    #classes .weekdaycontents {
+		        display: table-row;
+		    }
+
+		    #classes .series {
+		        width: 100%;
+		        margin-bottom: 10px;
+		        padding-left: 10px;
+		    }
+
+		    #classes .series .time {
+		        padding-left: 0;
+		    }
+
+		    #classes .series .info {
+		        padding-right: 10px;
+		    }
+		}
+
+		@media screen and (max-width:479px) {
+		    #classes .series .leadfollow {
+		        float: left;
+		    }
+		}
+	</style>
+	{% endaddtoblock %}
+{% endblock %}
 {% endif %}
 
 {% endblock %}
