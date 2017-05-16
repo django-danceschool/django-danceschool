@@ -66,6 +66,8 @@
 
       {% cms_toolbar %}
 
+      {% block body %}
+
       {% block navbar %}
           {% show_menu 0 100 100 100 "cms/navbar.html" %}
       {% endblock %}
@@ -75,8 +77,10 @@
           {% block main %}
             {# Default to a single column page #}
             {% block content %}
+            <div class="row">
             <div class="col-md-11 content-col">
             {% placeholder "content" %}
+            </div>
             </div>
             {% endblock %}
 
@@ -85,6 +89,8 @@
           {% endblock %}
 
       </div>
+
+      {% endblock %}
     </span>
 
   {% render_block "js" %}
