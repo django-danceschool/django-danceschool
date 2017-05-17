@@ -38,7 +38,7 @@ class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
         if instance.photoRequired:
             listing = listing.filter(image__isnull=False)
         if instance.bioRequired:
-            listing = listing.exclude(bio__isnull=True,bio__exact='')
+            listing = listing.filter(bio__isnull=False).exclude(bio__exact='')
 
         if instance.activeUpcomingOnly:
             listing = listing.filter(eventstaffmember__event__endTime__gte=datetime.now()).distinct()
