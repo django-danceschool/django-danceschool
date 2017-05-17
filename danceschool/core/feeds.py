@@ -66,7 +66,7 @@ class EventFeed(ICalFeed):
             return [EventFeedItem(x) for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
         else:
             # Private calendars do show link-only registration Events
-            return [EventFeedItem(x) for x in item_set.filter(event__eventstaffmember__staffmember__feedKey=obj)]
+            return [EventFeedItem(x) for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=obj)]
 
     def item_guid(self,item):
         return item.id + '@' + item.url
