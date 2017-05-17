@@ -121,7 +121,7 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
     def render(self, context, instance, placeholder):
         context = super(EventListPlugin,self).render(context,instance,placeholder)
 
-        listing = Event.objects.all()
+        listing = Event.objects.exclude(status__in=[Event.RegStatus.hidden, Event.RegStatus.linkOnly])
 
         if instance.eventType == 'S':
             listing = listing.instance_of(Series)
