@@ -332,12 +332,14 @@ class PricingTier(models.Model):
     # By default, prices may vary by online or door registration, and they may
     # also be adjusted through a student discount.  More sophisticated discounts
     # may be achieved through the discounts and vouchers apps, if enabled.
-    onlineStudentPrice = models.FloatField(default=0,validators=[MinValueValidator(0)])
-    doorStudentPrice = models.FloatField(default=0,validators=[MinValueValidator(0)])
-    onlineGeneralPrice = models.FloatField(default=0,validators=[MinValueValidator(0)])
-    doorGeneralPrice = models.FloatField(default=0,validators=[MinValueValidator(0)])
+    onlineGeneralPrice = models.FloatField(_('Online price'),default=0,validators=[MinValueValidator(0)])
+    doorGeneralPrice = models.FloatField(_('At-the-door price'), default=0,validators=[MinValueValidator(0)])
+    onlineStudentPrice = models.FloatField(_('Online price for HS/college/university students'),default=0,validators=[MinValueValidator(0)])
+    doorStudentPrice = models.FloatField(_('At-the-door price for HS/college/university students'), default=0,validators=[MinValueValidator(0)])
 
-    expired = models.BooleanField(default=False,help_text=_("If this box is checked, then this pricing tier will not show up as an option when creating new series.  Use this for old prices or custom pricing that will not be repeated."))
+    dropinPrice = models.FloatField(_('Single class drop-in price'),default=0,validators=[MinValueValidator(0)],help_text=_('If students are allowed to drop in, then this price will be applied per class.'))
+
+    expired = models.BooleanField(_('Expired'),default=False,help_text=_("If this box is checked, then this pricing tier will not show up as an option when creating new series.  Use this for old prices or custom pricing that will not be repeated."))
 
     def getBasePrice(self,**kwargs):
         '''
@@ -347,7 +349,10 @@ class PricingTier(models.Model):
         '''
         isStudent = kwargs.get('isStudent', False)
         payAtDoor = kwargs.get('payAtDoor', False)
+        dropIns = kwargs.get('dropIns', 0)
 
+        if dropIns:
+            return dropIns * self.dropinPrice
         if isStudent:
             if payAtDoor:
                 return self.doorStudentPrice
@@ -922,8 +927,6 @@ class Series(Event):
 
     pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing Tier'))
 
-    dropinPrice = models.FloatField(_('Drop-in price'),default=15,null=True,blank=True,validators=[MinValueValidator(0)])
-
     @property
     def name(self):
         '''
@@ -968,12 +971,12 @@ class Series(Event):
 
     @property
     def url(self):
-        if not self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
+        if self.status not in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
             return reverse('classView',args=[self.year,month_name[self.month],self.classDescription.slug])
 
     def clean(self):
-        if self.allowDropins and not self.dropinPrice:
-            raise ValidationError(_('If drop-ins are allowed then drop-in price must be specified.'))
+        if self.allowDropins and not self.pricingTier.dropinPrice:
+            raise ValidationError(_('If drop-ins are allowed then drop-in price must be specified by the Pricing Tier.'))
         super(Series,self).clean()
 
     def __str__(self):

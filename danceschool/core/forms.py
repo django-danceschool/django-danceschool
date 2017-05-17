@@ -2,7 +2,6 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.conf import settings
 from django.db.models import Q
 from django.utils.encoding import force_text
 from django.forms.widgets import CheckboxSelectMultiple, CheckboxInput, mark_safe, Select
@@ -18,7 +17,7 @@ import json
 import logging
 
 from .models import SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, get_defaultEmailName, get_defaultEmailFrom
-from .constants import HOW_HEARD_CHOICES, getConstant
+from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 
 
@@ -186,6 +185,10 @@ class ClassChoiceForm(forms.Form):
         else:
             choice_set = openEvents
 
+        # Only the keys passed in this property will be entered into session data.
+        # This prevents injection of unknown values into the registration process.
+        self.permitted_event_keys = ['role',]
+
         for event in choice_set:
             field_choices = []
 
@@ -238,9 +241,11 @@ class ClassChoiceForm(forms.Form):
                 if event.allowDropins and user and user.has_perm('core.register_dropins'):
                     for occurrence in event.eventoccurrence_set.all():
                         field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}), _('Drop-in: ') + occurrence.startTime.strftime('%B %-d')),)
+                        self.permitted_event_keys.append('dropin_' + str(occurrence.id))
                 elif (user and user.has_perm('core.override_register_dropins')):
                     for occurrence in event.eventoccurrence_set.all():
                         field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}),{'label': _('Drop-in: ') + occurrence.startTime.strftime('%B %-d'),'override':True}),)
+                        self.permitted_event_keys.append('dropin_' + str(occurrence.id))
 
             self.fields['event_' + str(event.id)] = CheckboxSeriesChoiceField(
                 label=event.name,
@@ -317,7 +322,7 @@ class RegistrationContactForm(forms.Form):
     def __init__(self,*args,**kwargs):
         self._request = kwargs.pop('request',None)
         user = getattr(self._request,'user',None)
-        session = getattr(self._request,'session',{}).get(settings.REG_VALIDATION_STR,{})
+        session = getattr(self._request,'session',{}).get(REG_VALIDATION_STR,{})
 
         super(RegistrationContactForm,self).__init__(*args,**kwargs)
         self._session = session

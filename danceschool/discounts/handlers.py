@@ -54,9 +54,12 @@ def getBestDiscount(sender,**kwargs):
     eligible_list = eventregs_list.filter(dropIn=False).filter(Q(event__series__pricingTier__isnull=False) | Q(event__publicevent__pricingTier__isnull=False))
     ineligible_list = eventregs_list.filter((Q(event__series__isnull=False) & Q(event__series__pricingTier__isnull=True)) | (Q(event__publicevent__isnull=False) & Q(event__publicevent__pricingTier__isnull=True)) | Q(dropIn=True))
 
-    price_list = [x.event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) for x in eventregs_list]
+    price_list = [x.event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) for x in eventregs_list.exclude(dropIn=True)] + [x.price for x in eventregs_list.filter(dropIn=True)]
 
-    ineligible_total = sum([x.event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) for x in ineligible_list])
+    ineligible_total = sum(
+        [x.event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) for x in ineligible_list.exclude(dropIn=True)] +
+        [x.price for x in ineligible_list.filter(dropIn=True)]
+    )
 
     discountCodesApplicable = getApplicableDiscountCombos(eligible_list, newCustomer)
 

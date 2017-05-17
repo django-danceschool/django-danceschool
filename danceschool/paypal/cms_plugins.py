@@ -27,8 +27,8 @@ class GiftCertificateFormPlugin(CMSPluginBase):
 
         context.update({
             'invoice_id': invoice_id,
-            'paypal_url': settings.PAYPAL_URL,
-            'paypal_account': settings.PAYPAL_ACCOUNT,
+            'paypal_url': getattr(settings,'PAYPAL_URL',''),
+            'paypal_account': getattr(settings,'PAYPAL_ACCOUNT',''),
         })
 
         return context
@@ -46,8 +46,8 @@ class CartPaymentFormPlugin(CMSPluginBase):
         context = super(CartPaymentFormPlugin, self).render(context, instance, placeholder)
 
         context.update({
-            'paypal_url': settings.PAYPAL_URL,
-            'paypal_account': settings.PAYPAL_ACCOUNT,
+            'paypal_url': getattr(settings,'PAYPAL_URL',''),
+            'paypal_account': getattr(settings,'PAYPAL_ACCOUNT',''),
         })
 
         return context

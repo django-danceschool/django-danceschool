@@ -1,6 +1,5 @@
 from django.dispatch import receiver
 from django.contrib import messages
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext
 from django.utils.html import format_html
@@ -8,7 +7,7 @@ from django.utils.safestring import mark_safe
 
 from danceschool.core.signals import check_student_info
 from danceschool.core.models import Series, Customer
-from danceschool.core.constants import getConstant
+from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 
 from .models import Requirement
 
@@ -36,7 +35,7 @@ def checkRequirements(sender,**kwargs):
     email = formData.get('email')
 
     request = kwargs.get('request',{})
-    session = getattr(request,'session',{}).get(settings.REG_VALIDATION_STR,{})
+    session = getattr(request,'session',{}).get(REG_VALIDATION_STR,{})
 
     seriesinfo = session['regInfo'].get('events',{})
     seriesids = [int(k) for k,v in seriesinfo.items() if v.get('register',False)]

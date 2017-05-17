@@ -20,7 +20,7 @@ from cms.models import Page
 
 from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, Instructor
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, EmailContactForm, ClassChoiceForm
-from .constants import getConstant
+from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR
 from .emails import renderEmail
 from .mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from .signals import get_customer_data
@@ -82,10 +82,10 @@ class ClassRegistrationReferralView(RedirectView):
 
         if marketing_id or voucher_id:
             ''' Put these things into the session data. '''
-            regSession = self.request.session.get(settings.REG_VALIDATION_STR, {})
+            regSession = self.request.session.get(REG_VALIDATION_STR, {})
             regSession['voucher_id'] = voucher_id or regSession.get('voucher_id',None)
             regSession['marketing_id'] = marketing_id or regSession.get('marketing_id',None)
-            self.request.session[settings.REG_VALIDATION_STR] = regSession
+            self.request.session[REG_VALIDATION_STR] = regSession
 
         return super(ClassRegistrationReferralView,self).get(request,*args,**kwargs)
 
@@ -135,7 +135,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
         keys that are permitted.  If no such list is specified as instance.permitted_event_keys, then
         the default list are used.
         '''
-        regSession = self.request.session.get(settings.REG_VALIDATION_STR, {})
+        regSession = self.request.session.get(REG_VALIDATION_STR, {})
 
         # The session expires after 15 minutes of inactivity to limit the possible extent of over-registration
         self.request.session.set_expiry(900)
@@ -155,7 +155,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 
         regSession["regInfo"] = regInfo
         regSession["payAtDoor"] = form.cleaned_data.get('payAtDoor', False)
-        self.request.session[settings.REG_VALIDATION_STR] = regSession
+        self.request.session[REG_VALIDATION_STR] = regSession
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
@@ -165,7 +165,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
         '''
         Splitting this method out to get the set of events to filter allows
         one to subclass for different subsets of events without copying other
-        logic 
+        logic
         '''
 
         if not hasattr(self,'allEvents'):
@@ -267,7 +267,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
     success_message = _('Email sent successfully.')
 
     def get(self, request, *args, **kwargs):
-        self.form_data = request.session.get(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),{}).get('form_data',{})
+        self.form_data = request.session.get(EMAIL_VALIDATION_STR,{}).get('form_data',{})
         if not self.form_data:
             return HttpResponseRedirect(reverse('emailStudents'))
         if request.GET.get('confirmed','').lower() == 'true':
@@ -312,7 +312,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
 
             renderEmail(subject,message,from_address,from_name,cc=cc,to=[],bcc=bcc,eventregistrations=regs,event=s)
 
-        self.request.session.pop(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),None)
+        self.request.session.pop(EMAIL_VALIDATION_STR,None)
         messages.success(self.request, self.success_message)
 
         return HttpResponseRedirect(self.get_success_url())
@@ -403,7 +403,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
         '''
         initial = super(SendEmailView,self).get_initial()
 
-        form_data = self.request.session.get(getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView'),{}).get('form_data',{})
+        form_data = self.request.session.get(EMAIL_VALIDATION_STR,{}).get('form_data',{})
         if form_data:
             initial.update(form_data)
         return initial
@@ -419,7 +419,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
 
     def form_valid(self, form):
         ''' Pass form data to the confirmation view '''
-        self.request.session[getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView')] = {'form_data': form.cleaned_data}
+        self.request.session[EMAIL_VALIDATION_STR] = {'form_data': form.cleaned_data}
         return HttpResponseRedirect(reverse('emailConfirmation'))
 
 

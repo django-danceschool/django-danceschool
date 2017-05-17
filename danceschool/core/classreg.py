@@ -12,9 +12,9 @@ import logging
 from allauth.account.forms import LoginForm, SignupForm
 
 from .helpers import emailErrorMessage
-from .models import Series, Event, Registration, EventRegistration, TemporaryRegistration, TemporaryEventRegistration, EmailTemplate, DanceRole, Customer
+from .models import Event, Registration, EventRegistration, TemporaryRegistration, TemporaryEventRegistration, EmailTemplate, DanceRole, Customer
 from .forms import RegistrationContactForm, DoorAmountForm
-from .constants import getConstant
+from .constants import getConstant, REG_VALIDATION_STR
 from .emails import renderEmail
 from .signals import invoice_sent, pre_temporary_registration, post_temporary_registration, request_discounts, apply_discount, apply_addons, apply_price_adjustments, post_registration, get_payment_context
 from .mixins import FinancialContextMixin
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 def createTemporaryRegistration(request):
 
     # first get reg info
-    regSession = request.session.get(settings.REG_VALIDATION_STR,{})
+    regSession = request.session.get(REG_VALIDATION_STR,{})
     formData = regSession.pop('infoFormData',{})
     if not regSession or not formData:
         return HttpResponseServerError(_("Error: No registration information provided."))
@@ -79,7 +79,7 @@ def createTemporaryRegistration(request):
     for event_id,regvalue in eventids.items():
         event = eventset.get(id=event_id)
 
-        dropInList = [int(k.split("_")[-1]) for k,v in regvalue.items() if 'dropin_' in k and v is True]
+        dropInList = [int(k.split("_")[-1]) for k,v in regvalue.items() if k.startswith('dropin_') and v is True]
 
         # The 'register' key is required to be passed.
         registered = regvalue.get('register',False)
@@ -97,9 +97,9 @@ def createTemporaryRegistration(request):
 
         logger.debug('Creating temporary event registration for:' + str(event_id))
         if len(dropInList) > 0:
-            tr = TemporaryEventRegistration(dropIn=True,price=event.dropinPrice * len(dropInList), event=event)
+            tr = TemporaryEventRegistration(dropIn=True, price=event.getBasePrice(dropIns=len(dropInList)), event=event)
         else:
-            tr = TemporaryEventRegistration(price=event.getBasePrice(isStudent=student,payAtDoor=payAtDoor),event=event,role=this_role)
+            tr = TemporaryEventRegistration(price=event.getBasePrice(isStudent=student,payAtDoor=payAtDoor), event=event, role=this_role)
 
         # If it's possible to store additional data and such data exist, then store them.
         tr.data = regvalue
@@ -242,7 +242,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
     form_class = DoorAmountForm
 
     def get(self,request,*args,**kwargs):
-        regSession = self.request.session[settings.REG_VALIDATION_STR]
+        regSession = self.request.session[REG_VALIDATION_STR]
         existing_reg_id = regSession.get('createdRegId',None)
 
         if existing_reg_id:
@@ -251,7 +251,10 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             reg = createTemporaryRegistration(request)
             regSession['createdRegId'] = reg.id
 
-        initial_price = sum([x.event.getBasePrice(isStudent=reg.student,payAtDoor=reg.payAtDoor) for x in reg.temporaryeventregistration_set.all()])
+        initial_price = sum(
+            [x.event.getBasePrice(isStudent=reg.student,payAtDoor=reg.payAtDoor) for x in reg.temporaryeventregistration_set.exclude(dropIn=True)] +
+            [x.price for x in reg.temporaryeventregistration_set.filter(dropIn=True)]
+        )
 
         # If the discounts app is enabled, then the return value to this signal
         # will contain any initial discounts that need to be applied (prior to)
@@ -315,7 +318,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         reg.save()
 
         # Update the session key to keep track of this registration
-        regSession = request.session[settings.REG_VALIDATION_STR]
+        regSession = request.session[REG_VALIDATION_STR]
         regSession["temp_reg_id"] = reg.id
         if discount_code:
             regSession['discount_code_id'] = discount_code.pk
@@ -324,7 +327,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         regSession['addons'] = addons
         regSession['voucher_names'] = adjustment_list
         regSession['total_voucher_amount'] = adjustment_amount
-        request.session[settings.REG_VALIDATION_STR] = regSession
+        request.session[REG_VALIDATION_STR] = regSession
 
         return super(RegistrationSummaryView,self).get(request,*args,**kwargs)
 
@@ -332,7 +335,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         ''' Pass the initial kwargs, then update with the needed registration info. '''
         context_data = super(RegistrationSummaryView,self).get_context_data(**kwargs)
 
-        regSession = self.request.session[settings.REG_VALIDATION_STR]
+        regSession = self.request.session[REG_VALIDATION_STR]
         reg_id = regSession["temp_reg_id"]
         reg = TemporaryRegistration.objects.get(id=reg_id)
 
@@ -393,7 +396,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         return context_data
 
     def form_valid(self,form):
-        regSession = self.request.session[settings.REG_VALIDATION_STR]
+        regSession = self.request.session[REG_VALIDATION_STR]
         reg_id = regSession["temp_reg_id"]
         tr = TemporaryRegistration.objects.get(id=reg_id)
 
@@ -439,7 +442,7 @@ class StudentInfoView(FormView):
 
     def dispatch(self, request, *args, **kwargs):
         ''' Require session data to be set to proceed, otherwise go back to step 1 '''
-        if settings.REG_VALIDATION_STR not in request.session:
+        if REG_VALIDATION_STR not in request.session:
             return HttpResponseRedirect(reverse('registration'))
         return super(StudentInfoView,self).dispatch(request,*args,**kwargs)
 
@@ -447,8 +450,8 @@ class StudentInfoView(FormView):
         context_data = super(StudentInfoView,self).get_context_data(**kwargs)
 
         context_data.update({
-            'regInfo': self.request.session[settings.REG_VALIDATION_STR].get('regInfo',{}),
-            'payAtDoor': self.request.session[settings.REG_VALIDATION_STR].get('payAtDoor',False),
+            'regInfo': self.request.session[REG_VALIDATION_STR].get('regInfo',{}),
+            'payAtDoor': self.request.session[REG_VALIDATION_STR].get('payAtDoor',False),
             'currencySymbol': getConstant('general__currencySymbol'),
         })
 
@@ -456,24 +459,27 @@ class StudentInfoView(FormView):
         # through the form.
         subtotal = 0
 
-        for k,v in context_data['regInfo'].get('series',{}).items():
-            series = Series.objects.prefetch_related('pricingTier').get(id=k)
-            base_price = series.getBasePrice(payAtDoor=context_data['payAtDoor'])
-            subtotal += base_price
-
-            context_data['regInfo']['series'][k].update({
-                'name': series.name,
-                'role_name': DanceRole.objects.get(id=context_data['regInfo']['series'][k]['role']).name,
-                'base_price': base_price,
-            })
-
         for k,v in context_data['regInfo'].get('events',{}).items():
             event = Event.objects.prefetch_related('pricingTier').get(id=k)
-            base_price = event.getBasePrice(payAtDoor=context_data['payAtDoor'])
+
+            dropin_keys = [x for x in v.keys() if x.startswith('dropin_')]
+            if dropin_keys:
+                name = _('DROP IN: %s' % event.name)
+                base_price = event.getBasePrice(dropIns=len(dropin_keys))
+            else:
+                name = event.name
+                base_price = event.getBasePrice(payAtDoor=context_data['payAtDoor'])
+
             subtotal += base_price
 
+            if v.get('role'):
+                role_name = DanceRole.objects.get(id=v.get('role')).name
+            else:
+                role_name = None
+
             context_data['regInfo']['events'][k].update({
-                'name': event.name,
+                'name': name,
+                'role_name': role_name,
                 'base_price': base_price,
             })
 
@@ -507,6 +513,6 @@ class StudentInfoView(FormView):
         were invalid.  Otherwise, update the session data with the form data and then
         move to the next view
         '''
-        self.request.session[settings.REG_VALIDATION_STR].update({'infoFormData': form.cleaned_data, 'createdRegId': None})
+        self.request.session[REG_VALIDATION_STR].update({'infoFormData': form.cleaned_data, 'createdRegId': None})
         self.request.session.modified = True
         return HttpResponseRedirect(self.get_success_url())  # Redirect after POST

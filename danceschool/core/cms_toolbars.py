@@ -1,6 +1,6 @@
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
-from django.conf import settings
+from django.apps import apps
 
 from cms.toolbar_pool import toolbar_pool
 from cms.toolbar_base import CMSToolbar
@@ -164,8 +164,10 @@ class ContentToolbar(CMSToolbar):
     ''' Adds links to manage files, and can be hooked in to manage News, FAQs, Surveys/Forms, etc. '''
 
     def populate(self):
-        if self.request.user.has_perm('filer.change_folder') or self.request.user.has_perm('core.change_emailtemplate') or \
-        ('djangocms_forms' in settings.INSTALLED_APPS and self.request.user.has_perm('djangocms_forms.export_formsubmission')):
+        if (
+            self.request.user.has_perm('filer.change_folder') or self.request.user.has_perm('core.change_emailtemplate') or
+            (apps.is_installed('djangocms_forms') and self.request.user.has_perm('djangocms_forms.export_formsubmission'))
+        ):
             menu = self.toolbar.get_or_create_menu('core-content',_('Content'))
 
         if self.request.user.has_perm('filer.change_folder'):
@@ -174,5 +176,5 @@ class ContentToolbar(CMSToolbar):
         if self.request.user.has_perm('core.change_emailtemplate'):
             menu.add_link_item(_('Manage Email Templates'), reverse('admin:core_emailtemplate_changelist'))
 
-        if 'djangocms_forms' in settings.INSTALLED_APPS and self.request.user.has_perm('djangocms_forms.export_formsubmission'):
+        if apps.is_installed('djangocms_forms') and self.request.user.has_perm('djangocms_forms.export_formsubmission'):
             menu.add_link_item(_('View/Export Survey Responses'), reverse('admin:djangocms_forms_formsubmission_changelist'))

@@ -44,7 +44,7 @@ def payment_received(request):
     payment_status = None
 
     # If turned on in settings, immediately send a debug email indicating
-    if settings.PAYPAL_DEBUG_ALL:
+    if getattr(settings,'PAYPAL_DEBUG_ALL',False):
         emailErrorMessage(_("Paypal IPN debugging"),str(getattr(request,request.method)))
 
     # Grab the parameters from the request
@@ -70,7 +70,7 @@ def payment_received(request):
     logger.info('Sending callback to Paypal')
     parameters['cmd'] = '_notify-validate'
 
-    req = Request(settings.PAYPAL_URL, urlencode(parameters).encode('ascii'))
+    req = Request(getattr(settings,'PAYPAL_URL',''), urlencode(parameters).encode('ascii'))
     req.add_header("Content-type", "application/x-www-form-urlencoded")
     response = urlopen(req)
     status = response.read()

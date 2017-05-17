@@ -118,10 +118,10 @@ def invoice_handler(sender,**kwargs):
     logger.debug(itemList)
 
     headers = {
-        'X-PAYPAL-SECURITY-USERID': settings.PAYPAL_INVOICE_USERID,
-        'X-PAYPAL-SECURITY-PASSWORD': settings.PAYPAL_INVOICE_PASSWORD,
-        'X-PAYPAL-SECURITY-SIGNATURE': settings.PAYPAL_INVOICE_SIGNATURE,
-        'X-PAYPAL-APPLICATION-ID': settings.PAYPAL_INVOICE_APPID,
+        'X-PAYPAL-SECURITY-USERID': getattr(settings,'PAYPAL_INVOICE_USERID',''),
+        'X-PAYPAL-SECURITY-PASSWORD': getattr(settings,'PAYPAL_INVOICE_PASSWORD',''),
+        'X-PAYPAL-SECURITY-SIGNATURE': getattr(settings,'PAYPAL_INVOICE_SIGNATURE',''),
+        'X-PAYPAL-APPLICATION-ID': getattr(settings,'PAYPAL_INVOICE_APPID',''),
         'X-PAYPAL-REQUEST-DATA-FORMAT': 'JSON',
         'X-PAYPAL-RESPONSE-DATA-FORMAT': 'JSON',
     }
@@ -132,10 +132,10 @@ def invoice_handler(sender,**kwargs):
         },
         'invoice': {
             'number': invoiceNumber,
-            'merchantEmail': settings.PAYPAL_ACCOUNT,
+            'merchantEmail': getattr(settings,'PAYPAL_ACCOUNT',''),
             'merchantInfo': {
                 'businessName': getConstant('contact__businessName'),
-                'website': Site.objects.get(id=settings.SITE_ID).domain,
+                'website': Site.objects.get(id=getattr(settings,'SITE_ID',1)).domain,
                 'phone': getConstant('contact__businessPhone'),
                 'address': {
                     'line1': getConstant('contact__businessAddress'),
@@ -155,7 +155,7 @@ def invoice_handler(sender,**kwargs):
     }
 
     r = requests.post(
-        settings.PAYPAL_INVOICE_URL,
+        getattr(settings,'PAYPAL_INVOICE_URL',''),
         data=json.dumps(payload),
         headers=headers,
     )
@@ -207,9 +207,9 @@ def refund_handler(sender,**kwargs):
         return
 
     payload = {
-        'USER': settings.PAYPAL_REFUND_USERID,
-        'PWD': settings.PAYPAL_REFUND_PASSWORD,
-        'SIGNATURE': settings.PAYPAL_REFUND_SIGNATURE,
+        'USER': getattr(settings,'PAYPAL_REFUND_USERID',''),
+        'PWD': getattr(settings,'PAYPAL_REFUND_PASSWORD',''),
+        'SIGNATURE': getattr(settings,'PAYPAL_REFUND_SIGNATURE',''),
         'VERSION': 94,
         'METHOD': 'RefundTransaction',
         'TRANSACTIONID': txnID,
@@ -220,7 +220,7 @@ def refund_handler(sender,**kwargs):
         payload['AMT'] = refundAmount
 
     r = requests.post(
-        settings.PAYPAL_REFUND_URL,
+        getattr(settings,'PAYPAL_REFUND_URL',''),
         data=payload,
     )
 

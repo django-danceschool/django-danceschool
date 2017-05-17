@@ -1,4 +1,5 @@
 from django.db import connection
+from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
 from dynamic_preferences.registries import global_preferences_registry
@@ -49,3 +50,7 @@ HOW_HEARD_CHOICES = [
     ('Friend',_('Another Student')),
     ('Other',_('Other')),
 ]
+
+
+REG_VALIDATION_STR = getattr(settings,'REG_VALIDATION_STR','danceschool_registration')
+EMAIL_VALIDATION_STR = getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView')

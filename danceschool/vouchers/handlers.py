@@ -1,11 +1,10 @@
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-from django.conf import settings
 
 from danceschool.core.signals import post_temporary_registration, post_registration, apply_price_adjustments, get_customer_data, check_student_info
 from danceschool.core.models import Customer, Series
-from danceschool.core.constants import getConstant
+from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 
 import logging
 
@@ -26,7 +25,7 @@ def checkVoucherCode(sender,**kwargs):
 
     formData = kwargs.get('formData',{})
     request = kwargs.get('request',{})
-    session = getattr(request,'session',{}).get(settings.REG_VALIDATION_STR,{})
+    session = getattr(request,'session',{}).get(REG_VALIDATION_STR,{})
 
     id = formData.get('gift','')
     first = formData.get('firstName')
@@ -45,7 +44,7 @@ def checkVoucherCode(sender,**kwargs):
         raise ValidationError({'gift': _('Can\'t have more than one voucher')})
 
     seriesinfo = session['regInfo'].get('events',{})
-    seriesids = [int(k) for k,v in seriesinfo.items() if v.get('register',False)]
+    seriesids = [int(k) for k,v in seriesinfo.items() if v.get('register',False) and not [x for x in v.keys() if x.startswith('dropin_')]]
     seriess = Series.objects.filter(id__in=seriesids)
 
     obj = Voucher.objects.filter(voucherId=id).first()
