@@ -383,7 +383,7 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
     def uuidLink(self,obj):
         address = reverse('singleClassRegistration', args=[obj.uuid,])
         return mark_safe('<a href="%s">%s</a>' % (address, address))
-    uuidLink.short_description = _('Individual Class Registration Link')
+    uuidLink.short_description = _('Direct Registration Link')
     uuidLink.allow_tags = True
 
     # This is needed so that when an event is created, the year and month
@@ -464,15 +464,11 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription','location','pricingTier',('special','allowDropins'))
+            'fields': ('classDescription','location','pricingTier',('special','allowDropins'),('uuidLink',)),
         }),
-        (_('Override Display/Registration'), {
+        (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse',),
-            'fields': ('status','closeAfterDays','uuidLink',),
-        }),
-        (_('Override Default Capacity/Drop-In Price'), {
-            'classes': ('collapse',),
-            'fields': ('capacity','dropinPrice'),
+            'fields': ('status','closeAfterDays','capacity',),
         }),
     )
 
