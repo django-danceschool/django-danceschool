@@ -419,6 +419,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
 
     def form_valid(self, form):
         ''' Pass form data to the confirmation view '''
+        form.cleaned_data.pop('template',None)
         self.request.session[EMAIL_VALIDATION_STR] = {'form_data': form.cleaned_data}
         return HttpResponseRedirect(reverse('emailConfirmation'))
 
