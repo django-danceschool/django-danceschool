@@ -34,6 +34,9 @@ class InstructorAvailability(models.Model):
     endTime = models.DateTimeField(_('End time'))
     location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True)
 
+    def name(self):
+        return '%s: %s to %s, at %s' % (self.instructor.fullName, self.startTime, self.endTime, self.location)
+
 
 class PrivateLessonEvent(Event):
     '''

@@ -1,0 +1,82 @@
+{% extends "cms/home.html" %}
+{% load sekizai_tags static %}
+
+{% block content %}
+
+<h1>Private Lesson Scheduling</h1>
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        Choose an Instructor
+    </div>
+    <div class="panel-body">
+        <form name='instructorSelect' id='instructorSelect'>
+
+            <p>
+            <select name="instructor">
+                <option>Select instructor</option>
+                {% for instructor in instructor_list %}
+                    <option data-id="{{ instructor.id }}">{{ instructor.fullName }}</option>
+                {% endfor %}
+            </select>
+            </p>
+
+        </form>
+    </div>
+</div>
+
+
+<div id="calendarbox">&nbsp;</div>
+
+{% addtoblock "css" %}
+    <link rel='stylesheet' type="text/css" href='{% static 'css/fullcalendar.min.css' %}' />
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style media="screen" type="text/css">
+        .fc-day-grid-event > .fc-content {
+            white-space: normal;
+        }
+    </style>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'js/jquery-ui.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'js/moment.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'js/fullcalendar.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+    // page is now ready, initialize the calendar...
+
+    $('#calendarbox').fullCalendar({
+        // put your options and callbacks here
+        eventTextColor: '#ffffff',
+        height: "auto",
+        aspectRatio: 1,
+        defaultView: 'agendaWeek',
+        header: {right: 'prev,next today'},
+        selectable: true,
+        selectHelper: true,
+        slotMinutes: 30,
+        editable: true,
+
+        eventRender: function (event, element, view) {
+            var nextEventLeft = element.offset().left + element.width() + 5;
+            element.parent().children().eq(element.index()+1).css('left',nextEventLeft);
+        },
+    });
+
+    $('#instructorSelect').change(function(inst) {
+        // Get the ID of the instructor, submit to AJAX view,
+        // and finally load the availability of that instructor
+
+    });
+});
+</script>
+{% endaddtoblock %}
+{% endblock %}
