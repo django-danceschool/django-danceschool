@@ -33,11 +33,8 @@ def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attac
     recipients = [x for x in to + cc if x]
     logger.info('Sending email from %s to %s' % (from_address,recipients))
 
-    if getattr(settings,'IS_LOCAL_WEBSERVER',None) or getattr(settings,'DEBUG',None):
+    if getattr(settings,'DEBUG',None):
         logger.info('Email content:\n\n%s' % content)
-    if getattr(settings,'IS_LOCAL_WEBSERVER',None):
-        logger.info('Not sending email because IS_LOCAL_WEBSERVER is enabled.')
-        return
 
     with get_connection() as connection:
         connection.open()

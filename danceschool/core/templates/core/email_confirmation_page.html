@@ -1,4 +1,5 @@
 {% extends "cms/admin_home.html" %}
+{% load sekizai_tags %}
 
 {% block content %}
 
@@ -6,60 +7,107 @@
 
 	<p>Please confirm the following before sending:</p>
 
+	<hr />
+
+	{% if testemail %}<h3>Test Email (No Recipients)</h3> <hr />{% endif %}
+	<h4>From: {{ from_name }} &lt;{{ from_address }}&gt;</h3>
+	<h4>Subject: {{ subject }}</h4>
+
+	<hr />
+
 	<div class="panel panel-default">
-	<div class="panel-heading">Content</div>
+	<div class="panel-heading"><h4 class="panel-title">Message</h4></div>
 	<div class="panel-body">
-
-		{% if testemail %}<h3>Test Email (No Recipients)</h3> <hr />{% endif %}
-		<h3>From: {{ from_name }} &lt;{{ from_address }}&gt;</h3>
-		<h3>Subject: {{ subject }}</h3>
-
-		<h4>Message:</h4>
-		<div class="well">{{ message }}</div>
-
+		<pre class="unstyled">{{ message }}</pre>
 	</div>
-	<div class="panel-heading">Recipients</div>
-	<div class="panel-body">
+	</div>
 
-		<h4>
-			{% if month and not series %}
-				Events in {{ month }}:
-			{% else %}
-				Students Registered for Events:
-			{% endif %}
-		</h4>
-		<ul>
-			{% for s in events_to_send %}
-				<li>{{ s.name }}</li>
+	<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+	  <div class="panel panel-default">
+	    <div class="panel-heading" role="tab" id="headingOne">
+	      <h4 class="panel-title">
+	        <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+	          Recipients
+	        </a>
+	      </h4>
+	    </div>
+	    <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
+	      <div class="panel-body">
+
+			<h4>
+				{% if month and not series %}
+					Events in {{ month }}:
+				{% else %}
+					Students Registered for Events:
+				{% endif %}
+			</h4>
+			<ul>
+				{% for s in events_to_send %}
+					<li>{{ s.name }}</li>
+				{% endfor %}
+			</ul>
+
+	      </div>
+	    </div>
+	  </div>
+	  <div class="panel panel-default">
+	    <div class="panel-heading" role="tab" id="headingTwo">
+	      <h4 class="panel-title">
+	        <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+	          Detailed Recipients
+	        </a>
+	      </h4>
+	    </div>
+	    <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+	      <div class="panel-body">
+
+			{% if to %}
+			<h5>CC:</h5>
+			<ul>
+			{% for item in to %}
+				<li>{{ item }}</li>
 			{% endfor %}
-		</ul>
-		<a class="btn btn-default" data-toggle="collapse" href="#recipients_detail">Show Detailed Recipients &raquo;</a>
+			</ul>
+			{% endif %}
+					
+			{% if cc %}
+			<h5>CC:</h5>
+			<ul>
+			{% for item in cc %}
+				<li>{{ item }}</li>
+			{% endfor %}
+			</ul>
+			{% endif %}
 
-	</div>
-	<div class="panel-body panel-collapse collapse" id="recipients_detail">
-				
-		<h4>CC:</h4>
-		<ul>
-		{% for item in cc %}
-			<li>{{ item }}</li>
-		{% endfor %}
-		</ul>
+			{% if bcc or emails %}
+			<h5>BCC:</h5>
+			<ul>
+			{% for item in bcc %}
+				<li>{{ item }}</li>
+			{% endfor %}
+			{% for item in emails %}
+				<li>{{ item }}</li>
+			{% endfor %}
+			</ul>
+			{% endif %}
 
-		<h4>BCC:</h4>
-		<ul>
-		{% for item in bcc %}
-			<li>{{ item }}</li>
-		{% endfor %}
-		{% for item in emails %}
-			<li>{{ item }}</li>
-		{% endfor %}
-		</ul>
-
-
-	</div>
+	      </div>
+	    </div>
+	  </div>
 	</div>
 
 	<a class="btn btn-success" href="?confirmed=True">Send Emails</a>
 	<a class="btn btn-default" href="{% url 'emailStudents' %}">Return To Form</a>
 
+{% addtoblock "css" %}
+	<style type="text/css">
+		pre.unstyled {
+			border: 0;
+			padding: 0;
+			background-color: transparent;
+		    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+		    font-size: 14px;
+		}
+	</style>
+{% endaddtoblock %}
 {% endblock %}
