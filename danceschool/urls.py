@@ -48,5 +48,8 @@ if apps.is_installed('danceschool.financial'):
 if apps.is_installed('danceschool.private_events'):
     urlpatterns.append(url(r'^private_events/', include('danceschool.private_events.urls')),)
 
+if apps.is_installed('danceschool.private_lessons'):
+    urlpatterns.append(url(r'^private_lessons/', include('danceschool.private_lessons.urls')),)
+
 # CMS URLs always go last because they will match any pattern that has not already been matched.
 urlpatterns.append(url(r'^', include('cms.urls')),)

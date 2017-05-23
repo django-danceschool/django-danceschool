@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load sekizai_tags static %}
+{% load sekizai_tags static crispy_forms_tags %}
 
 {% block content %}
 
@@ -25,6 +25,26 @@
     </div>
 </div>
 
+<div id="alertBox"></div>
+
+<!-- Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="eventModalTitle"></h4>
+      </div>
+      <div class="modal-body" id="eventModalBody">
+          {{ form|crispy }}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary">Schedule This Lesson</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="calendarbox">&nbsp;</div>
 
@@ -56,27 +76,57 @@ $(document).ready(function() {
     $('#calendarbox').fullCalendar({
         // put your options and callbacks here
         eventTextColor: '#ffffff',
-        height: "auto",
+        height: 500,
         aspectRatio: 1,
-        defaultView: 'agendaWeek',
-        header: {right: 'prev,next today'},
-        selectable: true,
-        selectHelper: true,
-        slotMinutes: 30,
-        editable: true,
+        defaultView: 'listWeek',
+        header: {right: 'listWeek,agendaWeek, prev,next today'},
 
-        eventRender: function (event, element, view) {
-            var nextEventLeft = element.offset().left + element.width() + 5;
-            element.parent().children().eq(element.index()+1).css('left',nextEventLeft);
+         eventClick: function(calEvent, jsEvent) {
+            $('#eventModalTitle').html(calEvent.title);
+            $('#eventModalLocation').html(calEvent.location);
+            $('#id_duration').empty();
+            calEvent.availableDurations.forEach(function(minutes){
+                $('#id_duration').append('<option value="' + minutes + '">' + minutes + '</option>');
+            });
+            $('#eventModal').modal();
         },
     });
 
-    $('#instructorSelect').change(function(inst) {
+    $('#instructorSelect').change(function(event) {
         // Get the ID of the instructor, submit to AJAX view,
         // and finally load the availability of that instructor
+        event.preventDefault();
+
+        var new_id = $('#instructorSelect option:selected').data('id');
+
+        $.ajax({
+            type: "GET",
+            url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/",
+            success: function(events) {
+              $('#alertBox').empty();
+              $('#calendarbox').fullCalendar('removeEvents');
+              $('#calendarbox').fullCalendar('addEventSource', events);
+              $('#calendarbox').fullCalendar('rerenderEvents');
+            },
+            error: function() {
+
+              if (new_id) {
+                  $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert"><strong>ERROR:</strong> Instructor availability did not load.</div>');
+              }
+              $('#calendarbox').fullCalendar('removeEvents');
+            },
+        });
 
     });
 });
 </script>
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style type="text/css">
+        .modal {
+           position: absolute;
+           top: 40px;
+        }
+    </style>
 {% endaddtoblock %}
 {% endblock %}

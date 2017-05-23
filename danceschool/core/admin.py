@@ -351,6 +351,7 @@ class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
     list_editable = ('availableForPrivates','privateEmail','status')
     list_filter = ('status','availableForPrivates')
     search_fields = ('=firstName','=lastName','publicEmail','privateEmail')
+    inlines = []
 
     ordering = ('status','lastName','firstName')
 
