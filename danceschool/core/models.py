@@ -26,6 +26,9 @@ from jsonfield import JSONField
 from cms.models.pluginmodel import CMSPlugin
 
 from .constants import getConstant
+from .signals import post_registration
+from .mixins import EmailRecipientMixin
+
 
 if six.PY3:
     # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
@@ -400,7 +403,7 @@ class PublicEventCategory(EventCategory):
 
 
 @python_2_unicode_compatible
-class Event(PolymorphicModel):
+class Event(EmailRecipientMixin, PolymorphicModel):
     '''
     All public and private events, including class series, inherit off of this model.
     '''
@@ -498,6 +501,24 @@ class Event(PolymorphicModel):
         '''
         if hasattr(self,'category') and self.category:
             return self.category.displayColor
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [x.registration.customer.email for x in self.eventregistration_set.filter(cancelled=False)]
+
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        context = super(Event,self).get_email_context(**kwargs)
+        context.update({
+            'id': self.id,
+            'name': self.__str__(),
+            'title': self.name,
+            'start': self.firstOccurrenceTime,
+            'next': self.nextOccurrenceTime,
+            'last': self.lastOccurrenceTime,
+            'url': self.url,
+        })
+        return context
 
     def getBasePrice(self,**kwargs):
         '''
@@ -1229,7 +1250,7 @@ class Customer(models.Model):
 
 
 @python_2_unicode_compatible
-class TemporaryRegistration(models.Model):
+class TemporaryRegistration(EmailRecipientMixin, models.Model):
     firstName = models.CharField(max_length=100)
     lastName = models.CharField(max_length=100)
     email = models.CharField(max_length=200)
@@ -1274,6 +1295,87 @@ class TemporaryRegistration(models.Model):
     def totalDiscount(self):
         return self.totalPrice - self.priceWithDiscount
 
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [self.email,]
+
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        context = super(TemporaryRegistration,self).get_email_context(**kwargs)
+        context.update({
+            'first_name': self.firstName,
+            'last_name': self.lastName,
+            'registrationComments': self.comments,
+            'registrationHowHeardAboutUs': self.howHeardAboutUs,
+            'eventList': [x.get_email_context(includeName=False) for x in self.temporaryeventregistration_set.all()],
+        })
+
+        if hasattr(self,'invoice') and self.invoice:
+            context.update({
+                'invoice': self.invoice.get_email_context(),
+            })
+
+        return context
+
+    def finalize(self,**kwargs):
+        '''
+        This method is called when the payment process has been completed and a registration
+        is ready to be finalized.  It also fires the post-registration signal
+        '''
+        dateTime = kwargs.pop('dateTime', datetime.now())
+
+        # If sendEmail is passed as False, then
+        sendEmail = kwargs.pop('sendEmail', True)
+
+        customer, created = Customer.objects.get_or_create(first_name=self.firstName,last_name=self.lastName,email=self.email,defaults={'phone': self.phone})
+
+        regArgs = {'customer': customer, 'dateTime': dateTime, 'temporaryRegistration': self}
+        for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount']:
+            regArgs[key] = kwargs.pop(key, getattr(self,key,None))
+
+        # All other passed kwargs are put into the data JSON
+        regArgs['data'] = self.data
+        regArgs['data'].update(kwargs)
+
+        realreg = Registration(**regArgs)
+        realreg.save()
+        logger.debug('Created registration with id: ' + str(realreg.id))
+
+        for er in self.temporaryeventregistration_set.all():
+            logger.debug('Creating eventreg for event: ' + str(er.event.id))
+            realer = EventRegistration(registration=realreg,event=er.event,
+                                       customer=customer,role=er.role,
+                                       price=er.price,
+                                       dropIn=er.dropIn,
+                                       data=er.data
+                                       )
+            realer.save()
+
+        # This signal can, for example, be caught by the vouchers app to keep track of any vouchers
+        # that were applied
+        post_registration.send(
+            sender=TemporaryRegistration,
+            registration=realreg
+        )
+
+        if sendEmail:
+            if getConstant('email__disableSiteEmails'):
+                logger.info('Sending of confirmation emails is disabled.')
+            else:
+                logger.info('Sending confirmation email.')
+                template = EmailTemplate.objects.get(id=getConstant('email__registrationSuccessTemplateID'))
+
+                realreg.email_recipient(
+                    subject=template.subject,
+                    content=template.content,
+                    from_address=template.defaultFromAddress,
+                    from_name=template.defaultFromName,
+                    cc=template.defaultCC,
+                )
+
+        # Return the newly-created finalized registration object
+        return realreg
+
     def __str__(self):
         if self.dateTime:
             return '%s #%s: %s, %s' % (_('Temporary Registration'), self.id, self.fullName, self.dateTime.strftime('%b. %Y'))
@@ -1285,7 +1387,7 @@ class TemporaryRegistration(models.Model):
 
 
 @python_2_unicode_compatible
-class Registration(models.Model):
+class Registration(EmailRecipientMixin, models.Model):
     '''
     There is a single registration for an online transaction.
     A single Registration includes multiple classes, as well as events.
@@ -1298,17 +1400,11 @@ class Registration(models.Model):
     student = models.BooleanField(default=False)
     payAtDoor = models.BooleanField(default=False)
 
-    comments = models.TextField(default='',blank=True,null=True)
-    paidOnline = models.BooleanField(default=False,verbose_name=_('Paid Online'))
-    submissionUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('registered by user'),related_name='submittedregistrations')
-    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedregistrations')
-    processingFee = models.FloatField(default=0,verbose_name=_('Processing Fees'),validators=[MinValueValidator(0)])
     priceWithDiscount = models.FloatField(verbose_name=_('Price Net of Discounts'),validators=[MinValueValidator(0)])
-    amountPaid = models.FloatField(default=0,verbose_name=_('Net Amount Paid'),validators=[MinValueValidator(0)])
-    dateTime = models.DateTimeField(blank=True,null=True,verbose_name=_('Date & Time'))
-    invoiceNumber = models.CharField(_('Invoice Number'),null=True,blank=True,max_length=80)
+    comments = models.TextField(default='',blank=True,null=True)
 
     temporaryRegistration = models.OneToOneField(TemporaryRegistration,null=True)
+    dateTime = models.DateTimeField(blank=True,null=True,verbose_name=_('Date & Time'))
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
@@ -1352,18 +1448,6 @@ class Registration(models.Model):
         return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
 
     @property
-    def seriesAmountPaid(self):
-        if self.totalPrice == 0:
-            return 0
-        return self.amountPaid * (self.seriesPrice / self.totalPrice)
-
-    @property
-    def eventAmountPaid(self):
-        if self.totalPrice == 0:
-            return 0
-        return self.amountPaid * (self.publicEventPrice / self.totalPrice)
-
-    @property
     def voucherAmount(self):
         return sum([x.amount for x in self.voucheruse_set.all()])
 
@@ -1392,28 +1476,27 @@ class Registration(models.Model):
     def getPriceForMonth(self,dateOfInterest):
         return sum([x.price for x in self.eventregistration_set.filter(series__year=dateOfInterest.year,series__month=dateOfInterest.month)])
 
-    def getSeriesAmountPaidForMonth(self,dateOfInterest):
-        # get total price for series of this month
-        if self.seriesPrice == 0:
-            return 0
-        else:
-            return self.seriesAmountPaid * (self.getSeriesPriceForMonth(dateOfInterest) / self.seriesPrice)
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [self.customer.email,]
 
-    def getEventAmountPaidForMonth(self,dateOfInterest):
-        # get total price for series of this month
-        if self.publicEventPrice == 0:
-            return 0
-        else:
-            return self.eventAmountPaid * (self.getEventPriceForMonth(dateOfInterest) / self.publicEventPrice)
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        context = super(Registration,self).get_email_context(**kwargs)
+        context.update({
+            'first_name': self.customer.first_name,
+            'last_name': self.customer.last_name,
+            'registrationComments': self.comments,
+            'registrationHowHeardAboutUs': self.howHeardAboutUs,
+            'eventList': [x.get_email_context(includeName=False) for x in self.eventregistration_set.all()],
+        })
 
-    def getAmountPaidForMonth(self,dateOfInterest):
-        return self.getSeriesAmountPaidForMonth(dateOfInterest) + self.getEventAmountPaidForMonth(dateOfInterest)
+        if hasattr(self,'invoice') and self.invoice:
+            context.update({
+                'invoice': self.invoice.get_email_context(),
+            })
 
-    def getProcessingFeeForMonth(self,dateOfInterest):
-        if self.amountPaid == 0:
-            return 0
-        else:
-            return self.processingFee * self.getAmountPaidForMonth(dateOfInterest) / self.amountPaid
+        return context
 
     def __str__(self):
         if self.dateTime:
@@ -1437,7 +1520,7 @@ class Registration(models.Model):
 
 
 @python_2_unicode_compatible
-class EventRegistration(models.Model):
+class EventRegistration(EmailRecipientMixin, models.Model):
     '''
     An EventRegistration is associated with a Registration and records
     a registration for a single event.
@@ -1471,11 +1554,35 @@ class EventRegistration(models.Model):
     def matchingTemporaryRegistration(self):
         return self.registration.temporaryRegistration.temporaryeventregistration_set.get(event=self.event)
 
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [self.registration.customer.email,]
+
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        includeName = kwargs.pop('includeName',True)
+        context = super(EventRegistration,self).get_email_context(**kwargs)
+        context.update({
+            'title': self.event.name,
+            'start': self.event.firstOccurrenceTime,
+            'end': self.event.lastOccurrenceTime,
+        })
+
+        if includeName:
+            context.update({
+                'first_name': self.registration.customer.first_name,
+                'last_name': self.registration.customer.last_name,
+            })
+        return context
+
     def __str__(self):
         return str(self.customer) + " " + str(self.event)
 
+    class Meta:
+        unique_together = ['registration', 'event']
 
-class TemporaryEventRegistration(models.Model):
+
+class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
     price = models.FloatField(validators=[MinValueValidator(0)])
     event = models.ForeignKey(Event)
     role = models.ForeignKey(DanceRole,null=True,blank=True)
@@ -1486,6 +1593,32 @@ class TemporaryEventRegistration(models.Model):
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
     data = JSONField(default={})
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [self.registration.customer.email,]
+
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+
+        includeName = kwargs.pop('includeName',True)
+        context = super(TemporaryEventRegistration,self).get_email_context(**kwargs)
+
+        context.update({
+            'title': self.event.name,
+            'start': self.event.firstOccurrenceTime,
+            'end': self.event.lastOccurrenceTime,
+        })
+
+        if includeName:
+            context.update({
+                'first_name': self.registration.firstName,
+                'last_name': self.registration.lastName,
+            })
+        return context
+
+    class Meta:
+        unique_together = ['registration', 'event']
 
 
 @python_2_unicode_compatible
@@ -1507,6 +1640,348 @@ class EmailTemplate(models.Model):
         permissions = (
             ('send_email',_('Can send emails using the SendEmailView')),
         )
+
+
+@python_2_unicode_compatible
+class Invoice(EmailRecipientMixin, models.Model):
+
+    class PaymentStatus(DjangoChoices):
+        unpaid = ChoiceItem('U',_('Unpaid'))
+        authorized = ChoiceItem('A',_('Authorized using payment processor'))
+        paid = ChoiceItem('P',_('Paid'))
+        needsCollection = ChoiceItem('N',_('Cash payment recorded'))
+        fullRefund = ChoiceItem('R',_('Refunded in full'))
+        cancelled = ChoiceItem('C',_('Cancelled'))
+        rejected = ChoiceItem('X',_('Rejected in processing'))
+        error = ChoiceItem('E',_('Error in processing'))
+
+    # The UUID field is the unique internal identifier used for this Invoice
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    temporaryRegistration = models.OneToOneField(TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True)
+    finalRegistration = models.OneToOneField(Registration,verbose_name=_('Registration'),null=True,blank=True)
+
+    creationDate = models.DateTimeField(_('Invoice created'),auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last modified'),auto_now=True)
+
+    status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.unpaid)
+
+    paidOnline = models.BooleanField(default=False,verbose_name=_('Paid Online'))
+    submissionUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('registered by user'),related_name='submittedinvoices')
+    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedinvoices')
+
+    grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)
+    total = models.FloatField(_('Total billed amount'),validators=[MinValueValidator(0)], default=0)
+    adjustments = models.FloatField(_('Refunds/adjustments'),default=0)
+    taxes = models.FloatField(_('Taxes'),validators=[MinValueValidator(0)],default=0)
+    fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)],default=0)
+
+    amountPaid = models.FloatField(default=0,verbose_name=_('Net Amount Paid'),validators=[MinValueValidator(0)])
+
+    comments = models.TextField(_('Comments'),null=True,blank=True)
+
+    # Additional information (record of specific transactions) can go in here
+    data = JSONField(default={})
+
+    @classmethod
+    def create_from_item(cls, amount, item_description, **kwargs):
+        '''
+        Creates an Invoice as well as a single associated InvoiceItem
+        with the passed description (for things like gift certificates)
+        '''
+        submissionUser = kwargs.pop('submissionUser', None)
+        collectedByUser = kwargs.pop('collectedByUser', None)
+        calculate_taxes = kwargs.pop('calculate_taxes', False)
+        grossTotal = kwargs.pop('grossTotal',None)
+
+        new_invoice = cls(
+            grossTotal=grossTotal or amount,
+            total=amount,
+            submissionUser=submissionUser,
+            collectedByUser=collectedByUser,
+            data=kwargs,
+        )
+
+        if calculate_taxes:
+            new_invoice.calculateTaxes()
+
+        new_invoice.save()
+
+        InvoiceItem.objects.create(
+            invoice=new_invoice,
+            grossTotal=grossTotal or amount,
+            total=amount,
+            taxes=new_invoice.taxes,
+            description=item_description,
+        )
+        return new_invoice
+
+    @classmethod
+    def create_from_registration(cls, reg, **kwargs):
+        '''
+        Handles the creation of an Invoice as well as one InvoiceItem per
+        assodciated TemporaryEventRegistration or registration.  Also handles taxes
+        appropriately.
+        '''
+        submissionUser = kwargs.pop('submissionUser', None)
+        collectedByUser = kwargs.pop('collectedByUser', None)
+
+        new_invoice = cls(
+            grossTotal=reg.totalPrice,
+            total=reg.priceWithDiscount,
+            submissionUser=submissionUser,
+            collectedByUser=collectedByUser,
+            data=kwargs,
+        )
+
+        if isinstance(reg, Registration):
+            new_invoice.finalRegistration = reg
+            ter_set = reg.eventregistration_set.all()
+        elif isinstance(reg, TemporaryRegistration):
+            new_invoice.TemporaryRegistration = reg
+            ter_set = reg.temporaryeventregistration_set.all()
+        else:
+            raise ValueError('Object passed is not a registration.')
+
+        new_invoice.calculateTaxes()
+        new_invoice.save()
+
+        # Now, create InvoiceItem records for each EventRegistration
+        for ter in ter_set:
+            # Discounts and vouchers are always applied equally to all items at initial
+            # invoice creation.
+            allocated_total = ter.price * (new_invoice.total / new_invoice.grossTotal)
+            allocated_taxes = new_invoice.taxes * (ter.price / new_invoice.grossTotal)
+            allocated_fees = new_invoice.fees * (ter.price / new_invoice.grossTotal)
+
+            this_invoice = InvoiceItem(
+                invoice=new_invoice,
+                temporaryEventRegistration=ter,
+                grossTotal=ter.price,
+                total=allocated_total,
+                taxes=allocated_taxes,
+                fees=allocated_fees,
+            )
+
+            this_invoice.save()
+
+        return new_invoice
+
+    @property
+    def url(self):
+        return reverse('viewInvoice', args=[self.id,])
+
+    @property
+    def outstandingBalance(self):
+        balance = self.total + self.adjustments - self.amountPaid
+        if getConstant('buyerPaysSalesTax'):
+            balance += self.taxes
+        return balance
+
+    @property
+    def unallocatedAdjustments(self):
+        return self.adjustments - sum([x.adjustments for x in self.invoiceitem_set.all()])
+
+    @property
+    def refundsAllocated(self):
+        return (self.unallocatedAdjustments == 0)
+
+    @property
+    def netRevenue(self):
+        net = self.total - self.fees + self.adjustments
+        if not getConstant('buyerPaysSalesTax'):
+            net -= self.taxes
+        return net
+
+    @property
+    def discountPercentage(self):
+        return 1 - (self.total / self.grossTotal)
+
+    @property
+    def statusLabel(self):
+        return self.PaymentStatus.values.get(self.status,'')
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        if self.finalRegistration:
+            return [self.finalRegistration.customer.email,]
+        elif self.temporaryRegistration:
+            return [self.temporaryRegistration.email,]
+        return []
+
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        context = super(Invoice,self).get_email_context(**kwargs)
+        context.update({
+            'id': self.id,
+            'url': self.url,
+            'amountPaid': self.amountPaid,
+            'outstandingBalance': self.outstandingBalance,
+            'status': self.statusLabel,
+            'creationDate': self.creationDate,
+            'modifiedDate': self.modifiedDate,
+            'paidOnline': self.paidOnline,
+            'grossTotal': self.grossTotal,
+            'total': self.total,
+            'adjustments': self.adjustments,
+            'taxes': self.taxes,
+            'fees': self.fees,
+            'comments': self.comments,            
+        })
+        return context
+
+    def calculateTaxes(self):
+        '''
+        Updates the tax field to reflect the amount of taxes depending on1
+        the local rate as well as whether the buyer or seller pays sales tax.
+        '''
+
+        tax_rate = (getConstant('registration__salesTaxRate') or 0) / 100
+
+        if tax_rate > 0:
+            if getConstant('buyerPaysSalesTax'):
+                # If the buyer pays taxes, then taxes are just added as a fraction of the price
+                self.taxes = self.total * tax_rate
+            else:
+                # If the seller pays sales taxes, then adjusted_total will be their net revenue,
+                # and under this calculation adjusted_total + taxes = the price charged
+                adjusted_total = self.total / (1 + tax_rate)
+                self.taxes = adjusted_total * tax_rate
+
+    def processPayment(self, amount, fees, paidOnline=True, methodName=None, methodTxn=None, submissionUser=None, collectedByUser=None, forceFinalize=False, status=None):
+        '''
+        When a payment processor makes a successful payment against an invoice, it can call this method
+        which handles status updates, the creation of a final registration object (if applicable), and
+        the firing of appropriate registration-related signals.
+        '''
+        epsilon = .01
+
+        paymentTime = datetime.now()
+
+        logger.info('Processing payment and creating registration objects.')
+
+        # The payment history record is primarily for convenience, and passed values are not
+        # validated.  Payment processing apps should keep individual transaction records with
+        # a ForeignKey to the Invoice object.
+        paymentHistory = self.data.get('paymentHistory',[])
+        paymentHistory.append({
+            'dateTime': paymentTime,
+            'amount': amount,
+            'fees': fees,
+            'paidOnline': paidOnline,
+            'methodName': methodName,
+            'methodTxn': methodTxn,
+            'submissionUser': submissionUser,
+            'collectedByUser': collectedByUser,
+        })
+        self.data['paymentHistory'] = paymentHistory
+
+        self.amountPaid += amount
+        self.fees += fees
+        self.paidOnline = paidOnline
+
+        if submissionUser and not self.submissionUser:
+            self.submissionUser = submissionUser
+        if collectedByUser and not self.collectedByUser:
+            self.collectedByUser = collectedByUser
+
+        # if this completed the payment, then finalize the registration and mark
+        # the invoice as Paid unless told to do otherwise.
+        if forceFinalize or abs(self.outstandingBalance) < epsilon:
+            self.status = status or self.PaymentStatus.paid
+            finalReg = self.temporaryRegistration.finalize(dateTime=paymentTime)
+            self.finalRegistration = finalReg
+            self.save()
+            for eventReg in finalReg.eventregistration_set.filter(cancelled=False):
+                # There can only be one eventreg per event in a registration, so we
+                # can filter on temporaryRegistration event to get the invoiceItem
+                # to which we should
+                this_invoice_item = self.invoiceitem_set.filter(temporaryEventRegistration__event=eventReg.event).first()
+                if this_invoice_item:
+                    this_invoice_item.finalEventRegistration = eventReg
+                    this_invoice_item.save()
+        else:
+            # The payment wasn't completed so don't finalize, but do send a notification recording the payment.
+            self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
+            self.save()
+
+    def sendNotification(self, **kwargs):
+
+        if getConstant('email__disableSiteEmails'):
+            logger.info('Sending of invoice email is disabled.')
+            return
+        logger.info('Sending invoice notification to customer.')
+
+        payerEmail = kwargs.pop('payerEmail','')
+        amountDue = kwargs.pop('amountDue', self.outstandingBalance)
+
+        if not payerEmail and not self.get_default_recipients():
+            raise ValueError(_('Cannot send notification email because no recipient has been specified.'))
+
+        template = EmailTemplate.objects.get(id=getConstant('email__invoiceTemplateID'))
+
+        self.email_recipient(
+            subject=template.subject,
+            content=template.content,
+            from_address=template.defaultFromAddress,
+            from_name=template.defaultFromName,
+            cc=template.defaultCC,
+            bcc=[payerEmail,],
+            amountDue=amountDue,
+            **kwargs
+        )
+        logger.debug('Invoice notification sent.')
+
+    class Meta:
+        permissions = (
+            ('process_refunds',_('Can refund customers for registrations and other invoice payments.')),
+        )
+
+
+@python_2_unicode_compatible
+class InvoiceItem(models.Model):
+    '''
+    Since we potentially want to facilitate financial tracking by Event and not
+    just by period, we have to create a unique record for each item in each invoice.
+    In the financial app (if installed), RevenueItems may link uniquely to InvoiceItems,
+    and InvoiceItems may link uniquely to registration items.  Although this may seem
+    like duplicated functionality, it permits the core app (as well as the payment apps)
+    to operate completely independently of the financial app, making that app fully optional.
+    '''
+
+    # The UUID field is the unique internal identifier used for this InvoiceItem
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.ForeignKey(Invoice,verbose_name=_('Invoice'))
+    description = models.CharField(_('Description'), max_length=300,null=True,blank=True)
+
+    temporaryEventRegistration = models.OneToOneField(TemporaryEventRegistration,verbose_name=_('Temporary event registration'),null=True,blank=True)
+    finalEventRegistration = models.OneToOneField(EventRegistration,verbose_name=_('Event registration'),null=True,blank=True)
+
+    grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)
+    total = models.FloatField(_('Total billed amount'),validators=[MinValueValidator(0)], default=0)
+    adjustments = models.FloatField(_('Refunds/adjustments'),default=0)
+    taxes = models.FloatField(_('Taxes'),validators=[MinValueValidator(0)],default=0)
+    fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)],default=0)
+
+    @property
+    def netRevenue(self):
+        net = self.total - self.fees + self.adjustments
+        if not getConstant('buyerPaysSalesTax'):
+            net -= self.taxes
+        return net
+
+    @property
+    def name(self):
+        er = self.finalEventRegistration or self.temporaryEventRegistration
+        if er.dropIn:
+            return _('Drop-in Registration: %s' % er.event.name)
+        elif er:
+            return _('Registration: %s' % er.event.name)
+        else:
+            return self.description or _('Other items')
+
+    def __str__(self):
+        return self.name
 
 
 class StaffMemberPluginModel(CMSPlugin):

@@ -2,7 +2,7 @@ from django.test import RequestFactory
 from django.utils.translation import ugettext_lazy as _
 
 from danceschool.core.helpers import emailErrorMessage
-from danceschool.core.emails import renderEmail
+from danceschool.core.mixins import EmailRecipientMixin
 from danceschool.core.models import EmailTemplate
 from danceschool.core.constants import getConstant
 
@@ -64,7 +64,8 @@ def processGiftCertificate(mc_gross,payer_email,payment_status,txn_id,recipient_
         attachment_name = None
 
     # Send a confirmation email
-    renderEmail(
+    email_class = EmailRecipientMixin()
+    email_class.email_recipient(
         subject=template.subject,
         content=template.content,
         from_address=template.defaultFromAddress,

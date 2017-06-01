@@ -97,18 +97,18 @@ class RevenueItemAdminForm(ModelForm):
 class RevenueItemAdmin(admin.ModelAdmin):
     form = RevenueItemAdminForm
 
-    list_display = ('description','category','grossTotal','total','adjustments','netRevenue','received','receivedDate')
+    list_display = ('description','category','grossTotal','total','adjustments','netRevenue','received','receivedDate','invoiceLink')
     list_editable = ('received',)
-    search_fields = ('description','comments')
+    search_fields = ('description','comments','invoiceItem__id','invoiceItem__invoice__id')
     list_filter = ('category','received','paymentMethod',('receivedDate',DateRangeFilter),('accrualDate',DateRangeFilter),('submissionDate',DateRangeFilter))
-    readonly_fields = ('netRevenue','submissionUserLink','relatedRevItemsLink','eventLink','voucherLink','paymentMethod','invoiceNumber')
+    readonly_fields = ('netRevenue','submissionUserLink','relatedRevItemsLink','eventLink','paymentMethod','invoiceNumber','invoiceLink')
 
     fieldsets = (
         (_('Basic Info'), {
             'fields': ('category','description','grossTotal','total','adjustments','fees','netRevenue','paymentMethod','receivedFromName','invoiceNumber','comments')
         }),
         (_('Related Items'),{
-            'fields': ('relatedRevItemsLink','eventLink','voucherLink'),
+            'fields': ('relatedRevItemsLink','eventLink','invoiceLink'),
         }),
         (_('File Attachment (optional)'), {
             'fields': ('attachment',)
@@ -148,13 +148,12 @@ class RevenueItemAdmin(admin.ModelAdmin):
     eventLink.allow_tags = True
     eventLink.short_description = _('Series/Event')
 
-    def voucherLink(self,obj):
+    def invoiceLink(self,obj):
         ''' If vouchers app is enabled and there is a voucher, this will link to it. '''
-        if hasattr(obj,'purchasedVoucher') and obj.purchasedVoucher:
-            v = obj.purchasedVoucher
-            return self.get_admin_change_link('vouchers','voucher',v.id,v.__str__())
-    voucherLink.allow_tags = True
-    voucherLink.short_description = _('Voucher/Gift Certificate')
+        if hasattr(obj,'invoiceItem') and obj.invoiceItem:
+            return self.get_admin_change_link('core','invoice',obj.invoiceItem.invoice.id,obj.invoiceItem.invoice.id)
+    invoiceLink.allow_tags = True
+    invoiceLink.short_description = _('Invoice')
 
     def submissionUserLink(self,obj):
         link = []

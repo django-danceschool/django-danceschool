@@ -1,6 +1,7 @@
 # Give this app a custom verbose name to avoid confusion
 from django.apps import AppConfig
 from django.utils.translation import ugettext_lazy as _
+from django.template.loader import get_template
 
 from danceschool.core.utils.sys import isPreliminaryRun
 
@@ -61,11 +62,16 @@ class VoucherAppConfig(AppConfig):
             from danceschool.core.models import EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
 
             if (getConstant('vouchers__giftCertTemplateID') or 0) <= 0:
+                initial_template = get_template('email/gift_certificate_confirmation.html')
+                with open(initial_template.origin.name,'r') as infile:
+                    content = infile.read()
+                    infile.close()
+
                 new_template, created = EmailTemplate.objects.get_or_create(
                     name=_('Gift Certificate Purchase Confirmation Email'),
                     defaults={
                         'subject': _('Gift Certificate Purchase Confirmation'),
-                        'content': '',
+                        'content': content,
                         'defaultFromAddress': get_defaultEmailFrom(),
                         'defaultFromName': get_defaultEmailName(),
                         'defaultCC': '',
@@ -75,11 +81,16 @@ class VoucherAppConfig(AppConfig):
                 updateConstant('vouchers__giftCertTemplateID',new_template.id,True)
 
             if (getConstant('vouchers__giftCertPDFTemplateID') or 0) <= 0:
+                initial_template = get_template('email/gift_certificate_attachment.html')
+                with open(initial_template.origin.name,'r') as infile:
+                    content = infile.read()
+                    infile.close()
+
                 new_template, created = EmailTemplate.objects.get_or_create(
                     name=_('Gift Certificate Purchase PDF Text'),
                     defaults={
                         'subject': _('You\'ve Been Given the Gift of Dance!'),
-                        'content': _('Insert HTML here.'),
+                        'content': content,
                         'defaultFromAddress': get_defaultEmailFrom(),
                         'defaultFromName': get_defaultEmailName(),
                         'defaultCC': '',

@@ -15,10 +15,9 @@ from dal import autocomplete
 from datetime import datetime
 import logging
 
-from danceschool.core.models import EventRegistration, Registration
+from danceschool.core.models import InvoiceItem
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem
-from .signals import refund_requested
 
 
 # Define logger for this file
@@ -169,9 +168,9 @@ class ExpenseReportingForm(forms.ModelForm):
         }
 
 
-class EventRegistrationChoiceField(forms.ModelChoiceField):
+class InvoiceItemChoiceField(forms.ModelChoiceField):
     '''
-    This exists so that the validators for EventRegistrations are not
+    This exists so that the validators for InvoiceItems (EventRegistrations) are not
     thrown off by the fact that the initial query is blank.
     '''
 
@@ -180,7 +179,7 @@ class EventRegistrationChoiceField(forms.ModelChoiceField):
             value = super(self.__class__,self).to_python(value)
         except:
             key = self.to_field_name or 'pk'
-            value = EventRegistration.objects.filter(**{key: value})
+            value = InvoiceItem.objects.filter(**{key: value})
             if not value.exists():
                 raise ValidationError(self.error_messages['invalid_choice'], code='invalid_choice')
             else:
@@ -220,7 +219,7 @@ class RevenueReportingForm(forms.ModelForm):
         super(RevenueReportingForm,self).__init__(*args,**kwargs)
         self.fields['submissionUser'].widget = forms.HiddenInput()
         self.fields['invoiceNumber'].widget = forms.HiddenInput()
-        self.fields["eventregistration"] = EventRegistrationChoiceField(queryset=EventRegistration.objects.none(),required=False)
+        self.fields["invoiceItem"] = InvoiceItemChoiceField(queryset=InvoiceItem.objects.none(),required=False)
 
         # re-order fields to put the associateWith RadioSelect first.
         newFields = OrderedDict()
@@ -248,113 +247,13 @@ class RevenueReportingForm(forms.ModelForm):
 
         if associateWith in ['1','3'] and event:
             self.cleaned_data.pop('event', None)
-            self.cleaned_data.pop('eventregistration', None)
+            self.cleaned_data.pop('invoiceItem', None)
 
         return self.cleaned_data
 
     class Meta:
         model = RevenueItem
-        fields = ['submissionUser','invoiceNumber','category','description','event','eventregistration','receivedFromName','paymentMethod','currentlyHeldBy','total','attachment']
+        fields = ['submissionUser','invoiceNumber','category','description','event','invoiceItem','receivedFromName','paymentMethod','currentlyHeldBy','total','attachment']
 
     class Media:
         js = ('js/revenue_reporting.js',)
-
-
-class RegistrationRefundForm(forms.ModelForm):
-    '''
-    This is the form that is used to allocate refunds across series and events.  If the Paypal app is installed, then it
-    will also be used to submit refund requests to Paypal.  Note that most cleaning validation happens in Javascript.
-    '''
-    class Meta:
-        model = Registration
-        fields = []
-
-    def __init__(self, *args, **kwargs):
-        super(RegistrationRefundForm, self).__init__(*args, **kwargs)
-
-        reg = kwargs.pop('instance',None)
-
-        for er in reg.eventregistration_set.all():
-            self.fields["er_cancelled_%d" % er.id] = forms.BooleanField(
-                label=_('Cancelled'),required=False,initial=er.cancelled)
-            self.fields["er_refundamount_%d" % er.id] = forms.FloatField(
-                label=_('Refund Amount'),required=False,initial=er.revenueRefundsReported,min_value=0,max_value=er.netPrice)
-
-        self.fields['comments'] = forms.CharField(
-            label=_('Explanation/Comments (optional)'),required=False,
-            help_text=_('This information will be added to the comments on the revenue items associated with this refund.'),
-            widget=forms.Textarea(attrs={'placeholder': _('Enter explanation/comments...'), 'class': 'form-control'}))
-
-        self.fields['id'] = forms.ModelChoiceField(
-            required=True,queryset=Registration.objects.filter(pk=reg.pk),widget=forms.HiddenInput())
-
-        self.fields['initial_refund_amount'] = forms.FloatField(
-            required=True,initial=reg.revenueRefundsReported,min_value=0,max_value=reg.revenueReceivedGross,widget=forms.HiddenInput())
-
-        self.fields['total_refund_amount'] = forms.FloatField(
-            required=True,initial=0,min_value=0,max_value=reg.revenueReceivedGross,widget=forms.HiddenInput())
-
-    def clean_total_refund_amount(self):
-        '''
-        The Javascript should ensure that the hidden input is updated, but double check it here.
-        '''
-        initial = self.cleaned_data.get('initial_refund_amount', 0)
-        total = self.cleaned_data['total_refund_amount']
-        summed_refunds = sum([v for k,v in self.cleaned_data.items() if '_refundamount_' in k])
-
-        if summed_refunds != total:
-            raise ValidationError(_('Passed value does not match sum of allocated refunds.'))
-        elif summed_refunds > self.cleaned_data['id'].revenueReceivedGross:
-            raise ValidationError(_('Total refunds allocated exceed revenue received.'))
-        elif total < initial:
-            raise ValidationError(_('Cannot reduce the total amount of the refund.'))
-        return total
-
-    def save(self):
-        '''
-        Since this form doesn't actually change the Registration object itself, but instead
-        the related RevenueItem and other objects, this method is overridden to handle everything correctly,
-        rather than performing processing in the view itself.
-        '''
-        reg = self.instance
-        data = self.cleaned_data
-
-        refund_list = [(k.split('_')[0],int(k.split('_')[2]),v) for k,v in data.items() if '_refundamount_' in k]
-        comments = data.get('comments','')
-
-        for item in refund_list:
-            if item[0] == 'er':
-                er = reg.eventregistration_set.get(id=item[1])
-                revitem = er.revenueitem_set.first()
-                revChanged = False
-                cancelled = data.get('er_cancelled_' + str(item[1]))
-                if cancelled != er.cancelled:
-                    logger.debug(_('Updating cancellation status of EventRegistration %s' % item[1]))
-                    er.cancelled = cancelled
-                    er.save()
-                if revitem.adjustments != -1 * item[2]:
-                    logger.debug(_('Updating adjustment to RevenueItem %s, setting adjustments to %s' % (revitem.id,-1 * item[2])))
-                    revitem.adjustments = -1 * item[2]
-                    revChanged = True
-                if comments:
-                    revitem.comments = '%s%s\n%s' % (('%s\n\n' % revitem.comments) or '', _('Comment from registration refund form -- %s:' % datetime.now().strftime('%Y-%m-%d %H:%M:%S')),comments)
-                    revChanged = True
-                if revChanged:
-                    revitem.save()
-
-        # Fire the signal indicating that a refund has been processed.  The Paypal app hooks into this.
-        additional_refund_amount = data['total_refund_amount'] - data['initial_refund_amount']
-        if data['total_refund_amount'] == reg.netPrice:
-            refundType = 'Full'
-        else:
-            refundType = 'Partial'
-
-        if additional_refund_amount > 0:
-            logger.debug('Firing signal to handle request.')
-            refund_requested.send(
-                self,
-                registration=reg,
-                refundType=refundType,
-                refundAmount=additional_refund_amount)
-
-        return reg

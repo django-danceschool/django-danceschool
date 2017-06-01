@@ -1,0 +1,105 @@
+{% extends "cms/home.html" %}
+{% load danceschool_tags sekizai_tags %}
+
+{% block content %}
+
+<h1>Invoice: {{ business_name }}</h1>
+
+<dl>
+	<dt>Invoice Number:</dt>
+	<dd>{{ object.id }}</dd>
+
+	<dt>Invoice Status:</dt>
+	<dd>{{ object.statusLabel }}</dd>
+
+	{% if object.amountPaid %}
+		<dt>Amount Paid:</dt>
+		<dd>{{ object.amountPaid }}</dd>
+	{% endif %}
+
+	{% if object.outstandingBalance %}
+		<dt>Outstanding Balance:</dt>
+		<dd>{{ object.outstandingBalance }}</dd>
+	{% endif %}
+</dl>
+
+<table class="table">
+<tr>
+	<td>Initial Price</td>
+	<td>{{ currency_code }}{{ object.grossTotal|floatformat:"2" }}</td>
+</tr>
+<tr>
+	<td>Net Price</td>
+	<td>{{ currency_code }}{{ object.total|floatformat:"2" }}</td>
+</tr>
+<tr>
+	<td>Taxes</td>
+	<td>{{ currency_code }}{{ object.taxes|floatformat:"2" }}</td>
+</tr>
+<tr>
+	<td>Fees</td>
+	<td>{{ currency_code }}{{ object.fees|floatformat:"2" }}</td>
+</tr>
+<tr>
+	<td>Adjustments/Refunds</td>
+	<td>{{ currency_code }}{{ object.adjustments|floatformat:"2" }}</td>
+</tr>
+
+</table>
+
+<div class="panel panel-default">
+<div class="panel-heading"><h4 class="panel-title">Comments/Notes</h4></div>
+<div class="panel-body">
+	<pre class="unstyled">{{ object.comments }}</pre>
+</div>
+</div>
+
+<h2>Item Details</h2>
+
+<table class="table">
+<thead>
+	<tr>
+		<th>Name</th>
+		<th>Inital Price</th>
+		<th>Price with Discounts</th>
+		<th>Taxes</th>
+		<th>Fees</th>
+		<th>Adjustments</th>
+	</tr>
+</thead>
+<tbody>
+{% for item in object.invoiceitem_set.all %}
+	<tr>
+		<td>{{ item.name }}</td>
+		<td>{{ item.grossTotal|floatformat:"2" }}</td>
+		<td>{{ item.total|floatformat:"2" }}</td>
+		<td>{{ item.taxes|floatformat:"2" }}</td>
+		<td>{{ item.fees|floatformat:"2" }}</td>
+		<td>{{ item.adjustments|floatformat:"2" }}</td>
+	</tr>
+{% endfor %}
+<tbody>
+</table>
+
+{% if payments %}
+	<div class="panel panel-default">
+		<div class="panel-heading"><h4 class="panel-title">Payment Details</h4></div>
+		<div class="panel-body">
+			{% for payment in payments %}
+				{{ payment.method }} {{ payment.id}}: {{ payment.netAmountPaid }}
+			{% endfor %}
+		</div>
+{% endif %}
+
+{% addtoblock "css" %}
+	<style type="text/css">
+		pre.unstyled {
+			border: 0;
+			padding: 0;
+			background-color: transparent;
+		    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+		    font-size: 14px;
+		}
+	</style>
+{% endaddtoblock %}
+{% endblock %}

@@ -1,7 +1,8 @@
 from django.conf.urls import url
 
-from .views import payment_received
+from .views import createPaypalPayment, executePaypalPayment
 
 urlpatterns = [
-    url(r'^payment_received/$', payment_received, name='payment_received'),
+    url(r'^create_payment/$', createPaypalPayment, name='createPaypalPayment'),
+    url(r'^execute_payment/$', executePaypalPayment, name='executePaypalPayment'),
 ]

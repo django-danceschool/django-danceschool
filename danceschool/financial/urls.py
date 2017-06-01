@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from .views import InstructorPaymentsView, OtherInstructorPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, RefundProcessingView, FinancialDetailView, ExpenseReportingView, RevenueReportingView
+from .views import InstructorPaymentsView, OtherInstructorPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView
 from .ajax import updateEventRegistrations
 
 urlpatterns = [
@@ -17,9 +17,6 @@ urlpatterns = [
 
     # These URLs are for Ajax functionality
     url(r'^submit-revenues/eventfilter/$', updateEventRegistrations, name='ajaxhandler_updateEventRegistrations'),
-
-    # This URL is for refund processing
-    url(r'^refund-processing/(?P<pk>\d+)/$', RefundProcessingView.as_view(), name='refundProcessing'),
 
     # These URLs are for the financial views
     url(r'^finances/detail/(?P<year>[\w\+]+)/(?P<month>[\w\+]+)/$', FinancialDetailView.as_view(), name='financialDetailView'),

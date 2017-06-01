@@ -1,4 +1,4 @@
-from django.views.generic import DetailView, TemplateView, CreateView, View, UpdateView
+from django.views.generic import DetailView, TemplateView, CreateView, View
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, Http404
 from django.db.models import Q, Sum, F, Min
@@ -12,13 +12,13 @@ from calendar import month_name
 from urllib.parse import unquote_plus, unquote
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 
-from danceschool.core.models import Registration, Instructor, Location, Event
+from danceschool.core.models import Instructor, Location, Event
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
-from .forms import ExpenseReportingForm, RevenueReportingForm, RegistrationRefundForm
+from .forms import ExpenseReportingForm, RevenueReportingForm
 from .constants import EXPENSE_BASES
 
 
@@ -46,14 +46,6 @@ def getIntFromGet(request,key):
         return int(request.GET.get(key))
     except:
         return None
-
-
-class RefundProcessingView(FinancialContextMixin, AdminSuccessURLMixin, PermissionRequiredMixin, StaffuserRequiredMixin, SuccessMessageMixin, UpdateView):
-    template_name = 'financial/process_refund.html'
-    form_class = RegistrationRefundForm
-    permission_required = 'financial.process_registration_refunds'
-    model = Registration
-    success_message = _('Refund successfully submitted.')
 
 
 class ExpenseReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, SuccessMessageMixin, CreateView):

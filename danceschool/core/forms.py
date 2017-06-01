@@ -16,7 +16,7 @@ from random import random
 import json
 import logging
 
-from .models import SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, get_defaultEmailName, get_defaultEmailFrom
+from .models import SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 
@@ -440,17 +440,13 @@ class DoorAmountForm(forms.Form):
 
     invoiceSent = forms.BooleanField(label=_('Send Invoice'),required=False)
     payerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
-    invoiceNumber = forms.CharField(required=False)
-    itemList = forms.CharField(required=False)
     discountAmount = forms.FloatField(required=False)
 
     def __init__(self,*args,**kwargs):
         user = kwargs.pop('user',None)
-        invoiceNumber = kwargs.pop('invoiceNumber',None)
         payerEmail = kwargs.pop('payerEmail',None)
         doorPortion = kwargs.pop('doorPortion', None)
         invoicePortion = kwargs.pop('invoicePortion', None)
-        itemList = kwargs.pop('itemList', None)
         discountAmount = kwargs.pop('discountAmount', None)
 
         subUser = getattr(user,'id',None)
@@ -493,10 +489,8 @@ class DoorAmountForm(forms.Form):
                         </div>
                         <div class="panel-body">
                     """),
-                Hidden('invoiceNumber',invoiceNumber),
                 'invoiceSent',
                 'payerEmail',
-                Hidden('itemList',json.dumps(itemList).replace('"','&quot;')),
                 Hidden('discountAmount', discountAmount),
                 Submit('submit','Submit'),
                 HTML("""
@@ -539,14 +533,6 @@ class DoorAmountForm(forms.Form):
             raise ValidationError(_('Invalid user submitted invoice.'))
         return user
 
-    def clean_itemList(self):
-        jdata = self.cleaned_data['itemList']
-        try:
-            json_data = json.loads(jdata)
-        except:
-            raise ValidationError(_("Invalid data in jsonfield for itemList"))
-        return jdata
-
     def clean(self):
         form_data = self.cleaned_data
 
@@ -575,10 +561,62 @@ class DoorAmountForm(forms.Form):
                 raise ValidationError(_('Submission user is required.'))
             if not form_data.get('payerEmail'):
                 raise ValidationError(_('Must specify the email address of the invoice recipient.'))
-            if not form_data.get('invoiceNumber'):
-                raise ValidationError(_('Must specify an invoice number.'))
 
         return form_data
+
+
+class RefundForm(forms.ModelForm):
+    '''
+    This is the form that is used to allocate refunds across series and events.  If the Paypal app is installed, then it
+    will also be used to submit refund requests to Paypal.  Note that most cleaning validation happens in Javascript.
+    '''
+    class Meta:
+        model = Invoice
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super(RefundForm, self).__init__(*args, **kwargs)
+
+        this_invoice = kwargs.pop('instance',None)
+
+        for item in this_invoice.invoiceitem_set.all():
+            initial = False
+            if item.finalEventRegistration:
+                initial = item.finalEventRegistration.cancelled
+            self.fields["item_cancelled_%s" % item.id] = forms.BooleanField(
+                label=_('Cancelled'),required=False,initial=initial)
+            self.fields['item_refundamount_%s' % item.id] = forms.FloatField(
+                label=_('Refund Amount'),required=False,initial=(-1) * item.adjustments, min_value=0, max_value=item.total)
+
+        self.fields['comments'] = forms.CharField(
+            label=_('Explanation/Comments (optional)'),required=False,
+            help_text=_('This information will be added to the comments on the invoice associated with this refund.'),
+            widget=forms.Textarea(attrs={'placeholder': _('Enter explanation/comments...'), 'class': 'form-control'}))
+
+        self.fields['id'] = forms.ModelChoiceField(
+            required=True,queryset=Invoice.objects.filter(id=this_invoice.id),widget=forms.HiddenInput())
+
+        self.fields['initial_refund_amount'] = forms.FloatField(
+            required=True,initial=(-1) * this_invoice.adjustments,min_value=0,max_value=this_invoice.amountPaid,widget=forms.HiddenInput())
+
+        self.fields['total_refund_amount'] = forms.FloatField(
+            required=True,initial=0,min_value=0,max_value=this_invoice.amountPaid,widget=forms.HiddenInput())
+
+    def clean_total_refund_amount(self):
+        '''
+        The Javascript should ensure that the hidden input is updated, but double check it here.
+        '''
+        initial = self.cleaned_data.get('initial_refund_amount', 0)
+        total = self.cleaned_data['total_refund_amount']
+        summed_refunds = sum([v for k,v in self.cleaned_data.items() if k.startswith('item_refundamount_')])
+
+        if summed_refunds != total:
+            raise ValidationError(_('Passed value does not match sum of allocated refunds.'))
+        elif summed_refunds > self.cleaned_data['id'].amountPaid:
+            raise ValidationError(_('Total refunds allocated exceed revenue received.'))
+        elif total < initial:
+            raise ValidationError(_('Cannot reduce the total amount of the refund.'))
+        return total
 
 
 class EmailContactForm(forms.Form):

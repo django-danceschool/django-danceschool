@@ -5,18 +5,15 @@ from django.views.generic import FormView
 from django.utils.translation import ugettext_lazy as _
 
 from datetime import datetime
-import json
 from braces.views import UserFormKwargsMixin
 from cms.models import Page
 import logging
 from allauth.account.forms import LoginForm, SignupForm
 
-from .helpers import emailErrorMessage
-from .models import Event, Registration, EventRegistration, TemporaryRegistration, TemporaryEventRegistration, EmailTemplate, DanceRole, Customer
+from .models import Event, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Invoice
 from .forms import RegistrationContactForm, DoorAmountForm
 from .constants import getConstant, REG_VALIDATION_STR
-from .emails import renderEmail
-from .signals import invoice_sent, pre_temporary_registration, post_temporary_registration, request_discounts, apply_discount, apply_addons, apply_price_adjustments, post_registration, get_payment_context
+from .signals import pre_temporary_registration, post_temporary_registration, request_discounts, apply_discount, apply_addons, apply_price_adjustments
 from .mixins import FinancialContextMixin
 
 
@@ -124,115 +121,6 @@ def createTemporaryRegistration(request):
     return reg
 
 
-def processPayment(mc_gross,mc_fee,payment_status,reg,checkAmount=True,paidOnline=True,submissionUser=None,collectedByUser=None,invoiceNumber=None):
-    '''
-    Process a payment (Paypal or cash) and proceed to sending the confirmation email.
-    '''
-    epsilon = .01
-
-    logger.info('Processing payment and creating registration objects.')
-
-    # if the prices don't match, email an error message
-    if abs(reg.priceWithDiscount - float(mc_gross)) > epsilon and checkAmount:
-        emailErrorMessage(_('payment mismatch'),
-                          _('Payments didnt match for reg %s, received: %s, expected: %s' % (reg.id, mc_gross, reg.priceWithDiscount)))
-        return
-
-    # make sure the payment is completed and record the payment
-    if payment_status == "Completed":
-
-        customer, created = Customer.objects.get_or_create(first_name=reg.firstName,last_name=reg.lastName,email=reg.email,defaults={'phone': reg.phone})
-
-        realreg = Registration(customer=customer,
-                               comments=reg.comments,howHeardAboutUs=reg.howHeardAboutUs,
-                               student=reg.student,processingFee=mc_fee,amountPaid=mc_gross,
-                               priceWithDiscount=reg.priceWithDiscount,
-                               paidOnline=paidOnline,
-                               dateTime=reg.dateTime,
-                               submissionUser=submissionUser or reg.submissionUser,
-                               collectedByUser=collectedByUser,
-                               temporaryRegistration=reg,
-                               invoiceNumber=invoiceNumber,
-                               data=reg.data,
-                               )
-
-        realreg.save()
-        logger.debug('Created registration with id: ' + str(realreg.id))
-
-        for er in reg.temporaryeventregistration_set.all():
-            logger.debug('Creating eventreg for event: ' + str(er.event.id))
-            realer = EventRegistration(registration=realreg,event=er.event,
-                                       customer=customer,role=er.role,
-                                       price=er.price,
-                                       dropIn=er.dropIn,
-                                       data=er.data
-                                       )
-            realer.save()
-
-        # This signal can, for example, be caught by the vouchers app to keep track of any vouchers
-        # that were applied
-        post_registration.send(
-            sender=processPayment,
-            registration=realreg
-        )
-
-        if getConstant('email__disableSiteEmails'):
-            logger.info('Sending of confirmation emails is disabled.')
-        else:
-            logger.info('Sending confirmation email.')
-            template = EmailTemplate.objects.get(id=getConstant('email__registrationSuccessTemplateID'))
-
-            renderEmail(
-                subject=template.subject,
-                content=template.content,
-                from_address=template.defaultFromAddress,
-                from_name=template.defaultFromName,
-                cc=template.defaultCC,
-                registrations=[realreg,],
-            )
-
-
-def submitInvoice(payerEmail,invoiceNumber,tr,itemList=[],discountAmount=0,amountDue=None):
-    '''
-    Send an invoice to a student requesting payment.
-    '''
-
-    logger.info('Creating and sending invoice.')
-
-    if not amountDue:
-        amountDue = tr.priceWithDiscount
-
-    invoice_sent.send(
-        sender=tr,
-        payerEmail=payerEmail,
-        invoiceNumber=invoiceNumber,
-        itemList=itemList,
-        discountAmount=discountAmount,
-        amountDue=amountDue,
-    )
-    logger.debug('Invoice signal fired.')
-
-    if getConstant('email__disableSiteEmails'):
-        logger.info('Sending of confirmation email is disabled.')
-        return
-
-    logger.info('Sending confirmation email.')
-    template = EmailTemplate.objects.get(id=getConstant('email__invoiceTemplateID'))
-
-    renderEmail(
-        subject=template.subject,
-        content=template.content,
-        from_address=template.defaultFromAddress,
-        from_name=template.defaultFromName,
-        to=payerEmail,
-        cc=template.defaultCC,
-        temporaryregistrations=[tr,],
-        amountDue=amountDue,
-        discountAmount=discountAmount,
-    )
-    logger.debug('Confirmation email sent.')
-
-
 # ###################################################
 # Views
 
@@ -242,7 +130,11 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
     form_class = DoorAmountForm
 
     def get(self,request,*args,**kwargs):
-        regSession = self.request.session[REG_VALIDATION_STR]
+        regSession = self.request.session.get(REG_VALIDATION_STR,{})
+
+        if not regSession:
+            return HttpResponseRedirect(reverse('registration'))
+
         existing_reg_id = regSession.get('createdRegId',None)
 
         if existing_reg_id:
@@ -346,24 +238,15 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         total_voucher_amount = regSession.get('total_voucher_amount',0)
         addons = regSession.get('addons',[])
 
-        payment_context = get_payment_context.send(
-            sender=RegistrationSummaryView,
-            registration=reg,
-        )
-        payment_context_dict = {}
-        for x in payment_context:
-            if not isinstance(x[1],dict) or 'processor' not in x[1].keys():
-                continue
-            payment_context_dict[x[1].pop('processor',None)] = x[1]
-
         if reg.priceWithDiscount == 0:
-            processPayment(0,0,'Completed',reg,False,False,invoiceNumber='FREEREGISTRATION_%s_%s' % (reg.id, reg.dateTime.strftime('%Y%m%d%H%M%S')))
+            reg.finalize()
             isFree = True
         else:
             isFree = False
 
         context_data.update({
             'registration': reg,
+            "totalPrice": reg.totalPrice,
             "netPrice": reg.priceWithDiscount,
             "addonItems": addons,
             "discount_code_id": discount_code_id,
@@ -373,7 +256,6 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             "total_voucher_amount": total_voucher_amount,
             "total_discount_amount": discount_amount + total_voucher_amount,
             "currencyCode": getConstant('general__currencyCode'),
-            'payment_context': payment_context_dict,
             'payAtDoor': reg.payAtDoor,
             'is_free': isFree,
         })
@@ -385,12 +267,10 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             if door_permission or invoice_permission:
                 context_data['form'] = DoorAmountForm(
                     user=self.request.user,
-                    invoiceNumber='registration_%s' % reg.id,
                     doorPortion=door_permission,
                     invoicePortion=invoice_permission,
                     payerEmail=reg.email,
-                    itemList=payment_context_dict.get('Paypal',{}).get('invoiceItems'),
-                    discountAmount=payment_context_dict.get('Paypal',{}).get('discount_amount_cart'),
+                    discountAmount=max(reg.totalPrice - reg.priceWithDiscount,0),
                 )
 
         return context_data
@@ -400,6 +280,10 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         reg_id = regSession["temp_reg_id"]
         tr = TemporaryRegistration.objects.get(id=reg_id)
 
+        # Create a new Invoice if one does not already exist.
+        if not getattr('tr', 'invoice',None):
+            new_invoice = Invoice.create_from_registration(tr)
+
         if form.cleaned_data.get('paid'):
             logger.debug('Form is marked paid. Preparing to process payment.')
 
@@ -407,23 +291,21 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             submissionUser = form.cleaned_data['submissionUser']
             receivedBy = form.cleaned_data['receivedBy']
 
-            # process payment
-            processPayment(
-                amount,0,'Completed',
-                tr,False,False,
+            # Process payment, but mark cash payment as needing collection from
+            # the user who processed the registration and collected it.
+            new_invoice.processPayment(
+                amount,0,
+                paidOnline=False,
+                methodName='Cash',
+                methodTxn='CASHPAYMENT_%s_%s' % (tr.id, tr.dateTime.strftime('%Y%m%d%H%M%S')),
                 submissionUser=submissionUser,
                 collectedByUser=receivedBy,
-                invoiceNumber='CASHPAYMENT_%s_%s' % (tr.id, tr.dateTime.strftime('%Y%m%d%H%M%S'))
+                status=Invoice.PaymentStatus.needsCollection,
+                forceFinalize=True,
             )
         elif form.cleaned_data.get('invoiceSent'):
-            clean_itemList = form.cleaned_data.get('itemList') or ''
-
             payerEmail = form.cleaned_data['payerEmail']
-            invoiceNumber = form.cleaned_data['invoiceNumber']
-            itemList = json.loads(clean_itemList.replace('&quot;','"'))
-            discountAmount = form.cleaned_data['discountAmount']
-
-            submitInvoice(payerEmail,invoiceNumber,tr,itemList,discountAmount)
+            new_invoice.sendNotification(payerEmail,newRegistration=True)
 
         return HttpResponseRedirect(Page.objects.get(pk=getConstant('registration__doorRegistrationSuccessPage')).get_absolute_url(settings.LANGUAGE_CODE))
 

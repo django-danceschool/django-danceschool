@@ -1,12 +1,5 @@
 {% load cms_tags sekizai_tags %}
 
-<form action="" method="post">
-        <p><label>Amount:</label> 
-        <input id="id_amount" name="amount" type="text" value="{{ instance.defaultAmount }}" /></p>
-        <p><label>Recipient Name (optional):</label>
-        <input id="id_recipient" name="recipient" type="text" value="" /></p>        
-</form>
-
 <div id="paypal-button"></div>
 
 {% addtoblock "js" %}
@@ -24,13 +17,11 @@
             payment: function() {
                 return paypal.request.post('{% url "createPaypalPayment" %}', {
                     csrfmiddlewaretoken: '{{ csrf_token }}',
-                    
-                    transaction_type: 'Gift Certificate',
-                    amount: $('input[name=amount]').value,
-                    certificate_name: $('input[name=recipient').value,
-
                     {% if user.is_authenticated %},
                     user_id: {{ user.id }},
+                    {% endif %}
+                    {% if registration %}
+                    reg_id: {{ registration.id }},
                     {% endif %}
                 }).then(function(data) {
                     return data.id;

@@ -3,11 +3,8 @@ from cms.plugin_pool import plugin_pool
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
-from uuid import uuid4
 
-from danceschool.vouchers.models import Voucher
-
-from .models import PayNowFormModel, IPNMessage
+from .models import PayNowFormModel
 
 
 class GiftCertificateFormPlugin(CMSPluginBase):
@@ -21,14 +18,8 @@ class GiftCertificateFormPlugin(CMSPluginBase):
         ''' Create a UUID and check if a voucher with that ID exists before rendering '''
         context = super(GiftCertificateFormPlugin, self).render(context, instance, placeholder)
 
-        invoice_id = str(uuid4())
-        while IPNMessage.objects.filter(txn_id=invoice_id).count() > 0 or Voucher.objects.filter(voucherId='GC_%s' % invoice_id).count() > 0:
-            invoice_id = str(uuid4())
-
         context.update({
-            'invoice_id': invoice_id,
-            'paypal_url': getattr(settings,'PAYPAL_URL',''),
-            'paypal_account': getattr(settings,'PAYPAL_ACCOUNT',''),
+            'paypal_mode': getattr(settings,'PAYPAL_MODE', ''),
         })
 
         return context
@@ -36,8 +27,8 @@ class GiftCertificateFormPlugin(CMSPluginBase):
 
 class CartPaymentFormPlugin(CMSPluginBase):
     model = PayNowFormModel
-    name = _('Paypal Pay Now Form')
-    render_template = "paypal/paynow_form.html"
+    name = _('Paypal Express Checkout Form')
+    render_template = "paypal/express_checkout.html"
     cache = False
     module = 'Paypal'
 
@@ -46,8 +37,7 @@ class CartPaymentFormPlugin(CMSPluginBase):
         context = super(CartPaymentFormPlugin, self).render(context, instance, placeholder)
 
         context.update({
-            'paypal_url': getattr(settings,'PAYPAL_URL',''),
-            'paypal_account': getattr(settings,'PAYPAL_ACCOUNT',''),
+            'paypal_mode': getattr(settings,'PAYPAL_MODE', ''),
         })
 
         return context

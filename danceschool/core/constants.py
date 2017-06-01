@@ -54,3 +54,4 @@ HOW_HEARD_CHOICES = [
 
 REG_VALIDATION_STR = getattr(settings,'REG_VALIDATION_STR','danceschool_registration')
 EMAIL_VALIDATION_STR = getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView')
+REFUND_VALIDATION_STR = getattr(settings, 'REFUND_VALIDATION_STR', 'refundProcessingView')

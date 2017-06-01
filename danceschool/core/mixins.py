@@ -4,11 +4,105 @@ from django.core.urlresolvers import reverse
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template
+from django.template import Template, Context
 
 from braces.views import GroupRequiredMixin
 from urllib.parse import quote
+from six import string_types
+import re
 
 from .constants import getConstant
+from .tasks import sendEmail
+
+
+class EmailRecipientMixin(object):
+
+    def email_recipient(self, subject, content, **kwargs):
+        '''
+        This method allows for direct emailing of an object's recipient(s)
+        (default or manually specified), with both object-specific context
+        provided using the get_email_context() method.  This is used, for example,
+        to email an individual registrant or the recipient of an individual invoice.
+        '''
+
+        email_kwargs = {}
+
+        for list_arg in [
+            'to','cc','bcc',
+        ]:
+            email_kwargs[list_arg] = kwargs.pop(list_arg,[]) or []
+            if isinstance(email_kwargs[list_arg],string_types):
+                email_kwargs[list_arg] = [email_kwargs[list_arg],]
+
+        for none_arg in ['attachment_name','attachment']:
+            email_kwargs[none_arg] = kwargs.pop(none_arg,None) or None
+
+        email_kwargs['from_name'] = kwargs.pop('from_name',getConstant('email__defaultEmailName')) or \
+            getConstant('email__defaultEmailName')
+        email_kwargs['from_address'] = kwargs.pop('from_name',getConstant('email__defaultEmailFrom')) or \
+            getConstant('email__defaultEmailFrom')
+
+        # Add the object's default recipients if they are provided
+        default_recipients = self.get_default_recipients() or []
+        if isinstance(default_recipients,string_types):
+            default_recipients = [default_recipients,]
+
+        email_kwargs['bcc'] += default_recipients
+
+        if not (email_kwargs['bcc'] or email_kwargs['cc'] or email_kwargs['to']):
+            raise ValueError(_('Email must have a recipient.'))
+
+        # In situations where there are no context
+        # variables to be rendered, send a mass email
+        has_tags = re.search('\{\{.+\}\}',content)
+        if not has_tags:
+            t = Template(content)
+            rendered_content = t.render(Context(kwargs))
+            sendEmail(subject,rendered_content,**email_kwargs)
+            return
+
+        # Otherwise, get the object-specific email context and email
+        # each recipient
+        template_context = self.get_email_context() or {}
+        template_context.update(kwargs)
+
+        # For security reasons, the following tags are removed from the template before parsing:
+        # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}
+        content = re.sub('\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}','',content)
+        t = Template(content)
+
+        rendered_content = t.render(Context(template_context))
+        sendEmail(subject,rendered_content,**email_kwargs)
+
+    def get_email_context(self,**kwargs):
+        '''
+        This method can be overridden in classes that inherit from this mixin
+        so that additional object-specific context is provided to the email
+        template.  This should return a dictionary.  By default, only general
+        financial context variables are added to the dictionary, and kwargs are
+        just passed directly.
+
+        Note also that it is in general not a good idea for security reasons
+        to pass model instances in the context here, since these methods can be
+        accessed by logged in users who use the SendEmailView.  So, In the default
+        models of this app, the values of fields and properties are passed
+        directly instead.
+        '''
+        context = kwargs
+        context.update({
+            'currencyCode': getConstant('general__currencyCode'),
+            'currencySymbol': getConstant('general__currencySymbol'),
+            'businessName': getConstant('contact__businessName'),
+        })
+        return context
+
+    def get_default_recipients(self):
+        '''
+        This method should be overridden in each class that inherits from this
+        mixin, so that the email addresses to whom the email should be sent are
+        included on the BCC line.  This should return a list.
+        '''
+        return []
 
 
 ######################################
@@ -23,6 +117,7 @@ class FinancialContextMixin(object):
         context = {
             'currencyCode': getConstant('general__currencyCode'),
             'currencySymbol': getConstant('general__currencySymbol'),
+            'businessName': getConstant('contact__businessName'),
         }
         context.update(kwargs)
         return super(FinancialContextMixin,self).get_context_data(**context)

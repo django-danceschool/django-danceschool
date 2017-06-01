@@ -6,8 +6,6 @@ from huey.contrib.djhuey import task, db_periodic_task
 
 import logging
 
-from .models import Series
-
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -19,6 +17,8 @@ def updateSeriesRegistrationStatus():
     Every hour, check if the series that are currently open for registration
     should be closed.
     '''
+    from danceschool.core.models import Series
+
     logger.info('Checking status of Series that are open for registration.')
 
     open_series = Series.objects.filter().filter(**{'registrationOpen': True})

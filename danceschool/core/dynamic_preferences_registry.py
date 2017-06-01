@@ -6,7 +6,7 @@ but can be changed dynamically.
 from django.forms import HiddenInput
 from django.utils.translation import ugettext_lazy as _
 
-from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, ModelChoicePreference, Section
+from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, FloatPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
 from filer.models import Folder
 from cms.models import Page
@@ -276,6 +276,33 @@ class RegistrationClosesAfterDays(IntegerPreference):
     verbose_name = _('Close Registration Days After Beginning')
     help_text = _('By default, online registration closes automatically this many days from the beginning of an Event or Series (e.g. Enter 2 to close two days after beginning, or enter -3 to close three days before beginning).  This value can be overridden for individual Events.')
     default = 7
+
+
+@global_preferences_registry.register
+class SalesTaxRate(FloatPreference):
+    section = registration
+    name = 'salesTaxRate'
+    verbose_name = _('Sales tax percentage rate to be applied registrations')
+    help_text = _('Enter, e.g. \'10\' for a 10% tax rate to be applied to all class and event registrations.')
+    default = 0
+
+
+@global_preferences_registry.register
+class BuyerPaysSalesTax(BooleanPreference):
+    section = registration
+    name = 'buyerPaysSalesTax'
+    verbose_name = _('Buyer pays sales tax (added to total price)')
+    help_text = _('If unchecked, then the buyer will not be charged sales tax directly, but the amount of tax collected by the business will be reported.')
+    default = True
+
+
+@global_preferences_registry.register
+class BuyerPaysProcessingFees(BooleanPreference):
+    section = registration
+    name = 'buyerPaysProcessingFees'
+    verbose_name = _('Buyer pays processing fees (added to total price)')
+    help_text = _('If checked, then expected processing fees will be added to the customer\' total amount expected to pay.  This feature must be implemented by individual payment processing apps.')
+    default = False
 
 
 @global_preferences_registry.register

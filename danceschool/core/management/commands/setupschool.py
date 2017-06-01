@@ -488,12 +488,10 @@ Remember, all page settings and content can be changed later via the admin inter
                 add_plugin(
                     paynow_p_draft, 'CartPaymentFormPlugin', initial_language,
                     successPage=home_page,
-                    cancellationPage=registration_link_page,
                 )
                 add_plugin(
                     paynow_p_public, 'CartPaymentFormPlugin', initial_language,
                     successPage=home_page,
-                    cancellationPage=registration_link_page,
                 )
             self.stdout.write('Paypal Pay Now link added.  You will still need to add Paypal credentials to settings before use.')
 

@@ -46,18 +46,12 @@ def getSchoolName():
     '''
     return getConstant('contact__businessName')
 
+
 # This one is only used for the series registration check-in page
 @register.simple_tag
 def getSeriesPriceForMonth(reg,month,year):
     date = datetime.datetime(year=year,month=month,day=2)
     return reg.getPriceForMonth(date)
-
-
-# This one is only used for the series registration check-in page
-@register.simple_tag
-def getSeriesAmountPaidForMonth(reg,month,year):
-    date = datetime.datetime(year=year,month=month,day=2)
-    return reg.getAmountPaidForMonth(date)
 
 
 # This one allows us to specify group-based permissions in templates

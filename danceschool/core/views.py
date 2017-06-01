@@ -14,16 +14,16 @@ from calendar import month_name
 from datetime import datetime, timedelta
 import json
 from urllib.parse import unquote_plus, unquote
-from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin
+from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin, StaffuserRequiredMixin
 from cms.constants import RIGHT
 from cms.models import Page
+import re
 
-from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, Instructor
-from .forms import SubstituteReportingForm, InstructorBioChangeForm, EmailContactForm, ClassChoiceForm
-from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR
-from .emails import renderEmail
-from .mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
-from .signals import get_customer_data
+from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, Instructor, Invoice
+from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, ClassChoiceForm
+from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
+from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
+from .signals import get_customer_data, get_invoice_payments, refund_invoice_payment
 
 
 class RegistrationOfflineView(TemplateView):
@@ -256,6 +256,193 @@ class SubmissionRedirectView(TemplateView):
 
         return context
 
+#################################
+# For Viewing Invoices
+
+
+class ViewInvoiceView(FinancialContextMixin, DetailView):
+    template_name = 'core/invoice.html'
+    model = Invoice
+
+    def get_context_data(self, **kwargs):
+        context = super(ViewInvoiceView,self).get_context_data(**kwargs)
+        context.update({
+            'payments': self.get_payments(),
+        })
+        return context
+
+    def get_payments(self):
+
+        if not getattr(self,'payments',None):
+            # Get data on the payments associated with this invoice
+            payment_responses = get_invoice_payments.send(
+                sender=RefundProcessingView,
+                invoice=self.object,
+            )
+            self.payments = [x[1] for x in payment_responses if len(x) > 1 and isinstance(x[1],dict)]
+        return self.payments
+
+
+#################################
+# Refund processing and confirmation step views
+
+
+class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, PermissionRequiredMixin, StaffuserRequiredMixin, SuccessMessageMixin, TemplateView):
+    success_message = _('Refund successfully processed.')
+    template_name = 'core/refund_confirmation.html'
+    permission_required = 'core.process_refunds'
+
+    def get(self, request, *args, **kwargs):
+        self.form_data = request.session.get(REFUND_VALIDATION_STR,{}).get('form_data',{})
+        self.payments = request.session.get(REFUND_VALIDATION_STR,{}).get('payments',[])
+
+        if not self.form_data:
+            return HttpResponseRedirect(reverse('refundProcessing'))
+        if request.GET.get('confirmed','').lower() == 'true' and self.payments:
+            return self.process_refund()
+        return super(RefundConfirmationView,self).get(request, *args, **kwargs)
+
+    def get_context_data(self,**kwargs):
+        context = super(RefundConfirmationView,self).get_context_data(**kwargs)
+
+        total_refund_amount = self.form_data['total_refund_amount']
+        initial_refund_amount = self.form_data['initial_refund_amount']
+        amount_to_refund = max(total_refund_amount - initial_refund_amount,0)
+
+        context.update({
+            'form_data': self.form_data,
+            'payments': self.payments,
+            'total_refund_amount': total_refund_amount,
+            'initial_refund_amount': initial_refund_amount,
+            'amount_to_refund': amount_to_refund,
+        })
+        return context
+
+    def process_refund(self):
+
+        this_invoice = Invoice.objects.get(id=self.form_data.get('id'))
+        refund_data = this_invoice.data.get('refunds',[])
+
+        total_refund_amount = self.form_data['total_refund_amount']
+        initial_refund_amount = self.form_data['initial_refund_amount']
+        amount_to_refund = max(total_refund_amount - initial_refund_amount,0)
+
+        remains_to_refund = amount_to_refund
+        for this_payment in self.payments:
+            if remains_to_refund <= 0:
+                break
+            this_payment_id = this_payment.get('id')
+            this_payment_method = this_payment.get('method')
+            this_payment_amount = this_payment.get('netAmountPaid',0)
+            this_refund_amount = min(this_payment_amount, remains_to_refund)
+
+            # This dictionary will be updated and then added to refund_data for
+            # this invoice whether the refund is successful or not
+            this_refund_response_data = {
+                'datetime': datetime.now(),
+                'id': this_payment_id,
+                'amount': this_refund_amount,
+            }
+
+            response = refund_invoice_payment.send(
+                sender=RefundConfirmationView,
+                method=this_payment_method,
+                id=this_payment_id,
+                invoice=this_invoice,
+                refundAmount=this_refund_amount,
+            )
+            if not response:
+                # If no response is received, then we must stop because we cannot be sure that a refund has
+                # not already been processed.
+                this_refund_response_data.update({
+                    'status': 'error',
+                    'errorMessage': str(_('Error: No response from payment processing app. Check payment processor records for refund status.')),
+                })
+            elif response and len(response) > 1:
+                # There should only be a single refund processed each time that the
+                # signal is fired, so this means that there has been an error.  Save
+                # a record of the error for diagnostic purposes and then return with an
+                # error message.
+                this_refund_response_data.update({
+                    'status': 'error',
+                    'errorMessage': str(_('Error: Multiple responses from payment processing apps. Check payment processor records for refund status.')),
+                    'response': [dict(x[1]) for x in response],
+                })
+            elif response[0].get('status').lower() == 'success':
+                # A successful refund returns {'status': 'success'}
+                amount_refunded = response[0][1].get('refundAmount',0)
+
+                this_refund_response_data.update({
+                    'status': 'success',
+                    'refundAmount': amount_refunded,
+                    'response': [dict(response[0][1]),],
+                })
+
+                # Incrementally update the invoice's refunded amount
+                this_invoice.adjustments -= amount_refunded
+                remains_to_refund -= amount_refunded
+
+            else:
+                this_refund_response_data.update({
+                    'status': 'error',
+                    'errorMessage': _('An unkown error has occurred. Check payment processor records for refund status.'),
+                    'response': [dict(response[0][1]),],
+                })
+            refund_data.append(this_refund_response_data)
+
+            if this_refund_response_data.get('status') == 'error':
+                messages.error(self.request, this_refund_response_data.get('errorMessage'))
+
+                this_invoice.data['refunds'] = refund_data
+                this_invoice.save()
+                self.request.session.pop(REFUND_VALIDATION_STR,None)
+                return HttpResponseRedirect(self.get_success_url())
+
+        # If there were no errors, then check to ensure that the entire request refund was refunded.
+        # If so, then return success, otherwise return indicating that the refund was not completely
+        # applied.
+        if abs(remains_to_refund) <= 0.01:
+            messages.success(self.request, self.success_message)
+        else:
+            messages.error(self.request, _('Error, not all of the requested refund was applied. Check invoice and payment processor records for details.'))
+
+        this_invoice.data['refunds'] = refund_data
+        this_invoice.save()
+        self.request.session.pop(REFUND_VALIDATION_STR,None)
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class RefundProcessingView(FinancialContextMixin, PermissionRequiredMixin, StaffuserRequiredMixin, UpdateView):
+    template_name = 'core/process_refund.html'
+    form_class = RefundForm
+    permission_required = 'core.process_refunds'
+    model = Invoice
+
+    def get_context_data(self,**kwargs):
+        context = super(RefundProcessingView,self).get_context_data(**kwargs)
+        context.update({
+            'payments': self.get_payments(),
+        })
+        return context
+
+    def form_valid(self, form):
+        self.request.session[REFUND_VALIDATION_STR] = {
+            'form_data': form.cleaned_data,
+            'payments': self.get_payments(),
+        }
+        return HttpResponseRedirect(reverse('refundConfirmation'))
+
+    def get_payments(self):
+
+        if not getattr(self,'payments',None):
+            # Get data on the payments associated with this invoice
+            payment_responses = get_invoice_payments.send(
+                sender=RefundProcessingView,
+                invoice=self.object,
+            )
+            self.payments = [x[1] for x in payment_responses if len(x) > 1 and isinstance(x[1],dict)]
+        return self.payments
+
 
 #################################
 # Email view function and form
@@ -275,14 +462,17 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         return super(EmailConfirmationView,self).get(request, *args, **kwargs)
 
     def send_email(self):
-        subject = self.form_data['subject']
-        message = self.form_data['message']
-        from_name = self.form_data['from_name']
-        from_address = self.form_data['from_address']
-        cc_myself = self.form_data['cc_myself']
-        month = self.form_data['month']
-        series = self.form_data['series']
-        testemail = self.form_data['testemail']
+        subject = self.form_data.pop('subject')
+        message = self.form_data.pop('message')
+        cc_myself = self.form_data.pop('cc_myself')
+        testemail = self.form_data.pop('testemail')
+        month = self.form_data.pop('month')
+        series = self.form_data.pop('series')
+
+        email_kwargs = {
+            'from_name': self.form_data['from_name'],
+            'from_address': self.form_data['from_address'],
+        }
 
         events_to_send = []
         if month is not None and month != '':
@@ -293,24 +483,33 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         # We always call one email per series so that the series-level tags
         # can be passed.
         for s in events_to_send:
-            emails = []
-            cc = []
+            regs = EventRegistration.objects.filter(event=s,cancelled=False)
+            email_kwargs['cc'] = []
             if cc_myself:
-                cc.append(from_address)
+                email_kwargs['cc'].append(email_kwargs['from_address'])
 
-            regs = EventRegistration.objects.filter(event=s)
-            for r in regs:
-                emails.append(r.customer.email)
+            emails = [x.get_default_recipients() for x in regs]
 
-            bcc = [getConstant('email__defaultEmailFrom')]
+            email_kwargs['bcc'] = [email_kwargs['from_address'] or getConstant('email__defaultEmailFrom'),]
 
             if testemail:
-                message = str(_('Test email from %s to be sent to: ' % from_address)) + '\n\n'
-                message += ', '.join(bcc) + ', '.join(emails) + '\n\n'
+                message = str(_('Test email from %s to be sent to: ' % email_kwargs['from_address'])) + '\n\n'
+                message += ', '.join(email_kwargs['bcc']) + ', '.join(emails) + '\n\n'
                 message += str(_('Email body:')) + '\n\n' + message
-                bcc = []
+                email_kwargs['bcc'] = []
 
-            renderEmail(subject,message,from_address,from_name,cc=cc,to=[],bcc=bcc,eventregistrations=regs,event=s)
+            # If there are no context tags, then this can be sent as a single bulk email.
+            # Otherwise, send a separate email for each event registration
+            has_tags = re.search('\{\{.+\}\}',message)
+            if not has_tags:
+                email_kwargs['bcc'] += emails
+
+                # instantiate the recipient mixin directly
+                email_class = EmailRecipientMixin()
+                email_class.email_recipient(subject,message,**email_kwargs)
+            else:
+                for r in regs:
+                    r.email_recipient(subject,message,**email_kwargs)
 
         self.request.session.pop(EMAIL_VALIDATION_STR,None)
         messages.success(self.request, self.success_message)
@@ -458,7 +657,7 @@ class AccountProfileView(LoginRequiredMixin, DetailView):
             id__in=[x.id for x in context.get('customer_eventregs',[])]
         )
         context['submitted_eventregs'] = EventRegistration.objects.filter(
-            registration__submissionUser=self.request.user,registration__payAtDoor=False
+            registration__invoice__submissionUser=self.request.user,registration__payAtDoor=False
         ).exclude(
             id__in=[x.id for x in context.get('customer_eventregs',[])]
         ).exclude(

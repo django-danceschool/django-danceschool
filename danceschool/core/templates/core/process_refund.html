@@ -13,6 +13,17 @@
 	<dt>Student:</dt><dd>{{ registration.student|yesno }}</dd>
 </dl>
 
+{% if payments %}
+	<div class="panel panel-default">
+		<div class="panel-heading"><h4 class="panel-title">Payment Details</h4></div>
+		<div class="panel-body">
+			{% for payment in payments %}
+				{{ payment.method }}: {{ payment.id}}
+			{% endfor %}
+		</div>
+{% endif %}
+
+<hr />
 
 <form id="refund_form" method="post" action="">{% csrf_token %}
 

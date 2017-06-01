@@ -1,7 +1,7 @@
 # Give this app a custom verbose name to avoid confusion
 from django.apps import AppConfig
 from django.utils.translation import ugettext_lazy as _
-
+from django.template.loader import get_template
 from .utils.sys import isPreliminaryRun
 
 
@@ -24,11 +24,17 @@ class CoreAppConfig(AppConfig):
             invoice_template_id = getConstant('email__invoiceTemplateID') or 0
 
             if success_template_id <= 0:
+                initial_template = get_template('email/registration_success.html')
+                with open(initial_template.origin.name,'r') as infile:
+                    content = infile.read()
+                    infile.close()
+
                 new_success_template, created = EmailTemplate.objects.get_or_create(
                     name=_('Registration Confirmation Email'),
                     defaults={
+
                         'subject':_('Registration Confirmation'),
-                        'content': '',
+                        'content': content or '',
                         'defaultCC': '',
                         'hideFromForm': True,}
                 )
@@ -36,11 +42,16 @@ class CoreAppConfig(AppConfig):
                 updateConstant('email__registrationSuccessTemplateID', new_success_template.id, True)
 
             if invoice_template_id <= 0:
+                initial_template = get_template('email/invoice_initial.html')
+                with open(initial_template.origin.name,'r') as infile:
+                    content = infile.read()
+                    infile.close()
+
                 new_invoice_template, created = EmailTemplate.objects.get_or_create(
                     name=_('Registration Invoice Email'),
                     defaults={
                         'subject': _('Registration Invoice'),
-                        'content': '',
+                        'content': content or '',
                         'defaultCC': '',
                         'hideFromForm': True,}
                 )

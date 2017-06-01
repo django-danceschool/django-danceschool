@@ -8,7 +8,7 @@ from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 
-from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole
+from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem
 from .constants import getConstant
 from .forms import LocationWithCapacityWidget
 
@@ -173,11 +173,72 @@ class EventOccurrenceInline(admin.TabularInline):
 ######################################
 # Registration related admin classes
 
+
+class InvoiceItemInline(admin.StackedInline):
+    model = InvoiceItem
+    extra = 0
+    fields = ['id','description','gross','refundAmount','temporaryEventRegistrationLink','finalEventRegistrationLink']
+    readonly_fields = ['id','temporaryEventRegistrationLink','finalEventRegistrationLink']
+
+    # This ensures that InvoiceItems are not deleted except through
+    # the regular registration process.  Invoice items can still be
+    # manually added.
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def finalEventRegistrationLink(self,obj):
+        change_url = reverse('admin:core_eventregistration_change', args=(obj.finalEventRegistration.id,))
+        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.finalEventRegistration.id))
+    finalEventRegistrationLink.allow_tags = True
+    finalEventRegistrationLink.short_description = _('Final event registration')
+
+    def temporaryEventRegistrationLink(self,obj):
+        change_url = reverse('admin:core_temporaryeventregistration_change', args=(obj.temporaryEventRegistration.id,))
+        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.temporaryEventRegistration.id))
+    temporaryEventRegistrationLink.allow_tags = True
+    temporaryEventRegistrationLink.short_description = _('Temporary event registration')
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    inlines = [InvoiceItemInline,]
+    list_display = ['id', 'status', 'total','netRevenue','outstandingBalance','creationDate','modifiedDate','finalRegistrationLink','temporaryRegistrationLink']
+    list_filter = ['status', 'paidOnline', 'creationDate', 'modifiedDate']
+    search_fields = ['id','comments']
+    ordering = ['-modifiedDate',]
+    readonly_fields = ['id','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','finalRegistrationLink','temporaryRegistrationLink','submissionUser','collectedByUser']
+
+    def finalRegistrationLink(self,obj):
+        change_url = reverse('admin:core_registration_change', args=(obj.finalRegistration.id,))
+        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.finalRegistration.id))
+    finalRegistrationLink.allow_tags = True
+    finalRegistrationLink.short_description = _('Final registration')
+
+    def temporaryRegistrationLink(self,obj):
+        change_url = reverse('admin:core_temporaryregistration_change', args=(obj.temporaryRegistration.id,))
+        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.temporaryRegistration.id))
+    temporaryRegistrationLink.allow_tags = True
+    temporaryRegistrationLink.short_description = _('Temporary registration')
+
+    fieldsets = (
+        (None, {
+            'fields': ('id','status','total','adjustments','taxes','fees','netRevenue','amountPaid','outstandingBalance','comments'),
+        }),
+        (_('Dates'), {
+            'fields': ('creationDate','modifiedDate'),
+        }),
+        (_('Additional data'), {
+            'classes': ('collapse'),
+            'fields': ('submissionUser','collectedByUser','data'),
+        }),
+    )
+
+
 @admin.register(Registration)
 class RegistrationAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
-    list_display = ['customer','dateTime','priceWithDiscount','student','paidOnline']
-    list_filter = ['dateTime','student','paidOnline']
+    list_display = ['customer','dateTime','priceWithDiscount','student']
+    list_filter = ['dateTime','student','invoice__paidOnline']
     search_fields = ['=customer__first_name','=customer__last_name','customer__email']
     ordering = ('-dateTime',)
     fields = ('customer_link','amountPaid','priceWithDiscount','processingFee','student','paidOnline','dateTime','comments','howHeardAboutUs')
