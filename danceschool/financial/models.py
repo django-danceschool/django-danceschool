@@ -281,7 +281,7 @@ class RevenueItem(models.Model):
         # occurrence in that month.
         if not self.accrualDate:
             if self.invoiceItem and self.invoiceItem.finalEventRegistration:
-                min_event_time = self.invoiceItem.finalEventRegistration.event.eventoccurrence_set.filter(**{'startTime__month':self.eventregistration.event.month}).first().startTime
+                min_event_time = self.invoiceItem.finalEventRegistration.event.eventoccurrence_set.filter(**{'startTime__month':self.invoiceItem.finalEventRegistration.event.month}).first().startTime
                 self.accrualDate = min_event_time
             elif self.event:
                 self.accrualDate = self.event.eventoccurrence_set.order_by('startTime').filter(**{'startTime__month': self.event.month}).last().startTime
