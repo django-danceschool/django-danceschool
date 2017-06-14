@@ -24,6 +24,7 @@ djangocms-text-ckeditor>=3.4.0
 easy-thumbnails>=2.3
 huey>=1.2.1
 icalendar>=3.9.0
+paypalrestsdk>=1.12.0
 Pillow>=3.4.2
 python-dateutil>=2.4.1
 redis>=2.10.5

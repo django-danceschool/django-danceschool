@@ -2039,7 +2039,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         # a ForeignKey to the Invoice object.
         paymentHistory = self.data.get('paymentHistory',[])
         paymentHistory.append({
-            'dateTime': paymentTime,
+            'dateTime': paymentTime.isoformat(),
             'amount': amount,
             'fees': fees,
             'paidOnline': paidOnline,
