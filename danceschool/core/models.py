@@ -1873,9 +1873,14 @@ class Invoice(EmailRecipientMixin, models.Model):
         for ter in ter_set:
             # Discounts and vouchers are always applied equally to all items at initial
             # invoice creation.
-            allocated_total = ter.price * (new_invoice.total / new_invoice.grossTotal)
-            allocated_taxes = new_invoice.taxes * (ter.price / new_invoice.grossTotal)
-            allocated_fees = new_invoice.fees * (ter.price / new_invoice.grossTotal)
+            if new_invoice.grossTotal > 0:
+                allocated_total = ter.price * (new_invoice.total / new_invoice.grossTotal)
+                allocated_taxes = new_invoice.taxes * (ter.price / new_invoice.grossTotal)
+                allocated_fees = new_invoice.fees * (ter.price / new_invoice.grossTotal)
+            else:
+                allocated_total = ter.price
+                allocated_taxes = new_invoice.taxes
+                allocated_fees = new_invoice.fees
 
             this_item = InvoiceItem(
                 invoice=new_invoice,
@@ -2081,7 +2086,7 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         # If there were transaction fees, then these also need to be allocated among the InvoiceItems
         # All fees from payments are allocated proportionately.
-        if fees:
+        if fees and self.grossTotal > 0:
             for item in self.invoiceitem_set.all():
                 item.fees += fees * (item.grossTotal / self.grossTotal)
                 item.save()
