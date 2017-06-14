@@ -39,14 +39,25 @@ class PaymentRecord(models.Model):
         payment = self.getPayment()
         for t in payment.transactions:
             for r in t.related_resources:
-                ids.append(r.sale.id)
+                if hasattr(r,'sale') and r.sale:
+                    ids.append(r.sale.id)
+        return ids
+
+    def getRefundIds(self):
+        ids = []
+        payment = self.getPayment()
+        for t in payment.transactions:
+            for r in t.related_resources:
+                if hasattr(r,'refund') and r.refund:
+                    ids.append(r.refund.id)
         return ids
 
     def getNetAmountPaid(self):
-        pass
+        payment = self.getPayment()
+        return sum([float(t.amount.total) for t in payment.transactions])
 
     def refund(self, amount=None):
-        saleIds = self.getSaleIds
+        saleIds = self.getSaleIds()
         refundData = []
 
         leftToRefund = amount or 0
@@ -62,7 +73,7 @@ class PaymentRecord(models.Model):
 
                 refund = this_sale.refund({
                     'amount': {
-                        'total': this_amount,
+                        'total': '{0:.2f}'.format(this_amount),
                         'currency': getConstant('general__currencyCode'),
                     }
                 })
@@ -76,7 +87,15 @@ class PaymentRecord(models.Model):
                     'status': 'success',
                     'refund_id': refund.id,
                     'sale_id': refund.sale_id,
-                    'refundAmount': refund.amount.total,
+                    'refundAmount': float(refund.amount.total),
+
+                    # This is (annoyingly) hard-coded for now because the Paypal REST API does
+                    # not yet report fees in the event of a refund.  Hopefully this can be removed
+                    # soon.
+                    'fees': -1 * (
+                        (float(this_sale.transaction_fee.value) - getConstant('paypal__fixedTransactionFee')) *
+                        (float(refund.amount.total) / float(this_sale.amount.total))
+                    ),
                 })
                 leftToRefund -= this_amount
             else:

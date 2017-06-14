@@ -284,7 +284,7 @@ class SalesTaxRate(FloatPreference):
     name = 'salesTaxRate'
     verbose_name = _('Sales tax percentage rate to be applied registrations')
     help_text = _('Enter, e.g. \'10\' for a 10% tax rate to be applied to all class and event registrations.')
-    default = 0
+    default = 0.0
 
 
 @global_preferences_registry.register
@@ -312,22 +312,6 @@ class AllowAjaxSignin(BooleanPreference):
     verbose_name = _('Allow users to login/signup during registration')
     help_text = _('If you don\'t allow customers to see their history or do automatic checks for prerequisites, then you may not need customers to create user accounts or authenticate themselves. If this box is unchecked, then users will not be able to log in or create a new account during the registration process.')
     default = True
-
-
-@global_preferences_registry.register
-class DoorRegistrationSuccessPage(IntegerPreference):
-    section = registration
-    model = Page
-    name = 'doorRegistrationSuccessPage'
-    verbose_name = _('Door Registration Form Success Page')
-    help_text = _('The page to which a staff user is redirected after successfully submitting an at-the-door registration.')
-    default = Page.objects.none()
-    field_class = PageSelectFormField
-
-    def __init__(self, *args, **kwargs):
-        ''' Changes the default serializer '''
-        super(self.__class__, self).__init__(*args, **kwargs)
-        self.serializer = PageModelSerializer
 
 
 ############################

@@ -13,129 +13,99 @@ class FinancialAppConfig(AppConfig):
         from django.core.exceptions import ValidationError
         from django.db import connection
 
-        from danceschool.core.models import Event, SubstituteTeacher, Registration, EventRegistration
+        from danceschool.core.models import Event, SubstituteTeacher, Invoice, InvoiceItem
         from danceschool.core.constants import getConstant, updateConstant
 
-        from . import constants
-
-        # Add some properties that are useful for the series checkin process.
-        # Note that all of these properties are written in a way that depends
-        # on revenue items being linked to registrations both directly _and_
-        # also through the eventregistration objects.
-        # This works because it is set in the save() method of the RevenueItem
-        # model.  However, if you process revenue in a way such that save() is
-        # not called, then things will break.
-
-        @property
-        def cashReported(self):
-            ''' Add a property to Registrations indicating how much cash revenue has been reported. '''
-            return sum([x.netRevenue for x in self.revenueitem_set.filter(paymentMethod=constants.CASH_PAYMENTMETHOD_ID)])
-        Registration.add_to_class('cashReported', cashReported)
-        EventRegistration.add_to_class('cashReported', cashReported)
-
-        @property
-        def cashReceived(self):
-            ''' Add a property to Registrations indicating how much cash has been both reported and marked as received. '''
-            return sum([x.netRevenue for x in self.revenueitem_set.filter(paymentMethod=constants.CASH_PAYMENTMETHOD_ID,received=True)])
-        Registration.add_to_class('cashReceived', cashReceived)
-        EventRegistration.add_to_class('cashReceived', cashReceived)
-
-        @property
-        def paypalReported(self):
-            ''' Add a property to Registrations indicating how much Paypal revenue has been reported (in the financials app). '''
-            return sum([x.netRevenue for x in self.revenueitem_set.filter(paymentMethod=constants.PAYPAL_PAYMENTMETHOD_ID)])
-        Registration.add_to_class('paypalReported', paypalReported)
-        EventRegistration.add_to_class('paypalReported', paypalReported)
-
-        @property
-        def paypalReceived(self):
-            return sum([x.netRevenue for x in self.revenueitem_set.filter(paymentMethod=constants.PAYPAL_PAYMENTMETHOD_ID,received=True)])
-        Registration.add_to_class('paypalReceived',paypalReceived)
-        EventRegistration.add_to_class('paypalReceived',paypalReceived)
-
-        @property
-        def refundableReceived(self):
-            ''' Total amount received by auto-refundable payment methods. '''
-            return sum([x.netRevenue for x in self.revenueitem_set.filter(paymentMethod__in=constants.REVENUE_AUTOREFUND_PAYMENTMETHODS,received=True)])
-        Registration.add_to_class('refundableReceived',refundableReceived)
-        EventRegistration.add_to_class('refundableReceived',refundableReceived)
-
-        @property
-        def paypalReceivedInApp(self):
-            '''
-            Add a property to Registrations indicating how much Paypal revenue has been received.
-            There is only one directly related Paypal transaction for each registration, but the
-            netRevenue method takes account of any transactions that are related to the initial one,
-            and the Paypal app should ensure that any refund type transactions are automatically linked.
-            Manual secondary transactions must be manually linked in the Paypal app.
-            '''
-            if hasattr(self,'ipnmessage'):
-                return self.ipnmessage.netRevenue
-            else:
-                return 0
-        Registration.add_to_class('paypalReceivedInApp',paypalReceivedInApp)
-
-        @property
-        def paypalMismatch(self):
-            ''' Add a property indicating that the IPN Paypal total and the recorded revenue total do not match '''
-            return round(self.paypalReported - self.paypalReceived,2) != 0 or round(self.paypalReceived - self.paypalReceivedInApp,2) != 0
-        Registration.add_to_class('paypalMismatch',paypalMismatch)
-
-        @property
-        def paypalUnallocatedRefunds(self):
-            if hasattr(self,'ipnmessage'):
-                return self.ipnmessage.unallocatedRefunds
-            else:
-                return 0
-        Registration.add_to_class('paypalUnallocatedRefunds',paypalUnallocatedRefunds)
+        # Add some properties to Invoices that are useful for the check-in process.
+        # to ensure that the financials are being recorded correctly.
 
         @property
         def revenueReportedGross(self):
-            return sum([x.total for x in self.revenueitem_set.all()])
-        Registration.add_to_class('revenueReportedGross',revenueReportedGross)
-        EventRegistration.add_to_class('revenueReportedGross',revenueReportedGross)
+            if hasattr(self,'revenueitem') and self.revenueitem:
+                return self.revenueitem.total
+            return 0
+        InvoiceItem.add_to_class('revenueReportedGross',revenueReportedGross)
 
         @property
         def revenueReported(self):
-            return sum([x.netRevenue for x in self.revenueitem_set.all()])
-        Registration.add_to_class('revenueReported',revenueReported)
-        EventRegistration.add_to_class('revenueReported',revenueReported)
+            if hasattr(self,'revenueitem') and self.revenueitem:
+                return self.revenueitem.netRevenue
+            return 0
+        InvoiceItem.add_to_class('revenueReported',revenueReported)
 
         @property
         def feesReported(self):
-            return sum([x.fees for x in self.revenueitem_set.all()])
-        Registration.add_to_class('feesReported',feesReported)
-        EventRegistration.add_to_class('feesReported',feesReported)
+            if hasattr(self,'revenueitem') and self.revenueitem:
+                return self.revenueitem.fees
+            return 0
+        InvoiceItem.add_to_class('feesReported',feesReported)
+
+        @property
+        def taxesReported(self):
+            if hasattr(self,'revenueitem') and self.revenueitem:
+                return self.revenueitem.taxes
+            return 0
+        InvoiceItem.add_to_class('taxesReported',taxesReported)
 
         @property
         def revenueReceivedGross(self):
-            return sum([x.total for x in self.revenueitem_set.filter(received=True)])
-        Registration.add_to_class('revenueReceivedGross',revenueReceivedGross)
-        EventRegistration.add_to_class('revenueReceivedGross',revenueReceivedGross)
+            if hasattr(self,'revenueitem') and self.revenueitem and self.revenueitem.received:
+                return self.revenueitem.total
+            return 0
+        InvoiceItem.add_to_class('revenueReceivedGross',revenueReceivedGross)
 
         @property
         def revenueReceived(self):
-            return sum([x.netRevenue for x in self.revenueitem_set.filter(received=True)])
-        Registration.add_to_class('revenueReceived',revenueReceived)
-        EventRegistration.add_to_class('revenueReceived',revenueReceived)
+            if hasattr(self,'revenueitem') and self.revenueitem and self.revenueitem.received:
+                return self.revenueitem.netRevenue
+            return 0
+        InvoiceItem.add_to_class('revenueReceived',revenueReceived)
 
         @property
         def revenueMismatch(self):
-            return round(self.netPrice,2) != round(self.revenueReported + self.feesReported + self.revenueRefundsReported,2)
-        EventRegistration.add_to_class('revenueMismatch',revenueMismatch)
-        Registration.add_to_class('revenueMismatch',revenueMismatch)
+            comparison = self.revenueReported + self.revenueRefundsReported
+            if not getConstant('registration__buyerPaysProcessingFees'):
+                comparison += self.feesReported
+            if not getConstant('registration__buyerPaysSalesTax'):
+                comparison += self.taxesReported
+
+            return round(self.total,2) != round(comparison,2)
+        InvoiceItem.add_to_class('revenueMismatch',revenueMismatch)
+
+        @property
+        def invoiceRevenueMismatch(self):
+            for x in self.invoiceitem_set.all():
+                if x.revenueMismatch:
+                    return True
+
+            return False
+        Invoice.add_to_class('revenueMismatch', invoiceRevenueMismatch)
 
         @property
         def revenueNotYetReceived(self):
             return self.revenueReceived != self.revenueReported
-        EventRegistration.add_to_class('revenueNotYetReceived',revenueNotYetReceived)
-        Registration.add_to_class('revenueNotYetReceived',revenueNotYetReceived)
+        InvoiceItem.add_to_class('revenueNotYetReceived',revenueNotYetReceived)
+
+        @property
+        def invoiceRevenueNotYetReceived(self):
+            for x in self.invoiceitem_set.all():
+                if x.revenueNotYetReceived:
+                    return True
+
+            return False
+        Invoice.add_to_class('revenueNotYetReceived', invoiceRevenueNotYetReceived)
 
         @property
         def revenueRefundsReported(self):
-            return -1 * sum([x.adjustments for x in self.revenueitem_set.all()])
-        EventRegistration.add_to_class('revenueRefundsReported',revenueRefundsReported)
-        Registration.add_to_class('revenueRefundsReported',revenueRefundsReported)
+            if hasattr(self,'revenueitem') and self.revenueitem:
+                return -1 * self.revenueitem.adjustments
+            return 0
+        InvoiceItem.add_to_class('revenueRefundsReported',revenueRefundsReported)
+
+        @property
+        def invoiceRevenueRefundsReported(self):
+            return sum([x.revenueRefundsReported for x in self.invoiceitem_set.all()])
+        Invoice.add_to_class('revenueRefundsReported', invoiceRevenueRefundsReported)
 
         # Add a property and a validator to check for and validate that teachers have not
         # already been paid when accepting SubstituteTeacher submissions.

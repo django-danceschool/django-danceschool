@@ -39,7 +39,7 @@ def refundPaypalPayment(sender,**kwargs):
         return
 
     try:
-        this_payment = PaymentRecord.objects.get(id=id)
+        this_payment = PaymentRecord.objects.get(paymentId=id)
     except ObjectDoesNotExist:
         return {'status': 'error', 'errorMessage': 'No payment record found.'}
 

@@ -11,6 +11,7 @@ from daterange_filter.filter import DateRangeFilter
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
 from .forms import ExpenseCategoryWidget
+from .autocomplete_light_registry import get_method_list
 
 
 class ExpenseItemAdminForm(ModelForm):
@@ -30,6 +31,11 @@ class ExpenseItemAdminForm(ModelForm):
                 'class': 'modern-style',
             }
         )
+    )
+    paymentMethod = autocomplete.Select2ListChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
     )
 
     class Meta:
@@ -88,6 +94,12 @@ class RevenueItemAdminForm(ModelForm):
             }
         )
     )
+    paymentMethod = autocomplete.Select2ListChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
+    )
+
 
     class Meta:
         model = RevenueItem

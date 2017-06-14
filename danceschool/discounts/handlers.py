@@ -106,11 +106,15 @@ def getBestDiscount(sender,**kwargs):
                     (
                         sum([x[0].event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) for x in tieredTuples]) +
                         ineligible_total
-                    ) * (100 - max(min(discount.code.percentDiscount,100),0))
+                    ) * (1 - (max(min(discount.code.percentDiscount or 0,100),0) / 100))
             else:
-                this_price = sum([x[0].event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) * (1 - x[1]) for x in tieredTuples]) * (100 - max(min(discount.code.percentDiscount,100),0)) \
-                    + sum([x[0].event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) * x[1] for x in tieredTuples]) \
-                    + ineligible_total
+                this_price = \
+                    (
+                        sum([x[0].event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) * (1 - x[1]) for x in tieredTuples]) *
+                        (1 - (max(min(discount.code.percentDiscount or 0,100),0) / 100)) +
+                        sum([x[0].event.getBasePrice(isStudent=isStudent,payAtDoor=payAtDoor) * x[1] for x in tieredTuples]) +
+                        ineligible_total
+                    )
         else:
             raise KeyError(_('Invalid discount type.'))
 

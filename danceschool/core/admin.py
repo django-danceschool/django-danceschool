@@ -177,7 +177,7 @@ class EventOccurrenceInline(admin.TabularInline):
 class InvoiceItemInline(admin.StackedInline):
     model = InvoiceItem
     extra = 0
-    fields = ['id','description','gross','refundAmount','temporaryEventRegistrationLink','finalEventRegistrationLink']
+    fields = ['id','description','grossTotal','adjustments','temporaryEventRegistrationLink','finalEventRegistrationLink']
     readonly_fields = ['id','temporaryEventRegistrationLink','finalEventRegistrationLink']
 
     # This ensures that InvoiceItems are not deleted except through
@@ -202,33 +202,53 @@ class InvoiceItemInline(admin.StackedInline):
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceItemInline,]
-    list_display = ['id', 'status', 'total','netRevenue','outstandingBalance','creationDate','modifiedDate','finalRegistrationLink','temporaryRegistrationLink']
+    list_display = ['id', 'status', 'total','netRevenue','outstandingBalance','creationDate','modifiedDate','links']
     list_filter = ['status', 'paidOnline', 'creationDate', 'modifiedDate']
     search_fields = ['id','comments']
     ordering = ['-modifiedDate',]
-    readonly_fields = ['id','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','finalRegistrationLink','temporaryRegistrationLink','submissionUser','collectedByUser']
+    readonly_fields = ['id','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','links','submissionUser','collectedByUser']
+
+    def viewInvoiceLink(self,obj):
+        change_url = reverse('viewInvoice', args=(obj.id,))
+        return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
+    viewInvoiceLink.allow_tags = True
+    viewInvoiceLink.short_description = _('Invoice')
 
     def finalRegistrationLink(self,obj):
-        change_url = reverse('admin:core_registration_change', args=(obj.finalRegistration.id,))
-        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.finalRegistration.id))
+        if obj.finalRegistration:
+            change_url = reverse('admin:core_registration_change', args=(obj.finalRegistration.id,))
+            return mark_safe('<a class="btn btn-default" href="%s">Registration</a>' % (change_url,))
     finalRegistrationLink.allow_tags = True
     finalRegistrationLink.short_description = _('Final registration')
 
     def temporaryRegistrationLink(self,obj):
-        change_url = reverse('admin:core_temporaryregistration_change', args=(obj.temporaryRegistration.id,))
-        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.temporaryRegistration.id))
+        if obj.temporaryRegistration:
+            change_url = reverse('admin:core_temporaryregistration_change', args=(obj.temporaryRegistration.id,))
+            return mark_safe('<a class="btn btn-default" href="%s">Temporary Registration</a>' % (change_url,))
     temporaryRegistrationLink.allow_tags = True
     temporaryRegistrationLink.short_description = _('Temporary registration')
 
+    def links(self,obj):
+        return ''.join([
+            self.viewInvoiceLink(obj) or '',
+            self.temporaryRegistrationLink(obj) or '',
+            self.finalRegistrationLink(obj) or '',
+        ])
+    links.allow_tags = True
+    links.short_description = _('Links')
+
     fieldsets = (
         (None, {
-            'fields': ('id','status','total','adjustments','taxes','fees','netRevenue','amountPaid','outstandingBalance','comments'),
+            'fields': ('id','status','amountPaid','outstandingBalance','links','comments'),
+        }),
+        (_('Financial Details'), {
+            'fields': ('total','adjustments','taxes','fees','netRevenue'),
         }),
         (_('Dates'), {
             'fields': ('creationDate','modifiedDate'),
         }),
         (_('Additional data'), {
-            'classes': ('collapse'),
+            'classes': ('collapse',),
             'fields': ('submissionUser','collectedByUser','data'),
         }),
     )
@@ -241,7 +261,7 @@ class RegistrationAdmin(admin.ModelAdmin):
     list_filter = ['dateTime','student','invoice__paidOnline']
     search_fields = ['=customer__first_name','=customer__last_name','customer__email']
     ordering = ('-dateTime',)
-    fields = ('customer_link','amountPaid','priceWithDiscount','processingFee','student','paidOnline','dateTime','comments','howHeardAboutUs')
+    fields = ('customer_link','priceWithDiscount','student','dateTime','comments','howHeardAboutUs')
     readonly_fields = ('customer_link',)
 
     def customer_link(self,obj):

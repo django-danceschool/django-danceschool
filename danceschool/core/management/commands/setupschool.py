@@ -3,6 +3,7 @@ from django.apps import apps
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User, Group, Permission
+from django.contrib.sites.models import Site
 
 from danceschool.core.models import DanceType, DanceTypeLevel, DanceRole, PricingTier, InstructorListPluginModel
 
@@ -77,7 +78,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         from cms.api import create_page, add_plugin, publish_page
-        from cms.constants import VISIBILITY_ANONYMOUS
+        from cms.constants import VISIBILITY_ANONYMOUS, VISIBILITY_USERS
         from cms.models import Page, StaticPlaceholder
 
         prefs = global_preferences_registry.manager()
@@ -122,6 +123,18 @@ BASIC SETUP:
 ------------
             """
         )
+
+        # Current Domain
+        current_domain = self.pattern_input(
+            'Enter the domain name of this installation, with no protocol or trailing slashes (e.g. \'bostonlindyhop.com\')',
+            message='Invalid domain name (no whitespace or slashes allowed)',
+            default='localhost:8000',
+            pattern='^[^/\\ ]+$'
+        )
+        this_site = Site.objects.get_current()
+        this_site.name = current_domain
+        this_site.domain = current_domain
+        this_site.save()
 
         # School name
         school_name = self.pattern_input(
@@ -287,6 +300,7 @@ interface after completing this setup.
         initial_door_price = self.float_input('Initial at-the-door price [60]',default=60)
         initial_student_online_price = self.float_input('Initial online price for HS/college/university students [40]',default=40)
         initial_student_door_price = self.float_input('Initial at-the-door price for HS/college/university students [50]',default=50)
+        initial_dropin_price = self.float_input('Initial price for single-class drop-ins [15]',default=15)
 
         PricingTier.objects.get_or_create(
             name=initial_pricing_tier_name,
@@ -295,6 +309,7 @@ interface after completing this setup.
                 'doorGeneralPrice': initial_door_price,
                 'onlineStudentPrice': initial_student_online_price,
                 'doorStudentPrice': initial_student_door_price,
+                'dropinPrice': initial_dropin_price,
             })
 
         if apps.is_installed('danceschool.vouchers'):
@@ -470,7 +485,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 publish_page(stats_page, this_user, initial_language)
                 self.stdout.write('School performance stats page added.\n')
 
-        add_login_link = self.boolean_input('Add login link to the main navigation bar [Y/n]', True)
+        add_login_link = self.boolean_input('Add login and account links to the main navigation bar [Y/n]', True)
         if add_login_link:
             create_page(
                 'Login', 'cms/home.html', initial_language,
@@ -478,6 +493,13 @@ Remember, all page settings and content can be changed later via the admin inter
                 in_navigation=True, limit_visibility_in_menu=VISIBILITY_ANONYMOUS, published=True
             )
             self.stdout.write('Login link added.\n')
+            create_page(
+                'My Account', 'cms/home.html', initial_language,
+                menu_title='My Account', slug='profile', overwrite_url=reverse('accountProfile'),
+                in_navigation=True, limit_visibility_in_menu=VISIBILITY_USERS, published=True
+            )
+            self.stdout.write('\'My Account\' link added.\n')
+
 
         if apps.is_installed('danceschool.paypal'):
             add_paypal_paynow = self.boolean_input('Add Paypal Pay Now link to the registration summary view to allow students to pay [Y/n]', True)
@@ -581,13 +603,15 @@ Note: This process may take a minute or two to complete.
                 ('update_instructor_bio', 'core', 'instructor'),
                 ('view_own_instructor_finances', 'core', 'instructor'),
                 ('view_own_instructor_stats', 'core', 'instructor'),
+                ('process_refunds','core','invoice'),
+                ('send_invoices', 'core', 'invoice'),
+                ('view_all_invoices','core','invoice'),
                 ('accept_door_payments', 'core', 'registration'),
                 ('checkin_customers', 'core', 'registration'),
                 ('override_register_closed', 'core', 'registration'),
                 ('override_register_dropins', 'core', 'registration'),
                 ('override_register_soldout', 'core', 'registration'),
                 ('register_dropins', 'core', 'registration'),
-                ('send_invoices', 'core', 'registration'),
                 ('view_registration_summary', 'core', 'registration'),
                 ('view_school_stats', 'core', 'staffmember'),
                 ('view_staff_directory', 'core', 'staffmember'),
@@ -599,7 +623,6 @@ Note: This process may take a minute or two to complete.
                 ('add_expenseitem', 'financial', 'expenseitem'),
                 ('mark_expenses_paid', 'financial', 'expenseitem'),
                 ('add_revenueitem', 'financial', 'revenueitem'),
-                ('process_registration_refunds', 'financial', 'revenueitem'),
                 ('view_finances_bymonth', 'financial', 'revenueitem'),
                 ('add_newsitem', 'news', 'newsitem'),
                 ('change_newsitem', 'news', 'newsitem'),
@@ -624,16 +647,17 @@ Note: This process may take a minute or two to complete.
             give_explicit = [
                 ('view_page', 'cms', 'page'),
                 ('can_autocomplete_users', 'core', 'customer'),
+                ('process_refunds','core','invoice'),
+                ('send_invoices', 'core', 'invoice'),
+                ('view_all_invoices','core','invoice'),
                 ('accept_door_payments', 'core', 'registration'),
                 ('checkin_customers', 'core', 'registration'),
                 ('override_register_closed', 'core', 'registration'),
                 ('override_register_dropins', 'core', 'registration'),
                 ('override_register_soldout', 'core', 'registration'),
                 ('register_dropins', 'core', 'registration'),
-                ('send_invoices', 'core', 'registration'),
                 ('view_registration_summary', 'core', 'registration'),
                 ('view_staff_directory', 'core', 'staffmember'),
-                ('process_registration_refunds', 'financial', 'revenueitem'),
                 ('ignore_requirements', 'prerequisites', 'requirement'),
             ]
 

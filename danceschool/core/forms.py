@@ -461,7 +461,7 @@ class DoorAmountForm(forms.Form):
                     <div class="panel panel-default">
                         <div class="panel-heading" role="tab" id="door_headingOne">
                             <h4 class="panel-title">
-                            """ + str(_('Cash Payment (Staff only)')) + """
+                            """ + str(_('Cash Payment')) + """
                             </h4>
                         </div>
                         <div class="panel-body">
@@ -484,7 +484,7 @@ class DoorAmountForm(forms.Form):
                     <div class="panel panel-default">
                         <div class="panel-heading" role="tab" id="door_headingTwo">
                             <h4 class="panel-title">
-                                """ + str(_('Send Invoice (beta)')) + """
+                                """ + str(_('Send Invoice')) + """
                             </h4>
                         </div>
                         <div class="panel-body">
@@ -594,7 +594,7 @@ class RefundForm(forms.ModelForm):
             widget=forms.Textarea(attrs={'placeholder': _('Enter explanation/comments...'), 'class': 'form-control'}))
 
         self.fields['id'] = forms.ModelChoiceField(
-            required=True,queryset=Invoice.objects.filter(id=this_invoice.id),widget=forms.HiddenInput())
+            required=True,queryset=Invoice.objects.filter(id=this_invoice.id),widget=forms.HiddenInput(),initial=this_invoice.id)
 
         self.fields['initial_refund_amount'] = forms.FloatField(
             required=True,initial=(-1) * this_invoice.adjustments,min_value=0,max_value=this_invoice.amountPaid,widget=forms.HiddenInput())
@@ -609,6 +609,9 @@ class RefundForm(forms.ModelForm):
         initial = self.cleaned_data.get('initial_refund_amount', 0)
         total = self.cleaned_data['total_refund_amount']
         summed_refunds = sum([v for k,v in self.cleaned_data.items() if k.startswith('item_refundamount_')])
+
+        if not self.cleaned_data.get('id'):
+            raise ValidationError('ID not in cleaned data')
 
         if summed_refunds != total:
             raise ValidationError(_('Passed value does not match sum of allocated refunds.'))

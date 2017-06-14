@@ -11,8 +11,8 @@ This Payment Amount: {{ currencySymbol }}{{ thisPaymentAmount|floatformat:2 }}
 Invoice ID: #{{ id }}
 Creation Date: {{ creationDate|date:"F jS, g:i A" }}
 Status: {{ status }}
-Total, Net of Discounts: {{ currencySymbol }}{{ total|floatformat:2 }}
-Adjustments/Refunds: {{ currencySymbol }}{{ adjustments|floatformat:2 }}
+Total, Net of Discounts: {{ currencySymbol }}{{ total|floatformat:2 }}{% if adjustments %}
+Adjustments/Refunds: {{ currencySymbol }}{{ adjustments|floatformat:2 }}{% endif %}
 
 Amount Paid {{ currencySymbol }}{{ amountPaid|floatformat:2 }}
 Outstanding Balance: {{ currencySymbol }}{{ outstandingBalance|floatformat:2 }}

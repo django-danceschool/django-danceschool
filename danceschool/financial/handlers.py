@@ -1,12 +1,11 @@
 from django.dispatch import receiver
 from django.db.models.signals import post_save, m2m_changed
-from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 
 import sys
 import logging
 
-from danceschool.core.models import EventStaffMember, EventOccurrence, InvoiceItem
+from danceschool.core.models import EventStaffMember, EventOccurrence, InvoiceItem, Invoice
 from danceschool.core.constants import getConstant
 
 from .models import ExpenseItem, RevenueItem, RevenueCategory
@@ -76,6 +75,8 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
 
     logger.debug('RevenueItem signal fired for InvoiceItem %s.' % instance.id)
 
+    received_status = (instance.invoice.status == Invoice.PaymentStatus.paid)
+
     related_item = getattr(instance, 'revenueitem', None)
     if not related_item:
         related_item = RevenueItem.objects.create(
@@ -89,6 +90,8 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
             category=RevenueCategory.objects.get(id=getConstant('financial__registrationsRevenueCatID')),
             submissionUser=instance.invoice.submissionUser,
             currentlyHeldBy=instance.invoice.collectedByUser,
+            received=received_status,
+            paymentMethod=instance.invoice.get_payment_method(),
             description=_('Registration invoice %s' % instance.id)
         )
         logger.debug('RevenueItem created.')
@@ -100,6 +103,11 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
             if getattr(related_item,field) != getattr(instance,field):
                 setattr(related_item,field,getattr(instance,field))
                 saveFlag = True
+
+        if related_item.received != received_status:
+            related_item.received = received_status
+            related_item.paymentMethod = instance.invoice.get_payment_method()
+            saveFlag = True
 
         if saveFlag:
             related_item.save()

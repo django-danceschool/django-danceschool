@@ -18,6 +18,7 @@ import logging
 from danceschool.core.models import InvoiceItem
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem
+from .autocomplete_light_registry import get_method_list
 
 
 # Define logger for this file
@@ -71,6 +72,11 @@ class ExpenseCategoryWidget(Select):
 class ExpenseReportingForm(forms.ModelForm):
     payTo = forms.ChoiceField(widget=forms.RadioSelect, choices=RECIPIENT_CHOICES,label=_('This expense to be paid to:'),initial=1)
     payBy = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYBY_CHOICES, label=_('Report this expense as:'), initial=1)
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
@@ -205,6 +211,11 @@ class RevenueReportingForm(forms.ModelForm):
                 'class': 'modern-style',
             }
         )
+    )
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
     )
 
     def __init__(self, *args, **kwargs):

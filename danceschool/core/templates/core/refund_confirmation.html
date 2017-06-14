@@ -34,10 +34,11 @@
 					{{ payment.method }}: {{ payment.id}}
 				{% endfor %}
 			</div>
+		</div>
 	{% endif %}
 
 	<a class="btn btn-success" href="?confirmed=True">Process Refund</a>
-	<a class="btn btn-default" href="{% url 'refundProcessing' %}">Return To Form</a>
+	<a class="btn btn-default" href="{% url 'refundProcessing' form_data.id %}">Return To Form</a>
 
 {% addtoblock "css" %}
 	<style type="text/css">

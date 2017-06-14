@@ -1,9 +1,9 @@
 {% extends "cms/home.html" %}
-{% load danceschool_tags sekizai_tags %}
+{% load cms_tags danceschool_tags sekizai_tags %}
 
 {% block content %}
 
-<h1>Invoice: {{ business_name }}</h1>
+<h1>Invoice for {{ businessName }}:</h1>
 
 <dl>
 	<dt>Invoice Number:</dt>
@@ -14,47 +14,48 @@
 
 	{% if object.amountPaid %}
 		<dt>Amount Paid:</dt>
-		<dd>{{ object.amountPaid }}</dd>
+		<dd>{{ currencySymbol }}{{ object.amountPaid }}</dd>
 	{% endif %}
 
 	{% if object.outstandingBalance %}
 		<dt>Outstanding Balance:</dt>
-		<dd>{{ object.outstandingBalance }}</dd>
+		<dd>{{ currencySymbol }}{{ object.outstandingBalance }}</dd>
 	{% endif %}
 </dl>
 
 <table class="table">
 <tr>
 	<td>Initial Price</td>
-	<td>{{ currency_code }}{{ object.grossTotal|floatformat:"2" }}</td>
+	<td>{{ currencySymbol }}{{ object.grossTotal|floatformat:"2" }}</td>
 </tr>
 <tr>
 	<td>Net Price</td>
-	<td>{{ currency_code }}{{ object.total|floatformat:"2" }}</td>
+	<td>{{ currencySymbol }}{{ object.total|floatformat:"2" }}</td>
 </tr>
 <tr>
 	<td>Taxes</td>
-	<td>{{ currency_code }}{{ object.taxes|floatformat:"2" }}</td>
+	<td>{{ currencySymbol }}{{ object.taxes|floatformat:"2" }}</td>
 </tr>
 <tr>
 	<td>Fees</td>
-	<td>{{ currency_code }}{{ object.fees|floatformat:"2" }}</td>
+	<td>{{ currencySymbol }}{{ object.fees|floatformat:"2" }}</td>
 </tr>
 <tr>
 	<td>Adjustments/Refunds</td>
-	<td>{{ currency_code }}{{ object.adjustments|floatformat:"2" }}</td>
+	<td>{{ currencySymbol }}{{ object.adjustments|floatformat:"2" }}</td>
 </tr>
 
 </table>
 
-<div class="panel panel-default">
-<div class="panel-heading"><h4 class="panel-title">Comments/Notes</h4></div>
-<div class="panel-body">
-	<pre class="unstyled">{{ object.comments }}</pre>
-</div>
-</div>
+<hr />
 
 <h2>Item Details</h2>
+
+{% if 'core.change_registration' in perms and object.finalRegistration %}
+	<a class="btn btn-default" href="{% url 'admin:core_registration_change' object.finalRegistration.id %}">View Registration</a>
+{% elif 'core.change_temporaryregistration' in perms and object.temporaryRegistration %}
+	<a class="btn btn-default" href="{% url 'admin:core_temporaryregistration_change' object.temporaryRegistration.id %}">View Temporary Registration</a>
+{% endif %}
 
 <table class="table">
 <thead>
@@ -65,30 +66,71 @@
 		<th>Taxes</th>
 		<th>Fees</th>
 		<th>Adjustments</th>
+		{% if 'financial.change_revenueitem' in perms %}
+		<th>Links</th>
+		{% endif %}
 	</tr>
 </thead>
 <tbody>
 {% for item in object.invoiceitem_set.all %}
 	<tr>
 		<td>{{ item.name }}</td>
-		<td>{{ item.grossTotal|floatformat:"2" }}</td>
-		<td>{{ item.total|floatformat:"2" }}</td>
-		<td>{{ item.taxes|floatformat:"2" }}</td>
-		<td>{{ item.fees|floatformat:"2" }}</td>
-		<td>{{ item.adjustments|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.grossTotal|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.total|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.taxes|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.fees|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.adjustments|floatformat:"2" }}</td>
+		{% if 'financial.change_revenueitem' in perms %}
+			<td>
+				{% if item.revenueitem %}
+					<a class="btn btn-default btn-xs" href="{% url 'admin:financial_revenueitem_change' item.revenueitem.id %}">Rev. Item</a>
+				{% endif %}
+			</td>
+		{% endif %}
 	</tr>
 {% endfor %}
 <tbody>
 </table>
 
 {% if payments %}
-	<div class="panel panel-default">
-		<div class="panel-heading"><h4 class="panel-title">Payment Details</h4></div>
-		<div class="panel-body">
-			{% for payment in payments %}
-				{{ payment.method }} {{ payment.id}}: {{ payment.netAmountPaid }}
-			{% endfor %}
-		</div>
+	<hr />
+
+	<h2>Payment Details</h2>
+
+	{% if 'core.process_refunds' in perms %}
+		<a class="btn btn-default" href="{% url 'refundProcessing' object.id %}">Refund</a>
+	{% endif %}
+
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Payment Method</th>
+				<th>Transaction ID</th>
+				<th>Amount</th>
+			</tr>
+		</thead>
+		{% for payment in payments %}
+			<tr>
+				<td>{{ payment.method }}</td>
+				<td>{{ payment.id}}</td>
+				<td>{{ currencySymbol }}{{ payment.netAmountPaid|floatformat:"2" }}</td>
+			</tr>
+		{% endfor %}
+		</table>
+{% endif %}
+
+<div class="panel panel-default">
+<div class="panel-heading"><h4 class="panel-title">Comments/Notes</h4></div>
+<div class="panel-body">
+	<pre class="unstyled">{{ object.comments }}</pre>
+</div>
+</div>
+
+{% if object.outstandingBalance %}
+	<hr />
+	<h2>Pay Invoice</h2>
+
+	{% static_placeholder "registration_payment_placeholder" %}
 {% endif %}
 
 {% addtoblock "css" %}

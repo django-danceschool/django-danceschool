@@ -42,6 +42,8 @@ def createPaypalPayment(request):
     certificateName = request.POST.get('certificate_name')
     taxable = request.POST.get('taxable', False)
 
+    # If a specific amount to pay has been passed, then allow payment
+    # of that amount.
     if amount:
         try:
             amount = float(amount)
@@ -49,6 +51,7 @@ def createPaypalPayment(request):
             logger.error('Invalid amount passed.')
             return HttpResponseBadRequest()
 
+    # Parse if a specific submission user is indicated
     submissionUser = None
     if submissionUserId:
         try:
@@ -57,23 +60,27 @@ def createPaypalPayment(request):
             logger.warning('Invalid user passed, submissionUser will not be recorded.')
 
     try:
+        # Invoice transactions are usually payment on an existing invoice.
         if invoice_id:
             this_invoice = Invoice.objects.get(id=invoice_id)
             this_description = _('Invoice Payment: %s' % this_invoice.id)
             if not amount:
                 amount = this_invoice.outstandingBalance
+        # This is typical of payment at the time of registration
         elif tr_id:
             tr = TemporaryRegistration.objects.get(id=int(tr_id))
             this_invoice = getattr(tr,'invoice',None)
             if not this_invoice:
-                this_invoice = Invoice.create_from_registration(tr, submissionUser=submissionUser)
+                this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
             this_description = _('Registration Payment: #%s' % tr_id)
             if not amount:
                 amount = this_invoice.outstandingBalance
+        # All other transactions require both a transaction type and an amount to be specified
         elif not transactionType or not amount:
             logger.error('Insufficient information passed to createPaypalPayment view.')
             raise ValueError
         else:
+            # Gift certificates automatically get a nicer invoice description
             if transactionType == 'Gift Certificate':
                 if certificateName:
                     this_description = _('Gift Certificate Purchase for %s' % certificateName)
@@ -95,10 +102,21 @@ def createPaypalPayment(request):
 
     this_currency = getConstant('general__currencyCode')
 
+    this_total = min(this_invoice.outstandingBalance, amount)
+
+    if not getConstant('registration__buyerPaysSalesTax'):
+        this_subtotal = this_total - this_invoice.taxes
+    else:
+        this_subtotal = this_total
+
     this_transaction = {
         'amount': {
-            'total': min(this_invoice.outstandingBalance, amount),
+            'total': this_total,
             'currency': this_currency,
+            'details': {
+                'subtotal': this_subtotal,
+                'tax': this_invoice.taxes,
+            },
         },
         'description': str(this_description),
         'item_list': {
@@ -107,9 +125,41 @@ def createPaypalPayment(request):
     }
 
     for item in this_invoice.invoiceitem_set.all():
+
+        if not getConstant('registration__buyerPaysSalesTax'):
+            this_item_price = item.grossTotal - item.taxes
+        else:
+            this_item_price = item.grossTotal
+
         this_transaction['item_list']['items'].append({
             'name': str(item.name),
-            'price': item.gross,
+            'price': this_item_price,
+            'tax': item.taxes,
+            'currency': this_currency,
+            'quantity': 1,
+        })
+
+    # Because the Paypal API requires that the subtotal add up to the sum of the item
+    # totals, we must add a negative line item for discounts applied, and a line item
+    # for the remaining balance if there is to be one.
+    if this_invoice.grossTotal != this_invoice.total:
+        this_transaction['item_list']['items'].append({
+            'name': str(_('Total Discounts')),
+            'price': this_invoice.total - this_invoice.grossTotal,
+            'currency': this_currency,
+            'quantity': 1,
+        })
+    if this_invoice.amountPaid > 0:
+        this_transaction['item_list']['items'].append({
+            'name': str(_('Previously Paid')),
+            'price': -1 * this_invoice.amountPaid,
+            'currency': this_currency,
+            'quantity': 1,
+        })        
+    if amount != this_invoice.outstandingBalance:
+        this_transaction['item_list']['items'].append({
+            'name': str(_('Remaining Balance After Payment')),
+            'price': amount - this_invoice.outstandingBalance,
             'currency': this_currency,
             'quantity': 1,
         })
@@ -152,6 +202,7 @@ def createPaypalPayment(request):
     else:
         logger.error('Paypal payment object not created.')
         logger.error(payment)
+        logger.error(payment.error)
         if this_invoice:
             this_invoice.status = Invoice.PaymentStatus.error
             this_invoice.save()

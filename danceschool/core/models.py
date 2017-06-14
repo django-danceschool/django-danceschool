@@ -1,11 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
+from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
+from django.apps import apps
 
 from polymorphic.models import PolymorphicModel
 from filer.models import ThumbnailOption
@@ -22,11 +24,13 @@ from djchoices import DjangoChoices, ChoiceItem
 from math import ceil
 import logging
 from jsonfield import JSONField
+import string
+import random
 
 from cms.models.pluginmodel import CMSPlugin
 
 from .constants import getConstant
-from .signals import post_registration
+from .signals import post_registration, get_invoice_payments
 from .mixins import EmailRecipientMixin
 
 
@@ -62,6 +66,10 @@ def get_defaultEmailName():
 def get_defaultEmailFrom():
     ''' Callable for default used by EmailTemplate class '''
     return getConstant('email__defaultEmailFrom')
+
+
+def get_validationString():
+    return ''.join(random.choice(string.ascii_uppercase) for i in range(25))
 
 
 @python_2_unicode_compatible
@@ -164,14 +172,17 @@ class StaffMember(PolymorphicModel):
     @property
     def fullName(self):
         return ' '.join([self.firstName or '',self.lastName or ''])
+    fullName.fget.short_description = _('Name')
 
     @property
     def activeThisMonth(self):
         return self.eventstaffmember_set.filter(event__year=datetime.now().year,event__month=datetime.now().month).exists()
+    activeThisMonth.fget.short_description = _('Staffed this month')
 
     @property
     def activeUpcoming(self):
         return self.eventstaffmember_set.filter(event__endTime__gte=datetime.now()).exists()
+    activeUpcoming.fget.short_description = _('Staffed for upcoming events')
 
     def __str__(self):
         return self.fullName
@@ -206,18 +217,22 @@ class Instructor(StaffMember):
     @property
     def assistant(self):
         return self.status == self.InstructorStatus.assistant
+    assistant.fget.short_description = _('Is assistant')
 
     @property
     def guest(self):
         return self.status == self.InstructorStatus.guest
+    guest.fget.short_description = _('Is guest')
 
     @property
     def retired(self):
         return self.status == self.InstructorStatus.retired
+    retired.fget.short_description = _('Is retired')
 
     @property
     def hide(self):
         return self.status == self.InstructorStatus.hidden
+    retired.fget.short_description = _('Is hidden')
 
     @property
     def activeGuest(self):
@@ -225,10 +240,12 @@ class Instructor(StaffMember):
             self.status == self.InstructorStatus.guest and
             self.activeUpcoming
         )
+    retired.fget.short_description = _('Is upcoming guest')
 
     @property
     def statusLabel(self):
         return self.InstructorStatus.values.get(self.status,'')
+    statusLabel.fget.short_description = _('Status')
 
     class Meta:
         permissions = (
@@ -256,10 +273,12 @@ class ClassDescription(models.Model):
     @property
     def danceTypeName(self):
         return self.danceTypeLevel.danceType.name
+    danceTypeName.fget.short_description = _('Dance type')
 
     @property
     def levelName(self):
         return self.danceTypeLevel.name
+    levelName.fget.short_description = _('Level')
 
     @property
     def lastOffered(self):
@@ -267,6 +286,7 @@ class ClassDescription(models.Model):
         Returns the start time of the last time this series was offered
         '''
         return self.event_set.order_by('-startTime').first().startTime
+    lastOffered.fget.short_description = _('Last offered')
 
     @property
     def lastOfferedMonth(self):
@@ -277,6 +297,7 @@ class ClassDescription(models.Model):
         '''
         lastOfferedSeries = self.event_set.order_by('-startTime').first()
         return (lastOfferedSeries.year,lastOfferedSeries.month)
+    lastOfferedMonth.fget.short_description = _('Last offered')
 
     def __str__(self):
         return self.title
@@ -366,6 +387,7 @@ class PricingTier(models.Model):
 
     # basePrice is the non-student, online registration price
     basePrice = property(fget=getBasePrice)
+    basePrice.fget.short_description = _('Base price')
 
     def __str__(self):
         return self.name
@@ -467,6 +489,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         else:
             return month_name[min(all_months)[1]]
+    getMonthName.fget.short_description = _('Month')
 
     @property
     def name(self):
@@ -481,6 +504,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             return _('Event, begins %s' % (self.startTime.strftime('%a., %B %d, %Y, %I:%M %p')))
         else:
             return _('Event #%s' % (self.id))
+    name.fget.short_description = _('Name')
 
     @property
     def description(self):
@@ -492,6 +516,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         for describing the event.
         '''
         return ''
+    description.fget.short_description = _('Description')
 
     @property
     def displayColor(self):
@@ -501,6 +526,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         if hasattr(self,'category') and self.category:
             return self.category.displayColor
+    displayColor.fget.short_description = _('Display color')
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -553,6 +579,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def firstOccurrence(self):
         return self.eventoccurrence_set.order_by('startTime').first()
+    firstOccurrence.fget.short_description = _('First occurrence')
 
     @property
     def firstOccurrenceTime(self):
@@ -564,6 +591,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def nextOccurrence(self):
         return self.eventoccurrence_set.filter(**{'startTime__gte': datetime.now()}).order_by('startTime').first()
+    nextOccurrence.fget.short_description = _('Next occurrence')
 
     @property
     def nextOccurrenceTime(self):
@@ -575,6 +603,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def lastOccurrence(self):
         return self.eventoccurrence_set.order_by('startTime').last()
+    lastOccurrence.fget.short_description = _('Last occurrence')
 
     @property
     def lastOccurrenceTime(self):
@@ -591,10 +620,12 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def hour(self):
         return self.firstOccurrenceTime.hour
+    hour.fget.short_description = _('Hour')
 
     @property
     def minute(self):
         return self.firstOccurrenceTime.minute
+    minute.fget.short_description = _('Minute')
 
     @property
     def isStarted(self):
@@ -610,6 +641,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     def registrationEnabled(self):
         ''' Just checks if this event ever permits/permitted registration '''
         return self.status in [self.RegStatus.enabled,self.RegStatus.heldOpen,self.RegStatus.heldClosed]
+    registrationEnabled.fget.short_description = _('Registration enabled')
 
     @property
     def numDropIns(self):
@@ -807,6 +839,7 @@ class EventOccurrence(models.Model):
         Returns the duration, in hours, for this occurrence
         '''
         return (self.endTime - self.startTime).seconds / 3600
+    duration.fget.short_description = _('Duration')
 
     def allDayForDate(self,this_date):
         '''
@@ -906,6 +939,7 @@ class EventStaffMember(models.Model):
             return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
         else:
             return sum([x.duration for x in self.occurrences.filter(cancelled=False)])
+    netHours.fget.short_description = _('Net hours')
 
     def __str__(self):
         replacements = {
@@ -954,6 +988,7 @@ class Series(Event):
         Overrides property from Event base class.
         '''
         return self.classDescription.title
+    name.fget.short_description = _('Name')
 
     @property
     def description(self):
@@ -961,6 +996,7 @@ class Series(Event):
         Overrides property from Event base class.
         '''
         return self.classDescription.title
+    description.fget.short_description = _('Description')
 
     @property
     def slug(self):
@@ -969,6 +1005,7 @@ class Series(Event):
         us to iterate over that property in templates
         '''
         return self.classDescription.slug
+    slug.fget.short_description = _('Slug')
 
     @property
     def displayColor(self):
@@ -976,6 +1013,7 @@ class Series(Event):
         Overrides property from Event base class.
         '''
         return self.classDescription.danceTypeLevel.displayColor
+    displayColor.fget.short_description = _('Display color')
 
     def getBasePrice(self,**kwargs):
         '''
@@ -1140,6 +1178,7 @@ class PublicEvent(Event):
         Overrides property from Event base class.
         '''
         return self.title
+    name.fget.short_description = _('Name')
 
     @property
     def description(self):
@@ -1147,10 +1186,11 @@ class PublicEvent(Event):
         Overrides property from Event base class.
         '''
         return self.descriptionField
+    description.fget.short_description = _('Description')
 
     @property
     def url(self):
-        if not self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
+        if self.status not in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
             return reverse('eventView',args=[self.year,month_name[self.month],self.slug])
 
     def __str__(self):
@@ -1185,6 +1225,7 @@ class Customer(models.Model):
     @property
     def fullName(self):
         return ' '.join([self.first_name or '',self.last_name or ''])
+    fullName.fget.short_description = _('Name')
 
     @property
     def numEventRegistrations(self):
@@ -1278,22 +1319,27 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     @property
     def fullName(self):
         return ' '.join([self.firstName,self.lastName])
+    fullName.fget.short_description = _('Name')
 
     @property
     def seriesPrice(self):
         return self.temporaryeventregistration_set.filter(Q(event__series__isnull=False)).aggregate(Sum('price')).get('price__sum')
+    seriesPrice.fget.short_description = _('Price of class series')
 
     @property
     def publicEventPrice(self):
         return self.temporaryeventregistration_set.filter(Q(event__publicevent__isnull=False)).aggregate(Sum('price')).get('price__sum')
+    publicEventPrice.fget.short_description = _('Price of public events')
 
     @property
     def totalPrice(self):
         return self.temporaryeventregistration_set.aggregate(Sum('price')).get('price__sum')
+    totalPrice.fget.short_description = _('Total price before discounts')
 
     @property
     def totalDiscount(self):
         return self.totalPrice - self.priceWithDiscount
+    totalDiscount.fget.short_description = _('Total discounts')
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -1330,7 +1376,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         customer, created = Customer.objects.get_or_create(first_name=self.firstName,last_name=self.lastName,email=self.email,defaults={'phone': self.phone})
 
         regArgs = {'customer': customer, 'dateTime': dateTime, 'temporaryRegistration': self}
-        for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount']:
+        for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount','payAtDoor']:
             regArgs[key] = kwargs.pop(key, getattr(self,key,None))
 
         # All other passed kwargs are put into the data JSON
@@ -1411,25 +1457,69 @@ class Registration(EmailRecipientMixin, models.Model):
     data = JSONField(null=True,blank=True)
 
     @property
+    def warningFlag(self):
+        '''
+        When viewing individual event registrations, there are a large number of potential
+        issues that can arise that may warrant scrutiny. This property just checks all of
+        these conditions and indicates if anything is amiss so that the template need not
+        check each of these conditions individually repeatedly.
+        '''
+        if not hasattr(self,'invoice'):
+            return True
+        if apps.is_installed('danceschool.financial'):
+            '''
+            If the financial app is installed, then we can also check additional
+            properties set by that app to ensure that there are no inconsistencies
+            '''
+            if self.invoice.revenueNotYetReceived != 0 or self.invoice.revenueMismatch:
+                return True
+        return (
+            self.priceWithDiscount != self.invoice.total or
+            self.invoice.unpaid or self.invoice.outstandingBalance != 0
+        )
+    warningFlag.fget.short_description = _('Issue with event registration')
+
+    @property
+    def refundFlag(self):
+        if (
+            not hasattr(self,'invoice') or
+            self.invoice.adjustments != 0 or
+            (apps.is_installed('danceschool.financial') and self.invoice.revenueRefundsReported != 0)
+        ):
+            return True
+        return False
+    refundFlag.fget.short_description = _('Transaction was partially refunded')
+
+    @property
     def fullName(self):
         return self.customer.fullName
+    fullName.fget.short_description = _('Name')
 
     @property
     def seriesPrice(self):
         return self.eventregistration_set.filter(Q(event__series__isnull=False)).aggregate(Sum('price')).get('price__sum') or 0
+    seriesPrice.fget.short_description = _('Price of class series')
 
     @property
     def publicEventPrice(self):
         return self.eventregistration_set.filter(Q(event__publicevent__isnull=False)).aggregate(Sum('price')).get('price__sum') or 0
+    publicEventPrice.fget.short_description = _('Price of public events')
 
     @property
     def totalPrice(self):
         return self.eventregistration_set.aggregate(Sum('price')).get('price__sum')
+    totalPrice.fget.short_description = _('Total price before discounts')
 
     # This alias just makes it easier to register properties in other apps.
     @property
     def netPrice(self):
         return self.priceWithDiscount
+    netPrice.fget.short_description = _('Net price')
+
+    @property
+    def discounted(self):
+        return (self.totalPrice != self.priceWithDiscount)
+    discounted.fget.short_description = _('Is discounted')
 
     # For now, revenue is allocated proportionately between series and events
     # as a percentage of the discounted total amount paid.  Ideally, revenue would
@@ -1440,30 +1530,14 @@ class Registration(EmailRecipientMixin, models.Model):
         if self.totalPrice == 0:
             return 0
         return self.priceWithDiscount * (self.seriesPrice / self.totalPrice)
+    seriesNetPrice.fget.short_description = _('Net price of class series')
 
     @property
     def eventNetPrice(self):
         if self.totalPrice == 0:
             return 0
         return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
-
-    @property
-    def voucherAmount(self):
-        return sum([x.amount for x in self.voucheruse_set.all()])
-
-    @property
-    def seriesVoucherAmount(self):
-        if self.totalPrice == 0:
-            return 0
-        else:
-            return self.voucherAmount * (self.seriesPrice / self.totalPrice)
-
-    @property
-    def eventVoucherAmount(self):
-        if self.totalPrice == 0:
-            return 0
-        else:
-            return self.voucherAmount * (self.publicEventPrice / self.totalPrice)
+    eventNetPrice.fget.short_description = _('Net price of public events')
 
     def getSeriesPriceForMonth(self,dateOfInterest):
         # get all series associated with this registration
@@ -1511,7 +1585,6 @@ class Registration(EmailRecipientMixin, models.Model):
             ('view_registration_summary',_('Can access the series-level registration summary view')),
             ('checkin_customers',_('Can check-in customers using the summary view')),
             ('accept_door_payments',_('Can process door payments in the registration system')),
-            ('send_invoices',_('Can send invoices to students requesting payment')),
             ('register_dropins',_('Can register students for drop-ins.')),
             ('override_register_closed',_('Can register students for series/events that are closed for registration by the public')),
             ('override_register_soldout',_('Can register students for series/events that are officially sold out')),
@@ -1545,14 +1618,51 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         if self.registration.totalPrice == 0:
             return 0
         return self.price * (self.registration.netPrice / self.registration.totalPrice)
+    netPrice.fget.short_description = _('Net price')
 
     @property
     def discounted(self):
         return (self.price != self.netPrice)
+    discounted.fget.short_description = _('Is discounted')
 
     @property
     def matchingTemporaryRegistration(self):
         return self.registration.temporaryRegistration.temporaryeventregistration_set.get(event=self.event)
+    matchingTemporaryRegistration.fget.short_description = _('Matching temporary registration')
+
+    @property
+    def warningFlag(self):
+        '''
+        When viewing individual event registrations, there are a large number of potential
+        issues that can arise that may warrant scrutiny. This property just checks all of
+        these conditions and indicates if anything is amiss so that the template need not
+        check each of these conditions individually repeatedly.
+        '''
+        if not hasattr(self,'invoiceitem'):
+            return True
+        if apps.is_installed('danceschool.financial'):
+            '''
+            If the financial app is installed, then we can also check additional
+            properties set by that app to ensure that there are no inconsistencies
+            '''
+            if self.invoiceitem.revenueNotYetReceived != 0 or self.invoiceitem.revenueMismatch:
+                return True
+        return (
+            self.price != self.invoiceitem.grossTotal or
+            self.invoiceitem.invoice.unpaid or self.invoiceitem.invoice.outstandingBalance != 0
+        )
+    warningFlag.fget.short_description = _('Issue with event registration')
+
+    @property
+    def refundFlag(self):
+        if (
+            not hasattr(self,'invoiceitem') or
+            self.invoiceitem.invoice.adjustments != 0 or
+            (apps.is_installed('danceschool.financial') and self.invoiceitem.revenueRefundsReported != 0)
+        ):
+            return True
+        return False
+    refundFlag.fget.short_description = _('Transaction was partially refunded')
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -1655,8 +1765,11 @@ class Invoice(EmailRecipientMixin, models.Model):
         rejected = ChoiceItem('X',_('Rejected in processing'))
         error = ChoiceItem('E',_('Error in processing'))
 
-    # The UUID field is the unique internal identifier used for this Invoice
+    # The UUID field is the unique internal identifier used for this Invoice.
+    # The validationString field is used only so that non-logged in users can view
+    # an invoice.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    validationString = models.CharField(_('Validation string'),max_length=25,default=get_validationString,editable=False)
 
     temporaryRegistration = models.OneToOneField(TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True)
     finalRegistration = models.OneToOneField(Registration,verbose_name=_('Registration'),null=True,blank=True)
@@ -1717,6 +1830,16 @@ class Invoice(EmailRecipientMixin, models.Model):
         return new_invoice
 
     @classmethod
+    def get_or_create_from_registration(cls, reg, **kwargs):
+
+        # Return the existing Invoice if it exists
+        if hasattr(reg,'invoice') and reg.invoice:
+            return reg.invoice
+
+        # Otherwise, create a new Invoice
+        return cls.create_from_registration(reg,**kwargs)
+
+    @classmethod
     def create_from_registration(cls, reg, **kwargs):
         '''
         Handles the creation of an Invoice as well as one InvoiceItem per
@@ -1738,7 +1861,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             new_invoice.finalRegistration = reg
             ter_set = reg.eventregistration_set.all()
         elif isinstance(reg, TemporaryRegistration):
-            new_invoice.TemporaryRegistration = reg
+            new_invoice.temporaryRegistration = reg
             ter_set = reg.temporaryeventregistration_set.all()
         else:
             raise ValueError('Object passed is not a registration.')
@@ -1754,7 +1877,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             allocated_taxes = new_invoice.taxes * (ter.price / new_invoice.grossTotal)
             allocated_fees = new_invoice.fees * (ter.price / new_invoice.grossTotal)
 
-            this_invoice = InvoiceItem(
+            this_item = InvoiceItem(
                 invoice=new_invoice,
                 temporaryEventRegistration=ter,
                 grossTotal=ter.price,
@@ -1763,13 +1886,18 @@ class Invoice(EmailRecipientMixin, models.Model):
                 fees=allocated_fees,
             )
 
-            this_invoice.save()
+            this_item.save()
 
         return new_invoice
 
     @property
     def url(self):
-        return reverse('viewInvoice', args=[self.id,])
+        return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
+
+    @property
+    def unpaid(self):
+        return (self.status != self.PaymentStatus.paid)
+    unpaid.fget.short_description = _('Unpaid')
 
     @property
     def outstandingBalance(self):
@@ -1777,14 +1905,21 @@ class Invoice(EmailRecipientMixin, models.Model):
         if getConstant('buyerPaysSalesTax'):
             balance += self.taxes
         return balance
+    outstandingBalance.fget.short_description = _('Outstanding balance')
+
+    @property
+    def refunds(self):
+        return -1 * self.adjustments
 
     @property
     def unallocatedAdjustments(self):
         return self.adjustments - sum([x.adjustments for x in self.invoiceitem_set.all()])
+    unallocatedAdjustments.fget.short_description = _('Unallocated adjustments')
 
     @property
     def refundsAllocated(self):
         return (self.unallocatedAdjustments == 0)
+    refundsAllocated.fget.short_description = _('All refunds are allocated')
 
     @property
     def netRevenue(self):
@@ -1792,14 +1927,22 @@ class Invoice(EmailRecipientMixin, models.Model):
         if not getConstant('buyerPaysSalesTax'):
             net -= self.taxes
         return net
+    netRevenue.fget.short_description = _('Net revenue')
+
+    @property
+    def discounted(self):
+        return (self.total != self.grossTotal)
+    discounted.fget.short_description = _('Is discounted')
 
     @property
     def discountPercentage(self):
         return 1 - (self.total / self.grossTotal)
+    discountPercentage.fget.short_description = _('Discount percentage')
 
     @property
     def statusLabel(self):
         return self.PaymentStatus.values.get(self.status,'')
+    statusLabel.fget.short_description = _('Status')
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -1814,7 +1957,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         context = super(Invoice,self).get_email_context(**kwargs)
         context.update({
             'id': self.id,
-            'url': self.url,
+            'url': '%s?v=%s' % (self.url, self.validationString),
             'amountPaid': self.amountPaid,
             'outstandingBalance': self.outstandingBalance,
             'status': self.statusLabel,
@@ -1826,9 +1969,35 @@ class Invoice(EmailRecipientMixin, models.Model):
             'adjustments': self.adjustments,
             'taxes': self.taxes,
             'fees': self.fees,
-            'comments': self.comments,            
+            'comments': self.comments,
         })
         return context
+
+    def get_payments(self):
+        '''
+        Since there may be many payment processors, this method simplifies the process of getting
+        the list of payments
+        '''
+        payment_responses = get_invoice_payments.send(
+            sender=Invoice,
+            invoice=self,
+        )
+        responses = []
+        for x in payment_responses:
+            if isinstance(x[1],dict):
+                responses.append(x[1])
+            elif isinstance(x[1],list):
+                responses += x[1]
+        return responses
+
+    def get_payment_method(self):
+        '''
+        Since there may be many payment processors, this just gets the reported payment
+        method name for the first payment method used.
+        '''
+        payments = self.get_payments() or []
+        if len(payments) > 0:
+            return payments[0].get('method','')
 
     def calculateTaxes(self):
         '''
@@ -1871,8 +2040,8 @@ class Invoice(EmailRecipientMixin, models.Model):
             'paidOnline': paidOnline,
             'methodName': methodName,
             'methodTxn': methodTxn,
-            'submissionUser': submissionUser,
-            'collectedByUser': collectedByUser,
+            'submissionUser': getattr(submissionUser,'id',None),
+            'collectedByUser': getattr(collectedByUser,'id',None),
         })
         self.data['paymentHistory'] = paymentHistory
 
@@ -1889,14 +2058,19 @@ class Invoice(EmailRecipientMixin, models.Model):
         # the invoice as Paid unless told to do otherwise.
         if forceFinalize or abs(self.outstandingBalance) < epsilon:
             self.status = status or self.PaymentStatus.paid
-            finalReg = self.temporaryRegistration.finalize(dateTime=paymentTime)
-            self.finalRegistration = finalReg
+            if not self.finalRegistration:
+                self.finalRegistration = self.temporaryRegistration.finalize(dateTime=paymentTime)
+            else:
+                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
             self.save()
-            for eventReg in finalReg.eventregistration_set.filter(cancelled=False):
+            for eventReg in self.finalRegistration.eventregistration_set.filter(cancelled=False):
                 # There can only be one eventreg per event in a registration, so we
                 # can filter on temporaryRegistration event to get the invoiceItem
-                # to which we should
-                this_invoice_item = self.invoiceitem_set.filter(temporaryEventRegistration__event=eventReg.event).first()
+                # to which we should attach a finalEventRegistration
+                this_invoice_item = self.invoiceitem_set.filter(
+                    temporaryEventRegistration__event=eventReg.event,
+                    finalEventRegistration__isnull=True
+                ).first()
                 if this_invoice_item:
                     this_invoice_item.finalEventRegistration = eventReg
                     this_invoice_item.save()
@@ -1904,6 +2078,13 @@ class Invoice(EmailRecipientMixin, models.Model):
             # The payment wasn't completed so don't finalize, but do send a notification recording the payment.
             self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
             self.save()
+
+        # If there were transaction fees, then these also need to be allocated among the InvoiceItems
+        # All fees from payments are allocated proportionately.
+        if fees:
+            for item in self.invoiceitem_set.all():
+                item.fees += fees * (item.grossTotal / self.grossTotal)
+                item.save()
 
     def sendNotification(self, **kwargs):
 
@@ -1934,6 +2115,8 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     class Meta:
         permissions = (
+            ('view_all_invoices',_('Can view invoices without passing the validation string.')),
+            ('send_invoices',_('Can send invoices to students requesting payment')),
             ('process_refunds',_('Can refund customers for registrations and other invoice payments.')),
         )
 
@@ -1969,6 +2152,7 @@ class InvoiceItem(models.Model):
         if not getConstant('buyerPaysSalesTax'):
             net -= self.taxes
         return net
+    netRevenue.fget.short_description = _('Net revenue')
 
     @property
     def name(self):
@@ -1979,9 +2163,10 @@ class InvoiceItem(models.Model):
             return _('Registration: %s' % er.event.name)
         else:
             return self.description or _('Other items')
+    name.fget.short_description = _('Name')
 
     def __str__(self):
-        return self.name
+        return '%s: #%s' % (self.name, self.id)
 
 
 class StaffMemberPluginModel(CMSPlugin):

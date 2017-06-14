@@ -185,12 +185,13 @@
 	<table class="table table-striped table-bordered">
 	<thead>
 		<tr>
-			<th>Month</th><th>Series Name</th><th>Location</th><th>Class Time</th><th>Instructors</th>
+			<th>Registered As</th><th>Month</th><th>Series Name</th><th>Location</th><th>Class Time</th><th>Instructors</th>
 		</tr>
 	</thead>
 	<tbody>
 	{% for eventreg in submitted_eventregs|dictsortreversed:'event.startTime' %}
 		<tr {% if forloop.counter > 5 %}class="prior_submitted collapse"{% endif %}>
+			<td>{{ eventreg.registration.fullName }}: {{ eventreg.registration.customer.email }}</td>
 			{% with eventreg.event as event %}
 			<td>{{ event.month|readable_month }} {{ event.year }}</td>
 			<td>{{ event.name }}</td>
@@ -205,7 +206,7 @@
 		</tr>
 		{% if forloop.counter == 5 %}
 		<tr id="showMoreSubmittedRow" class="table-active">
-			<td colspan="5"><a href="" id="showMoreSubmitted" data-toggle="collapse" data-target=".prior_submitted" aria-expanded="false" aria-controls="prior_submitted">Show all&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
+			<td colspan="6"><a href="" id="showMoreSubmitted" data-toggle="collapse" data-target=".prior_submitted" aria-expanded="false" aria-controls="prior_submitted">Show all&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
 		</tr>
 		{% endif %}
 	{% endfor %}

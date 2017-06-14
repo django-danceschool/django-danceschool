@@ -3,14 +3,18 @@
 
 {% block content %}
 
-<h3>Registration #{{ registration.id }} for {{ registration.customer.first_name }} {{ registration.customer.last_name }}</h3>
+<h3>Invoice #{{ invoice.id }}
+{% if registration %}
+	for {{ registration.fullName }}
+{% endif %}
+</h3>
 
 <dl>
-	<dt>Date &amp; Time:</dt><dd>{{ registration.dateTime|date:'DATETIME_FORMAT' }}</dd>
-	<dt>Net Amount Paid:</dt><dd>{{ registration.amountPaid }}</dd>
-	<dt>Price with Discounts:</dt><dd>{{ registration.priceWithDiscount }}</dd>
-	<dt>Paid Online:</dt><dd>{{ registration.paidOnline|yesno }}</dd>
-	<dt>Student:</dt><dd>{{ registration.student|yesno }}</dd>
+	<dt>Date &amp; Time:</dt><dd>{{ invoice.creationDate|date:'DATETIME_FORMAT' }}</dd>
+	<dt>Net Amount Paid:</dt><dd>{{ invoice.amountPaid }}</dd>
+	<dt>Price with Discounts:</dt><dd>{{ invoice.total }}</dd>
+	<dt>Paid Online:</dt><dd>{{ invoice.paidOnline|yesno }}</dd>
+	{% if registration %}<dt>Student:</dt><dd>{{ registration.student|yesno }}</dd>{% endif %}
 </dl>
 
 {% if payments %}
@@ -21,45 +25,60 @@
 				{{ payment.method }}: {{ payment.id}}
 			{% endfor %}
 		</div>
+	</div>
 {% endif %}
 
 <hr />
 
 <form id="refund_form" method="post" action="">{% csrf_token %}
 
-<h2>Total Refund Amount: {{ currencySymbol }}<span id="total_refund_amount">{{ registration.revenueRefundsReported|floatformat:2 }}</span></h2>
+<h2>Total Refund Amount: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h2>
 
-{% if registration.revenueNotYetReceived %}
-	<div class="alert alert-danger" role="alert">Revenue in the amount of {{ currencySymbol }}<span id="not_received_amount">{{ registration.revenueNotYetReceived|floatformat:2 }}</span> has been recorded for this registration, but not yet received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below.</div>
+{% if invoice.revenueNotYetReceived %}
+	<div class="alert alert-danger" role="alert">Revenue has been recorded for this registration that has not yet been marked as received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below.</div>
 {% endif %}
-{% if registration.refundableReceived < registration.revenueReceived and registration.refundableReceived > 0 %}
-	<div class="alert alert-danger" role="alert">Of the {{ currencySymbol }}<span id="all_received_amount">{{ registration.revenueReceived|floatformat:2 }}</span> marked as received for this registration, only {{ currencySymbol }}<span id="refundable_received_amount">{{ registration.refunableReceived|floatformat:2 }}</span> was received via a method that is automatically refundable.  Items with non-automatically-refundable revenue are highlighted below.  If you process a refund request for these items using this form, note that you will still need to manually refund the money.</div>
-{% endif %}
-{% if registration.refundableReceived == 0 %}
-	<div class="alert alert-danger" role="alert">None of the {{ currencySymbol }}<span id="all_received_amount_2">{{ registration.revenueReceived|floatformat:2 }}</span> received for this registration is received via a method that is automatically refundable.  If you process a refund request for these items using this form, note that you will still need to manually refund the money.</div>
-{% endif %}
-{% if registration.paypalUnallocatedRefunds %}
-	<div class="alert alert-danger" role="alert">This registration has unallocated refunds amounting to {{ currencySymbol }}<span id="unallocated_refund_amount">{{ registration.paypalUnallocatedRefunds|floatformat:2 }}</span>.  Please allocate them before submitting.</div>
+{% if invoice.unpaid %}
+	<div class="alert alert-danger" role="alert">This invoice is not yet marked as paid.  In determining any refund amount, please account for revenue that has not yet been received.</div>
 {% endif %}
 
-{{ form.non_field_errors }}
-{{ form.id.errors }}
+{% if form.non_field_errors %}
+	<div class="alert alert-danger" role="alert">
+		{{ form.non_field_errors }}
+	</div>
+{% endif %}
+{% if form.id.errors %}
+	<div class="alert alert-danger" role="alert">
+		<strong>Error with ID:</strong>
+		{{ form.id.errors }}
+	</div>
+{% endif %}
+
+{% if form.total_refund_amount.errors %}
+	<div class="alert alert-danger" role="alert">
+		<strong>Error with Total Refund Amount:</strong>
+		{{ form.total_refund_amount.errors }}
+	</div>
+{% endif %}
+
+{% if form.initial_refund_amount.errors %}
+	<div class="alert alert-danger" role="alert">
+		<strong>Error with Initial Refund Amount:</strong>
+		{{ form.initial_refund_amount.errors }}
+	</div>
+{% endif %}
+
 {{ form.id }}
-{{ form.total_refund_amount.errors }}
 {{ form.total_refund_amount }}
-{{ form.initial_refund_amount.errors }}
 {{ form.initial_refund_amount }}
-
 
 <input type="submit" class="btn btn-primary" value="Process Refund" />
 
-{% if registration.eventregistration_set.all %}
-	<h4>Events Registered</h4>
+	<h4>Item Details</h4>
 	<table class="regrefundtable table" border=1>
 	<thead>
 		<tr>
-			<td>Reg. ID</td>
-			<td>Event/Series Name</td>
+			<td>Item ID</td>
+			<td>Item Name</td>
 			<td>Price (Gross)</td>
 			<td>Price (Net)</td>
 			<td>Cancelled</td>
@@ -67,19 +86,18 @@
 		</tr>
 	</thead>
 	<tbody>
-	{% for er in registration.eventregistration_set.all %}
-		<tr {%if er.revenueNotYetReceived or er.refundableReceived < er.revenueReceived %}class="warning"{% endif %}>
-			<td>{{ er.id }}</td>
-			<td>{{ er.event }}</td>
-			<td id="er_price_{{ er.id }}">{{ currencySymbol }}{{ er.price|floatformat:2 }}</td>
-			<td id="er_netPrice_{{ er.id }}">{{ currencySymbol }}{{ er.netPrice|floatformat:2 }}</td>
-			<td>{% get_field_for_object 'er_cancelled' er.id form as field_cancelled %}{{ field_cancelled }}</td>
-			<td>{% get_field_for_object 'er_refundamount' er.id form as field_refundAmount %}{{ field_refundAmount }} {{ field_cancelled.errors }}{{ field_refundAmount.errors }}</td>
+	{% for item in invoice.invoiceitem_set.all %}
+		<tr {%if item.revenueNotYetReceived %}class="warning"{% endif %}>
+			<td>{{ item.id }}</td>
+			<td>{{ item.name }}</td>
+			<td id="item_price_{{ item.id }}">{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
+			<td id="item_netPrice_{{ item.id }}">{{ currencySymbol }}{{ item.total|floatformat:2 }}</td>
+			<td>{% get_field_for_object 'item_cancelled' item.id form as field_cancelled %}{{ field_cancelled }}</td>
+			<td>{% get_field_for_object 'item_refundamount' item.id form as field_refundAmount %}{{ field_refundAmount }} {{ field_cancelled.errors }}{{ field_refundAmount.errors }}</td>
 		</tr>
 	{% endfor %}
 	</tbody>
 	</table>
-{% endif %}
 
 <div class="form-group">
     {{ form.comments.errors }}

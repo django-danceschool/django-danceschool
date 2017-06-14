@@ -11,7 +11,7 @@ from calendar import month_name
 
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Registration, DanceRole, Event, EventStaffMember, EventRegistration
+from danceschool.core.models import Registration, DanceRole, Event, EventStaffMember, InvoiceItem
 
 from .constants import EXPENSE_BASES
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
@@ -221,43 +221,30 @@ def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
 
     this_category = RevenueCategory.objects.get(id=getConstant('financial__registrationsRevenueCatID'))
 
-    filters_events = {'revenueitem': None}
-    filters_reg = {'eventregistration':None,'revenueitem':None}
+    filters_events = {'revenueitem__isnull': True,'finalEventRegistration__isnull': False}
 
     if datetimeTuple:
         timelist = list(datetimeTuple)
         timelist.sort()
 
-        filters_events['event__eventoccurrence__startTime__gte'] = timelist[0]
-        filters_events['event__eventoccurrence__startTime__lte'] = timelist[1]
-        filters_reg['dateTime__gte'] = timelist[0]
-        filters_reg['dateTime__lte'] = timelist[1]
+        filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = timelist[0]
+        filters_events['finalEventRegistration__event__eventoccurrence__startTime__lte'] = timelist[1]
     else:
         try:
             c = getConstant('financial__autoGenerateRevenueRegistrationsWindow')
             if c > 0:
-                filters_events['event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c.value)
-                filters_reg['dateTime__gte'] = datetime.now() - relativedelta(months=c.value)
+                filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c.value)
         except:
             pass
 
-    for reg in EventRegistration.objects.filter(**filters_events):
-        if reg.registration.paidOnline:
+    for item in InvoiceItem.objects.filter(**filters_events).distinct():
+        if item.finalRegistration.paidOnline:
             received = True
         else:
             received = False
 
-        revenue_description = _('Event Registration ') + str(reg.id) + ': ' + reg.registration.fullName
-        RevenueItem.objects.create(eventregistration=reg,category=this_category,description=revenue_description,submissionUser=submissionUser,grossTotal=reg.price,total=reg.netPrice,received=received,receivedDate=reg.registration.dateTime)
-
-    for reg in Registration.objects.filter(**filters_reg):
-        if reg.paidOnline:
-            received = True
-        else:
-            received = False
-
-        revenue_description = _('Registration ') + str(reg.id) + ': ' + reg.fullName
-        RevenueItem.objects.create(registration=reg,category=this_category,description=revenue_description,submissionUser=submissionUser,grossTotal=reg.amountPaid,total=reg.amountPaid,received=received,receivedDate=reg.dateTime)
+        revenue_description = _('Event Registration ') + str(item.finalEventRegistration.id) + ': ' + item.invoice.finalRegistration.fullName
+        RevenueItem.objects.create(invoiceItem=item,category=this_category,description=revenue_description,submissionUser=submissionUser,grossTotal=item.grossTotal,total=item.total,received=received,receivedDate=item.invoice.modifiedDate)
 
 
 def prepareFinancialStatement(year=None):

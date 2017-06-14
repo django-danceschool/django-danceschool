@@ -1,12 +1,10 @@
 from django.core.urlresolvers import reverse
-from django.conf import settings
 from django.http import HttpResponseServerError, HttpResponseRedirect
 from django.views.generic import FormView
 from django.utils.translation import ugettext_lazy as _
 
 from datetime import datetime
 from braces.views import UserFormKwargsMixin
-from cms.models import Page
 import logging
 from allauth.account.forms import LoginForm, SignupForm
 
@@ -281,7 +279,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         tr = TemporaryRegistration.objects.get(id=reg_id)
 
         # Create a new Invoice if one does not already exist.
-        if not getattr('tr', 'invoice',None):
+        if not getattr(tr, 'invoice',None):
             new_invoice = Invoice.create_from_registration(tr)
 
         if form.cleaned_data.get('paid'):
@@ -305,9 +303,9 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             )
         elif form.cleaned_data.get('invoiceSent'):
             payerEmail = form.cleaned_data['payerEmail']
-            new_invoice.sendNotification(payerEmail,newRegistration=True)
+            new_invoice.sendNotification(payerEmail=payerEmail,newRegistration=True)
 
-        return HttpResponseRedirect(Page.objects.get(pk=getConstant('registration__doorRegistrationSuccessPage')).get_absolute_url(settings.LANGUAGE_CODE))
+        return HttpResponseRedirect(reverse('registration'))
 
 
 class StudentInfoView(FormView):
@@ -346,6 +344,7 @@ class StudentInfoView(FormView):
 
             dropin_keys = [x for x in v.keys() if x.startswith('dropin_')]
             if dropin_keys:
+
                 name = _('DROP IN: %s' % event.name)
                 base_price = event.getBasePrice(dropIns=len(dropin_keys))
             else:

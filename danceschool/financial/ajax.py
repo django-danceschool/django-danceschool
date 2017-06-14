@@ -1,21 +1,21 @@
 from django.http import JsonResponse
-from danceschool.core.models import EventRegistration
+from danceschool.core.models import InvoiceItem
 
 
 def updateEventRegistrations(request):
     '''
-    This function handles the filtering of available eventregistrations and is
-    used on the revenue reporting form.
+    This function handles the filtering of available eventregistration-related
+    invoice items and is used on the revenue reporting form.
     '''
     if not (request.method == 'POST' and request.POST.get('event')):
         return JsonResponse({})
 
-    eventRegistrations = EventRegistration.objects.filter(**{'event__id': request.POST.get('event')})
+    invoiceItems = InvoiceItem.objects.filter(**{'finalEventRegistration__event__id': request.POST.get('event')})
 
     outRegs = {}
-    for option in eventRegistrations:
+    for option in invoiceItems:
         outRegs[str(option.id)] = option.__str__()
 
     return JsonResponse({
-        'id_eventregistration': outRegs,
+        'id_invoiceItem': outRegs,
     })
