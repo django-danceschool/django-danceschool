@@ -1,10 +1,14 @@
 {% load cms_tags sekizai_tags %}
 
 <form action="" method="post">
+        <div id="error_payment"></div>
+
         <p><label>Amount:</label> 
         <input id="id_amount" name="amount" type="text" value="{{ instance.defaultAmount }}" /></p>
+        <p><label>Email Invoice To (enter email address):</label>
+        <input id="id_email" name="email" type="text" value="" /></p>
         <p><label>Recipient Name (optional):</label>
-        <input id="id_recipient" name="recipient" type="text" value="" /></p>        
+        <input id="id_recipient" name="recipient" type="text" value="" /></p>
 </form>
 
 <div id="paypal-button"></div>
@@ -22,13 +26,13 @@
             commit: true, // Show a 'Pay Now' button
 
             payment: function() {
+
                 return paypal.request.post('{% url "createPaypalPayment" %}', {
                     csrfmiddlewaretoken: '{{ csrf_token }}',
                     
                     transaction_type: 'Gift Certificate',
-                    amount: $('input[name=amount]').value,
-                    certificate_name: $('input[name=recipient').value,
-
+                    amount: $('input[name=amount]').val(),
+                    certificate_name: $('input[name=recipient').val(),
                     {% if user.is_authenticated %}
                     user_id: {{ user.id }},
                     {% endif %}
@@ -40,6 +44,7 @@
             onAuthorize: function(data) {
                 return paypal.request.post('{% url "executePaypalPayment" %}', {
                     csrfmiddlewaretoken: '{{ csrf_token }}',
+                    recipient_email: $('input[name=email]').val(),
                     paymentID: data.paymentID,
                     payerID: data.payerID,
                 }).then(function() {
@@ -49,8 +54,12 @@
                     window.location.replace('/');
                     {% endif %}
                 });
-            }
+            },
 
+            onError: function(err) {
+                $('#error_payment').addClass('alert alert-danger');
+                $('#error_payment').text('An unknown error has occurred. Please try again, or notify us if you continue to have an issue.');
+            }
 
         }, '#paypal-button');
     </script>

@@ -1,5 +1,6 @@
 {% load cms_tags sekizai_tags %}
 
+<div id="error_payment"></div>
 <div id="paypal-button"></div>
 
 {% addtoblock "js" %}
@@ -42,8 +43,12 @@
                     window.location.replace('/');
                     {% endif %}
                 });
-            }
+            },
 
+            onError: function(err) {
+                $('#error_payment').addClass('alert alert-danger');
+                $('#error_payment').text('An unknown error has occurred. Please try again, or notify us if you continue to have an issue.');
+            }
 
         }, '#paypal-button');
     </script>

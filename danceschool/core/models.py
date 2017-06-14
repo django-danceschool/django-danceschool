@@ -2028,7 +2028,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 adjusted_total = self.total / (1 + tax_rate)
                 self.taxes = adjusted_total * tax_rate
 
-    def processPayment(self, amount, fees, paidOnline=True, methodName=None, methodTxn=None, submissionUser=None, collectedByUser=None, forceFinalize=False, status=None):
+    def processPayment(self, amount, fees, paidOnline=True, methodName=None, methodTxn=None, submissionUser=None, collectedByUser=None, forceFinalize=False, status=None, notify=None):
         '''
         When a payment processor makes a successful payment against an invoice, it can call this method
         which handles status updates, the creation of a final registration object (if applicable), and
@@ -2069,25 +2069,29 @@ class Invoice(EmailRecipientMixin, models.Model):
         # the invoice as Paid unless told to do otherwise.
         if forceFinalize or abs(self.outstandingBalance) < epsilon:
             self.status = status or self.PaymentStatus.paid
-            if not self.finalRegistration:
+            if not self.finalRegistration and self.temporaryRegistration:
                 self.finalRegistration = self.temporaryRegistration.finalize(dateTime=paymentTime)
             else:
-                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
+                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount,payerEmail=notify)
             self.save()
-            for eventReg in self.finalRegistration.eventregistration_set.filter(cancelled=False):
-                # There can only be one eventreg per event in a registration, so we
-                # can filter on temporaryRegistration event to get the invoiceItem
-                # to which we should attach a finalEventRegistration
-                this_invoice_item = self.invoiceitem_set.filter(
-                    temporaryEventRegistration__event=eventReg.event,
-                    finalEventRegistration__isnull=True
-                ).first()
-                if this_invoice_item:
-                    this_invoice_item.finalEventRegistration = eventReg
-                    this_invoice_item.save()
+            if self.finalRegistration:
+                for eventReg in self.finalRegistration.eventregistration_set.filter(cancelled=False):
+                    # There can only be one eventreg per event in a registration, so we
+                    # can filter on temporaryRegistration event to get the invoiceItem
+                    # to which we should attach a finalEventRegistration
+                    this_invoice_item = self.invoiceitem_set.filter(
+                        temporaryEventRegistration__event=eventReg.event,
+                        finalEventRegistration__isnull=True
+                    ).first()
+                    if this_invoice_item:
+                        this_invoice_item.finalEventRegistration = eventReg
+                        this_invoice_item.save()
         else:
             # The payment wasn't completed so don't finalize, but do send a notification recording the payment.
-            self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
+            if notify:
+                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount,payerEmail=notify)
+            else:
+                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
             self.save()
 
         # If there were transaction fees, then these also need to be allocated among the InvoiceItems
@@ -2168,7 +2172,7 @@ class InvoiceItem(models.Model):
     @property
     def name(self):
         er = self.finalEventRegistration or self.temporaryEventRegistration
-        if er.dropIn:
+        if er and er.dropIn:
             return _('Drop-in Registration: %s' % er.event.name)
         elif er:
             return _('Registration: %s' % er.event.name)

@@ -48,7 +48,7 @@ def createPaypalPayment(request):
         try:
             amount = float(amount)
         except ValueError:
-            logger.error('Invalid amount passed.')
+            logger.error('Invalid amount passed')
             return HttpResponseBadRequest()
 
     # Parse if a specific submission user is indicated
@@ -155,7 +155,7 @@ def createPaypalPayment(request):
             'price': -1 * this_invoice.amountPaid,
             'currency': this_currency,
             'quantity': 1,
-        })        
+        })
     if amount != this_invoice.outstandingBalance:
         this_transaction['item_list']['items'].append({
             'name': str(_('Remaining Balance After Payment')),
@@ -212,6 +212,7 @@ def createPaypalPayment(request):
 def executePaypalPayment(request):
     paymentId = request.POST.get('paymentID')
     payerId = request.POST.get('payerID')
+    recipientEmail = request.POST.get('recipient_email')
 
     try:
         payment_record = PaymentRecord.objects.get(paymentId=paymentId)
@@ -232,6 +233,7 @@ def executePaypalPayment(request):
             paidOnline=True,
             methodName='Paypal Express Checkout',
             methodTxn=paymentId,
+            notify=recipientEmail,
         )
         return JsonResponse({'paid': True})
     else:

@@ -533,7 +533,9 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             if cc_myself:
                 email_kwargs['cc'].append(email_kwargs['from_address'])
 
-            emails = [x.get_default_recipients() for x in regs]
+            emails = []
+            for x in regs:
+                emails += x.get_default_recipients() or []
 
             email_kwargs['bcc'] = [email_kwargs['from_address'] or getConstant('email__defaultEmailFrom'),]
 
@@ -548,6 +550,8 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             has_tags = re.search('\{\{.+\}\}',message)
             if not has_tags:
                 email_kwargs['bcc'] += emails
+                # Avoid duplicate emails
+                email_kwargs['bcc'] = list(set(email_kwargs['bcc']))
 
                 # instantiate the recipient mixin directly
                 email_class = EmailRecipientMixin()
