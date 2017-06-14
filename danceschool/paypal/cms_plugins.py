@@ -18,8 +18,13 @@ class GiftCertificateFormPlugin(CMSPluginBase):
         ''' Create a UUID and check if a voucher with that ID exists before rendering '''
         context = super(GiftCertificateFormPlugin, self).render(context, instance, placeholder)
 
+        # Paypal "live" mode is "production" to checkout.js
+        mode = getattr(settings,'PAYPAL_MODE', 'sandbox')
+        if mode == 'live':
+            mode = 'production'
+
         context.update({
-            'paypal_mode': getattr(settings,'PAYPAL_MODE', ''),
+            'paypal_mode': mode,
         })
 
         return context
@@ -36,8 +41,13 @@ class CartPaymentFormPlugin(CMSPluginBase):
         ''' Add the cart-specific context to this form '''
         context = super(CartPaymentFormPlugin, self).render(context, instance, placeholder)
 
+        # Paypal "live" mode is "production" to checkout.js
+        mode = getattr(settings,'PAYPAL_MODE', 'sandbox')
+        if mode == 'live':
+            mode = 'production'
+
         context.update({
-            'paypal_mode': getattr(settings,'PAYPAL_MODE', ''),
+            'paypal_mode': mode,
         })
 
         return context
