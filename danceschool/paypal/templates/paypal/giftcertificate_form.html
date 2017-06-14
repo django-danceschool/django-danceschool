@@ -29,7 +29,7 @@
                     amount: $('input[name=amount]').value,
                     certificate_name: $('input[name=recipient').value,
 
-                    {% if user.is_authenticated %},
+                    {% if user.is_authenticated %}
                     user_id: {{ user.id }},
                     {% endif %}
                 }).then(function(data) {
