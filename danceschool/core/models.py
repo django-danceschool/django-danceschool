@@ -1873,32 +1873,30 @@ class Invoice(EmailRecipientMixin, models.Model):
         for ter in ter_set:
             # Discounts and vouchers are always applied equally to all items at initial
             # invoice creation.
+            item_kwargs = {
+                'invoice': new_invoice,
+                'grossTotal': ter.price,
+            }
+
             if new_invoice.grossTotal > 0:
-                allocated_total = ter.price * (new_invoice.total / new_invoice.grossTotal)
-                allocated_taxes = new_invoice.taxes * (ter.price / new_invoice.grossTotal)
-                allocated_fees = new_invoice.fees * (ter.price / new_invoice.grossTotal)
+                item_kwargs.update({
+                    'total': ter.price * (new_invoice.total / new_invoice.grossTotal),
+                    'taxes': new_invoice.taxes * (ter.price / new_invoice.grossTotal),
+                    'fees': new_invoice.fees * (ter.price / new_invoice.grossTotal),
+                })
             else:
-                allocated_total = ter.price
-                allocated_taxes = new_invoice.taxes
-                allocated_fees = new_invoice.fees
+                item_kwargs.update({
+                    'total': ter.price,
+                    'taxes': new_invoice.taxes,
+                    'fees': new_invoice.fees,
+                })
 
             if isinstance(ter,TemporaryEventRegistration):
-                this_ter = ter
-                this_er = None
+                item_kwargs['temporaryEventRegistration'] = ter
             elif isinstance(ter,EventRegistration):
-                this_ter=None,
-                this_er = ter,
+                item_kwargs['finalEventRegistration'] = ter
 
-            this_item = InvoiceItem(
-                invoice=new_invoice,
-                temporaryEventRegistration=this_ter,
-                finalEventRegistration=this_er,
-                grossTotal=ter.price,
-                total=allocated_total,
-                taxes=allocated_taxes,
-                fees=allocated_fees,
-            )
-
+            this_item = InvoiceItem(**item_kwargs)
             this_item.save()
 
         return new_invoice
