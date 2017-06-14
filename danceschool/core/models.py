@@ -1882,9 +1882,17 @@ class Invoice(EmailRecipientMixin, models.Model):
                 allocated_taxes = new_invoice.taxes
                 allocated_fees = new_invoice.fees
 
+            if isinstance(ter,TemporaryEventRegistration):
+                this_ter = ter
+                this_er = None
+            elif isinstance(ter,EventRegistration):
+                this_ter=None,
+                this_er = ter,
+
             this_item = InvoiceItem(
                 invoice=new_invoice,
-                temporaryEventRegistration=ter,
+                temporaryEventRegistration=this_ter,
+                finalEventRegistration=this_er,
                 grossTotal=ter.price,
                 total=allocated_total,
                 taxes=allocated_taxes,
