@@ -126,7 +126,7 @@ BASIC SETUP:
 
         # Current Domain
         current_domain = self.pattern_input(
-            'Enter the domain name of this installation, with no protocol or trailing slashes (e.g. \'bostonlindyhop.com\')',
+            'Enter the domain name of this installation, with no protocol or trailing slashes (e.g. \'bostonlindyhop.com\') [localhost:8000]',
             message='Invalid domain name (no whitespace or slashes allowed)',
             default='localhost:8000',
             pattern='^[^/\\ ]+$'
