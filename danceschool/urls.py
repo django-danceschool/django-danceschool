@@ -16,12 +16,14 @@ urlpatterns = [
     url(r'^settings/global/$',
         user_passes_test(lambda u: u.is_superuser)(PreferenceFormView.as_view(
             registry=global_preferences_registry,
-            form_class=GlobalPreferenceForm)),
+            form_class=GlobalPreferenceForm,
+            template_name='dynamic_preferences/form_danceschool.html',)),
         name="dynamic_preferences.global"),
     url(r'^settings/global/(?P<section>[\w\ ]+)$',
         user_passes_test(lambda u: u.is_superuser)(PreferenceFormView.as_view(
             registry=global_preferences_registry,
-            form_class=GlobalPreferenceForm)),
+            form_class=GlobalPreferenceForm,
+            template_name='dynamic_preferences/form_danceschool.html',)),
         name="dynamic_preferences.global.section"),
     # For Django-filer
     url(r'^filer/', include('filer.urls')),

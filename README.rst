@@ -120,6 +120,8 @@ What you need:
 -  External library dependencies for Pillow, used for basic image
    processing (see the `Pillow
    Documentation <http://pillow.readthedocs.io/en/3.4.x/installation.html>`__).
+-  `Redis server <https://redis.io/>` for asynchronous handling of emails and other tasks
+-  **For Paypal integration only:** SSL and FFI libraries needed to use the Paypal REST SDK (see `the Github repo <https://github.com/paypal/PayPal-Python-SDK>` for details)
 
 **Linux**
 
@@ -130,6 +132,8 @@ What you need:
    ::
 
        sudo apt-get install libjpeg zlib
+       sudo apt-get install redis-server
+       sudo apt-get install libssl-dev libffi-dev
 
 **Mac**
 
@@ -220,7 +224,7 @@ Basic Installation Process
 Settings Customization and Production Deployment
 ------------------------------------------------
 
-After performing steps 1-7 above, you should have a working instance of
+After performing steps 1-8 above, you should have a working instance of
 the danceschool project. However, in order to make the site usable for
 your purposes, you will, at a minimum, need to do some basic setting of
 settings and preferences
@@ -277,82 +281,74 @@ in settings.py (and can therefore be changed by defining them in
 For more details, see the `Django
 documentation <https://docs.djangoproject.com/en/dev/topics/email/>`__.
 
+Additionally, because emails in this project are sent asynchronously,
+you will need to setup Redis and Huey as described below.
+
+Redis and Huey setup for production
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Certain website tasks are best run asynchronously.  For example, when
+a student successfully registers for a class, the website does not
+need to wait for the confirmation email to be sent in order for the
+process to proceed.  Similarly, other tasks such as closing of class
+registration are run at regular intervals and do not depend on user
+interaction.  For these reasons, this project uses a combination of
+the `Huey <https://github.com/coleifer/huey>` task queue and the
+popular `Redis <https://redis.io/>` cache server.
+
+If you followed the quick start instructions, then Huey and Redis should
+both already be installed for you.  However, to get them running so that
+your site can send emails, etc., you will need to take a couple of steps.
+Note that These instructions are designed for Linux, and they assume that
+you will be running Redis locally using default settings. Getting Redis
+running on Windows may require a slightly different process, and
+configuring Huey to use a remote Redis installation will also involve
+modifying site settings.
+
+1.  Start the Redis server: `sudo service redis-server start`
+2.  Run Huey in its own command shell: `python manage.py run_huey`
+
+With these two steps, your installation should now be able to send
+emails programmatically, and your site should also run recurring tasks
+as long as both Redis and Huey continue to run.
+
+Production deployment of Huey is beyond the scope of this documentation.
+However, solutions such as `Supervisord <http://supervisord.org/>` are
+generally the preferred approach.
+
 Paypal Settings (if using Paypal)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In order to accept and process Paypal payments, you will need to set up
-the credentials for your Paypal account. Paypal provides multiple APIs
-that are used by websites to interact with Paypal in different ways and
-to support different types of transaction. By default, the
-``danceschool.paypal`` app is designed to use two such APIs:
+the credentials for your Paypal account.  As of version 0.1.0 of this
+repository, the Django danceschool project uses the
+`Paypal REST SDK <https://github.com/paypal/PayPal-Python-SDK>`.  Older
+versions of this repository used the Paypal IPN system, but this
+software is no longer maintained, and it is highly recommended that you
+upgrade to using the REST API.
 
--  The *Instant Payment Notification (IPN)* API, which is used to submit
-   "Pay Now" type transactions by redirecting the user to the Paypal
-   site. When the user has completed their payment, the Paypal site
-   redirects them back to your site, and also sends a "callback" to your
-   site at a special URL so that it can notify your site that the
-   payment was successful.
--  The *Refund API*, which is used to automatically refund customers in
-   whole or in part (e.g. when classes are cancelled due to weather).
--  The *Invoicing Service API*, which is used to generate invoices
-   during the door registration process. These invoices are sent to the
-   email address specified.
+REST API Setup
+^^^^^^^^^^^^^^
 
-Configuring your site involves enabling the use of these APIs, then
-entering the appropriate keys into your ``settings_local.py`` file.
+1. Go to the `Paypal developer website <https://developer.paypal.com/>`
+   and log in using the Paypal account at which you wish to accept
+   payments
+2. On the dashboard, under "My Apps & Credentials", find the heading
+   for "REST API apps" and click "Create App."  Follow the instructions
+   to create an app with a set of API credentials
+3. Once you have created an app, you will see credentials listed.  At
+   the top of the page, you will see a toggle between "Sandbox" and
+   "Live."  If you are setting up this installation for testing only,
+   then choose "sandbox" credentials so that you can test transactions
+   without using actual money.  For your public installation, use
+   "live" credentials.
+4. Edit ``settings_local.py`` to add:
+    -  ``PAYPAL_MODE``: Either "sandbox" or "live"
+    -  ``PAYPAL_CLIENT_ID``: The value of "Client ID"
+    -  ``PAYPAL_CLIENT_SECRET``: The value of "Secret".  **Do not share
+    this value with anyone, or store it anywhere that could be publicly
+    accessed**
 
-IPN Setup
-^^^^^^^^^
-
-For IPN setup, you do not need to create any special credentials. You
-simply need to do the following:
-
-1. Go to the "Profile" page of your Paypal account, then under "My
-   selling tools," select "Instant Payment Notifications"
-2. Click on "Turn on IPN" or "Edit settings"
-3. Change the settings to "Receive IPN messages (Enabled)", and enter as
-   the notification URL http://yoursite/paypal/payment\_received/.
-4. Edit ``settings_local.py`` to add your paypal account username as
-   ``PAYPAL_ACCOUNT``, and add the Paypal Pay Now URL
-   (https://www.paypal.com/cgi-bin/webscr) as ``PAYPAL_URL``.
-
-For further details on Paypal IPN setup or testing, check out the Paypal
-`IPN Integration
-Guide <https://developer.paypal.com/docs/classic/ipn/integration-guide/IPNSetup/>`__.
-
-Invoice and Refund API Setup
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Setting up invoicing and refund capability involves a couple of
-additional steps, because you will need to set up a Developer App ID,
-followed by an API key and signature. For more details on this process,
-see the relevant `Paypal
-documentation <https://developer.paypal.com/docs/classic/lifecycle/goingLive/#register>`__.
-
-To get an appid:
-
-1. Log into `Paypal Developer <https://developer.paypal.com/>`__
-2. On the dashboard, select "My Appp & Credentials." Then, under
-   "NVP/SOAP API apps," select "Manage NVP/SOAP API apps"
-3. Follow the instructions to create a new app. Once approved, this will
-   give you both a Sandbox App ID (for testing purposes) and a Live App
-   ID (for production purposes). Enter the appropriate App ID for your
-   installation into ``settings_local.py`` as ``PAYPAL_INVOICE_APPID``
-   and ``PAYPAL_REFUND_APPID.``
-
-Once you have an App Id, get your other necessary API credentials:
-
-1. Log into the main Paypal page, go to the "Profile" page of your
-   Paypal account, then under "My selling tools," select "API Access"
-2. Under "NVP/SOAP API integration", click "View API Signature"
-3. Get the following credentials and enter into settings\_local.py:
-
-   -  API Username: Enter as ``PAYPAL_INVOICE_USERID`` and
-      ``PAYPAL_REFUND_USERID``
-   -  API Password: Enter as ``PAYPAL_INVOICE_PASSWORD`` and
-      ``PAYPAL_REFUND_PASSWORD``
-   -  Signature: Enter as ``PAYPAL_INVOICE_SIGNATURE`` and
-      ``PAYPAL_REFUND_SIGNATURE``
 
 Adding a "Pay Now" button to the registration page
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -360,8 +356,13 @@ Adding a "Pay Now" button to the registration page
 Because this project is designed to be configurable and to accept
 different payment providers, the "Pay Now" button is not included by
 default on the registration summary page (the last step of the
-registration process). However, adding this button is very
-straightforward. Follow the following steps:
+registration process).  If you have setup your installation by running
+the "setupschool" script, then a "Pay Now" button will already be in
+place.
+
+However, if you have not done used the setupschool script, or if you
+wish to enable another payment processory, then adding a "Pay Now" 
+button is very straightforward. Follow these steps:
 
 1. Log in as a user with appropriate permissions to edit pages and other
    CMS content (the superuser is fine)
@@ -390,7 +391,8 @@ successfully completes their registration and submits payment. It also
 sends out a confirmation email when a customer purchases a gift
 certificate. The templates for these emails are completely configurable,
 and they are stored in the database, so you can customize them without
-requiring access to the underlying code.
+requiring access to the underlying code.  The first time that you run the
+server, the templates are populated with default content using
 
 To edit these email templates (and to create other custom email
 templates for your own purposes), simply log in as the superuser (or

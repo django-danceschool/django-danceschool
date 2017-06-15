@@ -1,0 +1,6 @@
+<div class="sections btn-group" role="group" aria-label="Preference Sections">
+
+    {% for this_section in sections %}
+        <a class="btn btn-default {% if this_section == section.name %}active{% endif %}"  href="./{{ this_section }}">{{ this_section|title }}</a>
+    {% endfor %}
+</div>
