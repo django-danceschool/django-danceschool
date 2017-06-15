@@ -22,7 +22,10 @@
 		<div class="panel-heading"><h4 class="panel-title">Payment Details</h4></div>
 		<div class="panel-body">
 			{% for payment in payments %}
-				{{ payment.method }}: {{ payment.id}}
+				{{ payment.method }}: {{ payment.id}}<br />
+				{% if not payment.refundable %}
+					<strong>Note:</strong> This payment does not appear to be automatically refundable.  Please manually refund the money to this student after filling out this form.<br />
+				{% endif %}
 			{% endfor %}
 		</div>
 	</div>

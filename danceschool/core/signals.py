@@ -47,8 +47,9 @@ get_customer_data = Signal(providing_args=['customer',])
 # Fires when preparing to process a refund or viewing an invoice.  Payment processing
 # apps that handle this signal should return a dictionary with an 'id' key that is
 # the transaction ID to be refunded, a 'method' key that should be a unique string per
-# payment processor, and a 'netAmountPaid' key that indicates the amount paid in that
-# payment, net of any pre-existing refunds (i.e. the maximum amount that can be refunded).
+# payment processor, a 'netAmountPaid' key that indicates the amount paid in that
+# payment, net of any pre-existing refunds (i.e. the maximum amount that can be refunded),
+# and a 'refundable' key that should be True only if the payment can be refunded automatically.
 get_invoice_payments = Signal(providing_args=['invoice',])
 
 # Fires to request that a refund be processed. The value 'id' is the transaction ID to

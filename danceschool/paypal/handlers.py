@@ -25,6 +25,7 @@ def getPaypalPayments(sender,**kwargs):
         'method': 'Paypal Express Checkout',
         'id': x.paymentId,
         'netAmountPaid': x.getNetAmountPaid(),
+        'refundable': True,
     } for x in paypal_payments]
 
 

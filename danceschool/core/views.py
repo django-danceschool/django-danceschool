@@ -346,6 +346,9 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         for this_payment in self.payments:
             if remains_to_refund <= 0:
                 break
+            if not this_payment.get('refundable',False):
+                continue
+
             this_payment_id = this_payment.get('id')
             this_payment_method = this_payment.get('method')
             this_payment_amount = this_payment.get('netAmountPaid',0)
