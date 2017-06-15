@@ -1242,6 +1242,26 @@ class Customer(models.Model):
         return EventRegistration.objects.filter(registration__customer=self,event__publicevent__isnull=False).count()
     numEventRegistrations.fget.short_description = _('# Public Events Registered')
 
+    @property
+    def firstSeries(self):
+        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
+            order_by('event__startTime').first().event
+
+    @property
+    def firstSeriesDate(self):
+        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
+            order_by('event__startTime').first().event.startTime
+
+    @property
+    def lastSeries(self):
+        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
+            order_by('-event__startTime').first().event
+
+    @property
+    def lastSeriesDate(self):
+        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
+            order_by('-event__startTime').first().event.startTime
+
     def getSeriesRegistered(self,q_filter=Q(),distinct=True,counter=False,**kwargs):
         '''
         Return a list that indicates each series the person has registered for
