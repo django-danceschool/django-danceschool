@@ -416,7 +416,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 try:
                     month = list(month_name).index(self.kwargs.get('month').title())
                 except:
-                    pass
+                    month = None
         else:
             month = getIntFromGet(request,'month')
 
