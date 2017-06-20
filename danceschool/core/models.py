@@ -127,8 +127,6 @@ class DanceTypeLevel(models.Model):
     order = models.FloatField(help_text=_('This is used to order and look up dance types.'))
     danceType = models.ForeignKey(DanceType,verbose_name=_('Dance Type'))
 
-    requiresAudition = models.BooleanField(default=False)
-
     displayColor = ColorField(verbose_name=_('Display Color'),help_text=_('Choose a color for the calendar display.'),default=get_defaultClassColor)
 
     def __str__(self):
