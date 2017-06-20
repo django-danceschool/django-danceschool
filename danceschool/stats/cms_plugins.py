@@ -15,6 +15,8 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
     model = StatsGraphPluginModel
     name = _('School Performance Graph')
     render_template = 'stats/schoolstats_timeseriesbymonth.html'
+    admin_preview = True
+
     template_choices = [
         ('stats/schoolstats_timeseriesbymonth.html',_('Students By Month of the Year')),
         ('stats/schoolstats_averagebyclasstype.html',_('Performance By Class Type')),

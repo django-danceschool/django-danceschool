@@ -9,9 +9,13 @@ from danceschool.core.models import DanceType, DanceTypeLevel, DanceRole, Pricin
 
 from dynamic_preferences.registries import global_preferences_registry
 import re
-import readline
 from six.moves import input
 from importlib import import_module
+
+try:
+    import readline
+except ImportError:
+    pass
 
 
 class Command(BaseCommand):
