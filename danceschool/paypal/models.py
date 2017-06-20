@@ -110,3 +110,6 @@ class PayNowFormModel(CMSPlugin):
 
     successPage = PageField(verbose_name=_('Success Page'),help_text=_('When the user returns to the site after a successful transaction, send them to this page.'),related_name='successPageFor')
     defaultAmount = models.FloatField(verbose_name=_('Default amount'),help_text=_('The initial value for gift certificate forms.'),default=0)
+
+    def get_short_description(self):
+        return self.plugin_type or self.id

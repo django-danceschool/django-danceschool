@@ -2214,6 +2214,9 @@ class StaffMemberPluginModel(CMSPlugin):
     staffMember = models.ForeignKey(StaffMember)
     template = models.CharField(max_length=250,null=True,blank=True)
 
+    def get_short_description(self):
+        return self.staffMember.fullName
+
 
 class InstructorListPluginModel(CMSPlugin):
     '''
@@ -2241,16 +2244,58 @@ class InstructorListPluginModel(CMSPlugin):
     title = models.CharField(verbose_name=_('Listing Title'),max_length=200,null=True,blank=True)
     template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
 
+    def get_short_description(self):
+        desc = self.title or ''
+        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choice_name = [x[1] for x in choices if x[0] == self.template]
+        if choice_name:
+            if desc:
+                desc += ': %s' % choice_name[0]
+            else:
+                desc = choice_name[0]
+        elif self.template:
+            if desc:
+                desc += ': %s' % self.template
+            else:
+                desc = self.template
+        return desc or self.id
+
 
 class LocationListPluginModel(CMSPlugin):
     ''' A model for listing of all active locations '''
     template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
+
+    def get_short_description(self):
+        desc = self.id
+        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choice_name = [x[1] for x in choices if x[0] == self.template]
+        if choice_name:
+            desc = choice_name[0]
+        elif self.template:
+            desc = self.template
+        return desc
 
 
 class LocationPluginModel(CMSPlugin):
     ''' Individual location directions, etc. use this view '''
     location = models.ForeignKey(Location,verbose_name=_('Location'))
     template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
+
+    def get_short_description(self):
+        desc = self.location.name or ''
+        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choice_name = [x[1] for x in choices if x[0] == self.template]
+        if choice_name:
+            if desc:
+                desc += ': %s' % choice_name[0]
+            else:
+                desc = choice_name[0]
+        elif self.template:
+            if desc:
+                desc += ': %s' % self.template
+            else:
+                desc = self.template
+        return desc or self.id
 
 
 class EventListPluginModel(CMSPlugin):
@@ -2282,6 +2327,22 @@ class EventListPluginModel(CMSPlugin):
 
     cssClasses = models.CharField(max_length=250,verbose_name=_('Custom CSS Classes'),null=True,blank=True,help_text=_('Classes are applied to surrounding &lt;div&gt;'))
     template = models.CharField(max_length=250,null=True,blank=True)
+
+    def get_short_description(self):
+        desc = self.title or ''
+        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choice_name = [x[1] for x in choices if x[0] == self.template]
+        if choice_name:
+            if desc:
+                desc += ': %s' % choice_name[0]
+            else:
+                desc = choice_name[0]
+        elif self.template:
+            if desc:
+                desc += ': %s' % self.template
+            else:
+                desc = self.template
+        return desc or self.id
 
     class Meta:
         permissions = (

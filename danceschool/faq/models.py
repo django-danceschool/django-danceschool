@@ -50,6 +50,12 @@ class FAQCategoryPluginModel(CMSPlugin):
     category = models.ForeignKey(FAQCategory)
     showTitle = models.BooleanField(verbose_name=_('Show Category Title'),default=False)
 
+    def get_short_description(self):
+        return self.category.name
+
 
 class FAQSinglePluginModel(CMSPlugin):
     question = models.ForeignKey(FAQ)
+
+    def get_short_description(self):
+        return self.question

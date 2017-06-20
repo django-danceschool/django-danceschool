@@ -26,6 +26,7 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
         ('stats/schoolstats_registrationtypes.html',_('Student Discounts and At-The-Door Registrations')),
         ('stats/schoolstats_referralcounts.html',_('Tracked Advertising Referrals')),
     ]
+
     cache = True
     module = _('Stats')
 

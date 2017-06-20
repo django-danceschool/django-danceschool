@@ -44,3 +44,13 @@ class LatestNewsPluginModel(CMSPlugin):
     alertOnly = models.BooleanField(verbose_name=_('Show Alerts Only'),default=False)
     ignorePins = models.BooleanField(verbose_name=_('Ignore Pinned Item Precedence'),help_text=_('By default, pinned items are shown first, regardless of publication date. Checking this box overrides that behavior.'),default=False)
     template = models.CharField(max_length=250,null=True,blank=True)
+
+    def get_short_description(self):
+        desc = self.id
+        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choice_name = [x[1] for x in choices if x[0] == self.template]
+        if choice_name:
+            desc = choice_name[0]
+        elif self.template:
+            desc = self.template
+        return desc
