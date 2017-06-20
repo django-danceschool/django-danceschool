@@ -1,7 +1,7 @@
 {% load sekizai_tags static %}
 
 {% addtoblock "css" %}
-  <link href="{% static 'css/c3.min.css' %}" rel="stylesheet" type="text/css">
+  <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
 <h2>Number of Classes Taken By Starting Cohort</h2>
@@ -22,10 +22,10 @@ each.</p>
 
 
 {% addtoblock "js" %}
-  <script src="{% static 'js/d3.min.js' %}"></script>
+  <script src="{% static 'd3/d3.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-  <script src="{% static 'js/c3.min.js' %}"></script>
+  <script src="{% static 'c3/c3.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">

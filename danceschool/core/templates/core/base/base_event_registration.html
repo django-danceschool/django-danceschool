@@ -492,7 +492,7 @@
 
 {% block content_js %}
 	{% addtoblock "js" %}
-	<script type="text/javascript" src="{% static 'js/ekko-lightbox.min.js' %}"></script>
+	<script type="text/javascript" src="{% static 'ekko-lightbox/ekko-lightbox.min.js' %}"></script>
 	<script type="text/javascript">
 	$(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {
 	    event.preventDefault();

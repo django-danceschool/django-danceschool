@@ -675,6 +675,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         except:
             pass
 
+    @property
+    def numRegisteredByRole(self):
+        '''
+        Return a dictionary listing registrations by all available roles (including no role)
+        '''
+        return {getattr(x,'name',None):self.numRegisteredForRole(x) for x in list(self.availableRoles) + [None,]}
+
     def capacityForRole(self,role):
         '''
         Accepts a DanceRole object and determines the capacity for that role at this event.this

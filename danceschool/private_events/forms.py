@@ -102,8 +102,8 @@ class AddPrivateEventForm(forms.ModelForm):
         exclude = []
 
     class Media:
-        js = ('js/jquery.timepicker.min.js','js/jquery-ui.min.js','js/moment.min.js','js/addEvent_rollups.js',)
-        css = {'all':('css/jquery.timepicker.css','css/jquery-ui.min.css',)}
+        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','moment/moment.min.js','js/addEvent_rollups.js',)
+        css = {'all':('timepicker/jquery.timepicker.css','jquery-ui/jquery-ui.min.css',)}
 
 
 class AddEventOccurrenceForm(forms.ModelForm):

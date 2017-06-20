@@ -229,6 +229,14 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
         })
         context['statement']['statementByEvent'] = statementByEvent
 
+        # Get a list of all roles with positive registrations in the statement:
+        role_set = set()
+        for x in statementByEvent:
+            role_set.update(list(x.get('registrations').keys()))
+        role_list = list(role_set)
+        role_list.sort()
+        context['roles'] = role_list
+
         return super(self.__class__,self).get_context_data(**context)
 
     def dispatch(self, request, *args, **kwargs):

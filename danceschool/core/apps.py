@@ -58,28 +58,6 @@ class CoreAppConfig(AppConfig):
                 # Update constant and fail silently
                 updateConstant('email__invoiceTemplateID',new_invoice_template.id,True)
 
-        if 'core_dancerole' in connection.introspection.table_names() and not isPreliminaryRun():
-            DanceRole = self.get_model('DanceRole')
-
-            # Lead and Follow roles are automatically generated, since they are typically used.
-            # However, the set of roles for which one can register for any given thing
-            # is editable.
-            role_lead_id = getConstant('general__roleLeadID') or 0
-            role_follow_id = getConstant('general__roleFollowID') or 0
-
-            if role_lead_id <= 0:
-                new_lead_role, created = DanceRole.objects.get_or_create(
-                    name=_('Lead'),
-                    defaults={'order': 1}
-                )
-                updateConstant('general__roleLeadID',new_lead_role.id,True)
-            if role_follow_id <= 0:
-                new_follow_role, created = DanceRole.objects.get_or_create(
-                    name=_('Follow'),
-                    defaults={'order': 2}
-                )
-                updateConstant('general__roleFollowID',new_follow_role.id,True)
-
         if 'core_eventstaffcategory' in connection.introspection.table_names() and not isPreliminaryRun():
             EventStaffCategory = self.get_model('EventStaffCategory')
 

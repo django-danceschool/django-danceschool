@@ -168,9 +168,9 @@ class ExpenseReportingForm(forms.ModelForm):
         widgets = {'category': ExpenseCategoryWidget,}
 
     class Media:
-        js = ('js/expense_reporting.js','js/jquery-ui.min.js',)
+        js = ('js/expense_reporting.js','jquery-ui/jquery-ui.min.js',)
         css = {
-            'all': ('css/jquery-ui.min.css',),
+            'all': ('jquery-ui/jquery-ui.min.css',),
         }
 
 

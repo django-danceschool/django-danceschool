@@ -1,4 +1,5 @@
 {% extends "cms/admin_home.html" %}
+{% load danceschool_tags %}
 
 {% block content %}
 <div class="row">
@@ -36,10 +37,13 @@
 <table class="table">
 <thead>
 	<tr>
-		<td rowspan="2" colspan="2">Series</td><td colspan="3"># Registrations</td><td colspan="2">Series Revenue</td><td colspan="3">Series Expenses</td><td rowspan="2">Net Profit</td>
+		<td rowspan="2" colspan="2">Series</td><td colspan="{{ roles|length }}"># Registrations</td><td colspan="2">Series Revenue</td><td colspan="3">Series Expenses</td><td rowspan="2">Net Profit</td>
 	</tr>
 	<tr>
-		<td>Leads</td><td>Follows</td><td>Total</td><td>Gross</td><td>Net of Discounts</td><td>Instruction</td><td>Venue Rental</td><td>Total</td>
+		{% for this_role in roles %}
+			<td>{{ this_role|title }}</td>
+		{% endfor %}
+		<td>Gross</td><td>Net of Discounts</td><td>Instruction</td><td>Venue Rental</td><td>Total</td>
 	</tr>
 </thead>
 <tbody>
@@ -47,8 +51,9 @@
 	<tr>
 		<td>{{ this_event.month_name }}</td>
 		<td>{{ this_event.event_name }}</td>
-		<td>{{ this_event.registrations.leads }}</td>
-		<td>{{ this_event.registrations.follows }}</td>
+		{% for this_role in roles %}
+			<td>{{ this_event.registrations|get_item:this_role }}</td>
+		{% endfor %}
 		<td>{{ this_event.registrations.total }}</td>
 		<td>{{ this_event.revenues.gross|floatformat:2 }}</td>
 		<td>{{ this_event.revenues.net|floatformat:2 }}</td>

@@ -166,8 +166,8 @@ class EventOccurrenceInline(admin.TabularInline):
     extra = 1
 
     class Media:
-        js = ('js/jquery.timepicker.min.js','js/jquery-ui.min.js','js/eventadmin_pickers.js')
-        css = {'all':('css/jquery.timepicker.css','css/jquery-ui.min.css',)}
+        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','js/eventadmin_pickers.js')
+        css = {'all':('timepicker/jquery.timepicker.css','jquery-ui/jquery-ui.min.css',)}
 
 
 ######################################

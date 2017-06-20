@@ -412,10 +412,8 @@ def prepareStatementByEvent(**kwargs):
         else:
             this_event_statement['month_name'] = _('Unspecified Month')
         this_event_statement['event_name'] = event.name
-        this_event_statement['registrations'] = {
-            'total': event.numRegistered,
-            'leads': event.numRegisteredForRole(DanceRole.objects.get(id=getConstant('general__roleLeadID'))),
-            'follows': event.numRegisteredForRole(DanceRole.objects.get(id=getConstant('general__roleFollowID'))),}
+        this_event_statement['registrations'] = {'total': event.numRegistered,}
+        this_event_statement['registrations'].update(event.numRegisteredByRole)
 
         # The calculation of net vs. gross revenue for each registration item is done
         # in models.py via model methods.  Any discounts are applied equally to each event.

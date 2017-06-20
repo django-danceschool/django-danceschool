@@ -74,28 +74,6 @@ class DefaultAdminSuccessPage(IntegerPreference):
 
 
 @global_preferences_registry.register
-class RoleLead(IntegerPreference):
-    section = general
-    name = 'roleLeadID'
-    widget = HiddenInput
-    verbose_name = _('ID of automatically-generated Lead DanceRole')
-
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
-
-
-@global_preferences_registry.register
-class RoleFollow(IntegerPreference):
-    section = general
-    name = 'roleFollowID'
-    widget = HiddenInput
-    verbose_name = _('ID of automatically-generated Follow DanceRole')
-
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
-
-
-@global_preferences_registry.register
 class StaffCategoryInstructor(IntegerPreference):
     section = general
     name = 'eventStaffCategoryInstructorID'
