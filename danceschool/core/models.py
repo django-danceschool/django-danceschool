@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 from collections import Counter
 import six
 from filer.fields.image import FilerImageField
-from colorfield.fields import ColorField
+from colorful.fields import RGBColorField
 from multiselectfield import MultiSelectField
 from calendar import month_name, day_name
 from djchoices import DjangoChoices, ChoiceItem
@@ -127,7 +127,7 @@ class DanceTypeLevel(models.Model):
     order = models.FloatField(help_text=_('This is used to order and look up dance types.'))
     danceType = models.ForeignKey(DanceType,verbose_name=_('Dance Type'))
 
-    displayColor = ColorField(verbose_name=_('Display Color'),help_text=_('Choose a color for the calendar display.'),default=get_defaultClassColor)
+    displayColor = RGBColorField(verbose_name=_('Display Color'),help_text=_('Choose a color for the calendar display.'),default=get_defaultClassColor)
 
     def __str__(self):
         return ' - '.join([self.danceType.name, self.name])
@@ -402,7 +402,7 @@ class EventCategory(models.Model):
     name = models.CharField(max_length=100,unique=True,help_text=_('Category name will be displayed.'))
     description = models.TextField(null=True,blank=True,help_text=_('Add an optional description.'))
 
-    displayColor = ColorField(help_text=_('Choose a color for the calendar display.'),default='#0000FF')
+    displayColor = RGBColorField(help_text=_('Choose a color for the calendar display.'),default='#0000FF')
 
     def __str__(self):
         return self.name
