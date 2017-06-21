@@ -75,22 +75,12 @@ text.mg-barplot-group-label {
     font-size: 0.6rem;
 }
 
-.mg-category-guides line {
-    stroke: #b3b2b2;
-}
-
 .mg-header {
     cursor: default;
     font-size: 1.2rem;
 }
 
 .mg-header .mg-chart-description {
-    fill: #ccc;
-    font-family: FontAwesome;
-    font-size: 1.2rem;
-}
-
-.mg-header .mg-warning {
     fill: #ccc;
     font-family: FontAwesome;
     font-size: 1.2rem;
@@ -147,11 +137,11 @@ text.mg-barplot-group-label {
     padding-left: 30px;
 }
 
-.mg-y-axis line.mg-extended-yax-ticks {
+.mg-y-axis line.mg-extended-y-ticks {
     opacity: 0.4;
 }
 
-.mg-x-axis line.mg-extended-xax-ticks {
+.mg-x-axis line.mg-extended-x-ticks {
     opacity: 0.4;
 }
 
@@ -324,7 +314,7 @@ circle.mg-points-mono {
 
 tspan.mg-points-mono {
     fill: #0000ff;
-    stroke: #0000ff;
+    stroke: #0000ff; 
 }
 
 /* a selected point in a scatterplot */

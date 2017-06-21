@@ -1,4 +1,4 @@
-[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://opensource.org/licenses/MPL-2.0) [![Build Status][travis-badge]][travis-badge-url] [![Code Climate][code-climate-badge]][code-climate-url] [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard) 
+[![Build Status][travis-badge]][travis-badge-url] [![Code Climate][code-climate-badge]][code-climate-url] [![js-semistandard-style](https://img.shields.io/badge/code%20style-semistandard-brightgreen.svg?style=flat-square)](https://github.com/Flet/semistandard)
 
 <a href="http://metricsgraphicsjs.org/"><img src="http://metricsgraphicsjs.org/images/logo.svg" hspace="0" vspace="0" width="400" height="63"></a>
 
@@ -27,9 +27,6 @@ Though originally envisioned for Mozilla Metrics dashboard projects, we are maki
 
 <a href="http://metricsgraphicsjs.org">http://metricsgraphicsjs.org</a>
 
-## Important changes in v2.10
-The library now depends on D3 4.x. The impact on MG users is minimal, though if you do use D3 for other work, here is the [list of changes](https://github.com/d3/d3/blob/master/CHANGES.md) from 3.x to 4.x. Please refer to the [release notes](https://github.com/mozilla/metrics-graphics/releases/tag/v2.10.0) for further details.
-
 ## Important changes in v2.0
 1. The library is now namespaced. ``data_graphic`` is now ``MG.data_graphic``, ``convert_dates`` is now ``MG.convert.date``, ``clone`` is now ``MG.clone``, ``button_layout`` is now ``MG.button_layout`` and ``data_table`` is now ``MG.data_table``. We added a new convenience function called ``MG.convert.number``.
 2. The ``rollover_callback`` option has been renamed ``mouseover`` and expanded in order to make it more consistent with other libraries. We now have three callback functions available: [mouseover](https://github.com/mozilla/metrics-graphics/wiki/Graphic#mouseover), [mouseout](https://github.com/mozilla/metrics-graphics/wiki/Graphic#mouseout) and [mousemove](https://github.com/mozilla/metrics-graphics/wiki/Graphic#mousemove).
@@ -40,7 +37,7 @@ The library now depends on D3 4.x. The impact on MG users is minimal, though if 
 2. Follow the examples [here](https://github.com/mozilla/metrics-graphics/blob/master/examples/index.htm) and [here](https://github.com/mozilla/metrics-graphics/blob/master/examples/js/main.js) to see how graphics are laid out and built. The examples use JSON data from [examples/data](https://github.com/mozilla/metrics-graphics/blob/master/examples/data), though you may easily pull data from elsewhere.
 
 ## Dependencies
-The library depends on [D3](http://d3js.org). If you wish to enable tooltips or use [buttons](https://github.com/mozilla/metrics-graphics/wiki/Button-Layout), please include [jQuery](http://jquery.com/) as well. Versions of MG older than v2.10 depend on D3 3, whereas MG v2.10 onwards depend on D3 4.
+The library depends on [D3](http://d3js.org) and [jQuery](http://jquery.com/). As of v2.2, if you do not wish to use jQuery, set [show_tooltips](https://github.com/mozilla/metrics-graphics/wiki/Graphic#show_tooltips) to false, either globally in ``metricsgraphics.js``, or within every ``MG.data_graphic`` call. Only tooltips and [buttons](https://github.com/mozilla/metrics-graphics/wiki/Button-Layout) depend on jQuery.
 
 ## Contributing
 If you would like to help extend MetricsGraphics.js or fix bugs, please [fork the library](https://github.com/mozilla/metrics-graphics) and install [Node.js](http://nodejs.org). Then, from the project's root directory install [gulp](http://gulpjs.com):
@@ -121,7 +118,6 @@ Feel free to add your addons and websites to this list.
 * [R package (htmlwidget)](https://github.com/hrbrmstr/metricsgraphics)
 * [Python library - using Pyxley](http://multithreaded.stitchfix.com/blog/2015/07/16/pyxley)
 * [Angular directive](https://github.com/elmarquez/angular-metrics-graphics)
-* [React component](https://github.com/cf/react-metrics-graphics)
 
 ## License
 
