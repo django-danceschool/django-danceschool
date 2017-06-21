@@ -1,6 +1,7 @@
 from django.db.models import Count, Avg, Sum, IntegerField, Case, When, Q, Min, FloatField, F
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, JsonResponse
+from django.utils.translation import ugettext as _
 
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -85,7 +86,7 @@ def getAveragesByClassType(startDate=None,endDate=None):
                 'avgRegistrations': (results[k]['registrations'] or 0) / float(results[k]['series']),
             })
             for this_role in role_list:
-                results[k]['avg' + this_role.pluralName] = (results[k][this_role.pluralName] or 0) / float(results[k]['series'])
+                results[k]['avg' + this_role.pluralName] = (results[k]['total' + this_role.pluralName] or 0) / float(results[k]['series'])
 
     return results
 
@@ -166,10 +167,10 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
         'eventregistration__cancelled': False,
     }
 
-    annotations = {'registrations': Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField()))}
+    annotations = {'registrations': Sum(Case(When(Q(**when_all),then=1),output_field=FloatField()))}
 
     for this_role in role_list:
-        annotations[this_role.pluralName] = Sum(Case(When(Q(Q(**when_all) & Q(eventregistration__role=this_role)),then=1),output_field=IntegerField()))
+        annotations[this_role.pluralName] = Sum(Case(When(Q(Q(**when_all) & Q(eventregistration__role=this_role)),then=1),output_field=FloatField()))
 
     series_counts = Series.objects.filter(year=year).annotate(**annotations).annotate(studenthours=F('duration') * F('registrations')).select_related('classDescription__danceTypeLevel__danceType','classDescription__danceTypeLevel')
 
@@ -261,14 +262,17 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
     }
 
     cohortFilters = {}
+    roleFilters = {}
 
     if cohortStart:
         cohortFilters['eventregistration__event__startTime__min__gte'] = cohortStart
+        roleFilters['eventregistration__event__startTime__gte'] = cohortStart
 
     if cohortEnd:
         cohortFilters['eventregistration__event__startTime__min__lte'] = cohortEnd
+        roleFilters['eventregistration__event__startTime__lte'] = cohortEnd
 
-    role_list = DanceRole.objects.filter(cohortFilters).distinct()
+    role_list = DanceRole.objects.filter(**roleFilters).distinct()
 
     annotations = {
         'eventregistration__event__startTime__min': Min('eventregistration__event__startTime'),
@@ -318,14 +322,14 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
             this_label:
             {
                 '# Students': (i_all - lastAll),
-                'Pct. Students': 100 * (i_all - lastAll) / float(totalCustomers),
+                '% Students': 100 * (i_all - lastAll) / float(totalCustomers),
                 'bin': this_bin,
             },
         })
         for this_role in role_list:
             results[this_label].update({
                 '# ' + this_role.pluralName: (iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]),
-                'Pct. ' + this_role.pluralName: 100 * (
+                '% ' + this_role.pluralName: 100 * (
                     iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]
                 ) /
                 float(totalsByRole[this_role.pluralName]['customers']),
@@ -607,7 +611,7 @@ def getRegistrationTypesAveragesByYear():
     for year in eligible_years:
         this_year_results = srs.filter(event__year=year).annotate(
             student=Case(When(registration__student=True,then=100),default=0,output_field=IntegerField()),
-            door=Case(When(registration__paidOnline=False,then=100),default=0,output_field=IntegerField()),
+            door=Case(When(registration__payAtDoor=False,then=100),default=0,output_field=IntegerField()),
             droppedIn=Case(When(dropIn=True,then=100),default=0,output_field=IntegerField()),
             cancellation=Case(When(cancelled=True,then=100),default=0,output_field=IntegerField()),
         ).aggregate(Student=Avg('student'),Door=Avg('door'),DropIn=Avg('droppedIn'),Cancelled=Avg('cancellation'),year=Min('event__year'))
@@ -639,18 +643,10 @@ def getRegistrationReferralCounts(startDate,endDate):
     if endDate:
         timeFilters['dateTime__lt'] = endDate
 
-    reg_count = Registration.objects.filter(**timeFilters).count()
+    regs = Registration.objects.filter(**timeFilters)
+    counter = Counter([x.data.get('marketing_id',None) for x in regs if isinstance(x.data,dict)] + [None for x in regs if not isinstance(x.data,dict)])
 
-    regs = Registration.objects.filter(**timeFilters).filter(data__marketing_id__isnull=False)
-    counter = Counter([x.data['marketing_id'] for x in regs])
-
-    results = [{'code': k, 'count': v} for k,v in counter.items()]
-
-    results.append({
-        'code': 'None',
-        'count':reg_count - sum([x['count'] for x in results])
-    })
-
+    results = [{'code': k or _('None'), 'count': v} for k,v in counter.items()]
     return results
 
 

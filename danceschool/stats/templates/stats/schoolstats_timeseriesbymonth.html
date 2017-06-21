@@ -25,7 +25,6 @@
   <button type="button" data-series="AvgStudents" class="btn btn-default monthlyPerformanceButton">Avg. Students/Hour</button>
 </div>
 
-
 <div id="MonthlyPerformance"></div>
 
 
@@ -48,7 +47,7 @@ $(document).ready(function(){
       hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
       keys: {
         x: 'month_name',
-        value: ['MonthlyAverage',{{ allYears|join:"," }}]
+        value: ['MonthlyAverage','{{ allYears|join:"','" }}'],
       }
     },
     axis: {
@@ -57,7 +56,6 @@ $(document).ready(function(){
       }
     }
   });
-
 
   $('.monthlyPerformanceButton').click(function(){
     var series = $(this).attr('data-series')
@@ -69,7 +67,7 @@ $(document).ready(function(){
         hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
         keys: {
           x: 'month_name',
-          value: ['MonthlyAverage',{{ allYears|join:"," }}]
+          value: ['MonthlyAverage','{{ allYears|join:"','" }}']
         }
     });
 
@@ -77,6 +75,6 @@ $(document).ready(function(){
     $(this).addClass('active');
 
   });
-});
-</script>
+
+});</script>
 {% endaddtoblock %}
