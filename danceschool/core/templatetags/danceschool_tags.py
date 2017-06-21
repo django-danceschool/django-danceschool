@@ -1,5 +1,6 @@
 from django import template
 from django.db.models.query import QuerySet
+from django.core.exceptions import ObjectDoesNotExist
 
 import datetime
 from calendar import month_name, day_name
@@ -16,7 +17,7 @@ register = template.Library()
 def readable_month(month):
     try:
         return month_name[month]
-    except:
+    except (TypeError,IndexError):
         return None
 
 
@@ -34,7 +35,7 @@ def urldecodename(string):
 def readable_weekday(weekday):
     try:
         return day_name[weekday]
-    except:
+    except (TypeError,IndexError):
         return None
 
 
@@ -119,7 +120,7 @@ def numRegisteredForRoleName(event,roleName):
 
     try:
         role = DanceRole.objects.get(name=roleName)
-    except:
+    except ObjectDoesNotExist:
         return None
 
     return event.numRegisteredForRole(role)

@@ -23,7 +23,7 @@ def getDateTimeFromGet(request,key):
     if request.GET.get(key,''):
         try:
             return datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d')
-        except:
+        except ValueError:
             pass
     return None
 
@@ -225,12 +225,12 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
 def ClassTypeMonthlyJSON(request):
     try:
         year = int(request.GET.get('year'))
-    except:
+    except ValueError:
         year = None
 
     try:
         typeLimit = int(request.GET.get('typeLimit'))
-    except:
+    except ValueError:
         typeLimit = None
 
     series = request.GET.get('series')

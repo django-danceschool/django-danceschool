@@ -393,7 +393,7 @@ Remember, all page settings and content can be changed later via the admin inter
 
         try:
             initial_language = settings.LANGUAGES[0][0]
-        except:
+        except IndexError:
             initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
 
         add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)

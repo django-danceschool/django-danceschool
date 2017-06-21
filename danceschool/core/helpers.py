@@ -29,5 +29,5 @@ def emailErrorMessage(subject,message):
                   send_from,
                   [send_to], fail_silently=False)
         logger.debug('Error email sent.')
-    except:
-        logger.error('Error email was not sent for unknown reason.')
+    except Exception as e:
+        logger.error('Error email was not sent: %s' % e)

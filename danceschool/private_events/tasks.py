@@ -66,7 +66,8 @@ def sendReminderEmailToUser(user,reminder):
                     user.email,
                 ],
                 fail_silently=False)
-    except:
+    except Exception as e:
+        logger.error('Error in sending reminder emails: %s' % e)
         return False
     if sent:
         return True

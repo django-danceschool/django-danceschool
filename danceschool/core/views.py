@@ -801,7 +801,7 @@ class IndividualClassView(FinancialContextMixin, TemplateView):
 
         try:
             month_number = list(month_name).index(month)
-        except:
+        except ValueError:
             return Http404(_('Invalid month.'))
 
         seriesset = get_list_or_404(Series,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,classDescription__slug=slug)
@@ -831,7 +831,7 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
 
         try:
             month_number = list(month_name).index(month)
-        except:
+        except ValueError:
             return Http404(_('Invalid month.'))
 
         eventset = get_list_or_404(PublicEvent,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,slug=slug)

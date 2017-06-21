@@ -2,8 +2,14 @@ from django.db import connection
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
+import logging
 from dynamic_preferences.registries import global_preferences_registry
+from dynamic_preferences.exceptions import NotFoundInRegistry
 from .utils.sys import isPreliminaryRun
+
+
+# Define logger for this file
+logger = logging.getLogger(__name__)
 
 
 def getConstant(name):
@@ -18,7 +24,8 @@ def getConstant(name):
         params = global_preferences_registry.manager()
         try:
             return params.get(name)
-        except:
+        except NotFoundInRegistry as e:
+            logger.error('Error in getting constant: %s' % e)
             return None
 
 
@@ -36,7 +43,8 @@ def updateConstant(name,value,fail_silently=False):
         try:
             params[name] = value
             return True
-        except:
+        except Exception as e:
+            logger.error('Error in updating constant: %s' % e)
             if not fail_silently:
                 raise
             return False

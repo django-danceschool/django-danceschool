@@ -54,9 +54,10 @@ class PrivateEvent(Event):
 
     def __str__(self):
         try:
-            return str(self.name + ': ' + self.eventoccurrence_set.first().startTime.strftime('%a., %B %d, %Y, %I:%M %p') or u'')
-        except:
-            return str(self.name)
+            return '%s: %s' % (self.name, getattr(self.eventoccurrence_set.first(),'startTime').strftime('%a., %B %d, %Y, %I:%M %p'))
+        except AttributeError:
+            # Event has no occurrences
+            return self.name
 
 
 @python_2_unicode_compatible

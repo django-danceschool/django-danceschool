@@ -2,6 +2,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import View
 from django.contrib import messages
+from django.core.exceptions import ObjectDoesNotExist
 
 from .models import EventOccurrence, SeriesTeacher, EventRegistration, EmailTemplate
 
@@ -116,7 +117,7 @@ def getEmailTemplate(request):
 
     try:
         this_template = EmailTemplate.objects.get(id=template_id)
-    except:
+    except ObjectDoesNotExist:
         return HttpResponse(_("Error getting template."))
 
     if this_template.groupRequired and this_template.groupRequired not in request.user.groups.all():

@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User, Group
 from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Q, Sum
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -668,12 +668,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     def numRegisteredForRole(self, role):
         '''
         Accepts a DanceRole object and returns the number of registrations of that role.
-        Ignores errors.
         '''
-        try:
-            return self.eventregistration_set.filter(cancelled=False,dropIn=False,role=role).count()
-        except:
-            pass
+        return self.eventregistration_set.filter(cancelled=False,dropIn=False,role=role).count()
+            
 
     @property
     def numRegisteredByRole(self):
@@ -706,11 +703,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
                 if availableRoles.count() > 0 and role not in availableRoles:
                     ''' DanceType roles specified and this is not one of them '''
                     return 0
-                elif availableRoles.count() > 0:
+                elif availableRoles.count() > 0 and self.capacity:
                     # Divide the total capacity by the number of roles and round up.
                     return ceil(self.capacity / availableRoles.count())
-            except:
-                pass
+            except ObjectDoesNotExist as e:
+                logger.error('Error in calculating capacity for role: %s' % e)
 
         # No custom roles and no danceType to get roles from, so return the overall capacity
         return self.capacity
@@ -992,7 +989,7 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        return self.classDescription.title
+        return getattr(getattr(self,'classDescription',None),'title','')
     name.fget.short_description = _('Name')
 
     @property
@@ -1000,7 +997,7 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        return self.classDescription.title
+        return getattr(getattr(self,'classDescription',None),'title','')
     description.fget.short_description = _('Description')
 
     @property
@@ -1009,7 +1006,7 @@ class Series(Event):
         No property in the Event base class, but PublicEvents have a slug field, so this allows
         us to iterate over that property in templates
         '''
-        return self.classDescription.slug
+        return getattr(getattr(self,'classDescription',None),'slug','')
     slug.fget.short_description = _('Slug')
 
     @property
@@ -1017,7 +1014,9 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        return self.classDescription.danceTypeLevel.displayColor
+        cd = getattr(self,'classDescription',None)
+        if cd:
+            return cd.danceTypeLevel.displayColor
     displayColor.fget.short_description = _('Display color')
 
     def getBasePrice(self,**kwargs):
@@ -1200,8 +1199,9 @@ class PublicEvent(Event):
 
     def __str__(self):
         try:
-            return self.name + ': ' + self.eventoccurrence_set.first().startTime.strftime('%a., %B %d, %Y, %I:%M %p')
-        except:
+            return '%s: %s' % (self.name, getattr(self.eventoccurrence_set.first(),'startTime').strftime('%a., %B %d, %Y, %I:%M %p'))
+        except AttributeError:
+            # Event has no occurrences
             return self.name
 
     class Meta:

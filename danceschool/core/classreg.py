@@ -1,4 +1,5 @@
 from django.core.urlresolvers import reverse
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseServerError, HttpResponseRedirect
 from django.views.generic import FormView
 from django.utils.translation import ugettext_lazy as _
@@ -87,7 +88,7 @@ def createTemporaryRegistration(request):
         if this_role_id:
             try:
                 this_role = DanceRole.objects.get(id=this_role_id)
-            except:
+            except ObjectDoesNotExist:
                 pass
 
         logger.debug('Creating temporary event registration for:' + str(event_id))
@@ -161,7 +162,8 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             discount_responses.sort(key=lambda k: k[1][1])
             discount_code, discounted_total = discount_responses[0][1]
             discount_amount = max(initial_price - discounted_total, 0)
-        except:
+        except (IndexError, TypeError) as e:
+            logger.error('Error in applying discount responses: %s' % e)
             discount_code = None
             discounted_total = initial_price
             discount_amount = 0
@@ -183,8 +185,8 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         for response in addon_responses:
             try:
                 addons += list(addon_responses[1])
-            except:
-                pass
+            except (IndexError, TypeError) as e:
+                logger.error('Error in applying addons: %s' % e)
 
         # The return value to this signal should contain any adjustments that
         # need to be made to the price (e.g. from vouchers if the voucher app

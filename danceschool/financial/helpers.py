@@ -11,7 +11,7 @@ from calendar import month_name
 
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Registration, DanceRole, Event, EventStaffMember, InvoiceItem
+from danceschool.core.models import Registration, Event, EventStaffMember, InvoiceItem
 
 from .constants import EXPENSE_BASES
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
@@ -130,12 +130,9 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
         filters['eventoccurrence__startTime__gte'] = timelist[0]
         filters['eventoccurrence__startTime__lte'] = timelist[1]
     else:
-        try:
-            c = getConstant('financial__autoGenerateExpensesVenueRentalWindow')
-            if c > 0:
-                filters['eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c.value)
-        except:
-            pass
+        c = getConstant('financial__autoGenerateExpensesVenueRentalWindow') or 0
+        if c > 0:
+            filters['eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c)
 
     # Only create expense items for venues with a positive rental rate
     for event in Event.objects.filter(**filters).distinct():
@@ -174,12 +171,9 @@ def createExpenseItemsForCompletedEvents(request=None,datetimeTuple=None):
         filters['event__eventoccurrence__startTime__gte'] = timelist[0]
         filters['event__eventoccurrence__startTime__lte'] = timelist[1]
     else:
-        try:
-            c = getConstant('financial__autoGenerateExpensesCompletedEventsWindow')
-            if c > 0:
-                filters['event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c.value)
-        except:
-            pass
+        c = getConstant('financial__autoGenerateExpensesCompletedEventsWindow') or 0
+        if c > 0:
+            filters['event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c)
 
     for member in EventStaffMember.objects.filter(**filters).distinct():
         # If an EventStaffMember object for a completed class has no associated ExpenseItem, then create one.
@@ -230,12 +224,9 @@ def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
         filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = timelist[0]
         filters_events['finalEventRegistration__event__eventoccurrence__startTime__lte'] = timelist[1]
     else:
-        try:
-            c = getConstant('financial__autoGenerateRevenueRegistrationsWindow')
-            if c > 0:
-                filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c.value)
-        except:
-            pass
+        c = getConstant('financial__autoGenerateRevenueRegistrationsWindow') or 0
+        if c > 0:
+            filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c)
 
     for item in InvoiceItem.objects.filter(**filters_events).distinct():
         if item.finalRegistration.paidOnline:

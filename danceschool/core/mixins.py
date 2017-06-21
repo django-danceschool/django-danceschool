@@ -5,6 +5,7 @@ from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template
 from django.template import Template, Context
+from django.template.exceptions import TemplateDoesNotExist
 
 from braces.views import GroupRequiredMixin
 from urllib.parse import quote
@@ -217,7 +218,7 @@ class TemplateChoiceField(ChoiceField):
 
         try:
             get_template(value)
-        except:
+        except TemplateDoesNotExist:
             raise ValidationError(_('%s is not a valid template.' % value))
 
 

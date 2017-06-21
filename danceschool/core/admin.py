@@ -535,10 +535,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     customers.short_description = _('# Registered Students')
 
     def series_month(self,obj):
-        try:
-            return month_name[obj.month] + ' ' + str(obj.year)
-        except:
-            return None
+        return '%s %s' % (month_name[obj.month or 0],obj.year or '')
 
     def class_time(self, obj):
         return obj.startTime.strftime('%A, %I:%M %p')

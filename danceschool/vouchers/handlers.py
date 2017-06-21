@@ -1,5 +1,5 @@
 from django.dispatch import receiver
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
 
 from danceschool.core.signals import post_temporary_registration, post_registration, apply_price_adjustments, get_customer_data, check_student_info
@@ -84,7 +84,7 @@ def applyVoucherCodeTemporarily(sender,**kwargs):
 
     try:
         voucher = Voucher.objects.get(voucherId=voucherId)
-    except:
+    except ObjectDoesNotExist:
         logger.debug('No applicable vouchers found.')
         return
 
@@ -114,7 +114,7 @@ def applyReferrerVouchersTemporarily(sender,**kwargs):
     try:
         c = Customer.objects.get(user__email=email)
         vouchers = c.getReferralVouchers()
-    except:
+    except ObjectDoesNotExist:
         vouchers = None
 
     if not vouchers:

@@ -68,16 +68,16 @@ def addPrivateEvent(request):
 
         for key in request.GET:
             try:
-                form.fields[key].initial = request.GET[key]
-            except:
+                form.fields[key].initial = request.GET.get(key)
+            except KeyError:
                 pass
             try:
                 # Only the startTime should be passable to the formset
                 if key == 'startTime':
-                    formset[0].fields['startTime'].initial = datetime.strptime(request.GET[key],'%Y-%m-%d')
-                    formset[0].fields['endTime'].initial = datetime.strptime(request.GET[key],'%Y-%m-%d')
+                    formset[0].fields['startTime'].initial = datetime.strptime(request.GET.get(key) or '','%Y-%m-%d')
+                    formset[0].fields['endTime'].initial = datetime.strptime(request.GET.get(key) or '','%Y-%m-%d')
                     formset[0].fields['allDay'].initial = True
-            except:
+            except ValueError:
                 pass
 
     return render(request,'private_events/add_private_event_form.html',{

@@ -183,7 +183,7 @@ class InvoiceItemChoiceField(forms.ModelChoiceField):
     def to_python(self,value):
         try:
             value = super(self.__class__,self).to_python(value)
-        except:
+        except (ValueError, ValidationError):
             key = self.to_field_name or 'pk'
             value = InvoiceItem.objects.filter(**{key: value})
             if not value.exists():

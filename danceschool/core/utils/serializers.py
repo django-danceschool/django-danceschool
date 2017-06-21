@@ -15,7 +15,7 @@ class PageModelSerializer(BaseSerializer):
 
         try:
             return int(value)
-        except:
+        except ValueError:
             raise cls.exception("Value {0} cannot be converted to int")
 
     @classmethod

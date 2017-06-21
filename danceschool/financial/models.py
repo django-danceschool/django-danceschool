@@ -1,7 +1,7 @@
 from django.db import models
 from datetime import datetime
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator
 from django.utils.translation import ugettext_lazy as _
@@ -162,7 +162,7 @@ class ExpenseItem(models.Model):
         if self.attachment:
             try:
                 self.attachment.folder = Folder.objects.get(name=_('Expense Receipts'))
-            except:
+            except ObjectDoesNotExist:
                 pass
             self.attachment.is_public = False
             self.attachment.save()
@@ -313,7 +313,7 @@ class RevenueItem(models.Model):
         if self.attachment:
             try:
                 self.attachment.folder = Folder.objects.get(name=_('Revenue Receipts'))
-            except:
+            except ObjectDoesNotExist:
                 pass
             self.attachment.is_public = False
             self.attachment.save()

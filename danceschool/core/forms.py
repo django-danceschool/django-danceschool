@@ -679,7 +679,7 @@ class SeriesTeacherChoiceField(forms.ModelChoiceField):
     def to_python(self,value):
         try:
             value = super(SeriesTeacherChoiceField,self).to_python(value)
-        except:
+        except (ValueError, ValidationError):
             key = self.to_field_name or 'pk'
             value = SeriesTeacher.objects.filter(**{key: value})
             if not value.exists():
