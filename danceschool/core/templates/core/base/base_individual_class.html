@@ -56,7 +56,7 @@
 
 		<p class='schedule'>
 		<strong>Class Schedule:</strong><br />
-		{% for class in series.eventoccurrence_set.all %}
+		{% for class in series.eventoccurrence_set.all reversed %}
 			{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
 		{% endfor %}
 		</p>
