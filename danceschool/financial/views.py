@@ -31,7 +31,7 @@ def getDateTimeFromGet(request,key):
     if request.GET.get(key,''):
         try:
             return datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d')
-        except ValueError:
+        except (ValueError, TypeError):
             pass
     return None
 
@@ -44,7 +44,7 @@ def getIntFromGet(request,key):
     '''
     try:
         return int(request.GET.get(key))
-    except ValueError:
+    except (ValueError, TypeError):
         return None
 
 
@@ -106,7 +106,7 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
                 if int_year not in eligible_years:
                     raise Http404(_("Invalid year."))
                 query_filter = query_filter & (Q(accrualDate__year=int_year) | Q(paymentDate__year=int_year) | Q(submissionDate__year=int_year))
-            except ValueError:
+            except (ValueError, TypeError):
                 raise Http404(_("Invalid year."))
 
         # No point in continuing if we can't actually match this instructor to their payments.
@@ -212,7 +212,7 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
                 # Check for year in kwargs and ensure that it is eligible
                 if int_year not in eligible_years:
                     raise Http404(_("Invalid year."))
-            except ValueError:
+            except (ValueError, TypeError):
                 raise Http404(_("Invalid year."))
 
         context['current_year'] = year
@@ -312,7 +312,7 @@ class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
         '''
         try:
             year = int(self.kwargs.get('year'))
-        except ValueError:
+        except (ValueError, TypeError):
             year = getIntFromGet(request,'year')
 
         kwargs.update({
@@ -414,16 +414,16 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         '''
         try:
             year = int(self.kwargs.get('year'))
-        except ValueError:
+        except (ValueError, TypeError):
             year = getIntFromGet(request,'year')
 
         if self.kwargs.get('month'):
             try:
                 month = int(self.kwargs.get('month'))
-            except ValueError:
+            except (ValueError, TypeError):
                 try:
                     month = list(month_name).index(self.kwargs.get('month').title())
-                except ValueError:
+                except (ValueError, TypeError):
                     month = None
         else:
             month = getIntFromGet(request,'month')
