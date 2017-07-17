@@ -43,6 +43,7 @@ class Requirement(models.Model):
     @property
     def enabled(self):
         return self.enforcementMethod != self.EnforcementChoice.none
+    enabled.fget.short_description = _('Enabled')
 
     def customerMeetsRequirement(self, customer, danceRole=None, registration=None):
         '''
@@ -115,6 +116,8 @@ class Requirement(models.Model):
         return self.name
 
     class Meta:
+        verbose_name = _('Class requirement')
+        verbose_name = _('Class requirements')
         permissions = (
             ('ignore_requirements',_('Can register users for series regardless of any prerequisites or requirements')),
         )
@@ -123,7 +126,7 @@ class Requirement(models.Model):
 class RequirementItem(models.Model):
     ''' Each component of a requirement is one of these '''
 
-    requirement = models.ForeignKey(Requirement,null=True)
+    requirement = models.ForeignKey(Requirement,verbose_name=_('Requirement'),null=True)
 
     class ConcurrencyRule(DjangoChoices):
         prohibited = ChoiceItem('P',_('Must have previously taken'))
@@ -131,8 +134,8 @@ class RequirementItem(models.Model):
         required = ChoiceItem('R',_('Concurrent registration required'))
 
     quantity = models.PositiveSmallIntegerField(_('Quantity'),default=1)
-    requiredLevel = models.ForeignKey(DanceTypeLevel,null=True,blank=True)
-    requiredClass = models.ForeignKey(ClassDescription,null=True,blank=True)
+    requiredLevel = models.ForeignKey(DanceTypeLevel,null=True,blank=True,verbose_name=_('Required Dance type/level'))
+    requiredClass = models.ForeignKey(ClassDescription,null=True,blank=True,verbose_name=_('Required class'))
 
     concurrentRule = models.CharField(_('Concurrency Rule'),max_length=1,choices=ConcurrencyRule.choices,default=ConcurrencyRule.prohibited)
 
@@ -142,20 +145,24 @@ class RequirementItem(models.Model):
         if not self.requiredLevel and not self.requiredClass:
             raise ValidationError(_('Either a level or a class must be required.'))
 
+    class Meta:
+        verbose_name = _('Requirement item')
+        verbose_name_plural = _('Requirement items')
+
 
 class CustomerRequirement(models.Model):
     '''
     This class allows for override of requirements on a per-customer basis.
     '''
-    customer = models.ForeignKey(Customer)
-    requirement = models.ForeignKey(Requirement)
-    role = models.ForeignKey(DanceRole,null=True,blank=True,help_text=_('Role must be specified only for requirements for which roles are enforced.'))
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
+    requirement = models.ForeignKey(Requirement,verbose_name=_('Requirement'))
+    role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'),help_text=_('Role must be specified only for requirements for which roles are enforced.'))
 
     met = models.BooleanField(_('Meets Requirement'),default=True,help_text=_('If unchecked, then the customer explicitly does not meet the requirement, regardless of whether they meet its parameters.'))
     comments = models.TextField(_('Comments/Notes'),null=True,blank=True)
 
-    submissionDate = models.DateTimeField(auto_now_add=True)
-    modifiedDate = models.DateTimeField(auto_now=True)
+    submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last modified date'),auto_now=True)
 
     def clean(self):
         if self.requirement.roleEnforced and not self.role:
@@ -163,3 +170,5 @@ class CustomerRequirement(models.Model):
 
     class Meta:
         unique_together = ('customer','requirement','role')
+        verbose_name = _('Customer-level requirement record')
+        verbose_name_plural = _('Customer-level requirement records')

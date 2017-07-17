@@ -11,7 +11,7 @@ from paypalrestsdk import Payment
 from paypalrestsdk.exceptions import ResourceNotFound
 
 from danceschool.core.models import TemporaryRegistration, Invoice
-from danceschool.core.constants import getConstant
+from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
 
 from .models import PaymentRecord
 
@@ -39,7 +39,6 @@ def createPaypalPayment(request):
     amount = request.POST.get('amount')
     submissionUserId = request.POST.get('user_id')
     transactionType = request.POST.get('transaction_type')
-    certificateName = request.POST.get('certificate_name')
     taxable = request.POST.get('taxable', False)
 
     # If a specific amount to pay has been passed, then allow payment
@@ -82,10 +81,7 @@ def createPaypalPayment(request):
         else:
             # Gift certificates automatically get a nicer invoice description
             if transactionType == 'Gift Certificate':
-                if certificateName:
-                    this_description = _('Gift Certificate Purchase for %s' % certificateName)
-                else:
-                    this_description = _('Gift Certificate Purchase')
+                this_description = _('Gift Certificate Purchase')
             else:
                 this_description = transactionType
             this_invoice = Invoice.create_from_item(
@@ -212,7 +208,8 @@ def createPaypalPayment(request):
 def executePaypalPayment(request):
     paymentId = request.POST.get('paymentID')
     payerId = request.POST.get('payerID')
-    recipientEmail = request.POST.get('recipient_email')
+    addSessionInfo = request.POST.get('addSessionInfo',False)
+    successUrl = request.POST.get('successUrl')
 
     try:
         payment_record = PaymentRecord.objects.get(paymentId=paymentId)
@@ -233,8 +230,19 @@ def executePaypalPayment(request):
             paidOnline=True,
             methodName='Paypal Express Checkout',
             methodTxn=paymentId,
-            notify=recipientEmail,
+            notify=payment.payer.payer_info.email,
         )
+
+        if addSessionInfo:
+            paymentSession = request.session.get(INVOICE_VALIDATION_STR, {})
+
+            paymentSession.update({
+                'invoiceID': str(this_invoice.id),
+                'amount': float(payment.transactions[0].amount.total),
+                'successUrl': successUrl,
+            })
+            request.session[INVOICE_VALIDATION_STR] = paymentSession
+
         return JsonResponse({'paid': True})
     else:
         this_invoice.status = Invoice.PaymentStatus.error

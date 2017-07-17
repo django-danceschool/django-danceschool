@@ -56,6 +56,10 @@ class PaymentRecord(models.Model):
         payment = self.getPayment()
         return sum([float(t.amount.total) for t in payment.transactions])
 
+    def getPayerEmail(self):
+        payment = self.getPayment
+        return payment.payer.email
+
     def refund(self, amount=None):
         saleIds = self.getSaleIds()
         refundData = []
@@ -103,6 +107,10 @@ class PaymentRecord(models.Model):
                 refundData.append({'status': 'error', 'errors': refund.error})
 
         return refundData
+
+    class Meta:
+        verbose_name = _('Paypal payment record')
+        verbose_name_plural = _('Payment records')
 
 
 class PayNowFormModel(CMSPlugin):
