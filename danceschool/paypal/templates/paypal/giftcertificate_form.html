@@ -5,10 +5,6 @@
 
         <p><label>Amount:</label> 
         <input id="id_amount" name="amount" type="text" value="{{ instance.defaultAmount }}" /></p>
-        <p><label>Email Invoice To (enter email address):</label>
-        <input id="id_email" name="email" type="text" value="" /></p>
-        <p><label>Recipient Name (optional):</label>
-        <input id="id_recipient" name="recipient" type="text" value="" /></p>
 </form>
 
 <div id="paypal-button"></div>
@@ -32,7 +28,6 @@
                     
                     transaction_type: 'Gift Certificate',
                     amount: $('input[name=amount]').val(),
-                    certificate_name: $('input[name=recipient').val(),
                     {% if user.is_authenticated %}
                     user_id: {{ user.id }},
                     {% endif %}
@@ -44,15 +39,12 @@
             onAuthorize: function(data) {
                 return paypal.request.post('{% url "executePaypalPayment" %}', {
                     csrfmiddlewaretoken: '{{ csrf_token }}',
-                    recipient_email: $('input[name=email]').val(),
                     paymentID: data.paymentID,
                     payerID: data.payerID,
+                    addSessionInfo: true,
+                    successUrl: '{% page_url instance.successPage.id %}',
                 }).then(function() {
-                    {% if instance.successPage %}
-                    window.location.replace('{% page_url instance.successPage.id %}');
-                    {% else %}
-                    window.location.replace('/');
-                    {% endif %}
+                    window.location.replace('{% url "customizeGiftCertificate" %}');
                 });
             },
 
