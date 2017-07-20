@@ -3,7 +3,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
-from django.template.loader import get_template
+from django.template.loader import get_template, render_to_string
 from django.template import Template, Context
 from django.template.exceptions import TemplateDoesNotExist
 
@@ -37,6 +37,13 @@ class EmailRecipientMixin(object):
 
         for none_arg in ['attachment_name','attachment']:
             email_kwargs[none_arg] = kwargs.pop(none_arg,None) or None
+
+        # Ignore any passed HTML content unless explicitly told to send as HTML
+        if kwargs.pop('send_html',False) and kwargs.get('html_message'):
+            email_kwargs['html_content'] = render_to_string(
+                'email/html_email_base.html',
+                context={'html_content': kwargs.get('html_message'),'subject': subject}
+            )
 
         email_kwargs['from_name'] = kwargs.pop('from_name',getConstant('email__defaultEmailName')) or \
             getConstant('email__defaultEmailName')

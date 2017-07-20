@@ -15,11 +15,12 @@ from dal import autocomplete
 from random import random
 import json
 import logging
+from djangocms_text_ckeditor.widgets import TextEditorWidget
 
 from .models import SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
-
+from .utils.emails import get_text_for_html
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -625,13 +626,19 @@ class RefundForm(forms.ModelForm):
 class EmailContactForm(forms.Form):
 
     EMAIL_SENDTOSET_CHOICES = (('series',_('All students in one or more series')),('month',_('All Students in a given month')))
+    RICH_TEXT_CHOICES = (('plain',_('Plain text email')),('HTML',_('HTML rich text email')))
 
     sendToSet = forms.ChoiceField(label=_('This email is for:'),widget=forms.RadioSelect,choices=EMAIL_SENDTOSET_CHOICES,required=False,initial='series')
 
     template = forms.ModelChoiceField(label=_('(Optional) Select a template'),required=False,queryset=EmailTemplate.objects.none())
 
+    richTextChoice = forms.ChoiceField(label=_('Send this email as'),widget=forms.RadioSelect,choices=RICH_TEXT_CHOICES,required=True,initial='plain')
+
     subject = forms.CharField(max_length=100)
-    message = forms.CharField(widget=forms.Textarea)
+
+    message = forms.CharField(widget=forms.Textarea,required=False)
+    html_message = forms.CharField(widget=TextEditorWidget,required=False)
+
     from_name = forms.CharField(max_length=50,initial=get_defaultEmailName)
     from_address = forms.EmailField(max_length=100,initial=get_defaultEmailFrom)
     cc_myself = forms.BooleanField(label=_('CC Myself:'),initial=True,required=False)
@@ -664,10 +671,22 @@ class EmailContactForm(forms.Form):
         if sendToSet == 'month':
             self.cleaned_data['series'] = None
 
+        # If this is an HTML email, then ignore the plain text content
+        # and replace it with plain text generated from the HTML.
+        # If this is a plain text email, then ignore the HTML content.
+        if self.cleaned_data['richTextChoice'] == 'HTML':
+            if not self.cleaned_data['html_message']:
+                raise ValidationError(_('Message is required.'))
+            self.cleaned_data['message'] = get_text_for_html(self.cleaned_data['html_message'])
+        if self.cleaned_data['richTextChoice'] == 'plain':
+            if not self.cleaned_data['message']:
+                raise ValidationError(_('Message is required.'))
+            self.cleaned_data['html_message'] = None
+
         return self.cleaned_data
 
     class Media:
-        js = ('js/emailcontact_sendToSet.js','js/emailcontact_ajax.js')
+        js = ('js/emailcontact_sendToSet.js','js/emailcontact_ajax.js','js/emailcontact_htmlmessage.js')
 
 
 class SeriesTeacherChoiceField(forms.ModelChoiceField):

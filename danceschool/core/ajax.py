@@ -128,4 +128,6 @@ def getEmailTemplate(request):
     return JsonResponse({
         'subject': this_template.subject,
         'content': this_template.content,
+        'html_content': this_template.html_content,
+        'richTextChoice': this_template.richTextChoice,
     })

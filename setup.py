@@ -21,6 +21,7 @@ setup(
     author='Lee Tucker',
     author_email='lee.c.tucker@gmail.com',
     install_requires=[
+        'beautifulsoup4>=4.6.0',
         'Django>=1.10,<1.11',
         'django-admin-sortable2>=0.6.10',
         'django-allauth>=0.31.0',

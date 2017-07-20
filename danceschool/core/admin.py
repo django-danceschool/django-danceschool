@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.forms import ModelForm, SplitDateTimeField, HiddenInput
+from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
@@ -400,6 +400,44 @@ class PricingTierAdmin(admin.ModelAdmin):
     inlines = []
 
 
+class EmailTemplateAdminForm(ModelForm):
+
+    class Meta:
+        model = EmailTemplate
+        exclude = []
+
+        widgets = {
+            'richTextChoice': RadioSelect,
+        }
+
+    class Media:
+        js = ('js/emailtemplate_contenttype.js',)
+
+
+@admin.register(EmailTemplate)
+class EmailTemplateAdmin(admin.ModelAdmin):
+    form = EmailTemplateAdminForm
+
+    list_display = ('name','richTextChoice','hideFromForm')
+    list_filter = ('richTextChoice','groupRequired','hideFromForm')
+    ordering = ('name',)
+
+    fieldsets = (
+        (None,{
+            'fields': ('name','richTextChoice','subject',),
+        }),
+        (_('Plain text content'),{
+            'fields': ('content',),
+        }),
+        (_('Rich text HTML content'),{
+            'fields': ('html_content',),
+        }),
+        (None,{
+            'fields': ('defaultFromName','defaultFromAddress','defaultCC','groupRequired','hideFromForm'),
+        }),
+    )
+
+
 ######################################
 # Staff and subclass admins
 
@@ -637,6 +675,5 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
 admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
-admin.site.register(EmailTemplate)
 admin.site.register(PublicEventCategory)
 admin.site.register(EventStaffCategory)

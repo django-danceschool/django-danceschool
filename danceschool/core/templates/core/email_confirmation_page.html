@@ -18,7 +18,11 @@
 	<div class="panel panel-default">
 	<div class="panel-heading"><h4 class="panel-title">Message</h4></div>
 	<div class="panel-body">
-		<pre class="unstyled">{{ message }}</pre>
+		{% if richTextChoice == "HTML" %}
+			{{ html_message|safe }}
+		{% else %}
+			<pre class="unstyled">{{ message }}</pre>
+		{% endif %}
 	</div>
 	</div>
 

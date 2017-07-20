@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.mail import get_connection, EmailMessage
+from django.core.mail import get_connection, EmailMultiAlternatives
 
 from huey import crontab
 from huey.contrib.djhuey import task, db_periodic_task
@@ -28,18 +28,19 @@ def updateSeriesRegistrationStatus():
 
 
 @task(retries=3)
-def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attachment_name='attachment',attachment=None):
+def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attachment_name='attachment',attachment=None,html_content=None):
     # Ensure that email address information is in list form.
     recipients = [x for x in to + cc if x]
     logger.info('Sending email from %s to %s' % (from_address,recipients))
 
     if getattr(settings,'DEBUG',None):
         logger.info('Email content:\n\n%s' % content)
+        logger.info('Email HTML content:\n\n%s' % html_content)
 
     with get_connection() as connection:
         connection.open()
 
-        message = EmailMessage(
+        message = EmailMultiAlternatives(
             subject=subject,
             body=content,
             from_email=from_name + ' <' + from_address + '>',
@@ -49,8 +50,11 @@ def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attac
             connection=connection,
         )
 
+        if html_content:
+            message.attach_alternative(html_content, "text/html")
+
         if attachment:
             message.attach(attachment_name, attachment)
 
-    message.send(fail_silently=False)
-    connection.close()
+        message.send(fail_silently=False)
+        connection.close()

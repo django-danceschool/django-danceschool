@@ -106,6 +106,8 @@ class GiftCertificateCustomizeView(FormView):
         email_class.email_recipient(
             subject=template.subject,
             content=template.content,
+            send_html=template.send_html,
+            html_content=template.html_content,
             from_address=template.defaultFromAddress,
             from_name=template.defaultFromName,
             cc=template.defaultCC,

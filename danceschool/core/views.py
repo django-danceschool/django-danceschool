@@ -512,6 +512,8 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
     def send_email(self):
         subject = self.form_data.pop('subject')
         message = self.form_data.pop('message')
+        html_message = self.form_data.pop('html_message',None)
+        richTextChoice = self.form_data.pop('richTextChoice')
         cc_myself = self.form_data.pop('cc_myself')
         testemail = self.form_data.pop('testemail')
         month = self.form_data.pop('month')
@@ -521,6 +523,12 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             'from_name': self.form_data['from_name'],
             'from_address': self.form_data['from_address'],
         }
+
+        if richTextChoice == 'HTML':
+            email_kwargs.update({
+                'send_html': True,
+                'html_message': html_message,
+            })
 
         events_to_send = []
         if month is not None and month != '':
