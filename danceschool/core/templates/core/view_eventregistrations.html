@@ -93,7 +93,20 @@
 				<strong>Outstanding Balance:</strong> {{ reg.registration.invoice.outstandingBalance|floatformat:2 }}<br />
 				{% endif %}
 			{% else %}
-				{{ reg.registration.totalPrice|floatformat:2 }}
+				{% if reg.registration.discounted %}
+					<strong>Gross Price:</strong> {{ reg.registration.totalPrice|floatformat:2 }} <br />
+					<strong>Net Price:</strong>
+					<a href="" data-toggle="popover" title="Gross vs. Net Price" data-container="body" data-placement="top" data-content="
+					{% if reg.registration.discountCode %}Discount Code: {{ reg.registration.discountCode.name }}, {% endif %}
+					{% for v in reg.registration.voucheruse_set.all %}
+						{% if v.amount > 0 %}
+					 		Voucher: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
+						{% endif %}
+					{% endfor %}">
+					{{ reg.registration.priceWithDiscount|floatformat:2 }}</a>
+				{% else %}
+					{{ reg.registration.totalPrice|floatformat:2 }}
+				{% endif %}
 			{% endif %}
 		</td>
 		

@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load danceschool_tags sekizai_tags %}
+{% load danceschool_tags sekizai_tags cms_tags %}
 
 {% block content %}
 
@@ -26,6 +26,10 @@
 		{% endif %}
 	{% endif %}
 </div>
+
+{% if staffmember or perms.cms.change_static_placeholder %}
+	{% static_placeholder 'staffmember_profile_placeholder' %}
+{% endif %}
 
 {% if staffmember %}
 
@@ -57,6 +61,10 @@
 	</tbody>
 	</table>
 
+{% endif %}
+
+{% if customer or perms.cms.change_static_placeholder %}
+	{% static_placeholder 'customer_profile_placeholder' %}
 {% endif %}
 
 {% if customer %}

@@ -11,7 +11,7 @@ class PaypalLinksToolbar(CMSToolbar):
     ''' Add Paypal items to the financial menu '''
 
     def populate(self):
-        if not (self.request.user.has_perm('paypal.change_paymentrecord')):
+        if not (self.request.user.has_perm('paypal.change_paypalpaymentrecord')):
             return
 
         financial_menu = self.toolbar.get_or_create_menu(
@@ -31,5 +31,5 @@ class PaypalLinksToolbar(CMSToolbar):
 
         related_menu = financial_menu.get_or_create_menu('financial-related',_('Related Items'), position=position)
 
-        if self.request.user.has_perm('paypal.change_paymentrecord'):
-            related_menu.add_link_item(_('Paypal Payment Records'), url=reverse('admin:paypal_paymentrecord_changelist'))
+        if self.request.user.has_perm('paypal.change_paypalpaymentrecord'):
+            related_menu.add_link_item(_('Paypal Payment Records'), url=reverse('admin:paypal_paypalpaymentrecord_changelist'))

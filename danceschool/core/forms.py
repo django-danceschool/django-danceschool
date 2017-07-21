@@ -440,7 +440,8 @@ class DoorAmountForm(forms.Form):
     amountPaid = forms.FloatField(label=_('Amount Paid'),required=False)
 
     invoiceSent = forms.BooleanField(label=_('Send Invoice'),required=False)
-    payerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
+    cashPayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
+    invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
     discountAmount = forms.FloatField(required=False)
 
     def __init__(self,*args,**kwargs):
@@ -470,6 +471,7 @@ class DoorAmountForm(forms.Form):
                 'paid',
                 'receivedBy',
                 'amountPaid',
+                'cashPayerEmail',
                 Submit('submit','Submit'),
                 HTML("""
                         </div>
@@ -491,7 +493,7 @@ class DoorAmountForm(forms.Form):
                         <div class="panel-body">
                     """),
                 'invoiceSent',
-                'payerEmail',
+                'invoicePayerEmail',
                 Hidden('discountAmount', discountAmount),
                 Submit('submit','Submit'),
                 HTML("""
@@ -511,7 +513,8 @@ class DoorAmountForm(forms.Form):
         )
 
         kwargs.update(initial={
-            'payerEmail': payerEmail,
+            'cashPayerEmail': payerEmail,
+            'invoicePayerEmail': payerEmail,
             'receivedBy': subUser,
         })
 
@@ -560,7 +563,7 @@ class DoorAmountForm(forms.Form):
         if invoiceSent:
             if not form_data.get('submissionUser'):
                 raise ValidationError(_('Submission user is required.'))
-            if not form_data.get('payerEmail'):
+            if not form_data.get('invoicePayerEmail'):
                 raise ValidationError(_('Must specify the email address of the invoice recipient.'))
 
         return form_data

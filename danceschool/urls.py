@@ -41,8 +41,8 @@ urlpatterns = [
 ]
 
 # If additional danceschool apps are installed, automatically add those URLs as well.
-if apps.is_installed('danceschool.paypal'):
-    urlpatterns.append(url(r'^paypal/', include('danceschool.paypal.urls')),)
+if apps.is_installed('danceschool.payments.paypal'):
+    urlpatterns.append(url(r'^paypal/', include('danceschool.payments.paypal.urls')),)
 
 if apps.is_installed('danceschool.financial'):
     urlpatterns.append(url(r'^financial/', include('danceschool.financial.urls')),)

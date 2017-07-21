@@ -3,10 +3,10 @@ from django.utils.html import format_html
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
 
-from .models import PaymentRecord
+from .models import PaypalPaymentRecord
 
 
-class PaymentRecordAdmin(admin.ModelAdmin):
+class PaypalPaymentRecordAdmin(admin.ModelAdmin):
 
     def get_admin_change_link(self,app_label, model_name, obj_id, name):
         url = reverse('admin:%s_%s_change' % (app_label, model_name),
@@ -39,4 +39,4 @@ class PaymentRecordAdmin(admin.ModelAdmin):
     )
 
 
-admin.site.register(PaymentRecord, PaymentRecordAdmin)
+admin.site.register(PaypalPaymentRecord, PaypalPaymentRecordAdmin)

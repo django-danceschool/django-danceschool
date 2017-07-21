@@ -4,12 +4,11 @@ from django.conf import settings
 
 
 class PaypalAppConfig(AppConfig):
-    name = 'danceschool.paypal'
+    name = 'danceschool.payments.paypal'
     verbose_name = 'Paypal Functions'
 
     def ready(self):
         # This ensures that the signal receivers are loaded
-        from . import handlers
         import paypalrestsdk
 
         # Paypal SDK is globally con

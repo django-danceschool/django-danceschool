@@ -111,8 +111,8 @@
 		</thead>
 		{% for payment in payments %}
 			<tr>
-				<td>{{ payment.method }}</td>
-				<td>{{ payment.id}}</td>
+				<td>{{ payment.methodName }}</td>
+				<td>{{ payment.recordId }}</td>
 				<td>{{ currencySymbol }}{{ payment.netAmountPaid|floatformat:"2" }}</td>
 			</tr>
 		{% endfor %}

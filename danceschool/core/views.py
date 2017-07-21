@@ -25,7 +25,7 @@ from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, 
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, ClassChoiceForm
 from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
-from .signals import get_customer_data, refund_invoice_payment
+from .signals import get_customer_data
 
 
 # Define logger for this file
@@ -305,10 +305,16 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
     def get(self, request, *args, **kwargs):
         self.form_data = request.session.get(REFUND_VALIDATION_STR,{}).get('form_data',{})
-        self.payments = request.session.get(REFUND_VALIDATION_STR,{}).get('payments',[])
-
         if not self.form_data:
             return HttpResponseRedirect(reverse('refundProcessing', args=(self.form_data.get('id'),)))
+
+        try:
+            self.invoice = Invoice.objects.get(id=self.form_data.get('id'))
+        except ObjectDoesNotExist:
+            return HttpResponseRedirect(reverse('refundProcessing', args=(self.form_data.get('id'),)))
+
+        self.payments = self.invoice.get_payments()
+
         if request.GET.get('confirmed','').lower() == 'true' and self.payments:
             return self.process_refund()
         return super(RefundConfirmationView,self).get(request, *args, **kwargs)
@@ -331,8 +337,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
     def process_refund(self):
 
-        this_invoice = Invoice.objects.get(id=self.form_data.get('id'))
-        refund_data = this_invoice.data.get('refunds',[])
+        refund_data = self.invoice.data.get('refunds',[])
 
         total_refund_amount = self.form_data['total_refund_amount']
         initial_refund_amount = self.form_data['initial_refund_amount']
@@ -346,62 +351,46 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         for this_payment in self.payments:
             if remains_to_refund <= 0:
                 break
-            if not this_payment.get('refundable',False):
+            if not this_payment.refundable:
                 continue
 
-            this_payment_id = this_payment.get('id')
-            this_payment_method = this_payment.get('method')
-            this_payment_amount = this_payment.get('netAmountPaid',0)
+            this_payment_amount = this_payment.netAmountPaid or 0
             this_refund_amount = min(this_payment_amount, remains_to_refund)
 
             # This dictionary will be updated and then added to refund_data for
             # this invoice whether the refund is successful or not
             this_refund_response_data = {
                 'datetime': datetime.now(),
-                'id': this_payment_id,
+                'id': this_payment.recordId,
+                'methodName': this_payment.methodName,
                 'amount': this_refund_amount,
             }
 
-            response = refund_invoice_payment.send(
-                sender=RefundConfirmationView,
-                method=this_payment_method,
-                id=this_payment_id,
-                invoice=this_invoice,
-                refundAmount=this_refund_amount,
-            )
-            if not response:
+            this_refund_response = this_payment.refund(this_refund_amount)
+
+            if not this_refund_response:
                 # If no response is received, then we must stop because we cannot be sure that a refund has
                 # not already been processed.
                 this_refund_response_data.update({
                     'status': 'error',
                     'errorMessage': str(_('Error: No response from payment processing app. Check payment processor records for refund status.')),
                 })
-            elif response and len(response) > 1:
-                # There should only be a single refund processed each time that the
-                # signal is fired, so this means that there has been an error.  Save
-                # a record of the error for diagnostic purposes and then return with an
-                # error message.
-                this_refund_response_data.update({
-                    'status': 'error',
-                    'errorMessage': str(_('Error: Multiple responses from payment processing apps. Check payment processor records for refund status.')),
-                    'response': [dict(x[1][0]) for x in response],
-                })
-            elif response[0][1][0].get('status').lower() == 'success':
+            elif this_refund_response[0].get('status').lower() == 'success':
                 # A successful refund returns {'status': 'success'}
-                amount_refunded = response[0][1][0].get('refundAmount',0)
-                fees = response[0][1][0].get('fees',0)
+                amount_refunded = this_refund_response[0].get('refundAmount',0)
+                fees = this_refund_response[0].get('fees',0)
 
                 this_refund_response_data.update({
                     'status': 'success',
                     'refundAmount': amount_refunded,
                     'fees': fees,
-                    'response': [dict(response[0][1][0]),],
+                    'response': [dict(this_refund_response[0]),],
                 })
 
                 # Incrementally update the invoice's refunded amount
-                this_invoice.adjustments -= amount_refunded
-                this_invoice.amountPaid -= amount_refunded
-                this_invoice.fees += fees
+                self.invoice.adjustments -= amount_refunded
+                self.invoice.amountPaid -= amount_refunded
+                self.invoice.fees += fees
                 remains_to_refund -= amount_refunded
                 total_fees += fees
 
@@ -409,9 +398,10 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
                 this_refund_response_data.update({
                     'status': 'error',
                     'errorMessage': _('An unkown error has occurred. Check payment processor records for refund status.'),
-                    'response': [dict(response[0][1][0]),],
-                    'id': this_payment_id,
-                    'invoice': this_invoice.id,
+                    'response': [dict(this_refund_response[0]),],
+                    'id': this_payment.recordId,
+                    'methodName': this_payment.methodName,
+                    'invoice': self.invoice.id,
                     'refundAmount': this_refund_amount,
                 })
             refund_data.append(this_refund_response_data)
@@ -422,8 +412,8 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
                 messages.error(self.request, this_refund_response_data.get('errorMessage'))
 
-                this_invoice.data['refunds'] = refund_data
-                this_invoice.save()
+                self.invoice.data['refunds'] = refund_data
+                self.invoice.save()
                 self.request.session.pop(REFUND_VALIDATION_STR,None)
                 return HttpResponseRedirect(self.get_success_url())
 
@@ -435,14 +425,14 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         else:
             messages.error(self.request, _('Error, not all of the requested refund was applied. Check invoice and payment processor records for details.'))
 
-        this_invoice.data['refunds'] = refund_data
-        this_invoice.save()
+        self.invoice.data['refunds'] = refund_data
+        self.invoice.save()
 
         # Identify the items to which refunds should be allocated and update the adjustments line
         # for those items.  Fees are also allocated across the items for which the refund was requested.
         item_refund_data = [(k.split('_')[2],v) for k,v in self.form_data.items() if k.startswith('item_refundamount_')]
         for item_request in item_refund_data:
-            this_item = this_invoice.invoiceitem_set.get(id=item_request[0])
+            this_item = self.invoice.invoiceitem_set.get(id=item_request[0])
             this_item.adjustments = -1 * float(item_request[1])
             this_item.fees += total_fees * (float(item_request[1]) / total_refund_amount)
             this_item.save()
@@ -482,7 +472,7 @@ class RefundProcessingView(FinancialContextMixin, PermissionRequiredMixin, Staff
 
         self.request.session[REFUND_VALIDATION_STR] = {
             'form_data': clean_data,
-            'payments': self.get_payments(),
+            'invoice': str(self.object.id),
         }
         return HttpResponseRedirect(reverse('refundConfirmation'))
 

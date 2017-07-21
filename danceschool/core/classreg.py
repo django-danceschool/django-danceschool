@@ -9,7 +9,7 @@ from braces.views import UserFormKwargsMixin
 import logging
 from allauth.account.forms import LoginForm, SignupForm
 
-from .models import Event, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Invoice
+from .models import Event, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Invoice, CashPaymentRecord
 from .forms import RegistrationContactForm, DoorAmountForm
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import pre_temporary_registration, post_temporary_registration, request_discounts, apply_discount, apply_addons, apply_price_adjustments
@@ -239,7 +239,9 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         addons = regSession.get('addons',[])
 
         if reg.priceWithDiscount == 0:
-            reg.finalize()
+            # Create a new Invoice if one does not already exist.
+            new_invoice = Invoice.get_or_create_from_registration(reg,status=Invoice.PaymentStatus.paid)
+            new_invoice.processPayment(0,0,forceFinalize=True)
             isFree = True
         else:
             isFree = False
@@ -281,15 +283,24 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         tr = TemporaryRegistration.objects.get(id=reg_id)
 
         # Create a new Invoice if one does not already exist.
-        if not getattr(tr, 'invoice',None):
-            new_invoice = Invoice.create_from_registration(tr)
+        new_invoice = Invoice.get_or_create_from_registration(tr)
 
         if form.cleaned_data.get('paid'):
             logger.debug('Form is marked paid. Preparing to process payment.')
 
             amount = form.cleaned_data["amountPaid"]
-            submissionUser = form.cleaned_data['submissionUser']
-            receivedBy = form.cleaned_data['receivedBy']
+            submissionUser = form.cleaned_data.get('submissionUser')
+            receivedBy = form.cleaned_data.get('receivedBy')
+            payerEmail = form.cleaned_data.get('cashPayerEmail')
+
+            this_cash_payment = CashPaymentRecord.objects.create(
+                invoice=new_invoice,
+                submissionUser=submissionUser,
+                amount=amount,
+                payerEmail=payerEmail,
+                collectedByUser=receivedBy,
+                status=CashPaymentRecord.PaymentStatus.needsCollection,
+            )
 
             # Process payment, but mark cash payment as needing collection from
             # the user who processed the registration and collected it.
@@ -297,14 +308,14 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
                 amount,0,
                 paidOnline=False,
                 methodName='Cash',
-                methodTxn='CASHPAYMENT_%s_%s' % (tr.id, tr.dateTime.strftime('%Y%m%d%H%M%S')),
+                methodTxn='CASHPAYMENT_%s' % (this_cash_payment.recordId),
                 submissionUser=submissionUser,
                 collectedByUser=receivedBy,
                 status=Invoice.PaymentStatus.needsCollection,
                 forceFinalize=True,
             )
         elif form.cleaned_data.get('invoiceSent'):
-            payerEmail = form.cleaned_data['payerEmail']
+            payerEmail = form.cleaned_data['invoicePayerEmail']
             new_invoice.sendNotification(payerEmail=payerEmail,newRegistration=True)
 
         return HttpResponseRedirect(reverse('registration'))

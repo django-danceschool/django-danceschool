@@ -8,7 +8,7 @@ from cms.models.fields import PageField
 import logging
 from paypalrestsdk import Payment, Sale
 
-from danceschool.core.models import Invoice
+from danceschool.core.models import PaymentRecord
 from danceschool.core.constants import getConstant
 
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 @python_2_unicode_compatible
-class PaymentRecord(models.Model):
+class PaypalPaymentRecord(PaymentRecord):
     '''
     Keeps a local record of Paypal transactions so that they can be looked up
     using the REST API.
@@ -25,11 +25,22 @@ class PaymentRecord(models.Model):
 
     paymentId = models.CharField(_('Paypal Payment ID'),max_length=50,unique=True)
     payerId = models.CharField(_('Paypal Payer ID'),max_length=50,null=True,blank=True)
-    invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), null=True,blank=True, related_name='paypalpayments')
     status = models.CharField(_('Current status'),max_length=30,null=True,blank=True)
 
-    creationDate = models.DateTimeField(_('Created'),auto_now_add=True)
-    modifiedDate = models.DateTimeField(_('Last updated'),auto_now=True)
+    @property
+    def methodName(self):
+        return 'Paypal Express Checkout'
+
+    @property
+    def refundable(self):
+        return True
+
+    @property
+    def recordId(self):
+        '''
+        Payment methods should override this if they keep their own unique identifiers.
+        '''
+        return self.paymentId
 
     def getPayment(self):
         return Payment.find(self.paymentId)
@@ -52,7 +63,8 @@ class PaymentRecord(models.Model):
                     ids.append(r.refund.id)
         return ids
 
-    def getNetAmountPaid(self):
+    @property
+    def netAmountPaid(self):
         payment = self.getPayment()
         return sum([float(t.amount.total) for t in payment.transactions])
 

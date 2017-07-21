@@ -13,7 +13,7 @@ from paypalrestsdk.exceptions import ResourceNotFound
 from danceschool.core.models import TemporaryRegistration, Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
 
-from .models import PaymentRecord
+from .models import PaypalPaymentRecord
 
 if six.PY3:
     # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
@@ -68,9 +68,7 @@ def createPaypalPayment(request):
         # This is typical of payment at the time of registration
         elif tr_id:
             tr = TemporaryRegistration.objects.get(id=int(tr_id))
-            this_invoice = getattr(tr,'invoice',None)
-            if not this_invoice:
-                this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
+            this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
             this_description = _('Registration Payment: #%s' % tr_id)
             if not amount:
                 amount = this_invoice.outstandingBalance
@@ -188,7 +186,7 @@ def createPaypalPayment(request):
 
             # We just keep a record of the ID and the status, because the
             # API can be used to look up everything else.
-            PaymentRecord.objects.create(
+            PaypalPaymentRecord.objects.create(
                 paymentId=payment.id,
                 invoice=this_invoice,
                 status=payment.state,
@@ -212,7 +210,7 @@ def executePaypalPayment(request):
     successUrl = request.POST.get('successUrl')
 
     try:
-        payment_record = PaymentRecord.objects.get(paymentId=paymentId)
+        payment_record = PaypalPaymentRecord.objects.get(paymentId=paymentId)
         payment = payment_record.getPayment()
         this_invoice = payment_record.invoice
     except (ResourceNotFound, ObjectDoesNotExist):

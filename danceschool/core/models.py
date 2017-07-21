@@ -30,7 +30,7 @@ import random
 from cms.models.pluginmodel import CMSPlugin
 
 from .constants import getConstant
-from .signals import post_registration, get_invoice_payments
+from .signals import post_registration
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
 
@@ -1957,12 +1957,14 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         submissionUser = kwargs.pop('submissionUser', None)
         collectedByUser = kwargs.pop('collectedByUser', None)
+        status = kwargs.pop('status',Invoice.PaymentStatus.unpaid)
 
         new_invoice = cls(
             grossTotal=reg.totalPrice,
             total=reg.priceWithDiscount,
             submissionUser=submissionUser,
             collectedByUser=collectedByUser,
+            status=status,
             data=kwargs,
         )
 
@@ -2100,26 +2102,16 @@ class Invoice(EmailRecipientMixin, models.Model):
         Since there may be many payment processors, this method simplifies the process of getting
         the list of payments
         '''
-        payment_responses = get_invoice_payments.send(
-            sender=Invoice,
-            invoice=self,
-        )
-        responses = []
-        for x in payment_responses:
-            if isinstance(x[1],dict):
-                responses.append(x[1])
-            elif isinstance(x[1],list):
-                responses += x[1]
-        return responses
+        return self.paymentrecord_set.order_by('creationDate')
 
     def get_payment_method(self):
         '''
         Since there may be many payment processors, this just gets the reported payment
         method name for the first payment method used.
         '''
-        payments = self.get_payments() or []
-        if len(payments) > 0:
-            return payments[0].get('method','')
+        payments = self.get_payments()
+        if payments:
+            return payments.first().methodName
 
     def calculateTaxes(self):
         '''
@@ -2242,7 +2234,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         logger.debug('Invoice notification sent.')
 
     class Meta:
-        verbose_name= _('Invoice')
+        verbose_name = _('Invoice')
         verbose_name_plural = _('Invoices')
         permissions = (
             ('view_all_invoices',_('Can view invoices without passing the validation string.')),
@@ -2301,6 +2293,96 @@ class InvoiceItem(models.Model):
     class Meta:
         verbose_name = _('Invoice item')
         verbose_name_plural = _('Invoice items')
+
+
+class PaymentRecord(PolymorphicModel):
+    '''
+    All payments to invoices should be recorded using PaymentRecords.  Individual payment
+    processors should be subclassed from this base class. Since this is a polymorphic model,
+    invoice operations can easily get a list of all payments by querying this model, but can
+    still perform operations on individual payment types depending on their features.  The
+    only payment method that is enabled by default is the 'Cash' payment method.
+    '''
+
+    invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), null=True,blank=True)
+
+    creationDate = models.DateTimeField(_('Created'),auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last updated'),auto_now=True)
+
+    submissionUser = models.ForeignKey(User,verbose_name=_('Submission user'), null=True,blank=True,related_name='payments_submitted',)
+
+    @property
+    def refundable(self):
+        '''
+        Payment methods that can be automatically refunded should override this to return True.
+        '''
+        return False
+
+    @property
+    def methodName(self):
+        '''
+        Payment methods should override this with a descriptive name.
+        '''
+        return None
+
+    @property
+    def recordId(self):
+        '''
+        Payment methods should override this if they keep their own unique identifiers.
+        '''
+        return self.id
+
+    @property
+    def netAmountPaid(self):
+        '''
+        This method should also be overridden by individual payment methods.
+        '''
+        return None
+
+    def getPayerEmail(self):
+        '''
+        This method should be overridden by individual payment methods.
+        '''
+        return None
+
+    def refund(self,amount):
+        '''
+        This method should be overridden by individual payment methods to process refunds.
+        '''
+        return False
+
+    class Meta:
+        verbose_name = _('Payment record')
+        verbose_name_plural = _('Payment records')
+
+
+class CashPaymentRecord(PaymentRecord):
+
+    class PaymentStatus(DjangoChoices):
+        needsCollection = ChoiceItem('N',_('Cash payment recorded, needs collection'))
+        collected = ChoiceItem('C',_('Cash payment collected'))
+        fullRefund = ChoiceItem('R',_('Refunded in full'))
+
+    amount = models.FloatField(_('Amount paid'),validators=[MinValueValidator(0),])
+    payerEmail = models.EmailField(_('Payer email'),null=True,blank=True)
+
+    status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.needsCollection)
+    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedcashpayments')
+
+    @property
+    def methodName(self):
+        return 'Cash'
+
+    @property
+    def netAmountPaid(self):
+        return self.amount
+
+    def getPayerEmail(self):
+        return self.payerEmail
+
+    class Meta:
+        verbose_name = _('Cash payment record')
+        verbose_name_plural = _('Cash payment records')
 
 
 class StaffMemberPluginModel(CMSPlugin):
