@@ -41,9 +41,6 @@ urlpatterns = [
 ]
 
 # If additional danceschool apps are installed, automatically add those URLs as well.
-if apps.is_installed('danceschool.payments.paypal'):
-    urlpatterns.append(url(r'^paypal/', include('danceschool.payments.paypal.urls')),)
-
 if apps.is_installed('danceschool.financial'):
     urlpatterns.append(url(r'^financial/', include('danceschool.financial.urls')),)
 
@@ -52,6 +49,12 @@ if apps.is_installed('danceschool.private_events'):
 
 if apps.is_installed('danceschool.vouchers'):
     urlpatterns.append(url(r'^vouchers/', include('danceschool.vouchers.urls')),)
+
+if apps.is_installed('danceschool.payments.paypal'):
+    urlpatterns.append(url(r'^paypal/', include('danceschool.payments.paypal.urls')),)
+
+if apps.is_installed('danceschool.payments.stripe'):
+    urlpatterns.append(url(r'^stripe/', include('danceschool.payments.stripe.urls')),)
 
 # CMS URLs always go last because they will match any pattern that has not already been matched.
 urlpatterns.append(url(r'^', include('cms.urls')),)

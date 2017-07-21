@@ -601,10 +601,10 @@ class RefundForm(forms.ModelForm):
             required=True,queryset=Invoice.objects.filter(id=this_invoice.id),widget=forms.HiddenInput(),initial=this_invoice.id)
 
         self.fields['initial_refund_amount'] = forms.FloatField(
-            required=True,initial=(-1) * this_invoice.adjustments,min_value=0,max_value=this_invoice.amountPaid,widget=forms.HiddenInput())
+            required=True,initial=(-1) * this_invoice.adjustments,min_value=0,max_value=this_invoice.amountPaid + this_invoice.refunds,widget=forms.HiddenInput())
 
         self.fields['total_refund_amount'] = forms.FloatField(
-            required=True,initial=0,min_value=0,max_value=this_invoice.amountPaid,widget=forms.HiddenInput())
+            required=True,initial=0,min_value=0,max_value=this_invoice.amountPaid + this_invoice.refunds,widget=forms.HiddenInput())
 
     def clean_total_refund_amount(self):
         '''
@@ -619,7 +619,7 @@ class RefundForm(forms.ModelForm):
 
         if summed_refunds != total:
             raise ValidationError(_('Passed value does not match sum of allocated refunds.'))
-        elif summed_refunds > self.cleaned_data['id'].amountPaid:
+        elif summed_refunds > self.cleaned_data['id'].amountPaid + self.cleaned_data['id'].refunds:
             raise ValidationError(_('Total refunds allocated exceed revenue received.'))
         elif total < initial:
             raise ValidationError(_('Cannot reduce the total amount of the refund.'))

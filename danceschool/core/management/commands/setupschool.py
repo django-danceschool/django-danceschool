@@ -504,8 +504,7 @@ Remember, all page settings and content can be changed later via the admin inter
             )
             self.stdout.write('\'My Account\' link added.\n')
 
-
-        if apps.is_installed('danceschool.paypal'):
+        if apps.is_installed('danceschool.payments.paypal'):
             add_paypal_paynow = self.boolean_input('Add Paypal Pay Now link to the registration summary view to allow students to pay [Y/n]', True)
             if add_paypal_paynow:
                 paynow_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
@@ -520,6 +519,22 @@ Remember, all page settings and content can be changed later via the admin inter
                     successPage=home_page,
                 )
             self.stdout.write('Paypal Pay Now link added.  You will still need to add Paypal credentials to settings before use.')
+
+        if apps.is_installed('danceschool.payments.stripe'):
+            add_stripe_checkout = self.boolean_input('Add Stripe Checkout link to the registration summary view to allow students to pay [Y/n]', True)
+            if add_stripe_checkout:
+                stripe_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
+                stripe_p_draft = stripe_sp[0].draft
+                stripe_p_public = stripe_sp[0].public
+                add_plugin(
+                    stripe_p_draft, 'StripePaymentFormPlugin', initial_language,
+                    successPage=home_page,
+                )
+                add_plugin(
+                    stripe_p_public, 'StripePaymentFormPlugin', initial_language,
+                    successPage=home_page,
+                )
+            self.stdout.write('Stripe checkout link added.  You will still need to add Stripe credentials to settings before use.')
 
         self.stdout.write(
             """
@@ -579,7 +594,7 @@ Note: This process may take a minute or two to complete.
                 'danceschool.discounts',
                 'danceschool.faq',
                 'danceschool.news',
-                'danceschool.paypal',
+                'danceschool.payments.paypal',
                 'danceschool.prerequisites',
                 'danceschool.private_events',
                 'danceschool.stats',

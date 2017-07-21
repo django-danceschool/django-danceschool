@@ -426,6 +426,8 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
             messages.error(self.request, _('Error, not all of the requested refund was applied. Check invoice and payment processor records for details.'))
 
         self.invoice.data['refunds'] = refund_data
+        if self.invoice.total + self.invoice.adjustments == 0:
+            self.invoice.status = Invoice.PaymentStatus.fullRefund
         self.invoice.save()
 
         # Identify the items to which refunds should be allocated and update the adjustments line

@@ -54,6 +54,7 @@ setup(
         'redis>=2.10.5',
         'requests>=2.6.0',
         'six>=1.10.0',
+        'stripe>=1.62.0',
         'unicodecsv>=0.14.1',
     ],
     classifiers=[

@@ -3,10 +3,10 @@ from django.utils.html import format_html
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
 
-from .models import PaypalPaymentRecord
+from .models import StripeCharge
 
 
-class PaypalPaymentRecordAdmin(admin.ModelAdmin):
+class StripeChargeAdmin(admin.ModelAdmin):
 
     def get_admin_change_link(self,app_label, model_name, obj_id, name):
         url = reverse('admin:%s_%s_change' % (app_label, model_name),
@@ -22,16 +22,16 @@ class PaypalPaymentRecordAdmin(admin.ModelAdmin):
     invoiceLink.allow_tags = True
     invoiceLink.short_description = _('Registration invoice')
 
-    list_display = ['paymentId','payerId','status','invoiceLink']
+    list_display = ['chargeId','status','invoiceLink']
     list_filter = ['status','creationDate','modifiedDate']
-    search_fields = ['paymentId','payerId','invoice__id']
+    search_fields = ['chargeId','invoice__id']
 
     ordering = ['-modifiedDate',]
-    readonly_fields = ['paymentId','payerId','status','creationDate','modifiedDate','invoiceLink']
+    readonly_fields = ['chargeId','status','creationDate','modifiedDate','invoiceLink']
 
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('paymentId','payerId','status','invoiceLink'),
+            'fields': ('chargeId','status','invoiceLink'),
         }),
         (_('Dates'), {
             'fields': ('creationDate','modifiedDate'),
@@ -39,4 +39,4 @@ class PaypalPaymentRecordAdmin(admin.ModelAdmin):
     )
 
 
-admin.site.register(PaypalPaymentRecord, PaypalPaymentRecordAdmin)
+admin.site.register(StripeCharge, StripeChargeAdmin)
