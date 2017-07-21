@@ -25,6 +25,7 @@
 		<td>Name</td>
 		<td>This Series Price</td>
 		<td>Total Payment</td>
+		{% if series.availableRoles %}<td>Role</td>{% endif %}
 		{% if series.allowDropins %}<td>Drop-In</td>{% endif %}
 		<td>Student</td>
 		<td>Customer Email</td>
@@ -110,6 +111,7 @@
 			{% endif %}
 		</td>
 		
+		{% if series.availableRoles %}<td>{{ reg.role }}</td>{% endif %}
 		{% if series.allowDropins %}<td>{{ reg.dropIn }}</td>{% endif %}
 		<td>{{ reg.registration.student }}</td>
 		<td>{{ reg.registration.customer.email }}</td>
