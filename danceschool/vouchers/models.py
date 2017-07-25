@@ -29,13 +29,13 @@ class Voucher(models.Model):
     voucherId = models.CharField(_('Voucher Code'),max_length=100,unique=True)
 
     # i.e. Social Living April 2013
-    name = models.CharField(_('Name'),max_length=80)
+    name = models.CharField(_('Name'),max_length=80,help_text=_('Give a descriptive name that will be used when a customer applies the voucher.'))
 
     # i.e. LivingSocial.  This is for categorical convenience only.
     category = models.ForeignKey(VoucherCategory,verbose_name=_('Category'),null=True)
 
     # Optional description for when vouchers are given in special cases.
-    type = models.CharField(_('Description'),null=True,blank=True,max_length=200)
+    description = models.CharField(_('Description (optional)'),null=True,blank=True,max_length=200,help_text=_('For internal use only'))
 
     # i.e. $45
     originalAmount = models.FloatField(_('Original Amount'),help_text=_('Enter the original amount of the voucher here.'),validators=[MinValueValidator(0)])
@@ -43,10 +43,10 @@ class Voucher(models.Model):
 
     # i.e. $2 - For tracking new students.  If null,
     # then there is no limit imposed.
-    maxAmountPerUse = models.FloatField(_('Max. Amount Per Use'),null=True,blank=True,validators=[MinValueValidator(0)])
+    maxAmountPerUse = models.FloatField(_('Max. Amount Per Use'),null=True,blank=True,validators=[MinValueValidator(0)],help_text=_('If specified, this will limit the size of a repeated-use voucher.  If unspecified, there is no limit.  Be sure to specify this for publicly advertised voucher codes.'))
 
     # i.e. For Groupon and LivingSocial, these are single use
-    singleUse = models.BooleanField(_('Single Use'),default=True)
+    singleUse = models.BooleanField(_('Single Use'),default=False)
 
     # If a customer has been with us before, we don't want them to be able to use
     # LivingSocial or Groupon
@@ -63,7 +63,7 @@ class Voucher(models.Model):
     expirationDate = models.DateTimeField(_('Expiration Date'), null=True,blank=True)
 
     # Vouchers can be disabled manually with this field.
-    disabled = models.BooleanField(_('Voucher Disabled'),default=False)
+    disabled = models.BooleanField(_('Voucher Disabled'),default=False,help_text=_('Check this box to disable the voucher entirely.'))
 
     @classmethod
     def create_new_code(cls,**kwargs):
@@ -178,6 +178,7 @@ class VoucherReferralDiscount(models.Model):
     class Meta:
         verbose_name = _('Voucher referral discount')
         verbose_name_plural = _('Voucher referral discounts')
+
 
 class VoucherUse(models.Model):
     voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))

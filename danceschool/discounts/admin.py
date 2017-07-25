@@ -1,3 +1,4 @@
+from django.forms import ModelForm
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
@@ -8,10 +9,22 @@ from danceschool.core.models import Registration, TemporaryRegistration, Pricing
 class DiscountComboComponentInline(admin.StackedInline):
     model = DiscountComboComponent
     extra = 1
+    fields = (('pointGroup','quantity',),'allWithinPointGroup',('level','weekday'),)
+
+
+class DiscountComboAdminForm(ModelForm):
+
+    class Meta:
+        model = DiscountCombo
+        exclude = []
+
+    class Media:
+        js = ('js/discountcombo_collapsetypes.js',)
 
 
 class DiscountComboAdmin(admin.ModelAdmin):
     inlines = [DiscountComboComponentInline,]
+    form = DiscountComboAdminForm
 
     list_display = ('name','discountType','newCustomersOnly','active')
     list_filter = ('discountType','newCustomersOnly','active')
@@ -21,13 +34,16 @@ class DiscountComboAdmin(admin.ModelAdmin):
         (None, {
             'fields': ('name','active','newCustomersOnly','discountType',)
         }),
-        (_('For Flat-Price Discounts'), {
+        (_('Flat-Price Discount (in default currency)'), {
+            'classes': ('type_flatPrice',),
             'fields': ('onlineStudentPrice','doorStudentPrice','onlineGeneralPrice','doorGeneralPrice'),
         }),
-        (_('For Dollar Discounts'), {
+        (_('Dollar Discount (in default currency)'), {
+            'classes': ('type_dollarDiscount',),
             'fields': ('dollarDiscount',),
         }),
-        (_('For Percentage Discounts'), {
+        (_('Percentage Discount'), {
+            'classes': ('type_percentageDiscount',),
             'fields': ('percentDiscount','percentUniversallyApplied'),
         }),
     )

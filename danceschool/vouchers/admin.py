@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.forms import ModelForm, ModelChoiceField
+from django.forms import ModelForm, ModelChoiceField, TextInput
 from django.utils.translation import ugettext_lazy as _
 
 from dal import autocomplete
@@ -94,17 +94,42 @@ class VoucherUseInline(admin.TabularInline):
         return False
 
 
-class VoucherCreditInline(admin.StackedInline):
+class VoucherCreditInlineForm(ModelForm):
+
+    class Meta:
+        widgets = {
+            'description': TextInput,
+        }
+
+
+class VoucherCreditInline(admin.TabularInline):
     model = VoucherCredit
     extra = 1
+    fields = ['amount', 'description','creationDate']
+    readonly_fields = ['creationDate',]
+
+    form = VoucherCreditInlineForm
 
 
 class VoucherAdmin(admin.ModelAdmin):
     inlines = [DanceTypeVoucherInline,ClassVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
-    list_display = ['voucherId','name','category','type','originalAmount','expirationDate','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
-    list_filter = ['category','type','expirationDate','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
+    list_display = ['voucherId','name','category','description','originalAmount','expirationDate','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
+    list_filter = ['category','expirationDate','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
     search_fields = ['voucherId','name','type',]
-    exclude = ['creationDate',]
+    readonly_fields = ['refundAmount','creationDate']
+
+    fieldsets = (
+        (None, {
+            'fields': (('voucherId','category'),'name','description',('originalAmount','maxAmountPerUse'),),
+        }),
+        (_('Voucher Restrictions'), {
+            'fields': ('expirationDate',('singleUse','forFirstTimeCustomersOnly','forPreviousCustomersOnly','disabled')),
+        }),
+        (_('Other Info'), {
+            'classes': ('collapse',),
+            'fields': ('creationDate','refundAmount'),
+        }),
+    )
 
 
 # This adds inlines to Registration and TemporaryRegistration without subclassing

@@ -59,7 +59,7 @@ class DiscountCombo(models.Model):
 
     newCustomersOnly = models.BooleanField(verbose_name=_('Discount for New Customers only'),default=False)
 
-    discountType = models.CharField(_('Discount type'),max_length=1,help_text=_('Is this a flat price, a dollar amount discount, a \'percentage off\' discount, or a free add-on?'),choices=DiscountType.choices)
+    discountType = models.CharField(_('Discount type'),max_length=1,help_text=_('Is this a flat price, a dollar amount discount, a \'percentage off\' discount, or a free add-on?'),choices=DiscountType.choices,default=DiscountType.dollarDiscount)
 
     # For flat price discounts
     onlineStudentPrice = models.FloatField(_('Online student price'),null=True,blank=True,validators=[MinValueValidator(0)])
