@@ -149,3 +149,108 @@ requested it.
 
 For more details on Django signals and signal handlers, see the `Django
 documentation <https://docs.djangoproject.com/en/dev/topics/signals/>`__.
+
+Adding a Custom Payment Processor
+---------------------------------
+
+The danceschool project supports two of the most popular online payment
+processors (Paypal and Stripe).  It also contains basic functionality
+for keeping track of cash payments.  However, depending on your location,
+you may want or need to accept online payments from other payment processors.
+
+Since payment processors vary in the way that they handle transactions from
+websites, this documentation cannot provide comprehensive instructions.
+However, this document provides a starting point for understanding how to
+implement a custom payment processor.  If you are attempting to do this,
+it is highly recommended to look at the code for the existing payment processor
+apps, ``danceschool.payments.paypal`` and ``danceschool.payments.stripe``, to
+see how they work.
+
+The PaymentRecord Model
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``danceschool.core`` app provides a PaymentRecord model that is designed
+to be a polymorphic model using the
+`Django-polymorphic <http://django-polymorphic.readthedocs.io/en/stable/>`
+app.  It provides several key fields that are common to all payment
+processors:
+
+- A foreign key relationship to the Invoice model (since payments are
+  associated with invoices).
+- Creation date and modification date fields
+- Several methods and descriptive properties that may need to be overridden
+  on a per-payment processor basis, such as the ``refundable`` property
+  to indicate whether a payment is refundable, and the ``refund()`` method
+  to actually process a refund.
+
+To create new payment processor, first create a new model in your app's
+``models.py`` that simply subclasses the ``danceschool.core.models.PaymentRecord`` model.
+Because of the way Django-polymorphic works, your payments will now be recognized just as
+payments from other payment processors.
+
+Add any fields that your particular payment processor may need (for example some kind of
+transaction identifier field).  Then, be sure to override the following from the parent model:
+- The ``refundable`` property (decorated method): defaults to False.  This can usually just return True if your
+  payment method is refundable.
+- The ``recordId`` property (decorated method).  This will usually just return the identifier used by the payment
+  processor, but since different payment processor apps must store this information differently, ``recordId``
+  ensures that the information is always available to the parent app.
+- The ``methodName`` property (decorated method).  This just returns a readble name for the type of payment processor
+  used, such as "Paypal Express Checkout" or "Stripe Checkout."
+- The ``netAmountPaid`` property (decorated method).  This should return the amount that was paid *net of any refunds*.
+- The ``refund()`` method.  If your API allows refunds of transactions, this should be handled here.  An ``amount``
+  parameter should be accepted to permit partial refunds.
+- The ``getPayerEmail()`` method.  This method should return the email address of the person who paid, in case they
+  need to be contacted.  Many payment processors store this information automatically, but if yours does not, then
+  you can potentially create a model field to store it.
+
+Payment Processor Views
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Your payment processor will need to define a view that receives data from the processor's website.  The view
+also needs to do the following:
+
+1.  Determine whether a payment is being made on a Temporary Registration or an existing Invoice.
+2.  If a payment is being made on a Temporary Registration, then it needs to create a new Invoice using
+    the ``get_or_create_from_registration()`` class method of the Invoice class.
+3.  If the payment is successful, then your view should call the ``processPayment()`` method of the associated
+    invoice to record that the payment has been made.  The ``processPayment()`` method will handle finalizing
+    the registration if applicable, sending the appropriate email notifications, etc.
+4.  Your view will either need to return an ``HttpResponseRedirect()`` to an appropriate success URL, or your
+    plugin template will need to use Javascript to redirect the user after a successul payment is made
+    (or notify the user if a payment is unsuccessful).
+5.  Additional steps may be necessary if you intend to use your payment processor to allow customers to
+    purchase gift certificates (as the Paypal and Stripe apps allow).
+    
+
+It is highly recommended that you follow along with the ``views.py`` of the existing payment processors to 
+be sure that you follow the appropriate steps.
+
+Creating a CMS Plugin
+^^^^^^^^^^^^^^^^^^^^^
+
+To add a checkout button for your payment processor, you will need to create a CMS plugin that can
+be added to the page Placeholder where checkout happens.  To do this, create a file in your app called
+``cms_plugins.py``, and define a new plugin here as a class that inherits from ``cms.plugin_base.CMSPluginBase``.
+Within the plugin class, specify template the contains whatever is needed for your payment processor, and use
+a custom ``render()`` method to add any additional context data that may be needed for your page.
+
+The existing payment processor apps are a good resource for understanding how to implement one of these plugins.
+It is also a good idea to read the `Django CMS documentation
+<http://docs.django-cms.org/en/release-3.4.x/how_to/custom_plugins.html>` to learn more.
+
+Once you have created your CMS plugin, you will need to manually add it to the "Registration Summary"
+page.  To do so, follow these steps:
+
+1. Log in as a user with appropriate permissions to edit pages and other
+   CMS content (the superuser is fine)
+2. Proceed through the first two pages of the registration process.
+   Entering fake information is fine, as you will not be completing this
+   registration.
+3. When you get to the registration summary page, click the button in
+   the toolbar labeled "Edit Page," then choose "Structure" mode to edit
+   the layout of the page.
+4. You will see a placeholder for the payment button, called
+   "Registration\_Payment\_Placeholder". Click the plus sign (+) next to
+   this placeholder to add a plugin, and from the available plugins choose
+   your payment processor's plugin.

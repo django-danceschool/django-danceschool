@@ -101,7 +101,7 @@ In order to facilitate the easy deployment of development instances, all
 of the default settings for this project are settings that can be used
 in a dev instance. For example, debug mode is on, and the server uses a
 SQLite backend instead of PostgreSQL. The only exceptions are features
-such as email and the Paypal integration, which cannot be enabled by
+such as email and the Paypal/Stripe integration, which cannot be enabled by
 default until you have entered credentials for those services. However,
 before you deploy this project for "production" purposes, you will need,
 *at a minimum*, to customize settings for Paypal, email, the database,
@@ -190,19 +190,21 @@ upgrade to using the REST API.
 REST API Setup
 ~~~~~~~~~~~~~~
 
-1. Go to the `Paypal developer website <https://developer.paypal.com/>`
+1. Enter your ``settings.py`` file and ensure that the app
+   ``danceschool.payments.paypal`` is listed in ``INSTALLED_APPS``.
+3. Go to the `Paypal developer website <https://developer.paypal.com/>`
    and log in using the Paypal account at which you wish to accept
-   payments
-2. On the dashboard, under "My Apps & Credentials", find the heading
+   payments.
+4. On the dashboard, under "My Apps & Credentials", find the heading
    for "REST API apps" and click "Create App."  Follow the instructions
    to create an app with a set of API credentials
-3. Once you have created an app, you will see credentials listed.  At
+5. Once you have created an app, you will see credentials listed.  At
    the top of the page, you will see a toggle between "Sandbox" and
    "Live."  If you are setting up this installation for testing only,
    then choose "sandbox" credentials so that you can test transactions
    without using actual money.  For your public installation, use
    "live" credentials.
-4. Edit ``settings_local.py`` to add:
+6. Edit ``settings_local.py`` to add:
     -  ``PAYPAL_MODE``: Either "sandbox" or "live"
     -  ``PAYPAL_CLIENT_ID``: The value of "Client ID"
     -  ``PAYPAL_CLIENT_SECRET``: The value of "Secret".  **Do not share
@@ -210,7 +212,7 @@ REST API Setup
     accessed**
 
 
-Adding a "Pay Now" button to the registration page
+Adding a Paypal "Pay Now" button to the registration page
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Because this project is designed to be configurable and to accept
@@ -241,4 +243,66 @@ button is very straightforward. Follow these steps:
 
 To add a gift certificate form to allow customers to purchase gift
 certficates, follow a similar procedure, adding the "Paypal Gift
+Certificate Form" plugin to any page of your choosing.
+
+Stripe Settings (if using Stripe)
+---------------------------------
+
+By default, the Django danceschool project now offers the ability to
+use the popular Stripe payment processor in place of Paypal.  As with
+Paypal, Stripe integration makes use of a modern API that does not
+require you to store any sensitive financial information on your own
+server, and it requires only that you enable the app and place your
+API keys in your ``settings.py`` or ``settings_local.py`` file.
+
+Stripe API Setup
+~~~~~~~~~~~~~~~~
+
+1. Enter your ``settings.py`` file and ensure that the app
+   ``danceschool.payments.stripe`` is listed in ``INSTALLED_APPS``.
+2.  Go to `Stripe.com <https://www.stripe.com/>` and log into your
+    account, or sign up for a new account (**Note:** Before running
+    transactions in live mode, you will need to activate your account,
+    which may involve providing a Tax ID, etc.)
+3.  In the dashboard on the left hand side, select "API" to get access
+    to your API keys.
+4.  You will see test credentials, and if your account has been activated,
+    you will also see live credentials.  Enter the following settings into
+    your ``settings_local.py`` file:
+   -  ``STRIPE_PUBLIC_KEY``: Your publishable key.
+   -  ``STRIPE_PRIVATE_KEY``: Your secret key.  **Do not share
+    this value with anyone, or store it anywhere that could be publicly
+    accessed**
+
+Adding a Stripe "Checkout Now" button to the registration page
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Because this project is designed to be configurable and to accept
+different payment providers, the "Checkout Now" button is not included by
+default on the registration summary page (the last step of the
+registration process).  If you have setup your installation by running
+the "setupschool" script, then a "Checkout Now" button will already be in
+place.
+
+However, if you have not done used the setupschool script, or if you
+wish to enable another payment processory, then adding a "Checkout Now" 
+button is very straightforward. Follow these steps:
+
+1. Log in as a user with appropriate permissions to edit pages and other
+   CMS content (the superuser is fine)
+2. Proceed through the first two pages of the registration process.
+   Entering fake information is fine, as you will not be completing this
+   registration.
+3. When you get to the registration summary page, click the button in
+   the toolbar labeled "Edit Page," then choose "Structure" mode to edit
+   the layout of the page.
+4. You will see a placeholder for the payment button, called
+   "Registration\_Payment\_Placeholder". Click the plus sign (+) next to
+   this placeholder to add a plugin, and from the "Stripe" section of
+   plugins choose "Stripe Checkout Form"
+5. Configure the plugin (choose which pages to send customers to when
+   they have completed/cancelled payment), and you're all set!
+
+To add a gift certificate form to allow customers to purchase gift
+certficates, follow a similar procedure, adding the "Stripe Gift
 Certificate Form" plugin to any page of your choosing.

@@ -71,7 +71,8 @@ The following are the main features of the project:
 -  Class registration (advance online registration and at-the-door
    registration with separate pricing for each)
 -  Emailing of registered students
--  Paypal integration for registration and refunds
+-  Paypal Express Checkout integration for registration and refunds
+-  Stripe Checkout integration for registration and refunds
 -  Instructor scheduling
 -  Internal scheduling (private internal calendars for all staff
    members)
