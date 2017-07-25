@@ -55,6 +55,3 @@ if apps.is_installed('danceschool.payments.paypal'):
 
 if apps.is_installed('danceschool.payments.stripe'):
     urlpatterns.append(url(r'^stripe/', include('danceschool.payments.stripe.urls')),)
-
-# CMS URLs always go last because they will match any pattern that has not already been matched.
-urlpatterns.append(url(r'^', include('cms.urls')),)
