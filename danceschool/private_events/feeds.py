@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 
 from danceschool.core.models import StaffMember
 from danceschool.core.constants import getConstant
+from danceschool.core.utils.timezone import ensure_timezone
 
 from .models import EventOccurrence
 
@@ -45,7 +46,7 @@ class EventFeed(ICalFeed):
     """
     A simple event calender
     """
-    timezone = settings.TIME_ZONE
+    timezone = getattr(settings,'TIME_ZONE','UTC')
     description = _('Calendar for %s' % getConstant('contact__businessName'))
 
     def get_member(self,obj):
@@ -113,9 +114,9 @@ def json_event_feed(request,instructorFeedKey):
 
     time_filter_dict_events = {}
     if startDate:
-        time_filter_dict_events['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
+        time_filter_dict_events['startTime__gte'] = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
     if endDate:
-        time_filter_dict_events['endTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
+        time_filter_dict_events['endTime__lte'] = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1)
 
     this_user = StaffMember.objects.get(feedKey=instructorFeedKey).userAccount
     instructor_groups = list(this_user.groups.all().values_list('id',flat=True))

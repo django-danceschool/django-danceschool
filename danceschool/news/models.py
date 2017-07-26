@@ -1,11 +1,11 @@
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from cms.models.pluginmodel import CMSPlugin
 
 from djangocms_text_ckeditor.fields import HTMLField
-from datetime import datetime
 
 
 @python_2_unicode_compatible
@@ -29,7 +29,7 @@ class NewsItem(models.Model):
 
     creationDate = models.DateTimeField(_('Creation date'),auto_now_add=True)
     modifiedDate = models.DateTimeField(_('Last modified date'),auto_now=True,help_text=_('Time of most recent edit'))
-    publicationDate = models.DateTimeField(_('Publication date'),default=datetime.now)
+    publicationDate = models.DateTimeField(_('Publication date'),default=timezone.now)
 
     def __str__(self):
         return self.title

@@ -2,8 +2,9 @@ from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
 
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from danceschool.core.mixins import PluginTemplateMixin
 
@@ -24,7 +25,7 @@ class LatestNewsItemPlugin(PluginTemplateMixin, CMSPluginBase):
         listing = NewsItem.objects.all()
 
         if instance.daysBefore:
-            listing = listing.filter(publicationDate__gte=datetime.now() - timedelta(days=instance.daysBefores))
+            listing = listing.filter(publicationDate__gte=timezone.now() - timedelta(days=instance.daysBefores))
         if instance.alertOnly:
             listing = listing.filter(alert=True)
         if instance.ignorePins:

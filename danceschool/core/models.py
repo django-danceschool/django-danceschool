@@ -8,6 +8,7 @@ from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
 from django.apps import apps
+from django.utils import timezone
 
 from polymorphic.models import PolymorphicModel
 from filer.models import ThumbnailOption
@@ -179,12 +180,12 @@ class StaffMember(PolymorphicModel):
 
     @property
     def activeThisMonth(self):
-        return self.eventstaffmember_set.filter(event__year=datetime.now().year,event__month=datetime.now().month).exists()
+        return self.eventstaffmember_set.filter(event__year=timezone.now().year,event__month=timezone.now().month).exists()
     activeThisMonth.fget.short_description = _('Staffed this month')
 
     @property
     def activeUpcoming(self):
-        return self.eventstaffmember_set.filter(event__endTime__gte=datetime.now()).exists()
+        return self.eventstaffmember_set.filter(event__endTime__gte=timezone.now()).exists()
     activeUpcoming.fget.short_description = _('Staffed for upcoming events')
 
     def __str__(self):
@@ -606,7 +607,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def nextOccurrence(self):
-        return self.eventoccurrence_set.filter(**{'startTime__gte': datetime.now()}).order_by('startTime').first()
+        return self.eventoccurrence_set.filter(**{'startTime__gte': timezone.now()}).order_by('startTime').first()
     nextOccurrence.fget.short_description = _('Next occurrence')
 
     @property
@@ -645,12 +646,12 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def isStarted(self):
-        return self.firstOccurrenceTime >= datetime.now()
+        return self.firstOccurrenceTime >= timezone.now()
     isStarted.fget.short_description = _('Has begun')
 
     @property
     def isCompleted(self):
-        return self.lastOccurrenceTime < datetime.now()
+        return self.lastOccurrenceTime < timezone.now()
     isCompleted.fget.short_description = _('Has ended')
 
     @property
@@ -799,13 +800,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             modified = True
         elif (
             startTime and self.status in automatic_codes and ((
-                self.closeAfterDays and datetime.now() > startTime + timedelta(days=self.closeAfterDays)) or
-                datetime.now() > endTime) and open is True):
+                self.closeAfterDays and timezone.now() > startTime + timedelta(days=self.closeAfterDays)) or
+                timezone.now() > endTime) and open is True):
                     open = False
                     modified = True
         elif startTime and self.status in automatic_codes and ((
-            datetime.now() < endTime and not self.closeAfterDays) or (
-                self.closeAfterDays and datetime.now() < startTime + timedelta(days=self.closeAfterDays))) and open is False:
+            timezone.now() < endTime and not self.closeAfterDays) or (
+                self.closeAfterDays and timezone.now() < startTime + timedelta(days=self.closeAfterDays))) and open is False:
                     open = True
                     modified = True
 
@@ -864,20 +865,26 @@ class EventOccurrence(models.Model):
         return (self.endTime - self.startTime).seconds / 3600
     duration.fget.short_description = _('Duration')
 
-    def allDayForDate(self,this_date):
+    def allDayForDate(self,this_date,timezone=None):
         '''
-        Give a grace period of a few minutes to account for issues with the way
-        events are sometimes entered.
+        This method determines whether the occurrence lasts the entirety of
+        a specified day in the specified time zone.  If no time zone is specified,
+        then it uses the default time zone).  Also, give a grace period of a few
+        minutes to account for issues with the way events are sometimes entered.
         '''
-        if type(this_date) is datetime:
+        if isinstance(this_date,datetime):
             d = this_date.date()
         else:
             d = this_date
 
         date_start = datetime(d.year,d.month,d.day)
+        naive_start = self.startTime if timezone.is_naive(self.startTime) else timezone.make_naive(self.startTime, timezone=None)
+        naive_end = self.endTime if timezone.is_naive(self.endTime) else timezone.make_naive(self.endTime, timezone=None)
+
         return (
-            self.startTime <= date_start and
-            self.endTime >= date_start + timedelta(days=1,minutes=-30)
+            # Ensure that all comparisons are done in local time
+            naive_start <= date_start and
+            naive_end >= date_start + timedelta(days=1,minutes=-30)
         )
 
     @property
@@ -1441,7 +1448,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         This method is called when the payment process has been completed and a registration
         is ready to be finalized.  It also fires the post-registration signal
         '''
-        dateTime = kwargs.pop('dateTime', datetime.now())
+        dateTime = kwargs.pop('dateTime', timezone.now())
 
         # If sendEmail is passed as False, then
         sendEmail = kwargs.pop('sendEmail', True)
@@ -2139,7 +2146,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         epsilon = .01
 
-        paymentTime = datetime.now()
+        paymentTime = timezone.now()
 
         logger.info('Processing payment and creating registration objects if applicable.')
 

@@ -1,11 +1,13 @@
 from django.views.generic import TemplateView
 from django.db.models import Count
+from django.utils import timezone
 
 from datetime import datetime
 import six
 from braces.views import PermissionRequiredMixin
 
 from danceschool.core.models import Instructor, SeriesTeacher, Customer
+from danceschool.core.utils.timezone import ensure_timezone
 
 if six.PY3:
     # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
@@ -24,10 +26,27 @@ class SchoolStatsView(PermissionRequiredMixin, TemplateView):
 
         (totalStudents,numSeries,totalSeriesRegs,totalTime) = getGeneralStats(request)
 
-        bestCustomersLastTwelveMonths = Customer.objects.values('user__first_name','user__last_name').filter(**{'eventregistration__registration__dateTime__gte':datetime(datetime.now().year - 1,datetime.now().month,datetime.now().day),'eventregistration__dropIn':False,'eventregistration__cancelled':False}).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
-        bestCustomersAllTime = Customer.objects.values('user__first_name','user__last_name').filter(**{'eventregistration__dropIn':False,'eventregistration__cancelled':False}).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
+        bestCustomersLastTwelveMonths = Customer.objects.values(
+            'user__first_name','user__last_name'
+        ).filter(**{
+            'eventregistration__registration__dateTime__gte': ensure_timezone(datetime(timezone.now().year - 1,timezone.now().month,timezone.now().day)),
+            'eventregistration__dropIn':False,'eventregistration__cancelled':False
+        }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
 
-        mostActiveTeachersThisYear = SeriesTeacher.objects.filter(event__year=datetime.now().year).exclude(staffMember__instructor__status=Instructor.InstructorStatus.guest).values_list('staffMember__firstName','staffMember__lastName').annotate(Count('staffMember')).order_by('-staffMember__count')
+        bestCustomersAllTime = Customer.objects.values(
+            'user__first_name','user__last_name'
+        ).filter(**{
+            'eventregistration__dropIn':False,
+            'eventregistration__cancelled':False
+        }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
+
+        mostActiveTeachersThisYear = SeriesTeacher.objects.filter(
+            event__year=timezone.now().year
+        ).exclude(
+            staffMember__instructor__status=Instructor.InstructorStatus.guest
+        ).values_list(
+            'staffMember__firstName','staffMember__lastName'
+        ).annotate(Count('staffMember')).order_by('-staffMember__count')
 
         context_data.update({
             'totalStudents':totalStudents,

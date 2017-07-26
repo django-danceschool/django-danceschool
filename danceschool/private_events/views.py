@@ -8,6 +8,7 @@ from datetime import datetime
 import six
 
 from .forms import AddPrivateEventForm, EventOccurrenceFormSet, OccurrenceFormSetHelper
+from danceschool.core.utils.timezone import ensure_timezone
 
 if six.PY3:
     # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
@@ -74,8 +75,8 @@ def addPrivateEvent(request):
             try:
                 # Only the startTime should be passable to the formset
                 if key == 'startTime':
-                    formset[0].fields['startTime'].initial = datetime.strptime(request.GET.get(key) or '','%Y-%m-%d')
-                    formset[0].fields['endTime'].initial = datetime.strptime(request.GET.get(key) or '','%Y-%m-%d')
+                    formset[0].fields['startTime'].initial = ensure_timezone(datetime.strptime(request.GET.get(key) or '','%Y-%m-%d'))
+                    formset[0].fields['endTime'].initial = ensure_timezone(datetime.strptime(request.GET.get(key) or '','%Y-%m-%d'))
                     formset[0].fields['allDay'].initial = True
             except ValueError:
                 pass

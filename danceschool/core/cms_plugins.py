@@ -1,4 +1,5 @@
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
@@ -41,7 +42,7 @@ class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
             listing = listing.filter(bio__isnull=False).exclude(bio__exact='')
 
         if instance.activeUpcomingOnly:
-            listing = listing.filter(eventstaffmember__event__endTime__gte=datetime.now()).distinct()
+            listing = listing.filter(eventstaffmember__event__endTime__gte=timezone.now()).distinct()
 
         if instance.orderChoice == 'firstName':
             listing = listing.order_by('firstName','lastName')
@@ -141,12 +142,12 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
         if instance.startDate:
             filters[startKey] = datetime.combine(instance.startDate,datetime.min.time())
         elif instance.daysStart is not None:
-            filters[startKey] = datetime.now() + timedelta(days=instance.daysStart)
+            filters[startKey] = timezone.now() + timedelta(days=instance.daysStart)
 
         if instance.endDate:
             filters[endKey] = datetime.combine(instance.endDate,datetime.max.time())
         elif instance.daysEnd is not None:
-            filters[endKey] = datetime.now() + timedelta(days=instance.daysEnd)
+            filters[endKey] = timezone.now() + timedelta(days=instance.daysEnd)
 
         if instance.limitToOpenRegistration:
             filters['registrationOpen'] = True

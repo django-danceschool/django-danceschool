@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from .models import EventOccurrence, StaffMember, Event
 from .constants import getConstant
+from .utils.timezone import ensure_timezone
 
 
 # Because our calendar will have both series classes and non-recurring events
@@ -35,7 +36,7 @@ class EventFeed(ICalFeed):
     """
     A simple event calender
     """
-    timezone = settings.TIME_ZONE
+    timezone = getattr(settings,'TIME_ZONE','UTC')
 
     def get_object(self,request,instructorFeedKey=''):
         if instructorFeedKey:
@@ -103,11 +104,13 @@ def json_event_feed(request,instructorFeedKey=''):
     time_filter_dict_series = {}
     time_filter_dict_events = {}
     if startDate:
-        time_filter_dict_series['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
-        time_filter_dict_events['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
+        limit_time = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
+        time_filter_dict_series['startTime__gte'] = limit_time
+        time_filter_dict_events['startTime__gte'] = limit_time
     if endDate:
-        time_filter_dict_series['endTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
-        time_filter_dict_events['endTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
+        limit_time = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d'))
+        time_filter_dict_series['endTime__lte'] = limit_time + timedelta(days=1)
+        time_filter_dict_events['endTime__lte'] = limit_time + timedelta(days=1)
 
     item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(**time_filter_dict_events).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
 

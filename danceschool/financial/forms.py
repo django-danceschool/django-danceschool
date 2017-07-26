@@ -7,12 +7,12 @@ from django.utils.encoding import force_text
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div, Submit, HTML
 from collections import OrderedDict
 from dal import autocomplete
-from datetime import datetime
 import logging
 
 from danceschool.core.models import InvoiceItem
@@ -100,7 +100,7 @@ class ExpenseReportingForm(forms.ModelForm):
                         'paymentMethod',
                         css_class='form-inline'
                     ),
-                    Field('accrualDate', type="hidden",value=datetime.now()),
+                    Field('accrualDate', type="hidden",value=timezone.now()),
                     HTML('<p style="margin-top: 30px;"><strong>%s</strong> %s</p>' % (_('Note:'),_('For accounting purposes, please do not mark expenses as paid unless they have already been paid to the recipient.'))),
                     css_class='panel-body collapse',
                     id='collapsepayment',
@@ -246,7 +246,7 @@ class RevenueReportingForm(forms.ModelForm):
 
     def clean_invoiceNumber(self):
         ''' Create a unique invoice number '''
-        return 'SUBMITTED_%s_%s' % (self.cleaned_data['submissionUser'].id,datetime.now().strftime('%Y%m%d%H%M%S'))
+        return 'SUBMITTED_%s_%s' % (self.cleaned_data['submissionUser'].id,timezone.now().strftime('%Y%m%d%H%M%S'))
 
     def clean(self):
         # Custom cleaning ensures that revenues are not attributed

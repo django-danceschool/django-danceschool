@@ -1,10 +1,10 @@
 from django.db import models
-from datetime import datetime
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from filer.fields.file import FilerFileField
 from filer.models import Folder
@@ -37,7 +37,7 @@ class ExpenseItem(models.Model):
     '''
 
     submissionUser = models.ForeignKey(User,verbose_name=_('Submission user'),related_name='expensessubmittedby',null=True, blank=True)
-    submissionDate = models.DateTimeField(_('Submission date'),default=datetime.now)
+    submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
 
     category = models.ForeignKey(ExpenseCategory,verbose_name=_('Category'))
 
@@ -112,14 +112,14 @@ class ExpenseItem(models.Model):
         # Set the approval and payment dates if they have just been approved/paid.
         if not hasattr(self,'__paid') or not hasattr(self,'__approved'):
             if self.approved and not self.approvalDate:
-                self.approvalDate = datetime.now()
+                self.approvalDate = timezone.now()
             if self.paid and not self.paymentDate:
-                self.paymentDate = datetime.now()
+                self.paymentDate = timezone.now()
         else:
             if self.approved and not self.approvalDate and not self.__approvalDate:
-                self.approvalDate = datetime.now()
+                self.approvalDate = timezone.now()
             if self.paid and not self.paymentDate and not self.__paymentDate:
-                self.paymentDate = datetime.now()
+                self.paymentDate = timezone.now()
 
         # Ensure that each expense is attribued to only one series or event.
         if len([x for x in [
@@ -221,7 +221,7 @@ class RevenueItem(models.Model):
     '''
 
     submissionUser = models.ForeignKey(User,null=True,blank=True,related_name='revenuessubmittedby',verbose_name=_('Submission user'))
-    submissionDate = models.DateTimeField(_('Submission date'),default=datetime.now)
+    submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
 
     category = models.ForeignKey(RevenueCategory,verbose_name=_('Category'))
     description = models.CharField(_('Description'),max_length=200,null=True,blank=True)
@@ -279,10 +279,10 @@ class RevenueItem(models.Model):
         # Set the received date if the payment was just marked received
         if not hasattr(self,'__received'):
             if self.received and not self.receivedDate:
-                self.receivedDate = datetime.now()
+                self.receivedDate = timezone.now()
         else:
             if self.received and not self.receivedDate and not self.__receivedDate:
-                self.receivedDate = datetime.now()
+                self.receivedDate = timezone.now()
 
         # Set the accrual date.  The method for series/events ensures that the accrualDate month
         # is the same as the reported month of the event/series by accruing to the start date of the first

@@ -2,30 +2,16 @@ from django.db.models import Count, Avg, Sum, IntegerField, Case, When, Q, Min, 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, JsonResponse
 from django.utils.translation import ugettext as _
+from django.utils import timezone
 
-from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
-from urllib.parse import unquote
 from collections import Counter, OrderedDict
 from bisect import bisect
 from calendar import month_name
 
 from danceschool.core.models import Customer, Series, EventOccurrence, Registration, EventRegistration, DanceTypeLevel, Location, DanceRole
-
-
-def getDateTimeFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it in datetime format, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    if request.GET.get(key,''):
-        try:
-            return datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d')
-        except ValueError:
-            pass
-    return None
+from danceschool.core.utils.timezone import getDateTimeFromGet
 
 
 def getAveragesByClassType(startDate=None,endDate=None):
@@ -154,7 +140,7 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
 
     # If no year specified, report current year to date.
     if not year:
-        year = datetime.now().year
+        year = timezone.now().year
 
     role_list = DanceRole.objects.distinct()
 
@@ -670,9 +656,9 @@ def getGeneralStats(request):
     if firstClass:
         firstStartTime = firstClass['startTime']
     else:
-        firstStartTime = datetime.now()
+        firstStartTime = timezone.now()
 
-    timeDiff = relativedelta(datetime.now(),firstStartTime)
+    timeDiff = relativedelta(timezone.now(),firstStartTime)
     totalTime = '%s years, %s months, %s days' % (timeDiff.years, timeDiff.months,timeDiff.days)
 
     return (totalStudents,numSeries,totalSeriesRegs,totalTime)

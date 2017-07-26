@@ -6,6 +6,7 @@ from django.core.urlresolvers import reverse
 from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, RedirectView, ListView
 from django.db.models import Min, Q
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
@@ -46,7 +47,7 @@ class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
     template_name = 'core/events_bymonth_viewregistration_list.html'
     permission_required = 'core.view_registration_summary'
 
-    queryset = Event.objects.filter(startTime__gte=datetime.now() - timedelta(days=90))
+    queryset = Event.objects.filter(startTime__gte=timezone.now() - timedelta(days=90))
 
 
 class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
@@ -177,7 +178,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
         if not hasattr(self,'allEvents'):
             # Get the Event listing here to avoid duplicate queries
             self.allEvents = Event.objects.filter(
-                endTime__gte=datetime.now()
+                endTime__gte=timezone.now()
             ).filter(
                 Q(instance_of=PublicEvent) |
                 Q(instance_of=Series)
@@ -360,7 +361,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
             # This dictionary will be updated and then added to refund_data for
             # this invoice whether the refund is successful or not
             this_refund_response_data = {
-                'datetime': datetime.now(),
+                'datetime': timezone.now(),
                 'id': this_payment.recordId,
                 'methodName': this_payment.methodName,
                 'amount': this_refund_amount,
@@ -618,8 +619,8 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
             month = lastStart.month
             year = lastStart.year
         else:
-            month = datetime.now().month
-            year = datetime.now().year
+            month = timezone.now().month
+            year = timezone.now().year
 
         months = [('',_('None'))]
         for i in range(0,numMonths):
@@ -634,7 +635,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
 
         self.months = months
 
-        cutoff = datetime.now() - timedelta(days=120)
+        cutoff = timezone.now() - timedelta(days=120)
 
         allEvents = Event.objects.filter(startTime__gte=cutoff).order_by('-startTime')
 
@@ -719,7 +720,7 @@ class AccountProfileView(LoginRequiredMixin, DetailView):
         if hasattr(user,'staffmember'):
             context.update({
                 'staffmember': user.staffmember,
-                'upcoming_events': Event.objects.filter(endTime__gt=datetime.now(),eventstaffmember__staffMember=user.staffmember).distinct().order_by('-startTime'),
+                'upcoming_events': Event.objects.filter(endTime__gt=timezone.now(),eventstaffmember__staffMember=user.staffmember).distinct().order_by('-startTime'),
             })
 
         # Get any extra context data passed by other apps.  These data require unique keys, so when writing
@@ -759,8 +760,8 @@ class InstructorStatsView(StaffMemberObjectMixin, PermissionRequiredMixin, Detai
 
         context.update({
             'instructor': instructor,
-            'prior_series': Event.objects.filter(startTime__lte=datetime.now(),eventstaffmember__staffMember=instructor).order_by('-startTime'),
-            'upcoming_series': Event.objects.filter(startTime__gt=datetime.now(),eventstaffmember__staffMember=instructor).order_by('-startTime'),
+            'prior_series': Event.objects.filter(startTime__lte=timezone.now(),eventstaffmember__staffMember=instructor).order_by('-startTime'),
+            'upcoming_series': Event.objects.filter(startTime__gt=timezone.now(),eventstaffmember__staffMember=instructor).order_by('-startTime'),
         })
 
         if context['prior_series']:
@@ -795,7 +796,7 @@ class IndividualClassView(FinancialContextMixin, TemplateView):
 
     def get(self,request,*args,**kwargs):
         # These are passed via the URL
-        year = self.kwargs.get('year',datetime.now().year)
+        year = self.kwargs.get('year',timezone.now().year)
         month = self.kwargs.get('month',0)
         slug = self.kwargs.get('slug','')
 
@@ -825,7 +826,7 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
 
     def get(self,request,*args,**kwargs):
         # These are passed via the URL
-        year = self.kwargs.get('year',datetime.now().year)
+        year = self.kwargs.get('year',timezone.now().year)
         month = self.kwargs.get('month',0)
         slug = self.kwargs.get('slug','')
 

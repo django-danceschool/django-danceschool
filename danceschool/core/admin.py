@@ -156,8 +156,10 @@ class EventRegistrationInline(admin.StackedInline):
 
 
 class EventOccurrenceInlineForm(ModelForm):
-    startTime = SplitDateTimeField(required=True,label=_('Start Date/Time'))
-    endTime = SplitDateTimeField(required=True,label=_('End Date/Time'))
+    WIDGET_FORMATS = ['%I:%M%p','%I:%M %p','%I:%M','%H:%M:%S','%H:%M']
+
+    startTime = SplitDateTimeField(required=True,label=_('Start Date/Time'),input_time_formats=WIDGET_FORMATS)
+    endTime = SplitDateTimeField(required=True,label=_('End Date/Time'),input_time_formats=WIDGET_FORMATS)
 
 
 class EventOccurrenceInline(admin.TabularInline):

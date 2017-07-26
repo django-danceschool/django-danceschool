@@ -1,6 +1,7 @@
 from django.db.models import Sum, Count
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import HttpResponse
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -9,9 +10,9 @@ from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
 from calendar import month_name
 
-
 from danceschool.core.constants import getConstant
 from danceschool.core.models import Registration, Event, EventStaffMember, InvoiceItem
+from danceschool.core.utils.timezone import ensure_timezone
 
 from .constants import EXPENSE_BASES
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
@@ -132,7 +133,7 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
     else:
         c = getConstant('financial__autoGenerateExpensesVenueRentalWindow') or 0
         if c > 0:
-            filters['eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c)
+            filters['eventoccurrence__startTime__gte'] = timezone.now() - relativedelta(months=c)
 
     # Only create expense items for venues with a positive rental rate
     for event in Event.objects.filter(**filters).distinct():
@@ -173,7 +174,7 @@ def createExpenseItemsForCompletedEvents(request=None,datetimeTuple=None):
     else:
         c = getConstant('financial__autoGenerateExpensesCompletedEventsWindow') or 0
         if c > 0:
-            filters['event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c)
+            filters['event__eventoccurrence__startTime__gte'] = timezone.now() - relativedelta(months=c)
 
     for member in EventStaffMember.objects.filter(**filters).distinct():
         # If an EventStaffMember object for a completed class has no associated ExpenseItem, then create one.
@@ -226,7 +227,7 @@ def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
     else:
         c = getConstant('financial__autoGenerateRevenueRegistrationsWindow') or 0
         if c > 0:
-            filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = datetime.now() - relativedelta(months=c)
+            filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = timezone.now() - relativedelta(months=c)
 
     for item in InvoiceItem.objects.filter(**filters_events).distinct():
         if item.finalRegistration.paidOnline:
@@ -243,7 +244,7 @@ def prepareFinancialStatement(year=None):
     if year:
         filter_year = year
     else:
-        filter_year = datetime.now().year
+        filter_year = timezone.now().year
 
     expenses_ytd = list(ExpenseItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values())[0]
     revenues_ytd = list(RevenueItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values())[0]
@@ -288,10 +289,13 @@ def prepareStatementByMonth(**kwargs):
         rev_timeFilters['%s__lt' % rev_basis] = end_date
 
     if year and not (start_date or end_date):
-        timeFilters['%s__gte' % basis] = datetime(year,1,1)
-        rev_timeFilters['%s__gte' % rev_basis] = datetime(year,1,1)
-        timeFilters['%s__lt' % basis] = datetime(year + 1,1,1)
-        rev_timeFilters['%s__lt' % rev_basis] = datetime(year + 1,1,1)
+        start_limit = ensure_timezone(datetime(year,1,1))
+        end_limit = ensure_timezone(datetime(year + 1,1,1))
+
+        timeFilters['%s__gte' % basis] = start_limit
+        rev_timeFilters['%s__gte' % rev_basis] = start_limit
+        timeFilters['%s__lt' % basis] = end_limit
+        rev_timeFilters['%s__lt' % rev_basis] = end_limit
 
     if timeFilters:
         expenseitems = expenseitems.filter(**timeFilters)

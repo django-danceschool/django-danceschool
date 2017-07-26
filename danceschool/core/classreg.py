@@ -3,8 +3,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseServerError, HttpResponseRedirect
 from django.views.generic import FormView
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
-from datetime import datetime
 from braces.views import UserFormKwargsMixin
 import logging
 from allauth.account.forms import LoginForm, SignupForm
@@ -55,7 +55,7 @@ def createTemporaryRegistration(request):
     reg = TemporaryRegistration(firstName=firstName,lastName=lastName,
                                 email=email,howHeardAboutUs=howHeardAboutUs,
                                 student=student,comments=comments,submissionUser=submissionUser,
-                                phone=phone,payAtDoor=payAtDoor,dateTime=datetime.now())
+                                phone=phone,payAtDoor=payAtDoor,dateTime=timezone.now())
 
     # Automatically place the marketing ID and any other information that was submitted in the student
     # form into the JSON data. If a handler of the pre_temporary_registration signal does not desire

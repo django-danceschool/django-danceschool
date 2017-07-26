@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
-import datetime
+from django.utils import timezone
 import random
 import string
 
@@ -82,7 +82,7 @@ class Voucher(models.Model):
         return Voucher.objects.create(voucherId='%s%s' % (prefix, random_string),**kwargs)
 
     def getHasExpired(self):
-        if self.expirationDate and datetime.datetime.now() > self.expirationDate:
+        if self.expirationDate and timezone.now() > self.expirationDate:
             return True
         else:
             return False

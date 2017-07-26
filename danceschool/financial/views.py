@@ -4,36 +4,24 @@ from django.http import HttpResponse, Http404
 from django.db.models import Q, Sum, F, Min
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
 
 from datetime import datetime
 import unicodecsv as csv
 from calendar import month_name
-from urllib.parse import unquote_plus, unquote
+from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 
 from danceschool.core.models import Instructor, Location, Event
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
+from danceschool.core.utils.timezone import ensure_timezone
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
 from .forms import ExpenseReportingForm, RevenueReportingForm
 from .constants import EXPENSE_BASES
-
-
-def getDateTimeFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it in datetime format, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    if request.GET.get(key,''):
-        try:
-            return datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d')
-        except (ValueError, TypeError):
-            pass
-    return None
 
 
 def getIntFromGet(request,key):
@@ -120,11 +108,11 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
         reimbursement_items = all_payments.filter(**{'paid':True,'reimbursement':True}).order_by('-paymentDate')
 
         if int_year:
-            time_lb = datetime(int_year,1,1,0,0)
-            time_ub = datetime(int_year + 1,1,1,0,0)
+            time_lb = ensure_timezone(datetime(int_year,1,1,0,0))
+            time_ub = ensure_timezone(datetime(int_year + 1,1,1,0,0))
         else:
-            time_lb = datetime(datetime.now().year,1,1,0,0)
-            time_ub = datetime(datetime.now().year + 1,1,1,0,0)
+            time_lb = ensure_timezone(datetime(timezone.now().year,1,1,0,0))
+            time_ub = ensure_timezone(datetime(timezone.now().year + 1,1,1,0,0))
 
         paid_this_year = paid_items.filter(paymentDate__gte=time_lb,paymentDate__lt=time_ub).order_by('-paymentDate')
         accrued_paid_this_year = paid_items.filter(accrualDate__gte=time_lb,accrualDate__lt=time_ub).order_by('-paymentDate')
@@ -476,22 +464,22 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 if end_month == 1:
                     end_year = year + 1
 
-                timeFilters['%s__gte' % basis] = datetime(year,month,1)
-                timeFilters['%s__lt' % basis] = datetime(end_year,end_month,1)
+                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(year,month,1))
+                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(end_year,end_month,1))
 
                 context['rangeType'] = 'Month'
                 context['rangeTitle'] = '%s %s' % (month_name[month], year)
 
             elif year:
-                timeFilters['%s__gte' % basis] = datetime(year,1,1)
-                timeFilters['%s__lt' % basis] = datetime(year + 1,1,1)
+                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(year,1,1))
+                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(year + 1,1,1))
 
                 context['rangeType'] = 'Year'
                 context['rangeTitle'] = '%s' % year
             else:
                 # Assume year to date if nothing otherwise specified
-                timeFilters['%s__gte' % basis] = datetime(datetime.now().year,1,1)
-                timeFilters['%s__lt' % basis] = datetime(datetime.now().year + 1,1,1)
+                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(timezone.now().year,1,1))
+                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(timezone.now().year + 1,1,1))
 
                 context['rangeType'] = 'YTD'
                 context['rangeTitle'] = _('Calendar Year To Date')

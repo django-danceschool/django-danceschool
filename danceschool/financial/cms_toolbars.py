@@ -1,7 +1,7 @@
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
-from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from calendar import month_name
 
@@ -62,7 +62,7 @@ class FinancialToolbar(CMSToolbar):
             menu, newPosition = self.addTheMenu()
             detail_submenu = menu.get_or_create_menu('financial-details',_('Detailed Breakdown'), position=newPosition)
 
-            now = datetime.now()
+            now = timezone.now()
             month_ago = now - relativedelta(months=1)
             two_months_ago = now - relativedelta(months=2)
             three_months_ago = now - relativedelta(months=3)
