@@ -1,20 +1,20 @@
-{% load sekizai_tags static %}
+{% load sekizai_tags static i18n %}
 
 {% addtoblock "css" %}
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>Website Referrals</h2>
+<h2>{% trans "Website Referrals" %}</h2>
 
-<p>When a customer clicks on a Facebook link, a mailing list link, etc., we can send them to a special URL that allows us to track where they came from.  When those customers register for classes, that referral information gets attached to their registration.  This graph shows how many
-registrations have used each referral code (i.e. how many students are registering by clicking on Facebook pages, etc.)</p>
+<p>{% blocktrans %}When a customer clicks on a Facebook link, a mailing list link, etc., we can send them to a special URL that allows us to track where they came from.  When those customers register for classes, that referral information gets attached to their registration.  This graph shows how many
+registrations have used each referral code (i.e. how many students are registering by clicking on Facebook pages, etc.){% endblocktrans %}</p>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.1 }}" class="btn btn-default active showReferralCountsButton">Last Month</button>
-  <button type="button" data-startDate="{{ limitMonthDates.3 }}" class="btn btn-default showReferralCountsButton">Last 3 Months</button>
-  <button type="button" data-startDate="{{ limitMonthDates.6 }}" class="btn btn-default showReferralCountsButton">Last 6 Months</button>
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default showReferralCountsButton">Last 12 Months</button>
-  <button type="button" class="btn btn-default showReferralCountsButton">All Time</button>
+  <button type="button" data-startDate="{{ limitMonthDates.1 }}" class="btn btn-default active showReferralCountsButton">{% trans "Last Month" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.3 }}" class="btn btn-default showReferralCountsButton">{% trans "Last 3 Months" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.6 }}" class="btn btn-default showReferralCountsButton">{% trans "Last 6 Months" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default showReferralCountsButton">{% trans "Last 12 Months" %}</button>
+  <button type="button" class="btn btn-default showReferralCountsButton">{% trans "All Time" %}</button>
 </div>
 
 <div id="ReferralCounts"></div>

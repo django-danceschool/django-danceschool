@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load cms_tags danceschool_tags thumbnail %}
+{% load cms_tags danceschool_tags thumbnail i18n %}
 
 {% block title %}
 	{{ eventset.0.name }}
@@ -10,11 +10,15 @@
 {% endblock %}
 
 {% block meta_description %}
-	Join us for our event, {{ eventset.0.name }}, held {{ eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' }} at {{ eventset.0.location.name %}.
+	{% blocktrans with name=eventset.0.name startTime=eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' endTime=eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' location=eventset.0.location.name
+	Join us for our event, {{ name }}, held {{ startTime }} - {{ endTime }} at {{ location %}.
+	{% endblocktrans %}
 {% endblock %}
 
 {% block facebook_og_description %}
-	Join us for our event, {{ eventset.0.name }}, held {{ eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' }} at {{ eventset.0.location.name %}.
+	{% blocktrans with name=eventset.0.name startTime=eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' endTime=eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' location=eventset.0.location.name
+	Join us for our event, {{ name }}, held {{ startTime }} - {{ endTime }} at {{ location %}.
+	{% endblocktrans %}
 {% endblock %}
 
 {% block body_id %}classes{% endblock %}
@@ -31,22 +35,22 @@
 		<strong>{{ event.location.name }}</strong><br />
 		{{ event.location.address }}<br />
 		{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
-		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ event.location.name|slugify }}">Map this</a>
+		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ event.location.name|slugify }}">{% trans "Map this" %}</a>
 		</p>
 
 		<p>
 		{% if event.registrationOpen %}
-			<a class="btn btn-primary" href="{% url 'registration' %}">Register for this event!</a>
+			<a class="btn btn-primary" href="{% url 'registration' %}">{% trans "Register for this event!" %}</a>
 		{% else %}
-			Registration for this event is not required.</a>
+			{% trans "Registration for this event is not required." %}</a>
 		{% endif %}
 		</p>
 
 		{% if 'core.change_event' in perms %}
-		<p><a class="btn btn-default" href="{% url 'admin:core_event_change' event.id %}">Edit Event Details</a></p>
+		<p><a class="btn btn-default" href="{% url 'admin:core_event_change' event.id %}">{% trans "Edit Event Details" %}</a></p>
 		{% endif %}
 		{% if 'core.view_registration_summary' in perms and event.registrationEnabled %}
-		<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">View Registrations</a></p>
+		<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
 		{% endif %}
 
 
@@ -54,7 +58,7 @@
 	{% endfor %}
 	</div>
 
-	<h3>About this Event</h3>
+	<h3>{% trans "About this Event" %}</h3>
 	<div class='eventDescription'>
 		{{ eventset.0.description|safe }}
 	</div>

@@ -1,4 +1,4 @@
-{% load cms_tags %}
+{% load cms_tags i18n %}
 
 <form action="{% url 'stripeHandler' %}" method="POST">
 {% csrf_token %}
@@ -23,10 +23,10 @@
   data-currency="{{ currencyCode }}"
   {% if invoice %}
       data-amount="{% widthratio invoice.outstandingBalance 1 100 %}"
-      data-description="Invoice #{{ invoice.id }}"
+      data-description="{% trans "Invoice #" %}{{ invoice.id }}"
   {% elif registration %}
       data-amount="{% widthratio registration.priceWithDiscount 1 100 %}"
-      data-description="Temporary Registration #{{ registration.id}}"
+      data-description="{% trans "Temporary Registration #" %}{{ registration.id}}"
       data-email="{{ registration.email }}"
   {% endif %}
 </script>

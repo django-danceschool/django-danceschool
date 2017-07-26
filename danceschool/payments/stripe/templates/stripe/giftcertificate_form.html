@@ -1,4 +1,4 @@
-{% load cms_tags sekizai_tags %}
+{% load cms_tags sekizai_tags i18n %}
 
 <form id="stripeCertificateForm" action="{% url 'stripeHandler' %}" method="POST">
 {% csrf_token %}
@@ -39,7 +39,7 @@
       // Open Checkout with further options:
       handler.open({
         name: '{{ businessName }}',
-        description: 'Gift Certificate Purchase',
+        description: '{% trans "Gift Certificate Purchase" %}',
         amount: $('input[name=stripeAmount]').val() * 100,
         currency: '{{ currencyCode }}'
       });

@@ -1,26 +1,26 @@
-{% load sekizai_tags static %}
+{% load sekizai_tags static i18n %}
 
 <div id="calendarbox">&nbsp;</div>
 <!-- Modal -->
 
-<div aria-labelledby="eventDetails" class="modal fade" id="eventContent" role="dialog" tabindex="-1" title="Event Details">
+<div aria-labelledby="eventDetails" class="modal fade" id="eventContent" role="dialog" tabindex="-1" title="{% trans 'Event Details' %}">
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
-				<button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
+				<button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
 				<h3 class="modal-title" id="eventTitle">&nbsp;</h3>
 			</div>
 
 			<div class="modal-body">
 				<dl>
-					<dt>Start:</dt>
+					<dt>{% trans "Start" %}:</dt>
 					<dd id="startTime">&nbsp;</dd>
-					<dt>End:</dt>
+					<dt>{% trans "End" %}:</dt>
 					<dd id="endTime">&nbsp;</dd>
 				</dl>
 				<div id="eventInfo">&nbsp;</div>
 			</div>
-			<div class="modal-footer"><a class="btn btn-default" href="" id="eventLink" target="_blank" type="button">Read More</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">Close</button></div>
+			<div class="modal-footer"><a class="btn btn-default" href="" id="eventLink" target="_blank" type="button">{% trans "Read More" %}</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
 		</div>
 	</div>
 </div>

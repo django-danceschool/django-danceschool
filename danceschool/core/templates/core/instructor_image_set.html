@@ -1,8 +1,10 @@
-{% load thumbnail %}
+{% load thumbnail i18n %}
+
+{% trans "Instructors" as title_default %}
 
 <div class="instructors">
 	{% if instructor_list %}
-    <h3>{{ list_title|default:"Instructors" }}</h3>
+    <h3>{{ list_title|default:title_default }}</h3>
     {% endif %}
 	{% for teacher in instructor_list %}
 		<div class="instructor">

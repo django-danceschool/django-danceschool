@@ -1,28 +1,28 @@
 {% extends "cms/home.html" %}
-{% load danceschool_tags sekizai_tags cms_tags %}
+{% load danceschool_tags sekizai_tags cms_tags i18n %}
 
 {% block content %}
 
 {% if request.user == object %}
-	<h1>Welcome Back{% if object.first_name %}, {{ object.first_name }}{% endif %}!</h1>
+	<h1>{% trans "Welcome Back" %} {% if object.first_name %}, {{ object.first_name }}{% endif %}!</h1>
 {% else %}
-	<h1>Account Profile for {{ object.get_full_name }}</h1>
+	<h1>{% blocktrans with name=object.get_full_name %}Account Profile for {{ name }}{% endblocktrans %}</h1>
 {% endif %}
 
 <div class="btn-group" role="group">
-	<a class="btn btn-default" href="{% url 'registration' %}">Register for Classes</a>
+	<a class="btn btn-default" href="{% url 'registration' %}">{% trans "Register for Classes" %}</a>
 	{% if request.user == object %}
 		{% if perms.core.view_registration_summary %}
-			<a class="btn btn-default" href="{% url 'viewregistrations_selectevent' %}">View Registrations</a>
+			<a class="btn btn-default" href="{% url 'viewregistrations_selectevent' %}">{% trans "View Registrations" %}</a>
 		{% endif %}
 		{% if perms.core.view_staff_directory %}
-			<a class="btn btn-default" href="{% url 'staffDirectory' %}">Staff Directory</a>
+			<a class="btn btn-default" href="{% url 'staffDirectory' %}">{% trans "Staff Directory" %}</a>
 		{% endif %}		
 		{% if perms.core.view_own_instructor_stats %}
-			<a class="btn btn-default" href="{% url 'instructorStats' %}">Your Instructor Stats</a>
+			<a class="btn btn-default" href="{% url 'instructorStats' %}">{% trans "Your Instructor Stats" %}</a>
 		{% endif %}
 		{% if perms.core.update_instructor_bio %}
-			<a class="btn btn-default" href="{% url 'instructorBioChange' %}">Update Your Contact Info</a>
+			<a class="btn btn-default" href="{% url 'instructorBioChange' %}">{% trans "Update Your Contact Info" %}</a>
 		{% endif %}
 	{% endif %}
 </div>
@@ -33,12 +33,12 @@
 
 {% if staffmember %}
 
-	<h3>Current and Upcoming Series</h3>
+	<h3>{% trans "Current and Upcoming Series" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
 		<tr>
-			<th>Month</th><th>Series/Event Name</th><th>{% if staffmember.instructor %}Teaching Partner{% else %}Other Staff{% endif %}</th><th>Location</th><th>Start Time</th><th>Students Registered</th>
+			<th>{% trans "Month" %}</th><th>{% trans "Series/Event Name" %}</th><th>{% if staffmember.instructor %}{% trans "Teaching Partner" %}{% else %}{% trans "Other Staff" %}{% endif %}</th><th>{% trans "Location" %}</th><th>{% trans "Start Time" %}</th><th>{% trans "Students Registered" %}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -70,30 +70,36 @@
 {% if customer %}
 
 	{% if customer.user != request.user %}
-		<h2>{% if staffmember %}Customer {% endif %}Summary Statistics for {{ object.first_name }} {{ object.last_name }}</h2>
+		<h2>{% if staffmember %}{% trans "Customer" %} {% endif %}{% blocktrans with name=object.get_full_name %}Summary Statistics for {{ name }}{% endblocktrans %}</h2>
 	{% endif %}
 
-	<h3>Basic {% if staffmember %}Customer{% endif %} Information</h3>
+	<h3>
+		{% if staffmember %}
+			{% trans "Basic Customer Information" %}
+		{% else %}
+			{% trans "Basic Information" %}
+		{% endif %}
+	</h3>
 
 	<dl>
-		<dt>Customer Since:</dt>
+		<dt>{% trans "Customer Since" %}:</dt>
 			<dd>{{ customer.eventregistration_set.first.event.month|readable_month }} {{ customer.eventregistration_set.first.event.year }}</dd>
-		<dt>Number of Series Taken:</dt>
+		<dt>{% trans "Number of Series Taken" %}:</dt>
 			<dd>{{ customer.numClassSeries }}</dd>
 		{% if referralVoucherId %}
-		<dt>Customer Referral ID:
+		<dt>{% trans "Customer Referral ID" %}:
 			<dd>{{ referralVoucherId }}</dd>
-		<dt>Available Referral Credits:</dt>
+		<dt>{% trans "Available Referral Credits" %}:</dt>
 			<dd>${{ customer.getAvailableCredits|floatformat:2 }}</dd>
 		{% endif %}
 	</dl>
 
-	<h3>Class Series Taken</h3>
+	<h3>{% trans "Class Series Taken" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
 		<tr>
-			<th>Month</th><th>Series Name</th><th>Location</th><th>Class Time</th><th>Instructors</th>
+			<th>{% trans "Month" %}</th><th>{% trans "Series Name" %}</th><th>{% trans "Location" %}</th><th>{% trans "Class Time" %}</th><th>{% trans "Instructors" %}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -113,7 +119,7 @@
 		</tr>
 		{% if forloop.counter == 5 %}
 		<tr id="showMoreClassesRow" class="table-active">
-			<td colspan="5"><a href="" id="showMoreClasses" data-toggle="collapse" data-target=".prior_events" aria-expanded="false" aria-controls="prior_events">Show all&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
+			<td colspan="5"><a href="" id="showMoreClasses" data-toggle="collapse" data-target=".prior_events" aria-expanded="false" aria-controls="prior_events">{% trans "Show all" %}&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
 		</tr>
 		{% endif %}
 	{% endfor %}
@@ -131,20 +137,20 @@
 		</script>
 	{% endaddtoblock %}
 {% else %}
-
-	<p>It looks like you are not yet a customer.  Perhaps you would like to <a href="{% url 'registration' %}">register for some classes</a>?</p>
+	{% url 'registration' as registration_url %}
+	<p>{% blocktrans %}It looks like you are not yet a customer.  Perhaps you would like to <a href="{{ registration_url }}">register for some classes</a>?{% endblocktrans %}</p>
 
 {% endif %}
 
 
 {# Other Series Registered From Verified Email Addresses #}
 {% if verified_eventregs %}
-	<h3>Series Registered From Other Email Addresses</h3>
+	<h3>{% trans "Series Registered From Other Email Addresses" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
 		<tr>
-			<th>Month</th><th>Series Name</th><th>Location</th><th>Class Time</th><th>Instructors</th>
+			<th>{% trans "Month" %}</th><th>{% trans "Series Name" %}</th><th>{% trans "Location" %}</th><th>{% trans "Class Time" %}</th><th>{% trans "Instructors" %}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -164,7 +170,7 @@
 		</tr>
 		{% if forloop.counter == 5 %}
 		<tr id="showMoreVerifiedRow" class="table-active">
-			<td colspan="5"><a href="" id="showMoreVerified" data-toggle="collapse" data-target=".prior_verified" aria-expanded="false" aria-controls="prior_verified">Show all&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
+			<td colspan="5"><a href="" id="showMoreVerified" data-toggle="collapse" data-target=".prior_verified" aria-expanded="false" aria-controls="prior_verified">{% trans "Show all" %}&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
 		</tr>
 		{% endif %}
 	{% endfor %}
@@ -188,12 +194,12 @@
 
 {# Series Registered By This Person #}
 {% if submitted_eventregs %}
-	<h3>Other Series Registered By You</h3>
+	<h3>{% trans "Other Series Registered By You" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
 		<tr>
-			<th>Registered As</th><th>Month</th><th>Series Name</th><th>Location</th><th>Class Time</th><th>Instructors</th>
+			<th>{% trans "Registered As" %}</th><th>{% trans "Month" %}</th><th>{% trans "Series Name" %}</th><th>{% trans "Location" %}</th><th>{% trans "Class Time" %}</th><th>{% trans "Instructors" %}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -214,7 +220,7 @@
 		</tr>
 		{% if forloop.counter == 5 %}
 		<tr id="showMoreSubmittedRow" class="table-active">
-			<td colspan="6"><a href="" id="showMoreSubmitted" data-toggle="collapse" data-target=".prior_submitted" aria-expanded="false" aria-controls="prior_submitted">Show all&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
+			<td colspan="6"><a href="" id="showMoreSubmitted" data-toggle="collapse" data-target=".prior_submitted" aria-expanded="false" aria-controls="prior_submitted">{% trans "Show all" %}&nbsp;<span class="glyphicon glyphicon-chevron-down"></span></a></td>
 		</tr>
 		{% endif %}
 	{% endfor %}

@@ -16,6 +16,6 @@
     {% endfor %}
     </div>
 
-	<p>You will be redirected automatically in {{ seconds|default:5 }} seconds.  If for some reason you are not redirected, please <a href="{{ redirect_url }}">click here</a>.</p>
+	<p>{% blocktrans with seconds=seconds|default:5 %}You will be redirected automatically in {{ seconds }} seconds.  If for some reason you are not redirected, please <a href="{{ redirect_url }}">click here</a>.{% endblocktrans %}</p>
 
 {% endblock %}

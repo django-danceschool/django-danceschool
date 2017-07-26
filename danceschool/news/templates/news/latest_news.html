@@ -1,12 +1,14 @@
+{% load i18n %}
+
 <div class="post">
-<h2>Latest News&nbsp;&nbsp;
+<h2>{% trans "Latest News" %}&nbsp;&nbsp;
 	<div class="pull-right">
 		{% if 'news.add_newsitem' in perms or user.is_superuser %}
-		<a class="edit-link btn btn-default btn-xs" href="{% url 'admin:news_newsitem_add' %}">Post News Item</a>&nbsp;
+		<a class="edit-link btn btn-default btn-xs" href="{% url 'admin:news_newsitem_add' %}">{% trans "Post News Item" %}</a>&nbsp;
 		{% endif %}
 		{% url 'news' as news_url %}
 		{% if news_url %}
-			<a class='get-more btn btn-default btn-xs' href="{{ news_url }}">See More News&nbsp;&raquo;</span></a>
+			<a class='get-more btn btn-default btn-xs' href="{{ news_url }}">{% trans "See More News" %}&nbsp;&raquo;</span></a>
 		{% endif %}
 	</div>
 </h2>

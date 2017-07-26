@@ -1,8 +1,9 @@
 {% extends "cms/home.html" %}
+{% load i18n %}
 
 {% block content %}
     {% if 'news.add_newsitem' in perms or user.is_superuser %}
-    <a class="btn btn-default" href="{% url 'admin:news_newsitem_add' %}">Post News Item</a>
+    <a class="btn btn-default" href="{% url 'admin:news_newsitem_add' %}">{% trans "Post News Item" %}</a>
     {% endif %}
     {% for news_item in newsitem_list %}
     	<div class="post">
@@ -19,13 +20,15 @@
         <div class="pagination">
             <span class="page-links">
                 {% if page_obj.has_previous %}
-                    <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                    <a href="?page={{ page_obj.previous_page_number }}">{% trans "previous" %}</a>
                 {% endif %}
                 <span class="page-current">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                    {% blocktrans with thisPage=page_obj.number numPages=page_obj.paginator.num_pages %}
+                    Page {{ thisPage }} of {{ numPages }}.
+                    {% endblocktrans %}
                 </span>
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}">next</a>
+                    <a href="?page={{ page_obj.next_page_number }}">{% trans "next" %}</a>
                 {% endif %}
             </span>
         </div>

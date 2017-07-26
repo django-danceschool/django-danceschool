@@ -47,6 +47,7 @@ def sendReminderEmailToUser(user,reminder):
         'name': ' '.join([user.first_name, user.last_name]),
         'event': reminder.eventOccurrence.event,
         'occurrence': reminder.eventOccurrence,
+        'businessName': getConstant('contact__businessName'),
     })
 
     try:

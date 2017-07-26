@@ -1,5 +1,5 @@
 {% extends "core/base/base_event_registration.html" %}
-{% load cms_tags thumbnail %}
+{% load cms_tags thumbnail i18n %}
 
 
 {% block top %}
@@ -8,9 +8,9 @@
 	<h1>{{ event.name }}</h1>
 
 	{% if event.teachers %}
-		<h3 class="instructor-names">With 
+		<h3 class="instructor-names">{% trans "With" %} 
 		{% for teacher in event.teachers %}
-				{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} and {% endif %}
+				{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} {% trans "and" %} {% endif %}
 		{% endfor %}
 		</h3>
 		<div class="visible-xs col-xs-12">
@@ -23,14 +23,14 @@
 	{% endif %}
 
 	{% if 'core.change_series' in perms and event.series %}
-	<p><a class="btn btn-default" href="{% url 'admin:core_series_change' event.id %}">Edit Class Details</a></p>
+	<p><a class="btn btn-default" href="{% url 'admin:core_series_change' event.id %}">{% trans "Edit Class Details" %}</a></p>
 	{% endif %}
 	{% if 'core.view_registration_summary' in perms %}
-	<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">View Registrations</a></p>
+	<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
 	{% endif %}
 
 	<p class='schedule'>
-	<strong>Class Schedule:</strong><br />
+	<strong>{% trans "Class Schedule" %}:</strong><br />
 	{% for class in event.eventoccurrence_set.all %}
 		{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
 	{% endfor %}
@@ -41,7 +41,7 @@
 	{{ event.location.address }}<br />
 	{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
 	{% page_url 'directions' as directions_url %}
-	{% if directions_url %}<a href="{{ directions_url }}#{{ event.location.name|slugify }}">More Info</a>{% endif %}
+	{% if directions_url %}<a href="{{ directions_url }}#{{ event.location.name|slugify }}">{% trans "More Info" %}</a>{% endif %}
 	</p>
 
 	<hr />

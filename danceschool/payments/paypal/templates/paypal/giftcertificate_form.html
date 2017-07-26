@@ -1,9 +1,11 @@
-{% load cms_tags sekizai_tags %}
+{% load cms_tags sekizai_tags i18n %}
+
+{% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
 
 <form action="" method="post">
         <div id="error_payment"></div>
 
-        <p><label>Amount:</label> 
+        <p><label>{% trans "Amount" %}:</label> 
         <input id="id_amount" name="amount" type="text" value="{{ instance.defaultAmount }}" /></p>
 </form>
 
@@ -50,7 +52,7 @@
 
             onError: function(err) {
                 $('#error_payment').addClass('alert alert-danger');
-                $('#error_payment').text('An unknown error has occurred. Please try again, or notify us if you continue to have an issue.');
+                $('#error_payment').text('{{ unknown_error }}');
             }
 
         }, '#paypal-button');

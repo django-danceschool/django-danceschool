@@ -1,20 +1,20 @@
-{% load sekizai_tags static %}
+{% load sekizai_tags static i18n %}
 
 {% addtoblock "css" %}
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>Number of Classes Taken By Starting Cohort</h2>
+<h2>{% trans "Number of Classes Taken By Starting Cohort" %}</h2>
 
-<p>How many people decide to progress beyond beginner and how many students stick with us a while?
+<p>{% blocktrans %}How many people decide to progress beyond beginner and how many students stick with us a while?
 Note that students are not classified as leaders or follower in the data, so a student who takes
 classes in both roles will show up in both series depending on the number of series they've taken in
-each.</p>
+each.{% endblocktrans %}</p>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" class="btn btn-default active studentRetentionButton">All Students</button>
+  <button type="button" class="btn btn-default active studentRetentionButton">{% trans "All Students" %}</button>
   {% for prior_year in recentYears %}
-    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-default studentRetentionButton">{{ prior_year }} Cohort</button>
+    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-default studentRetentionButton">{{ prior_year }} {% trans "Cohort" %}</button>
   {% endfor %}
 </div>
 

@@ -1,5 +1,4 @@
-{% load i18n %}
-{% load account socialaccount sekizai_tags crispy_forms_tags %}
+{% load account socialaccount sekizai_tags crispy_forms_tags i18n %}
 
 <div class="panel panel-default" id="returning-customers-panel">
   {% get_providers as socialaccount_providers %}
@@ -9,8 +8,8 @@
   {# Offer Sign-in or Signup #}
   <div class="panel-body" id="ajax_login_choice">
 
-    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signin_form" aria-expanded="false" aria-controls="#signin_form" >Sign In</a>
-    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signup_form" aria-expanded="false" aria-controls="#signup_form">Create An Account</a>
+    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signin_form" aria-expanded="false" aria-controls="#signin_form" >{% trans "Sign In" %}</a>
+    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signup_form" aria-expanded="false" aria-controls="#signup_form">{% trans "Create An Account" %}</a>
   </div>
 
   {# Sign-in Form #}

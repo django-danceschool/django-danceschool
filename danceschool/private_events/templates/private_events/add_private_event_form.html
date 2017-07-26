@@ -1,10 +1,10 @@
 {% extends "cms/admin_home.html" %}
-{% load crispy_forms_tags sekizai_tags %}
+{% load crispy_forms_tags sekizai_tags i18n %}
 
 {% block content %}
     <div>
 
-        <h1>Add an Event (non-Public)</h1>
+        <h1>{% trans "Add an Event (non-Public)" %}</h1>
 
         <form action="" method="post">
             <div class="panel panel-default">

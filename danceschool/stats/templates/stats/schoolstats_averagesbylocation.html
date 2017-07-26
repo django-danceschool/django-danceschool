@@ -1,16 +1,16 @@
-{% load sekizai_tags static %}
+{% load sekizai_tags static i18n %}
 
 {% addtoblock "css" %}
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>Performance By Location
-  <a class="btn btn-xs btn-default" href="{% url 'LocationPerformanceCSV' %}">Download Data</a>
+<h2>{% trans "Performance By Location" %}
+  <a class="btn btn-xs btn-default" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
 </h2>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active showLocationButton">Last 12 Months</button>
-  <button type="button" class="btn btn-default showLocationButton">All Time</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active showLocationButton">{% trans "Last 12 Months" %}</button>
+  <button type="button" class="btn btn-default showLocationButton">{% trans "All Time" %}</button>
 </div>
 
 
@@ -44,8 +44,8 @@ $(document).ready(function(){
     },
     axis: {
         labels: {
-          y: '# Series',
-          y2: '# Registrations',
+          y: '{% trans "# Series" %}',
+          y2: '{% trans "# Registrations" %}',
         },
         x: {
             type: 'category' // this needed to load string x value

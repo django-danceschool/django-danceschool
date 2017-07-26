@@ -1,47 +1,47 @@
 {% extends "cms/home.html" %}
-{% load cms_tags danceschool_tags sekizai_tags %}
+{% load cms_tags danceschool_tags sekizai_tags i18n %}
 
 {% block content %}
 
-<h1>Invoice for {{ businessName }}:</h1>
+<h1>{% blocktrans Invoice for {{ businessName }}{% endblocktrans %}:</h1>
 
 <dl>
-	<dt>Invoice Number:</dt>
+	<dt>{% trans "Invoice Number" %}:</dt>
 	<dd>{{ object.id }}</dd>
 
-	<dt>Invoice Status:</dt>
+	<dt>{% trans "Invoice Status" %}:</dt>
 	<dd>{{ object.statusLabel }}</dd>
 
 	{% if object.amountPaid %}
-		<dt>Amount Paid:</dt>
+		<dt>{% trans "Amount Paid" %}:</dt>
 		<dd>{{ currencySymbol }}{{ object.amountPaid }}</dd>
 	{% endif %}
 
 	{% if object.outstandingBalance %}
-		<dt>Outstanding Balance:</dt>
+		<dt>{% trans "Outstanding Balance" %}:</dt>
 		<dd>{{ currencySymbol }}{{ object.outstandingBalance }}</dd>
 	{% endif %}
 </dl>
 
 <table class="table">
 <tr>
-	<td>Initial Price</td>
+	<td>{% trans "Initial Price" %}</td>
 	<td>{{ currencySymbol }}{{ object.grossTotal|floatformat:"2" }}</td>
 </tr>
 <tr>
-	<td>Net Price</td>
+	<td>{% trans "Net Price" %}</td>
 	<td>{{ currencySymbol }}{{ object.total|floatformat:"2" }}</td>
 </tr>
 <tr>
-	<td>Taxes</td>
+	<td>{% trans "Taxes" %}</td>
 	<td>{{ currencySymbol }}{{ object.taxes|floatformat:"2" }}</td>
 </tr>
 <tr>
-	<td>Fees</td>
+	<td>{% trans "Fees" %}</td>
 	<td>{{ currencySymbol }}{{ object.fees|floatformat:"2" }}</td>
 </tr>
 <tr>
-	<td>Adjustments/Refunds</td>
+	<td>{% trans "Adjustments/Refunds" %}</td>
 	<td>{{ currencySymbol }}{{ object.adjustments|floatformat:"2" }}</td>
 </tr>
 
@@ -49,25 +49,25 @@
 
 <hr />
 
-<h2>Item Details</h2>
+<h2>{% trans "Item Details" %}</h2>
 
 {% if 'core.change_registration' in perms and object.finalRegistration %}
-	<a class="btn btn-default" href="{% url 'admin:core_registration_change' object.finalRegistration.id %}">View Registration</a>
+	<a class="btn btn-default" href="{% url 'admin:core_registration_change' object.finalRegistration.id %}">{% trans "View Registration" %}</a>
 {% elif 'core.change_temporaryregistration' in perms and object.temporaryRegistration %}
-	<a class="btn btn-default" href="{% url 'admin:core_temporaryregistration_change' object.temporaryRegistration.id %}">View Temporary Registration</a>
+	<a class="btn btn-default" href="{% url 'admin:core_temporaryregistration_change' object.temporaryRegistration.id %}">{% trans "View Temporary Registration" %}</a>
 {% endif %}
 
 <table class="table">
 <thead>
 	<tr>
-		<th>Name</th>
-		<th>Inital Price</th>
-		<th>Price with Discounts</th>
-		<th>Taxes</th>
-		<th>Fees</th>
-		<th>Adjustments</th>
+		<th>{% trans "Name" %}</th>
+		<th>{% trans "Inital Price" %}</th>
+		<th>{% trans "Price with Discounts" %}</th>
+		<th>{% trans "Taxes" %}</th>
+		<th>{% trans "Fees" %}</th>
+		<th>{% trans "Adjustments" %}</th>
 		{% if 'financial.change_revenueitem' in perms %}
-		<th>Links</th>
+		<th>{% trans "Links" %}</th>
 		{% endif %}
 	</tr>
 </thead>
@@ -83,7 +83,7 @@
 		{% if 'financial.change_revenueitem' in perms %}
 			<td>
 				{% if item.revenueitem %}
-					<a class="btn btn-default btn-xs" href="{% url 'admin:financial_revenueitem_change' item.revenueitem.id %}">Rev. Item</a>
+					<a class="btn btn-default btn-xs" href="{% url 'admin:financial_revenueitem_change' item.revenueitem.id %}">{% trans "Rev. Item" %}</a>
 				{% endif %}
 			</td>
 		{% endif %}
@@ -95,18 +95,18 @@
 {% if payments %}
 	<hr />
 
-	<h2>Payment Details</h2>
+	<h2>{% trans "Payment Details" %}</h2>
 
 	{% if 'core.process_refunds' in perms %}
-		<a class="btn btn-default" href="{% url 'refundProcessing' object.id %}">Refund</a>
+		<a class="btn btn-default" href="{% url 'refundProcessing' object.id %}">{% trans "Refund" %}</a>
 	{% endif %}
 
 	<table class="table">
 		<thead>
 			<tr>
-				<th>Payment Method</th>
-				<th>Transaction ID</th>
-				<th>Amount</th>
+				<th>{% trans "Payment Method" %}</th>
+				<th>{% trans "Transaction ID" %}</th>
+				<th>{% trans "Amount" %}</th>
 			</tr>
 		</thead>
 		{% for payment in payments %}
@@ -120,7 +120,7 @@
 {% endif %}
 
 <div class="panel panel-default">
-<div class="panel-heading"><h4 class="panel-title">Comments/Notes</h4></div>
+<div class="panel-heading"><h4 class="panel-title">{% trans "Comments/Notes" %}</h4></div>
 <div class="panel-body">
 	<pre class="unstyled">{{ object.comments }}</pre>
 </div>
@@ -128,7 +128,7 @@
 
 {% if object.outstandingBalance %}
 	<hr />
-	<h2>Pay Invoice</h2>
+	<h2>{% trans "Pay Invoice" %}</h2>
 
 	{% static_placeholder "registration_payment_placeholder" %}
 {% endif %}

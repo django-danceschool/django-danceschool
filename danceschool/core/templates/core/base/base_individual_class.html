@@ -1,20 +1,28 @@
 {% extends "cms/home.html" %}
-{% load cms_tags danceschool_tags sekizai_tags thumbnail %}
+{% load cms_tags danceschool_tags sekizai_tags thumbnail i18n %}
 
 {% block title %}
-	{{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} Class Series - {{ seriesset.0.classDescription.title }}
+	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
+	{{ month }} {{ year }} Class Series - {{ title }}
+	{% endblocktrans %}
 {% endblock %}
 
 {% block meta_title %}
-	{{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} Class Series - {{ seriesset.0.classDescription.title }}
+	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
+	{{ month }} {{ year }} Class Series - {{ title }}
+	{% endblocktrans %}
 {% endblock %}
 
 {% block meta_description %}
-	Learn more through our {{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} class, {{ seriesset.0.classDescription.title }}. Classes begin {{ seriesset.0.startTime|date:'l, F jS' }} at {{ seriesset.0.location }}.
+	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title startDate=seriesset.0.startTime|date:'l, F jS' location=seriesset.0.location %}
+	Learn more through our {{ month }} {{ year }} class, {{ title }}. Classes begin {{ startDate }} at {{ location }}.
+	{% endblocktrans %}
 {% endblock %}
 
 {% block facebook_og_description %}
-	Learn more through our {{ seriesset.0.month|readable_month }} {{ seriesset.0.year }} class, {{ seriesset.0.classDescription.title }}. Classes begin {{ seriesset.0.startTime|date:'l, F jS' }} at {{ seriesset.0.location }}.
+	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title startDate=seriesset.0.startTime|date:'l, F jS' location=seriesset.0.location %}
+	Learn more through our {{ month }} {{ year }} class, {{ title }}. Classes begin {{ startDate }} at {{ location }}.
+	{% endblocktrans %}
 {% endblock %}
 
 {% block body_id %}classes{% endblock %}
@@ -22,7 +30,11 @@
 {% block content %}
 	<div class='post'>
 	<div class="individualseries">
-	<h2>{{ seriesset.0.month|readable_month }} {{ seriesset.0.year }}: {{ seriesset.0.classDescription.title }}</h2>
+	<h2>
+		{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
+		{{ month }} {{ year }}: {{ title }}
+		{% endblocktrans %}
+	</h2>
 
 	{% for series in seriesset %}
 		{% if series.teachers %}
@@ -34,15 +46,24 @@
 		{% endif %}
 
 		{% if not series.special %}
-			<h3>{{ series.startTime|date:'l' }}s, {{ series.startTime|date:'h:i A' }} at {{ series.location }}, Beginning {{ series.startTime|date:'F jS' }}</h3>
+			<h3>
+				{% blocktrans with weekday=series.startTime|date:'l' startTime=series.startTime|date:'h:i A' location=series.location startDate=series.startTime|date:'F jS' %}
+					{{ weekday }}s, {{ startTime }} at {{ location }}, Beginning {{ startDate }}
+				{% endblocktrans %}
+
+			</h3>
 		{% else %}
-			<h3>Begins {{ series.startTime|date:'l, F jS, h:i A' }} at {{ series.location }}</h3>
+			<h3>
+				{% blocktrans with startTime=series.startTime|date:'l, F jS, h:i A' location=series.location %}
+					Begins {{ startTime }} at {{ location }}
+				{% endblocktrans %}
+			</h3>
 		{% endif %}
 
 		{% if series.teachers %}
-			<h3 class="instructor-names">With 
+			<h3 class="instructor-names">{% trans "With" %} 
 			{% for teacher in series.teachers %}
-					{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} and {% endif %}
+					{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} {% trans "and" %} {% endif %}
 			{% endfor %}
 			</h3>
 			<div class="visible-xs col-xs-12">
@@ -55,7 +76,7 @@
 		{% endif %}
 
 		<p class='schedule'>
-		<strong>Class Schedule:</strong><br />
+		<strong>{% trans "Class Schedule" %}:</strong><br />
 		{% for class in series.eventoccurrence_set.all reversed %}
 			{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
 		{% endfor %}
@@ -65,38 +86,38 @@
 		<strong>{{ series.location.name }}</strong><br />
 		{{ series.location.address }}<br />
 		{{ series.location.city }}, {{ series.location.state }} {{ series.location.zip }}<br />
-		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ series.location.name|slugify }}">More Info</a>
+		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ series.location.name|slugify }}">{% trans "More Info" %}</a>
 		</p>
 
 	    {% if series.pricingTier.id != default_pricingtier_id %}
 	    <p class="pricinginfo">
-	    	<strong>Pricing:</strong>&nbsp;
-			<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong" data-html="true" data-content="<em>Pre-Registered</em><br />General: {{ currencySymbol }}{{ series.pricingTier.onlineGeneralPrice|floatformat:2 }}<br />Students: {{ currencySymbol }}{{ series.pricingTier.onlineStudentPrice|floatformat:2 }}<br /><br /><em>At the Door</em><br />General: {{ currencySymbol }}{{ series.pricingTier.doorGeneralPrice|floatformat:2 }}<br />Students: {{ currencySymbol }}{{ series.pricingTier.doorStudentPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }} pricing</a>
+	    	<strong>{% trans "Pricing" %}:</strong>&nbsp;
+			<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />General: {{ currencySymbol }}{{ series.pricingTier.onlineGeneralPrice|floatformat:2 }}<br />{% trans 'Students' %}: {{ currencySymbol }}{{ series.pricingTier.onlineStudentPrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{% trans 'General' %}: {{ currencySymbol }}{{ series.pricingTier.doorGeneralPrice|floatformat:2 }}<br />{% trans 'Students' %}: {{ currencySymbol }}{{ series.pricingTier.doorStudentPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }} {% trans "pricing" %}</a>
 		</p>
 		{% endif %}
 
 		<p>
 		{% if not series.soldOut and not series.registrationClosed %}
-			<a class="btn btn-primary" href="{% url 'registration' %}">Register for this class!</a>
+			<a class="btn btn-primary" href="{% url 'registration' %}">{% trans "Register for this class!" %}</a>
 		{% elif series.soldOut %}
-			Sold out!
+			{% trans "Sold out!" %}
 		{% else %}
-			Registration closed!
+			{% trans "Registration closed!" %}
 		{% endif %}
 		</p>
 
 		{% if 'core.change_series' in perms %}
-		<p><a class="btn btn-default" href="{% url 'admin:core_series_change' series.id %}">Edit Class Details</a></p>
+		<p><a class="btn btn-default" href="{% url 'admin:core_series_change' series.id %}">{% trans "Edit Class Details" %}</a></p>
 		{% endif %}
 		{% if 'core.view_registration_summary' in perms %}
-		<p><a class="btn btn-default" href="{% url 'viewregistrations' series.id %}">View Registrations</a></p>
+		<p><a class="btn btn-default" href="{% url 'viewregistrations' series.id %}">{% trans "View Registrations" %}</a></p>
 		{% endif %}
 
 		<hr />
 	{% endfor %}
 	</div>
 
-		<h3>Class Description</h3>
+		<h3>{% trans "Class Description" %}</h3>
 		<div class='classDescription'>
 			<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
 		</div>

@@ -1,4 +1,4 @@
-{% load sekizai_tags static %}
+{% load sekizai_tags static i18n %}
 
 {% addtoblock "css" %}
   <style type="text/css" scoped>
@@ -11,18 +11,18 @@
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>Students By Month of the Year
-  <a class="btn btn-xs btn-default" href="{% url 'MonthlyPerformanceCSV' %}">Download Data</a>
+<h2>{% trans "Students By Month of the Year" %}
+  <a class="btn btn-xs btn-default" href="{% url 'MonthlyPerformanceCSV' %}">{% trans "Download Data" %}</a>
 </h2>
 
-<p>Which months of the year are the most successful for us?  Click the legend at the bottom to show/hide previous years.</p>
+<p>{% blocktrans %}Which months of the year are the most successful for us?  Click the legend at the bottom to show/hide previous years.{% endblocktrans %}</p>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-series="SeriesRegistrations" class="btn btn-default active monthlyPerformanceButton">Total Series Registrations</button>
-  <button type="button" data-series="Registrations" class="btn btn-default monthlyPerformanceButton">Total Registrations (unique students)</button>
-  <button type="button" data-series="Hours" class="btn btn-default monthlyPerformanceButton">Total Hours of Class</button>
-  <button type="button" data-series="StudentHours" class="btn btn-default monthlyPerformanceButton">Total Student-Hours</button>  
-  <button type="button" data-series="AvgStudents" class="btn btn-default monthlyPerformanceButton">Avg. Students/Hour</button>
+  <button type="button" data-series="SeriesRegistrations" class="btn btn-default active monthlyPerformanceButton">{% trans "Total Series Registrations" %}</button>
+  <button type="button" data-series="Registrations" class="btn btn-default monthlyPerformanceButton">{% trans "Total Registrations (unique students)" %}</button>
+  <button type="button" data-series="Hours" class="btn btn-default monthlyPerformanceButton">{% trans "Total Hours of Class" %}</button>
+  <button type="button" data-series="StudentHours" class="btn btn-default monthlyPerformanceButton">{% trans "Total Student-Hours" %}</button>  
+  <button type="button" data-series="AvgStudents" class="btn btn-default monthlyPerformanceButton">{% trans "Avg. Students/Hour" %}</button>
 </div>
 
 <div id="MonthlyPerformance"></div>

@@ -1,18 +1,21 @@
 {% extends "cms/admin_home.html" %}
-{% load danceschool_tags sekizai_tags %}
+{% load danceschool_tags sekizai_tags i18n %}
 
 {% block content %}
+
+{% trans "Other/Not Specified" as grouper_default %}
+
 <div class="row">
 <div class="col-md-12 col-sm-12 col-xs-12">
 
-	<a href="{% url 'financesByMonth' %}" class="btn btn-default">Return to Monthly Summary</a>
+	<a href="{% url 'financesByMonth' %}" class="btn btn-default">{% trans "Return to Monthly Summary" %}</a>
 
-	<h4>Choose Financial Basis</h4>
+	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-default {% if basis == 'accrualDate' %}active{% endif %}">Accrual Date (Default)</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-default {% if basis == 'paymentDate' %}active{% endif %}">Payment/Receipt Date</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-default {% if basis == 'submissionDate' %}active{% endif %}">Submission Date</a>
+	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-default {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-default {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-default {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 <hr />
@@ -23,28 +26,28 @@
 <div class="row" style="margin-top: 30px;">
 <div class="col-md-12 col-sm-12 col-xs-12">
 
-<h1>Detailed Financial Statement: {{ rangeTitle }}</h1>
+<h1>{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
 
-<h2>Period Summary</h2>
+<h2>{% trans "Period Summary" %}</h2>
 
 <table class="table summary_table">
 	<tr>
-		<th>Total Revenues</th><td>{{ currencySymbol }}{{ totalRevenues|floatformat:"2" }}</td>
+		<th>{% trans "Total Revenues" %}</th><td>{{ currencySymbol }}{{ totalRevenues|floatformat:"2" }}</td>
 	</tr>
 	<tr>
-		<th>Total Expenses</th><td>{{ currencySymbol }}{{ totalExpenses|floatformat:"2" }}</td>
+		<th>{% trans "Total Expenses" %}</th><td>{{ currencySymbol }}{{ totalExpenses|floatformat:"2" }}</td>
 	</tr>
 	<tr style="border-top: solid 2px;" class="info">
-		<th style="font-size: 1.2em;">Net Profit</th><th style="font-size: 1.2em;">{{ currencySymbol }}{{ netProfit|floatformat:"2" }}</th>
+		<th style="font-size: 1.2em;">{% trans "Net Profit" %}</th><th style="font-size: 1.2em;">{{ currencySymbol }}{{ netProfit|floatformat:"2" }}</th>
 	</tr>	
 </table>
 
-<h2>Revenues</h2>
+<h2>{% trans "Revenues" %}</h2>
 
 <table class="table table-hover">
 	<thead>
 		<tr class="active">
-			<th colspan="2">Registrations:</th>
+			<th colspan="2">{% trans "Registrations:" %}</th>
 			<th>{{ currencySymbol }}{{ totalRegistrationRevenues|floatformat:"2" }} </th>
 		</tr>
 	</thead>
@@ -53,16 +56,16 @@
 			<tbody>
 				<tr data-toggle="collapse" data-target="#accordionevent_{{ event.grouper.id }}" class="clickable">
 					<th colspan="2">
-						<span class="glyphicon glyphicon-plus"></span> {{ event.grouper|default:"Other/Not Specified" }}
+						<span class="glyphicon glyphicon-plus"></span>{{ event.grouper|default:grouper_default }}
 					</th>
 					<td>{% get_item_by_key registrationRevenueEventTotals 'id' event.grouper.id as cat %} {{ currencySymbol }}{{ cat.event_net|default:registrationRevenueOtherTotal.event_net|floatformat:"2" }}</td>
 				</tr>
 			</tbody>
 			<tbody id="accordionevent_{{ event.grouper.id }}" class="collapse">
 			<tr>
-				<th>Date</th>
-				<th>Description</th>
-				<th>Amount</th>
+				<th>{% trans "Date" %}</th>
+				<th>{% trans "Description" %}</th>
+				<th>{% trans "Amount" %}</th>
 			</tr>
 			{% for item in event.list|dictsort:"basisDate" %}
 				<tr>
@@ -79,7 +82,7 @@
 	<table class="table table-hover">
 		<thead>
 			<tr class="active">
-				<th colspan="2">Other Revenues:</th>
+				<th colspan="2">{% trans "Other Revenues" %}:</th>
 				<th>{{ currencySymbol }}{{ totalOtherRevenues|floatformat:"2" }} </th>
 			</tr>
 		</thead>
@@ -88,16 +91,16 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordionotherrevenue_{{ category.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span> {{ category.grouper|default:"Other/Not Specified" }}
+							<span class="glyphicon glyphicon-plus"></span> {{ category.grouper|default:grouper_default }}
 						</th>
 						<td>{% get_item_by_key revenueCategoryTotals 'id' category.grouper.id as cat %} {{ currencySymbol }}{{ cat.category_net|floatformat:"2" }}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionotherrevenue_{{ category.grouper.id }}" class="collapse">
 					<tr>
-						<th>Date</th>
-						<th>Description</th>
-						<th>Amount</th>
+						<th>{% trans "Date" %}</th>
+						<th>{% trans "Description" %}</th>
+						<th>{% trans "Amount" %}</th>
 					</tr>		
 				{% for item in category.list|dictsort:"basisDate" %}
 					<tr>
@@ -113,13 +116,13 @@
 
 <hr />
 
-<h2>Expenses</h2>
+<h2>{% trans "Expenses" %}</h2>
 
 {% if instructionExpenseItems %}
 	<table class="table table-hover">
 		<thead>
 			<tr class="active">
-				<th colspan="2">Instruction:</th>
+				<th colspan="2">{% trans "Instruction" %}:</th>
 				<th>{{ currencySymbol }}{{ totalInstructionExpenses|floatformat:"2" }}</th>
 			</tr>
 		</thead>
@@ -132,7 +135,7 @@
 							{% if teacher.grouper.first_name or teacher.grouper.last_name %}
 								{{ teacher.grouper.first_name }} {{ teacher.grouper.last_name }}
 							{% else %}
-								Other/Not Specified
+								{{ grouper_default }}
 							{% endif %}
 						</th>
 						<td>{% get_item_by_key instructionExpenseInstructorTotals 'id' teacher.grouper.id as cat %} {{ currencySymbol }}{{ cat.instructor_net|default:instructionExpenseOtherTotal.instructor_net|floatformat:"2" }}</td>
@@ -140,9 +143,9 @@
 				</tbody>
 				<tbody id="accordioninstructor_{{ teacher.grouper.id }}" class="collapse">
 					<tr>
-						<th>Date</th>
-						<th>Description</th>
-						<th>Amount</th>
+						<th>{% trans "Date" %}</th>
+						<th>{% trans "Description" %}</th>
+						<th>{% trans "Amount" %}</th>
 					</tr>		
 				{% for item in teacher.list|dictsort:"basisDate" %}
 					<tr>
@@ -162,7 +165,7 @@
 	<table class="table table-hover">
 		<thead>
 			<tr class="active">
-				<th colspan="2">Venue Rental:</th>
+				<th colspan="2">{% trans "Venue Rental" %}:</th>
 				<th>{{ currencySymbol }}{{ totalVenueExpenses|floatformat:"2" }}</th>
 			</tr>
 		</thead>
@@ -171,16 +174,16 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordionlocation_{{ venue.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span> {{ venue.grouper.name|default:"Other/Not Specified" }}
+							<span class="glyphicon glyphicon-plus"></span> {{ venue.grouper.name|default:grouper_default }}
 						</th>
 						<td>{% get_item_by_key venueExpenseVenueTotals 'id' venue.grouper.id as cat %} {{ currencySymbol }}{{ cat.location_net|default:venueExpenseOtherTotal.location_net|floatformat:"2" }}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionlocation_{{ venue.grouper.id }}" class="collapse">
 					<tr>
-						<th>Date</th>
-						<th>Description</th>
-						<th>Amount</th>
+						<th>{% trans "Date" %}</th>
+						<th>{% trans "Description" %}</th>
+						<th>{% trans "Amount" %}</th>
 					</tr>		
 				{% for item in venue.list|dictsort:"basisDate" %}
 					<tr>
@@ -199,7 +202,7 @@
 	<table class="table table-hover">
 		<thead>
 			<tr class="active">
-				<th colspan="2">Other Expenses:</th>
+				<th colspan="2">{% trans "Other Expenses" %}:</th>
 				<th>{{ currencySymbol }}{{ totalOtherExpenses|floatformat:"2" }}</th>
 			</tr>
 		</thead>
@@ -208,16 +211,16 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordionotherexpense_{{ category.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span> {{ category.grouper.name|default:"Other/Not Specified" }}
+							<span class="glyphicon glyphicon-plus"></span> {{ category.grouper.name|default:grouper_default }}
 						</th>
 						<td>{% get_item_by_key expenseCategoryTotals 'id' category.grouper.id as cat %} {{ currencySymbol }}{{ cat.category_net|floatformat:"2" }}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionotherexpense_{{ category.grouper.id }}" class="collapse">
 					<tr>
-						<th>Date</th>
-						<th>Description</th>
-						<th>Amount</th>
+						<th>{% trans "Date" %}</th>
+						<th>{% trans "Description" %}</th>
+						<th>{% trans "Amount" %}</th>
 					</tr>		
 				{% for item in category.list|dictsort:"basisDate" %}
 					<tr>

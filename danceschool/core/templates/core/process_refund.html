@@ -1,30 +1,32 @@
 {% extends "cms/admin_home.html" %}
-{% load danceschool_tags sekizai_tags %}
+{% load danceschool_tags sekizai_tags i18n %}
 
 {% block content %}
 
-<h3>Invoice #{{ invoice.id }}
+<h3>{% trans "Invoice #" %}{{ invoice.id }}
 {% if registration %}
-	for {{ registration.fullName }}
+	{% blocktrans with name=registration.fullName %}
+	for {{ name }}
+	{% endblocktrans %}
 {% endif %}
 </h3>
 
 <dl>
-	<dt>Date &amp; Time:</dt><dd>{{ invoice.creationDate|date:'DATETIME_FORMAT' }}</dd>
-	<dt>Net Amount Paid:</dt><dd>{{ invoice.amountPaid }}</dd>
-	<dt>Price with Discounts:</dt><dd>{{ invoice.total }}</dd>
-	<dt>Paid Online:</dt><dd>{{ invoice.paidOnline|yesno }}</dd>
-	{% if registration %}<dt>Student:</dt><dd>{{ registration.student|yesno }}</dd>{% endif %}
+	<dt>{% trans "Date &amp; Time" %}:</dt><dd>{{ invoice.creationDate|date:'DATETIME_FORMAT' }}</dd>
+	<dt>{% trans "Net Amount Paid" %}:</dt><dd>{{ invoice.amountPaid }}</dd>
+	<dt>{% trans "Price with Discounts" %}:</dt><dd>{{ invoice.total }}</dd>
+	<dt>{% trans "Paid Online" %}:</dt><dd>{{ invoice.paidOnline|yesno }}</dd>
+	{% if registration %}<dt>{% trans "Student" %}:</dt><dd>{{ registration.student|yesno }}</dd>{% endif %}
 </dl>
 
 {% if payments %}
 	<div class="panel panel-default">
-		<div class="panel-heading"><h4 class="panel-title">Payment Details</h4></div>
+		<div class="panel-heading"><h4 class="panel-title">{% trans "Payment Details" %}</h4></div>
 		<div class="panel-body">
 			{% for payment in payments %}
 				{{ payment.methodName }}: {{ payment.recordId }}<br />
 				{% if not payment.refundable %}
-					<strong>Note:</strong> This payment does not appear to be automatically refundable.  Please manually refund the money to this student after filling out this form.<br />
+					<strong>{% trans "Note" context "alert" %}:</strong> {% trans "This payment does not appear to be automatically refundable.  Please manually refund the money to this student after filling out this form." %}<br />
 				{% endif %}
 			{% endfor %}
 		</div>
@@ -35,13 +37,13 @@
 
 <form id="refund_form" method="post" action="">{% csrf_token %}
 
-<h2>Total Refund Amount: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h2>
+<h2>{% trans "Total Refund Amount" %}: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h2>
 
 {% if invoice.revenueNotYetReceived %}
-	<div class="alert alert-danger" role="alert">Revenue has been recorded for this registration that has not yet been marked as received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below.</div>
+	<div class="alert alert-danger" role="alert">{% trans "Revenue has been recorded for this registration that has not yet been marked as received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below." %}</div>
 {% endif %}
 {% if invoice.unpaid %}
-	<div class="alert alert-danger" role="alert">This invoice is not yet marked as paid.  In determining any refund amount, please account for revenue that has not yet been received.</div>
+	<div class="alert alert-danger" role="alert">{% trans "This invoice is not yet marked as paid.  In determining any refund amount, please account for revenue that has not yet been received." %}</div>
 {% endif %}
 
 {% if form.non_field_errors %}
@@ -51,21 +53,21 @@
 {% endif %}
 {% if form.id.errors %}
 	<div class="alert alert-danger" role="alert">
-		<strong>Error with ID:</strong>
+		<strong>{% trans "Error with ID" %}:</strong>
 		{{ form.id.errors }}
 	</div>
 {% endif %}
 
 {% if form.total_refund_amount.errors %}
 	<div class="alert alert-danger" role="alert">
-		<strong>Error with Total Refund Amount:</strong>
+		<strong>{% trans "Error with Total Refund Amount" %}:</strong>
 		{{ form.total_refund_amount.errors }}
 	</div>
 {% endif %}
 
 {% if form.initial_refund_amount.errors %}
 	<div class="alert alert-danger" role="alert">
-		<strong>Error with Initial Refund Amount:</strong>
+		<strong>{% trans "Error with Initial Refund Amount" %}:</strong>
 		{{ form.initial_refund_amount.errors }}
 	</div>
 {% endif %}
@@ -74,18 +76,18 @@
 {{ form.total_refund_amount }}
 {{ form.initial_refund_amount }}
 
-<input type="submit" class="btn btn-primary" value="Process Refund" />
+<input type="submit" class="btn btn-primary" value="{% trans 'Process Refund' %}" />
 
-	<h4>Item Details</h4>
+	<h4>{% trans "Item Details" %}</h4>
 	<table class="regrefundtable table" border=1>
 	<thead>
 		<tr>
-			<td>Item ID</td>
-			<td>Item Name</td>
-			<td>Price (Gross)</td>
-			<td>Price (Net)</td>
-			<td>Cancelled</td>
-			<td>Refunds/Adjustments</td>
+			<td>{% trans "Item ID" %}</td>
+			<td>{% trans "Item Name" %}</td>
+			<td>{% trans "Price (Gross)" %}</td>
+			<td>{% trans "Price (Net)" %}</td>
+			<td>{% trans "Cancelled" %}</td>
+			<td>{% trans "Refunds/Adjustments" %}</td>
 		</tr>
 	</thead>
 	<tbody>
@@ -114,8 +116,8 @@
 <hr />
 
 <p>
-	<a class="btn btn-default btn-sm" href="{% url 'registration' %}">Class Registration Page</a>
-	<a class="btn btn-default btn-sm" href="{% url 'viewregistrations_selectevent' %}">Select Another Event</a>
+	<a class="btn btn-default btn-sm" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
+	<a class="btn btn-default btn-sm" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Event" %}</a>
 </p>
 
 {% addtoblock "js" %}
@@ -166,7 +168,7 @@
 			});
 
 			if (alertFlag == true) {
-				if (confirm("Cancelled classes are not fully refunded. Confirm that this is desired?")) {
+				if (confirm("{% trans 'Cancelled classes are not fully refunded. Confirm that this is desired?' %}")) {
 					$('#refund_form').submit();
 				}
 				else {

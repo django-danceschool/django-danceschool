@@ -1,15 +1,15 @@
 {% extends "cms/admin_home.html" %}
-{% load sekizai_tags %}
+{% load sekizai_tags i18n %}
 
 {% block content %}
 
 <h3>{{ series.name }}</h3>
 
 <dl>
-	<dt>Total Students:</dt><dd>{{ series.numRegistered }}</dd>
-	<dt>Location:</dt><dd>{{ series.location.name }}</dd>
-	<dt>Time:</dt><dd>{{ series.startTime|date:'l, h:i A' }}</dd>
-	<dt>Drop-Ins Permitted:</dt><dd>{{ series.allowDropins|yesno }}</dd>
+	<dt>{% trans "Total Students" %}:</dt><dd>{{ series.numRegistered }}</dd>
+	<dt>{% trans "Location" %}:</dt><dd>{{ series.location.name }}</dd>
+	<dt>{% trans "Time" %}:</dt><dd>{{ series.startTime|date:'l, h:i A' }}</dd>
+	<dt>{% trans "Drop-Ins Permitted" %}:</dt><dd>{{ series.allowDropins|yesno }}</dd>
 </dl>
 
 {% if 'core.checkin_customers' in perms %}
@@ -20,17 +20,17 @@
 <thead>
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
-		<td>Check In</td>
+		<td>{% trans "Check In" %}</td>
 		{% endif %}
-		<td>Name</td>
-		<td>This Series Price</td>
-		<td>Total Payment</td>
-		{% if series.availableRoles %}<td>Role</td>{% endif %}
-		{% if series.allowDropins %}<td>Drop-In</td>{% endif %}
-		<td>Student</td>
-		<td>Customer Email</td>
-		<td>All-Time Classes</td>
-		<td>Links</td>
+		<td>{% trans "Name" %}</td>
+		<td>{% trans "This Series Price" %}</td>
+		<td>{% trans "Total Payment" %}</td>
+		{% if series.availableRoles %}<td>{% trans "Role" %}</td>{% endif %}
+		{% if series.allowDropins %}<td>{% trans "Drop-In" %}</td>{% endif %}
+		<td>{% trans "Student" %}</td>
+		<td>{% trans "Customer Email" %}</td>
+		<td>{% trans "All-Time Classes" %}</td>
+		<td>{% trans "Links" %}</td>
 	</tr>
 </thead>
 <tbody>
@@ -43,7 +43,7 @@
 		{% endif %}
 		<td>
 			{% if reg.registration.fullName != reg.registration.customer.fullName %}
-				<a href="" data-toggle="popover" title="Customer Name" data-container="body" data-placement="top" data-content="Most recent reg. from this email address: {{ reg.registration.customer.fullName }}">{{ reg.registration.fullName }}</a>
+				<a href="" data-toggle="popover" title="{% trans 'Customer Name' %}" data-container="body" data-placement="top" data-content="{% trans 'Most recent reg. from this email address' %}: {{ reg.registration.customer.fullName }}">{{ reg.registration.fullName }}</a>
 			{% else %}
 				{{ reg.registration.fullName }}
 			{% endif %}
@@ -51,14 +51,14 @@
 
 		<td {% if reg.warningFlag %}class="warning"{% elif reg.refundFlag %}class="info"{% endif %}>
 			{% if reg.discounted or reg.warningFlag %}
-				<strong>Gross:</strong> {{ reg.price|floatformat:2 }} <br />
-				<strong>Net:</strong> {{ reg.netPrice|floatformat:2 }}
+				<strong>{% trans "Gross" %}:</strong> {{ reg.price|floatformat:2 }} <br />
+				<strong>{% trans "Net" %}:</strong> {{ reg.netPrice|floatformat:2 }}
 				{% if reg.refundFlag %}<br />
-				<strong>Adjustments/Refunds:</strong> {{ reg.invoiceitem.adjustments|floatformat:2 }}
+				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ reg.invoiceitem.adjustments|floatformat:2 }}
 				{% endif %}
 				{% if reg.invoiceitem.revenueMismatch or reg.invoiceitem.revenueNotYetReceived %}<br />
-				<strong>Recorded Revenue:</strong> {{ reg.invoiceitem.revenueReported|floatformat:2 }}<br />
-				<strong>Received Revenue:</strong> {{ reg.invoiceitem.revenueReceived|floatformat:2 }}<br />
+				<strong>{% trans "Recorded Revenue" %}:</strong> {{ reg.invoiceitem.revenueReported|floatformat:2 }}<br />
+				<strong>{% trans "Received Revenue" %}:</strong> {{ reg.invoiceitem.revenueReceived|floatformat:2 }}<br />
 				{% endif %}
 			{% else %}
 				{{reg.price|floatformat:2 }}
@@ -72,14 +72,14 @@
 			class="info"
 		{% endif %}>
 			{% if reg.registration.warningFlag or reg.registration.refundFlag %}
-				<strong>Gross Price:</strong> {{ reg.registration.totalPrice|floatformat:2 }} <br />
-				<strong>Net Price:</strong>
+				<strong>{% trans "Gross Price" %}:</strong> {{ reg.registration.totalPrice|floatformat:2 }} <br />
+				<strong>{% trans "Net Price" %}:</strong>
 				{% if reg.registration.discounted %}
-					<a href="" data-toggle="popover" title="Gross vs. Net Price" data-container="body" data-placement="top" data-content="
-					{% if reg.registration.discountCode %}Discount Code: {{ reg.registration.discountCode.name }}, {% endif %}
+					<a href="" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					{% if reg.registration.discountCode %}{% trans 'Discount Code' %}: {{ reg.registration.discountCode.name }}, {% endif %}
 					{% for v in reg.registration.voucheruse_set.all %}
 						{% if v.amount > 0 %}
-					 		Voucher: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
+					 		{% trans 'Voucher' %}: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
 						{% endif %}
 					{% endfor %}">
 					{{ reg.registration.priceWithDiscount|floatformat:2 }}</a>
@@ -87,21 +87,21 @@
 				 	{{ reg.registration.priceWithDiscount|floatformat:2 }}
 				{% endif %}
 				{% if reg.registration.refundFlag %}<br />
-				<strong>Adjustments/Refunds:</strong> {{ reg.registration.invoice.adjustments|floatformat:2 }}
+				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ reg.registration.invoice.adjustments|floatformat:2 }}
 				{% endif %}
 				{% if reg.registration.invoice.outstandingBalance != 0 %}<br />
-				<strong>Invoice Status:</strong> {{ reg.registration.invoice.statusLabel }}<br />
-				<strong>Outstanding Balance:</strong> {{ reg.registration.invoice.outstandingBalance|floatformat:2 }}<br />
+				<strong>{% trans "Invoice Status" %}:</strong> {{ reg.registration.invoice.statusLabel }}<br />
+				<strong>{% trans "Outstanding Balance" %}:</strong> {{ reg.registration.invoice.outstandingBalance|floatformat:2 }}<br />
 				{% endif %}
 			{% else %}
 				{% if reg.registration.discounted %}
-					<strong>Gross Price:</strong> {{ reg.registration.totalPrice|floatformat:2 }} <br />
-					<strong>Net Price:</strong>
-					<a href="" data-toggle="popover" title="Gross vs. Net Price" data-container="body" data-placement="top" data-content="
-					{% if reg.registration.discountCode %}Discount Code: {{ reg.registration.discountCode.name }}, {% endif %}
+					<strong>{% trans "Gross Price" %}:</strong> {{ reg.registration.totalPrice|floatformat:2 }} <br />
+					<strong>{% trans "Net Price" %}:</strong>
+					<a href="" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					{% if reg.registration.discountCode %}{% trans 'Discount Code' %}: {{ reg.registration.discountCode.name }}, {% endif %}
 					{% for v in reg.registration.voucheruse_set.all %}
 						{% if v.amount > 0 %}
-					 		Voucher: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
+					 		{% trans 'Voucher' %}: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
 						{% endif %}
 					{% endfor %}">
 					{{ reg.registration.priceWithDiscount|floatformat:2 }}</a>
@@ -118,16 +118,16 @@
 		<td>{{ reg.registration.customer.numClassSeries }}</td>
 		<td>
 		{% if 'core.view_all_invoices' in perms and reg.registration.invoice %}
-			<a class="btn btn-default btn-xs" href="{% url 'viewInvoice' reg.registration.invoice.id %}">Invoice</a>
+			<a class="btn btn-default btn-xs" href="{% url 'viewInvoice' reg.registration.invoice.id %}">{% trans "Invoice" %}</a>
 		{% endif %}
 		{% if 'core.change_registration' in perms %}
-			<a class="btn btn-default btn-xs" href="{% url 'admin:core_registration_change' reg.registration.id %}">Reg.</a>
+			<a class="btn btn-default btn-xs" href="{% url 'admin:core_registration_change' reg.registration.id %}">{% trans "Reg." context "registration" %}</a>
 		{% endif %}
 		{% if 'core.process_refunds' in perms and reg.registration.invoice %}
-			<a class="btn btn-default btn-xs" href="{% url 'refundProcessing' reg.registration.invoice.id %}">Refund</a>
+			<a class="btn btn-default btn-xs" href="{% url 'refundProcessing' reg.registration.invoice.id %}">{% trans "Refund" %}</a>
 		{% endif %}
 		{% if 'financial.change_revenueitem' in perms and reg.invoiceitem.revenueitem %}
-			<a class="btn btn-default btn-xs" href="{% url 'admin:financial_revenueitem_change' reg.invoiceitem.revenueitem.id %}">Rev. Item</a>
+			<a class="btn btn-default btn-xs" href="{% url 'admin:financial_revenueitem_change' reg.invoiceitem.revenueitem.id %}">{% trans "Rev. Item" %}</a>
 		{% endif %}
 		</td>
 	</tr>
@@ -137,18 +137,18 @@
 
 {% if 'core.checkin_customers' in perms %}
 	<input type="hidden" name="event_id" value="{{series.id}}" />
-	<input type="submit" value="Submit Checkins" />
+	<input type="submit" value="{% trans 'Submit Checkins' %}" />
 	</form>
 
-	<div id="update_ok" style="display:none; font-size: 1.5em; color: #0a0; background-color: #ddd; padding: 0.5em; width: 95%;">Check-ins submitted successfully!</div>
-	<div id="update_error" style="display:none; font-size: 1.5em; color: #a00; background-color: #ddd; padding: 0.5em; width: 95%;">Error submitting class check-in data.</div>
+	<div id="update_ok" style="display:none; font-size: 1.5em; color: #0a0; background-color: #ddd; padding: 0.5em; width: 95%;">{% trans "Check-ins submitted successfully!" %}</div>
+	<div id="update_error" style="display:none; font-size: 1.5em; color: #a00; background-color: #ddd; padding: 0.5em; width: 95%;">{% trans "Error submitting class check-in data." %}</div>
 {% endif %}
 
 <hr />
 
 <p>
-<a class="btn btn-default btn-sm" href="{% url 'registration' %}">Class Registration Page</a>
-<a class="btn btn-default btn-sm" href="{% url 'viewregistrations_selectevent' %}">Select Another Class</a>
+<a class="btn btn-default btn-sm" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
+<a class="btn btn-default btn-sm" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Class" %}</a>
 </p>
 
 
