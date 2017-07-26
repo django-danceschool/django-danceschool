@@ -51,6 +51,8 @@ Basic Installation Process
 
       django-admin startproject --template http://leetucker.net/django-danceschool/danceschool_default_setup.zip <your_project_name>
 
+  If you would prefer to install manually, then follow the instructions in the :ref:`manual_project_setup`.
+
 6. Perform initial database migrations
 
    ::
@@ -109,16 +111,11 @@ and the site's "secret key." Also, often time, if your workflow involves
 both a development installation and a production installation, there
 will be different settings required for each installation.
 
-The good news is that all of the major settings for this project can be
-overridden *without* changing ``settings.py`` directly. Instead, create
-a new file, in the same folder as settings.py, called
-``settings_local.py``. Anything that you enter in here will
-automatically override anything that is entered by default in
-settings.py. To get you started, this project includes a file called
-``settings_local.example`` which demonstrates how to customize things in
-this way. Simply copy ``settings_local.example`` to
-``settings_local.py``, modify anything that you need for your local
-installation, and you're on your way.
+Here is a list of settings that typically need to be customized in
+``settings.py`` before running:
+
+
+
 
 Customizing runtime settings is even easier. Simply log in as the
 superuser account that you previously created, and go to
@@ -139,7 +136,7 @@ in settings.py (and can therefore be changed by defining them in
 ``EMAIL_HOST_USER``, ``EMAIL_HOST_PASSWORD``, etc.
 
 For more details, see the `Django
-documentation <https://docs.djangoproject.com/en/dev/topics/email/>`__.
+documentation <https://docs.djangoproject.com/en/dev/topics/email/>`.
 
 Additionally, because emails in this project are sent asynchronously,
 you will need to setup Redis and Huey as described below.
@@ -175,6 +172,8 @@ as long as both Redis and Huey continue to run.
 Production deployment of Huey is beyond the scope of this documentation.
 However, solutions such as `Supervisord <http://supervisord.org/>` are
 generally the preferred approach.
+
+.. _paypal_setup:
 
 Paypal Settings (if using Paypal)
 ---------------------------------
@@ -245,6 +244,8 @@ To add a gift certificate form to allow customers to purchase gift
 certficates, follow a similar procedure, adding the "Paypal Gift
 Certificate Form" plugin to any page of your choosing.
 
+.. _stripe_setup:
+
 Stripe Settings (if using Stripe)
 ---------------------------------
 
@@ -306,3 +307,233 @@ button is very straightforward. Follow these steps:
 To add a gift certificate form to allow customers to purchase gift
 certficates, follow a similar procedure, adding the "Stripe Gift
 Certificate Form" plugin to any page of your choosing.
+
+.. _manual_project_setup:
+
+Manual Project Setup Guide
+--------------------------
+
+In setting up your project, it is strongly recommended that you deploy
+your new project by running the following:
+
+   ::
+
+      django-admin startproject --template http://leetucker.net/django-danceschool/danceschool_default_setup.zip <your_project_name>
+
+However, it is also possible to deploy a new project by manually
+editing ``settings.py`` to enter the needed values.  This section describes
+how to do this.
+
+Importing Third-Party Settings
+^^^^^^^^^^^^^^^^^
+
+Setting up the Django-danceschool project requires setting a large number of configuration options for third-party apps.  However, these options can be imported automatically so that you do not need to enter them yourself.  Near the top of the ``settings.py`` file, add the following:
+
+   ::
+
+      from danceschool.default_settings import *
+
+Note also that any of the options specified in ``danceschool.default_settings`` can readily be overridden in ``settings.py``.  Just be sure to set your chosen setting values *below* the import command above.
+
+Installed Apps
+^^^^^^^^^^^^^^
+
+In addition to the various apps that are components of the danceschool project, there are several other apps that need to be added to your project's ``INSTALLED_APPS``.  It is important to note that the order in which apps are added often matters.  In particular, because Django's template loading and URL pattern matching functions use the first matching template/pattern, some apps need to be loaded before others in order for them to function correctly.
+
+First, be sure that the following django contrib apps are all listed in ``INSTALLED_APPS``:
+
+   ::
+
+      'django.contrib.auth',
+      'django.contrib.contenttypes',
+      'django.contrib.sessions',
+      'django.contrib.messages',
+      'django.contrib.staticfiles',
+      'django.contrib.sites',
+      'django.contrib.sitemaps',
+      'django.contrib.admin',
+
+Then, after ``django.contrib.auth`` but *before* ``django.contrib.admin``, add the following:
+
+   ::
+
+      'allauth',
+      'allauth.account',
+      'allauth.socialaccount',
+      'polymorphic',
+      'adminsortable2',
+      'dal',
+      'dal_select2',
+      'easy_thumbnails',
+      'filer',
+      'djangocms_admin_style',
+
+Then, *after* ``django.contrib.admin``, add the following:
+
+   ::
+
+      'ckeditor_filebrowser_filer',
+      'huey.contrib.djhuey',
+      'crispy_forms',
+      'daterange_filter',
+      'easy_pdf',
+      'dynamic_preferences',
+      'sekizai',
+      'cms',
+      'menus',
+      'treebeard',
+      'djangocms_text_ckeditor',
+      'djangocms_forms',
+      'danceschool.core',
+
+The ``danceschool.core`` app contains all of the necessary basic functionality of the project.  However, depending on your needs, you may want to install some of all of the following apps by adding them to ``INSTALLED_APPS``:
+
+   ::
+
+      'danceschool.financial',        # Financial reporting and expense/revenue tracking
+      'danceschool.private_events',   # Non-public events and calendar with reminders and feeds
+      'danceschool.discounts',        # Configurable registration discounts
+      'danceschool.vouchers',         # Vouchers, gift certificates, and the referral program
+      'danceschool.prerequisites',    # Configurable prerequisites for specific classes
+      'danceschool.stats',            # School performance statistics
+      'danceschool.news',             # A simple news feed
+      'danceschool.faq',              # A simple FAQ system
+      'danceschool.payments.paypal',  # Paypal Express Checkout payment processor
+      'danceschool.payments.stripe',  # Stripe Checkout payment processor
+
+Finally, if you are developing your own custom app that overrides the core danceschool app's templates or URLs, then you will want to ensure that your app is listed *before* ``danceschool.core`` in INSTALLED_APPS.
+
+Template settings
+^^^^^^^^^^^^^^^^^
+Django CMS requires some specialized context processors to be enabled.  So, add the following to ``TEMPLATES['OPTIONS']['context_processors']``:
+
+   ::
+
+      'cms.context_processors.cms_settings',
+      'sekizai.context_processors.sekizai',
+
+Middleware
+^^^^^^^^^^
+
+Django CMS requires the following to be added to ``MIDDLEWARE_CLASSES``:
+
+At the top:
+
+   ::
+
+      'cms.middleware.utils.ApphookReloadMiddleware',
+
+Anywhere in MIDDLEWARE_CLASSES:
+  
+   ::
+
+      'django.middleware.locale.LocaleMiddleware',
+      'cms.middleware.user.CurrentUserMiddleware',
+      'cms.middleware.page.CurrentPageMiddleware',
+      'cms.middleware.toolbar.ToolbarMiddleware',
+      'cms.middleware.language.LanguageCookieMiddleware',
+
+Site ID and Language Code
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Because Django CMS makes use of ``django.contrib.sites``, in order
+for a default URL to be available for pages, the CMS needs to know
+the database identifier ofyour default site.  For most installations,
+this means adding:
+
+   ::
+
+      SITE_ID = 1
+
+Django CMS also uses slightly different language designations than Django
+as a whole.  By default, Django's ``settings.py`` ships with
+``LANGUAGE_CODE = 'en-us'``.  Assuming that your site will be running in
+English, you should change this to ``LANGUAGE_CODE = 'en'``.
+
+URL Handling
+^^^^^^^^^^^^
+
+The Danceschool project has a single ``urls.py`` file which handles all
+of the URLs for the project and its core dependencies.  Similarly, Django
+CMS requires a catch-all URL pattern that tries to match any unmatched
+URLs to CMS pages.  So, be sure to add the following code to the bottom
+of your ``urls.py``.
+
+   ::
+
+      from django.conf.urls import include, url
+
+      ...
+
+
+      # Add this at the bottom of urls.py
+      urlpatterns += [
+          # Include your own app's URLs first to override default app URLs
+          # url(r'^', include('<yourapp>.urls')),
+          # Now, include default app URLs and CMS URLs
+          url(r'^', include('danceschool.urls')),
+          url(r'^', include('cms.urls')),
+      ]
+
+**Note:** If for any reason you wish to modify any of the default URL paths
+provided by the project, you can do so by adding your own URLs prior to the
+inclusion of ``danceschool.urls``.
+
+Other Settings You May Wish to Modify
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As with all Django projects, you are generally free to modify other
+settings as you see fit.  However, there are certain other settings
+that are commonly modified for each installation, and that you will
+likely wish to modify.
+
+For more information on these settings, see the 
+`Django documentation <https://docs.djangoproject.com/en/dev/ref/settings/>`.
+
+**Static file storage/upload settings**:
+
+- ``STATIC_URL`` (set to "/static/" by default)
+- ``STATIC_ROOT``
+- ``MEDIA_ROOT``
+- ``MEDIA_URL``
+- ``CKEDITOR_UPLOAD_PATH``
+
+**Django email settings (needed for confirmation emails, etc.)**
+
+- host: ``EMAIL_HOST``
+- port: ``EMAIL_PORT``
+- username: ``EMAIL_HOST_USER``
+- password: ``EMAIL_HOST_PASSWORD``
+- use_tls: ``EMAIL_USE_TLS``
+- use_ssl: ``EMAIL_USE_SSL``
+  
+**Django database settings (recommended to change from default SQLite)**:
+
+- ``DATABASES['default']['ENGINE']``
+- ``DATABASES['default']['NAME']``
+- ``DATABASES['default']['USER']``
+- ``DATABASES['default']['PASSWORD']``
+- ``DATABASES['default']['HOST']``
+- ``DATABASES['default']['PORT']``
+
+**Django-filer settings**
+
+See the `Django-filer documentation <https://django-filer.readthedocs.io/en/latest/installation.html>`
+for more details:
+
+- ``FILER_STORAGES``
+- ``DEFAULT_FILER_SERVERS``
+  
+** Payment processors **
+
+These are just the settings listed above in :ref:`paypal_setup` and :ref:`stripe_setup`.
+
+For Paypal:
+
+- ``PAYPAL_MODE`` (either "sandbox" or "live")
+- ``PAYPAL_CLIENT_ID``
+- ``PAYPAL_CLIENT_SECRET``
+
+For Stripe:
+- ``STRIPE_PUBLIC_KEY``
+- ``STRIPE_PRIVATE_KEY``
