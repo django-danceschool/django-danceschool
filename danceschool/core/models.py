@@ -865,7 +865,7 @@ class EventOccurrence(models.Model):
         return (self.endTime - self.startTime).seconds / 3600
     duration.fget.short_description = _('Duration')
 
-    def allDayForDate(self,this_date,timezone=None):
+    def allDayForDate(self,this_date,timeZone=None):
         '''
         This method determines whether the occurrence lasts the entirety of
         a specified day in the specified time zone.  If no time zone is specified,
@@ -878,8 +878,8 @@ class EventOccurrence(models.Model):
             d = this_date
 
         date_start = datetime(d.year,d.month,d.day)
-        naive_start = self.startTime if timezone.is_naive(self.startTime) else timezone.make_naive(self.startTime, timezone=None)
-        naive_end = self.endTime if timezone.is_naive(self.endTime) else timezone.make_naive(self.endTime, timezone=None)
+        naive_start = self.startTime if timezone.is_naive(self.startTime) else timezone.make_naive(self.startTime, timezone=timeZone)
+        naive_end = self.endTime if timezone.is_naive(self.endTime) else timezone.make_naive(self.endTime, timezone=timeZone)
 
         return (
             # Ensure that all comparisons are done in local time

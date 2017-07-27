@@ -2,9 +2,11 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
+from django.utils import timezone
 
 from django_ical.views import ICalFeed
 from datetime import datetime, timedelta
+import pytz
 
 from .models import EventOccurrence, StaffMember, Event
 from .constants import getConstant
@@ -17,13 +19,21 @@ from .utils.timezone import ensure_timezone
 class EventFeedItem(object):
 
     def __init__(self,object,**kwargs):
+
+        timeZone = pytz.timezone(getattr(settings,'TIME_ZONE','UTC'))
+        if kwargs.get('timeZone',None):
+            try:
+                timeZone = pytz.timezone(kwargs.get('timeZone',None))
+            except pytz.exceptions.UnknownTimeZoneError:
+                pass
+
         self.id = 'event_' + str(object.event.id) + '_' + str(object.id)
         self.type = 'event'
         self.id_number = object.event.id
         self.title = object.event.name
         self.description = object.event.description
-        self.start = object.startTime
-        self.end = object.endTime
+        self.start = timezone.localtime(object.startTime,timeZone)
+        self.end = timezone.localtime(object.endTime,timeZone)
         self.color = object.event.displayColor
         self.url = object.event.get_absolute_url()
         if hasattr(object,'event.location'):
@@ -100,6 +110,7 @@ def json_event_feed(request,instructorFeedKey=''):
 
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
+    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
     time_filter_dict_series = {}
     time_filter_dict_events = {}
@@ -116,9 +127,9 @@ def json_event_feed(request,instructorFeedKey=''):
 
     if not instructorFeedKey:
         # Public calendar does not show hidden Events _or_ link-only registration Events
-        eventlist = [EventFeedItem(x).__dict__ for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
+        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
     else:
         # Private calendars do show link-only registration Events
-        eventlist = [EventFeedItem(x).__dict__ for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)]
+        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)]
 
     return JsonResponse(eventlist,safe=False)

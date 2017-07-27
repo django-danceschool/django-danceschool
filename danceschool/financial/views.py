@@ -16,7 +16,7 @@ from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFo
 from danceschool.core.models import Instructor, Location, Event
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
-from danceschool.core.utils.timezone import ensure_timezone
+from danceschool.core.utils.timezone import ensure_timezone, getDateTimeFromGet
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent

@@ -1,4 +1,5 @@
-{% load sekizai_tags static i18n %}
+{% load sekizai_tags static i18n tz %}
+{% get_current_timezone as TIME_ZONE %}
 
 <div id="calendarbox">&nbsp;</div>
 <!-- Modal -->
@@ -58,6 +59,7 @@
 	    $('#calendarbox').fullCalendar({
 	        // put your options and callbacks here
 	        events: "{% url 'jsonCalendarFeed' %}",
+	        timezone: "{{ TIME_ZONE }}",
 	        height: "auto",
 	        eventTextColor: '#ffffff',
 	        eventColor: '#477087',

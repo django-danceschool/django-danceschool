@@ -1,5 +1,6 @@
 {% extends "cms/admin_home.html" %}
-{% load sekizai_tags static i18n %}
+{% load sekizai_tags static i18n tz %}
+{% get_current_timezone as TIME_ZONE %}
 
 {% block content %}
 
@@ -93,6 +94,7 @@ $(document).ready(function() {
             {% endfor %}
         ],
         eventTextColor: '#ffffff',
+        timezone: "{{ TIME_ZONE }}",
         height: "auto",
         aspectRatio: 1,
         header: {right: 'month,agendaWeek,listMonth prev,next today'},
