@@ -112,8 +112,8 @@ def json_event_feed(request,instructorFeedKey=''):
     endDate = request.GET.get('end','')
     timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
-    time_filter_dict_series = {}
-    time_filter_dict_events = {}
+    time_filter_dict_series = {'event__month__isnull': False, 'event__year__isnull': False}
+    time_filter_dict_events = {'event__month__isnull': False, 'event__year__isnull': False}
     if startDate:
         limit_time = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
         time_filter_dict_series['startTime__gte'] = limit_time

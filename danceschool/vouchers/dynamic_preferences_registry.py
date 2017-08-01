@@ -3,11 +3,16 @@ This file defines a variety of preferences that must be set in the DB,
 but can be changed dynamically.
 '''
 
-from django.forms import HiddenInput
 from django.utils.translation import ugettext_lazy as _
+from django.db import connection
+from django.template.loader import get_template
 
-from dynamic_preferences.types import BooleanPreference, IntegerPreference, StringPreference, FloatPreference, Section
+from dynamic_preferences.types import BooleanPreference, StringPreference, FloatPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
+
+from danceschool.core.models import EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
+from .models import VoucherCategory
+
 
 # we create some section objects to link related preferences together
 
@@ -46,58 +51,100 @@ class GiftCertificatesPDFEnabled(BooleanPreference):
 
 
 @global_preferences_registry.register
-class EmailPromoCatID(IntegerPreference):
+class EmailPromoCat(ModelChoicePreference):
     section = vouchers
-    name = 'emailPromoCategoryID'
-    help_text = _('The ID of the created VoucherCategory for Email Promotions')
-    widget = HiddenInput
+    name = 'emailPromoCategory'
+    verbose_name = _('Voucher Category for email promotions')
+    model = VoucherCategory
+    queryset = VoucherCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return VoucherCategory.objects.get_or_create(name=_('Email Promotion'))[0]
 
 
 @global_preferences_registry.register
-class GiftCertCatID(IntegerPreference):
+class GiftCertCat(ModelChoicePreference):
     section = vouchers
-    name = 'giftCertCategoryID'
-    help_text = _('The ID of the created VoucherCategory for Purchased Gift Certificates')
-    widget = HiddenInput
+    name = 'giftCertCategory'
+    verbose_name = _('Voucher Category for Purchased Gift Certificates')
+    model = VoucherCategory
+    queryset = VoucherCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return VoucherCategory.objects.get_or_create(name=_('Purchased Gift Certificate'))[0]
 
 
 @global_preferences_registry.register
-class NonPurchasedGiftCertCatID(IntegerPreference):
+class NonPurchasedGiftCertCatID(ModelChoicePreference):
     section = vouchers
-    name = 'nonPurchasedGiftCertCategoryID'
-    help_text = _('The ID of the created VoucherCategory for Non-Purchased (Promotional) Gift Certificates')
-    widget = HiddenInput
+    name = 'nonPurchasedGiftCertCategory'
+    verbose_name = _('Voucher Category for Non-Purchased (Promotional) Gift Certificates')
+    model = VoucherCategory
+    queryset = VoucherCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return VoucherCategory.objects.get_or_create(name=_('Non-Purchased Gift Certificate'))[0]
 
 
 @global_preferences_registry.register
-class GiftCertTemplateID(IntegerPreference):
+class GiftCertTemplate(ModelChoicePreference):
     section = vouchers
-    name = 'giftCertTemplateID'
-    help_text = _('The ID of the created Email Template for Gift Certificates')
-    widget = HiddenInput
+    name = 'giftCertTemplate'
+    verbose_name = _('Email Template for Gift Certificates')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('email/gift_certificate_confirmation.html')
+        with open(initial_template.origin.name,'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Gift Certificate Purchase Confirmation Email'),
+            defaults={
+                'subject': _('Gift Certificate Purchase Confirmation'),
+                'content': content,
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
 
 
 @global_preferences_registry.register
-class GiftCertPDFTemplateID(IntegerPreference):
+class GiftCertPDFTemplate(ModelChoicePreference):
     section = vouchers
-    name = 'giftCertPDFTemplateID'
-    help_text = _('The ID of the created Email Template for Gift Certificates PDF Attachments')
-    widget = HiddenInput
+    name = 'giftCertPDFTemplate'
+    verbose_name = _('Email Template for Gift Certificate PDF Attachments')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('email/gift_certificate_attachment.html')
+        with open(initial_template.origin.name,'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Gift Certificate Purchase PDF Text'),
+            defaults={
+                'subject': _('You\'ve Been Given the Gift of Dance!'),
+                'content': content,
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
 
 
 ##############################
@@ -139,22 +186,26 @@ class VoucherPrefix(StringPreference):
 
 
 @global_preferences_registry.register
-class ReferrerCatID(IntegerPreference):
+class ReferrerCat(ModelChoicePreference):
     section = referrals
-    name = 'referrerCategoryID'
-    help_text = _('The ID of the created VoucherCategory for referrers')
-    widget = HiddenInput
+    name = 'referrerCategory'
+    help_text = _('The Voucher Category for referrer vouchers')
+    model = VoucherCategory
+    queryset = VoucherCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return VoucherCategory.objects.get_or_create(name=_('Referral Vouchers'))[0]
 
 
 @global_preferences_registry.register
-class RefereeCatID(IntegerPreference):
+class RefereeCat(ModelChoicePreference):
     section = referrals
-    name = 'refereeCategoryID'
-    help_text = _('The ID of the created VoucherCategory for referees')
-    widget = HiddenInput
+    name = 'refereeCategory'
+    help_text = _('The Voucher Category for referee vouchers')
+    model = VoucherCategory
+    queryset = VoucherCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return VoucherCategory.objects.get_or_create(name=_('Referee Vouchers'))[0]

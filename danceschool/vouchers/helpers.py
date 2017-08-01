@@ -21,7 +21,7 @@ def generateUniqueVoucherId(prefix):
 
 def createReferreeVoucher(name,amountPerUse):
     voucherId = generateUniqueVoucherId(getConstant('referrals__voucherPrefix'))
-    category = VoucherCategory.objects.get(id=getConstant('referrals__refereeCategoryID'))
+    category = getConstant('referrals__refereeCategory')
     originalAmount = 1e9
     maxAmountPerUse = amountPerUse
     singleUse = False
@@ -52,7 +52,7 @@ def createReferreeVoucher(name,amountPerUse):
 
 def createReferrerVoucher(customer):
     voucherId = generateUniqueVoucherId(getConstant('referrals__voucherPrefix'))
-    category = VoucherCategory.objects.get(id=getConstant('referrals__referrerCategoryID'))
+    category = getConstant('referrals__referrerCategory')
     originalAmount = 0
     maxAmountPerUse = None
     singleUse = False

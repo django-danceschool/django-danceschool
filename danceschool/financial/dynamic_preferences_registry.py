@@ -3,11 +3,13 @@ This file defines a variety of preferences that must be set in the DB,
 but can be changed dynamically.
 '''
 
-from django.forms import HiddenInput
+from django.db import connection
 from django.utils.translation import ugettext_lazy as _
 
-from dynamic_preferences.types import BooleanPreference, IntegerPreference, Section
+from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
+
+from .models import ExpenseCategory, RevenueCategory
 
 # we create some section objects to link related preferences together
 
@@ -72,77 +74,91 @@ class GenerateRegistrationRevenuesWindow(IntegerPreference):
 
 
 @global_preferences_registry.register
-class ClassInstructionCatID(IntegerPreference):
+class ClassInstructionCat(ModelChoicePreference):
     section = financial
-    name = 'classInstructionExpenseCatID'
-    help_text = _('The ExpenseCategory ID for Class Instruction items')
-    widget = HiddenInput
+    name = 'classInstructionExpenseCat'
+    verbose_name = _('Expense Category for Class Instruction items')
+    model = ExpenseCategory
+    queryset = ExpenseCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return ExpenseCategory.objects.get_or_create(name=_('Class Instruction'))[0]
 
 
 @global_preferences_registry.register
-class AssistantClassInstructionCatID(IntegerPreference):
+class AssistantClassInstructionCat(ModelChoicePreference):
     section = financial
-    name = 'assistantClassInstructionExpenseCatID'
-    help_text = _('The ExpenseCategory ID for Assistant Class Instruction items')
-    widget = HiddenInput
+    name = 'assistantClassInstructionExpenseCat'
+    verbose_name = _('Expense Category for Assistant Class Instruction items')
+    model = ExpenseCategory
+    queryset = ExpenseCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return ExpenseCategory.objects.get_or_create(name=_('Assistant Class Instruction'))[0]
 
 
 @global_preferences_registry.register
-class OtherStaffExpenseCatID(IntegerPreference):
+class OtherStaffExpenseCat(ModelChoicePreference):
     section = financial
-    name = 'otherStaffExpenseCatID'
-    help_text = _('The ExpenseCategory ID for other Event-Related Staff Expenses')
-    widget = HiddenInput
+    name = 'otherStaffExpenseCat'
+    verbose_name = _('Expense Category for other Event-Related Staff Expenses')
+    model = ExpenseCategory
+    queryset = ExpenseCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return ExpenseCategory.objects.get_or_create(name=_('Other Event-Related Staff Expenses'))[0]
 
 
 @global_preferences_registry.register
-class VenueRentalCatID(IntegerPreference):
+class VenueRentalCat(ModelChoicePreference):
     section = financial
-    name = 'venueRentalExpenseCatID'
-    help_text = _('The ExpenseCategory ID for Venue Rental')
-    widget = HiddenInput
+    name = 'venueRentalExpenseCat'
+    verbose_name = _('Expense Category for Venue Rental')
+    model = ExpenseCategory
+    queryset = ExpenseCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return ExpenseCategory.objects.get_or_create(name=_('Venue Rental'))[0]
 
 
 @global_preferences_registry.register
-class RegistrationsCatID(IntegerPreference):
+class RegistrationsCat(ModelChoicePreference):
     section = financial
-    name = 'registrationsRevenueCatID'
-    help_text = _('The RevenueCategory ID for Registrations')
-    widget = HiddenInput
+    name = 'registrationsRevenueCat'
+    verbose_name = _('Revenue Category for Registrations')
+    model = RevenueCategory
+    queryset = RevenueCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return RevenueCategory.objects.get_or_create(name=_('Registrations'))[0]
 
 
 @global_preferences_registry.register
-class GiftCertCatID(IntegerPreference):
+class GiftCertCat(ModelChoicePreference):
     section = financial
-    name = 'giftCertRevenueCatID'
-    help_text = _('The RevenueCategory ID for Purchased Vouchers and Gift Certificates')
-    widget = HiddenInput
+    name = 'giftCertRevenueCat'
+    verbose_name = _('Revenue Category for Purchased Vouchers and Gift Certificates')
+    model = RevenueCategory
+    queryset = RevenueCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return RevenueCategory.objects.get_or_create(name=_('Purchased Vouchers/Gift Certificates'))[0]
 
 
 @global_preferences_registry.register
-class UnallocatedPaymentsCatID(IntegerPreference):
+class UnallocatedPaymentsCat(ModelChoicePreference):
     section = financial
-    name = 'unallocatedPaymentsRevenueCatID'
-    help_text = _('The RevenueCategory ID for Unknown and Otherwise Unallocated Online Payments')
-    widget = HiddenInput
+    name = 'unallocatedPaymentsRevenueCat'
+    verbose_name = _('Revenue Category for Unknown and Otherwise Unallocated Online Payments')
+    model = RevenueCategory
+    queryset = RevenueCategory.objects.all()
 
-    # This is automatically updated by apps.py
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return RevenueCategory.objects.get_or_create(name=_('Unallocated Online Payments'))[0]

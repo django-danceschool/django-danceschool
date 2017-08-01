@@ -87,7 +87,7 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
             adjustments=instance.adjustments,
             fees=instance.fees,
             taxes=instance.taxes,
-            category=RevenueCategory.objects.get(id=getConstant('financial__registrationsRevenueCatID')),
+            category=getConstant('financial__registrationsRevenueCat'),
             submissionUser=instance.invoice.submissionUser,
             currentlyHeldBy=instance.invoice.collectedByUser,
             received=received_status,

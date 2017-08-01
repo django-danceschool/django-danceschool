@@ -2,8 +2,6 @@
 from django.apps import AppConfig
 from django.utils.translation import ugettext_lazy as _
 
-from danceschool.core.utils.sys import isPreliminaryRun
-
 
 class FinancialAppConfig(AppConfig):
     name = 'danceschool.financial'
@@ -11,10 +9,9 @@ class FinancialAppConfig(AppConfig):
 
     def ready(self):
         from django.core.exceptions import ValidationError
-        from django.db import connection
 
         from danceschool.core.models import Event, SubstituteTeacher, Invoice, InvoiceItem
-        from danceschool.core.constants import getConstant, updateConstant
+        from danceschool.core.constants import getConstant
 
         # Add some properties to Invoices that are useful for the check-in process.
         # to ensure that the financials are being recorded correctly.
@@ -124,44 +121,9 @@ class FinancialAppConfig(AppConfig):
         for field in [f for f in SubstituteTeacher._meta.fields if f.name == 'event']:
             field.validators.append(validate_EnsureNotPaidOut)
 
-        # This ensures that the receivers are loaded.
-        from . import handlers
-
         # Add get_or_create calls to ensure that the Expense and Revenue categories needed
         # for our handlers exist.  Other categories can always be created, and these can be
         # modified in the database.
-        if 'financial_expensecategory' in connection.introspection.table_names() and not isPreliminaryRun():
-            ExpenseCategory = self.get_model('ExpenseCategory')
 
-            # Name, preference key, and defaultRate
-            new_expense_cats = [
-                (_('Class Instruction'),'financial__classInstructionExpenseCatID',0),
-                (_('Assistant Class Instruction'),'financial__assistantClassInstructionExpenseCatID',0),
-                (_('Other Event-Related Staff Expenses'),'financial__otherStaffExpenseCatID',0),
-                (_('Venue Rental'),'financial__venueRentalExpenseCatID',None),
-            ]
-
-            for cat in new_expense_cats:
-                if (getConstant(cat[1]) or 0) <= 0:
-                    new_cat, created = ExpenseCategory.objects.get_or_create(
-                        name=cat[0],
-                        defaults={'defaultRate': cat[2]},
-                    )
-                    # Update constant and fail silently
-                    updateConstant(cat[1],new_cat.id,True)
-
-        if 'financial_revenuecategory' in connection.introspection.table_names() and not isPreliminaryRun():
-            RevenueCategory = self.get_model('RevenueCategory')
-
-            # Name and preference key
-            new_revenue_cats = [
-                (_('Registrations'),'financial__registrationsRevenueCatID'),
-                (_('Purchased Vouchers/Gift Certificates'),'financial__giftCertRevenueCatID'),
-                (_('Unallocated Online Payments'),'financial__unallocatedPaymentsRevenueCatID'),
-            ]
-
-            for cat in new_revenue_cats:
-                if (getConstant(cat[1]) or 0) <= 0:
-                    new_cat, created = RevenueCategory.objects.get_or_create(name=cat[0])
-                    # Update constant and fail silently
-                    updateConstant(cat[1],new_cat.id,True)
+        # This ensures that the receivers are loaded.
+        from . import handlers

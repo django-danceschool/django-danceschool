@@ -4,7 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 from .models import DiscountCombo
 
 
-def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
+def getApplicableDiscountCombos(cart_object_list,newCustomer=True,addOn=False):
 
     @python_2_unicode_compatible
     class ApplicableDiscountCode(object):
@@ -36,7 +36,11 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
             return _('ApplicableDiscountCode Object: Applies \'%s\'' % self.code.name)
 
     # Existing customers can't get discounts marked for new customers only.  Add-ons are handled separately.
-    availableDiscountCodes = DiscountCombo.objects.filter(active=True).exclude(discountType=DiscountCombo.DiscountType.addOn)
+    if addOn:
+        availableDiscountCodes = DiscountCombo.objects.filter(active=True,discountType=DiscountCombo.DiscountType.addOn)
+    else:
+        availableDiscountCodes = DiscountCombo.objects.filter(active=True).exclude(discountType=DiscountCombo.DiscountType.addOn)
+
     if not newCustomer:
         availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)
 

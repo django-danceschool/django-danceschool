@@ -508,9 +508,9 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         # are broken out separately.
 
         context.update({
-            'instructionExpenseItems': expenseItems.filter(category__id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID')]).order_by('payToUser__last_name','payToUser__first_name'),
-            'venueExpenseItems': expenseItems.filter(category__id=getConstant('financial__venueRentalExpenseCatID')).order_by('payToLocation'),
-            'otherExpenseItems': expenseItems.exclude(category__id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID'),getConstant('financial__venueRentalExpenseCatID')]).order_by('category'),
+            'instructionExpenseItems': expenseItems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).order_by('payToUser__last_name','payToUser__first_name'),
+            'venueExpenseItems': expenseItems.filter(category=getConstant('financial__venueRentalExpenseCat')).order_by('payToLocation'),
+            'otherExpenseItems': expenseItems.exclude(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat'),getConstant('financial__venueRentalExpenseCat')]).order_by('category'),
             'expenseCategoryTotals': ExpenseCategory.objects.filter(expenseitem__in=expenseItems).annotate(category_total=Sum('expenseitem__total'),category_adjustments=Sum('expenseitem__adjustments'),category_fees=Sum('expenseitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') + F('category_fees')),
         })
         context.update({
@@ -520,24 +520,24 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'venueExpenseVenueTotals': Location.objects.filter(expenseitem__in=context['venueExpenseItems']).annotate(location_total=Sum('expenseitem__total'),location_adjustments=Sum('expenseitem__adjustments'),location_fees=Sum('expenseitem__fees')).annotate(location_net=F('location_total') + F('location_adjustments') + F('location_fees')),
             'venueExpenseOtherTotal': context['venueExpenseItems'].filter(payToLocation__isnull=True).annotate(location_net=F('total') + F('adjustments') + F('fees')).aggregate(location_total=Sum('total'),location_adjustments=Sum('adjustments'),location_fees=Sum('fees'),location_net=Sum('net')),
 
-            'totalInstructionExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID')])]),
-            'totalVenueExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id=getConstant('financial__venueRentalExpenseCatID'))]),
-            'totalOtherExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].exclude(id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID'),getConstant('financial__venueRentalExpenseCatID')])]),
+            'totalInstructionExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id__in=[getConstant('financial__classInstructionExpenseCat').id,getConstant('financial__assistantClassInstructionExpenseCat').id])]),
+            'totalVenueExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id=getConstant('financial__venueRentalExpenseCat').id)]),
+            'totalOtherExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].exclude(id__in=[getConstant('financial__classInstructionExpenseCat').id,getConstant('financial__assistantClassInstructionExpenseCat').id,getConstant('financial__venueRentalExpenseCat').id])]),
 
             'totalExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals']]),
         })
 
         context.update({
-            'registrationRevenueItems': revenueItems.filter(category__id=getConstant('financial__registrationsRevenueCatID')).order_by('-event__startTime'),
-            'otherRevenueItems': revenueItems.exclude(category__id=getConstant('financial__registrationsRevenueCatID')).order_by('category'),
+            'registrationRevenueItems': revenueItems.filter(category=getConstant('financial__registrationsRevenueCat')).order_by('-event__startTime'),
+            'otherRevenueItems': revenueItems.exclude(category=getConstant('financial__registrationsRevenueCat')).order_by('category'),
             'revenueCategoryTotals': RevenueCategory.objects.filter(revenueitem__in=revenueItems).annotate(category_total=Sum('revenueitem__total'),category_adjustments=Sum('revenueitem__adjustments'),category_fees=Sum('revenueitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') - F('category_fees')),
         })
         context.update({
             'registrationRevenueEventTotals': Event.objects.filter(eventregistration__invoiceitem__revenueitem__in=context['registrationRevenueItems']).annotate(event_total=Sum('eventregistration__invoiceitem__revenueitem__total'),event_adjustments=Sum('eventregistration__invoiceitem__revenueitem__adjustments'),event_fees=Sum('eventregistration__invoiceitem__revenueitem__fees')).annotate(event_net=F('event_total') + F('event_adjustments') - F('event_fees')),
             'registrationRevenueOtherTotal': context['registrationRevenueItems'].filter(invoiceItem__finalEventRegistration__isnull=True).annotate(event_net=F('total') + F('adjustments') - F('fees')).aggregate(event_total=Sum('total'),event_adjustments=Sum('adjustments'),event_fees=Sum('fees'),event_net=Sum('net')),
 
-            'totalRegistrationRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].filter(id=getConstant('financial__registrationsRevenueCatID'))]),
-            'totalOtherRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].exclude(id=getConstant('financial__registrationsRevenueCatID'))]),
+            'totalRegistrationRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].filter(id=getConstant('financial__registrationsRevenueCat').id)]),
+            'totalOtherRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].exclude(id=getConstant('financial__registrationsRevenueCat').id)]),
             'totalRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals']]),
         })
 

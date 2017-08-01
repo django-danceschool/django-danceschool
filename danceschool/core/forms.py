@@ -767,7 +767,7 @@ class SubstituteReportingForm(forms.ModelForm):
 
         # Ensure 'initial' is initialized to avoid KeyError issues and fill in the Sub category
         kwargs['initial'] = kwargs.get('initial',{})
-        kwargs['initial'].update({'category': getConstant('general__eventStaffCategorySubstituteID')})
+        kwargs['initial'].update({'category': getConstant('general__eventStaffCategorySubstitute').id})
 
         # If the user is a staffMember, then populate the form with their info
         if hasattr(user,'staffmember'):
@@ -808,7 +808,7 @@ class SubstituteReportingForm(forms.ModelForm):
                     self.add_error('occurrences',ValidationError(_('One or more classes you have selected already has a substitute teacher for that class.'),code='invalid'))
 
         if event and staffMember:
-            if staffMember in [x.staffMember for x in event.eventstaffmember_set.filter(category__pk__in=[getConstant('general__eventStaffCategoryAssistantID'),getConstant('general__eventStaffCategoryInstructorID')])]:
+            if staffMember in [x.staffMember for x in event.eventstaffmember_set.filter(category__in=[getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')])]:
                 self.add_error('event',ValidationError(_('You cannot substitute teach for a class in which you were an instructor.'),code='invalid'))
 
     class Meta:

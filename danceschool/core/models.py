@@ -690,7 +690,6 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         Accepts a DanceRole object and returns the number of registrations of that role.
         '''
         return self.eventregistration_set.filter(cancelled=False,dropIn=False,role=role).count()
-            
 
     @property
     def numRegisteredByRole(self):
@@ -738,11 +737,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         Accepts a DanceRole object and responds if the number of registrations for that
         role exceeds the capacity for that role at this event.
         '''
-        return self.numRegisteredForRole(role) >= self.capacityForRole(role)
+        return self.numRegisteredForRole(role) >= self.capacityForRole(role) or 0
 
     @property
     def soldOut(self):
-        return self.numRegistered >= self.capacity
+        return self.numRegistered >= self.capacity or 0
     soldOut.fget.short_description = _('Sold Out')
 
     @property
@@ -829,6 +828,17 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             logger.debug('Avoiding duplicate call to update registration status; ready to save.')
         else:
             logger.debug('About to check registration status and update if needed.')
+
+            if self.eventoccurrence_set.all():
+                self.year = self.getYearAndMonth()[0]
+                self.month = self.getYearAndMonth()[1]
+                self.startTime = self.eventoccurrence_set.order_by('startTime').first().startTime
+                self.endTime = self.eventoccurrence_set.order_by('endTime').last().endTime
+                self.duration = sum([x.duration for x in self.eventoccurrence_set.all() if not x.cancelled])
+
+            if self.location and not self.capacity:
+                self.capacity = self.location.defaultCapacity
+
             modified, open = self.updateRegistrationStatus(saveMethod=True)
             if modified:
                 self.registrationOpen = open
@@ -972,7 +982,7 @@ class EventStaffMember(models.Model):
         For regular event staff, this is the net hours worked for financial purposes.
         For Instructors, netHours is caclulated net of any substitutes.
         '''
-        if self.category.id in [getConstant('general__eventStaffCategoryAssistantID'),getConstant('general__eventStaffCategoryInstructorID')]:
+        if self.category in [getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')]:
             return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
         else:
             return sum([x.duration for x in self.occurrences.filter(cancelled=False)])
@@ -1076,7 +1086,7 @@ class Series(Event):
     @property
     def url(self):
         if self.status not in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
-            return reverse('classView',args=[self.year,month_name[self.month],self.classDescription.slug])
+            return reverse('classView',args=[self.year,month_name[self.month or 0] or None,self.classDescription.slug])
     url.fget.short_description = _('Class series URL')
 
     def clean(self):
@@ -1087,7 +1097,7 @@ class Series(Event):
     def __str__(self):
         if self.month and self.year:
             # In case of unsaved series, month and year are not yet set.
-            return month_name[self.month] + ' ' + str(self.year) + ": " + self.classDescription.title
+            return month_name[self.month or 0] + ' ' + str(self.year) + ": " + self.classDescription.title
         else:
             return str(_('Class Series: %s' % self.classDescription.title))
 
@@ -1104,12 +1114,12 @@ class SeriesTeacherManager(models.Manager):
 
     def get_queryset(self):
         return super(SeriesTeacherManager,self).get_queryset().filter(
-            category__id=getConstant('general__eventStaffCategoryInstructorID')
+            category=getConstant('general__eventStaffCategoryInstructor')
         )
 
     def create(self, **kwargs):
         kwargs.update({
-            'category': getConstant('general__eventStaffCategoryInstructorID'),
+            'category': getConstant('general__eventStaffCategoryInstructor').id,
             'occurrences': kwargs.get('event').eventoccurrence_set.all(),
         })
         return super(SeriesTeacherManager,self).create(**kwargs)
@@ -1149,12 +1159,12 @@ class SubstituteTeacherManager(models.Manager):
 
     def get_queryset(self):
         return super(SubstituteTeacherManager,self).get_queryset().filter(
-            category__id=getConstant('general__eventStaffCategorySubstituteID')
+            category=getConstant('general__eventStaffCategorySubstitute')
         )
 
     def create(self, **kwargs):
         kwargs.update({
-            'category': getConstant('general__eventStaffCategorySubstituteID')})
+            'category': getConstant('general__eventStaffCategorySubstitute').id})
         return super(SubstituteTeacherManager,self).create(**kwargs)
 
 
@@ -1170,7 +1180,7 @@ class SubstituteTeacher(EventStaffMember):
         replacements = {
             'name': self.staffMember.fullName,
             'subbed': _(' subbed: '),
-            'month': month_name[self.event.month],
+            'month': month_name[self.event.month or 0],
             'year': self.event.year,
         }
         if not self.replacedStaffMember:
@@ -1243,7 +1253,7 @@ class PublicEvent(Event):
     @property
     def url(self):
         if self.status not in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
-            return reverse('eventView',args=[self.year,month_name[self.month],self.slug])
+            return reverse('eventView',args=[self.year,month_name[self.month or 0] or None,self.slug])
 
     def __str__(self):
         try:
@@ -1489,7 +1499,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
                 logger.info('Sending of confirmation emails is disabled.')
             else:
                 logger.info('Sending confirmation email.')
-                template = EmailTemplate.objects.get(id=getConstant('email__registrationSuccessTemplateID'))
+                template = getConstant('email__registrationSuccessTemplate')
 
                 realreg.email_recipient(
                     subject=template.subject,
@@ -2224,7 +2234,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         if not payerEmail and not self.get_default_recipients():
             raise ValueError(_('Cannot send notification email because no recipient has been specified.'))
 
-        template = EmailTemplate.objects.get(id=getConstant('email__invoiceTemplateID'))
+        template = getConstant('email__invoiceTemplate')
 
         self.email_recipient(
             subject=template.subject,

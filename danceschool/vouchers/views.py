@@ -11,13 +11,13 @@ from easy_pdf.views import PDFTemplateView
 import re
 import logging
 
-from danceschool.core.models import EmailTemplate, Invoice
+from danceschool.core.models import Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
 from danceschool.core.mixins import EmailRecipientMixin
 from danceschool.core.helpers import emailErrorMessage
 
 from .forms import VoucherCustomizationForm
-from .models import Voucher, VoucherCategory
+from .models import Voucher
 
 
 # Define logger for this file
@@ -66,7 +66,7 @@ class GiftCertificateCustomizeView(FormView):
             voucher = Voucher.create_new_code(
                 prefix='GC_',
                 name=_('Gift certificate: %s%s for %s' % (getConstant('general__currencySymbol'),self.amount, emailTo)),
-                category=VoucherCategory.objects.get(id=getConstant('vouchers__giftCertCategoryID')),
+                category=getConstant('vouchers__giftCertCategory'),
                 originalAmount=self.amount,
                 singleUse=False,
                 forFirstTimeCustomersOnly=False,
@@ -76,7 +76,7 @@ class GiftCertificateCustomizeView(FormView):
             logger.error('Error creating gift certificate voucher for Invoice #%s' % self.invoiceId)
             emailErrorMessage(_('Gift certificate transaction not completed'), self.invoiceId)
 
-        template = EmailTemplate.objects.get(id=getConstant('vouchers__giftCertTemplateID'))
+        template = getConstant('vouchers__giftCertTemplate')
 
         # Attempt to attach a PDF of the gift certificate
         rf = RequestFactory()
@@ -137,7 +137,7 @@ class GiftCertificatePDFView(PDFTemplateView):
     def get_context_data(self,**kwargs):
         context = super(GiftCertificatePDFView,self).get_context_data(**kwargs)
 
-        template = EmailTemplate.objects.get(id=getConstant('vouchers__giftCertPDFTemplateID'))
+        template = getConstant('vouchers__giftCertPDFTemplate')
 
         # For security reasons, the following tags are removed from the template before parsing:
         # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}

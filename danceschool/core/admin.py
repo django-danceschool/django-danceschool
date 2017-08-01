@@ -32,7 +32,7 @@ class SeriesTeacherInlineForm(ModelForm):
         super(SeriesTeacherInlineForm,self).__init__(*args,**kwargs)
 
         self.fields['staffMember'].label = _('Instructor')
-        self.fields['category'].initial = getConstant('general__eventStaffCategoryInstructorID')
+        self.fields['category'].initial = getConstant('general__eventStaffCategoryInstructor').id
 
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
@@ -69,7 +69,7 @@ class SubstituteTeacherInlineForm(ModelForm):
 
         self.fields['staffMember'].label = _('Instructor')
         self.fields['replacedStaffMember'].required = True
-        self.fields['category'].initial = getConstant('general__eventStaffCategorySubstituteID')
+        self.fields['category'].initial = getConstant('general__eventStaffCategorySubstitute').id
 
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):

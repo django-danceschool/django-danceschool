@@ -156,7 +156,7 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
         rentalRate = event.location.rentalRate
         total = hoursRented * rentalRate
 
-        this_category = ExpenseCategory.objects.filter(id=getConstant('financial__venueRentalExpenseCatID')).first()
+        this_category = getConstant('financial__venueRentalExpenseCat')
 
         ExpenseItem.objects.create(eventvenue=event,category=this_category,description=expense_description,submissionUser=submissionUser,hours=hoursRented,wageRate=rentalRate,total=total)
 
@@ -197,12 +197,12 @@ def createExpenseItemsForCompletedEvents(request=None,datetimeTuple=None):
             hours_taught = member.netHours
             wage_rate = member.category.defaultRate
 
-            if member.category.id == getConstant('general__eventStaffCategoryAssistantID'):
-                this_category = ExpenseCategory.objects.filter(id=getConstant('financial__assistantClassInstructionExpenseCatID')).first()
-            elif member.category.id in [getConstant('general__eventStaffCategoryInstructorID'),getConstant('general__eventStaffCategorySubstituteID')]:
-                this_category = ExpenseCategory.objects.filter(id=getConstant('financial__classInstructionExpenseCatID')).first()
+            if member.category == getConstant('general__eventStaffCategoryAssistant'):
+                this_category = getConstant('financial__assistantClassInstructionExpenseCat')
+            elif member.category in [getConstant('general__eventStaffCategoryInstructor'),getConstant('general__eventStaffCategorySubstitute')]:
+                this_category = getConstant('financial__classInstructionExpenseCat')
             else:
-                this_category = ExpenseCategory.objects.filter(id=getConstant('financial__otherStaffExpenseCatID')).first()
+                this_category = getConstant('financial__otherStaffExpenseCat')
 
             ExpenseItem.objects.create(eventstaffmember=member,category=this_category,description=expense_description,submissionUser=submissionUser,hours=hours_taught,wageRate=wage_rate)
 
@@ -214,7 +214,7 @@ def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
     else:
         submissionUser = None
 
-    this_category = RevenueCategory.objects.get(id=getConstant('financial__registrationsRevenueCatID'))
+    this_category = getConstant('financial__registrationsRevenueCat')
 
     filters_events = {'revenueitem__isnull': True,'finalEventRegistration__isnull': False}
 
@@ -318,8 +318,8 @@ def prepareStatementByMonth(**kwargs):
 
     # Get everything by month in one query each, then pull from this.
     totalExpensesByMonth = expenseitems.values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
-    instructionExpensesByMonth = expenseitems.filter(category__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID')]).values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
-    venueExpensesByMonth = expenseitems.filter(category=getConstant('financial__venueRentalExpenseCatID')).values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
+    instructionExpensesByMonth = expenseitems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
+    venueExpensesByMonth = expenseitems.filter(category=getConstant('financial__venueRentalExpenseCat')).values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
     totalRevenuesByMonth = revenueitems.values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
 
     # This includes only registrations in which a series was registered for (and was not cancelled)
@@ -425,9 +425,9 @@ def prepareStatementByEvent(**kwargs):
                                                        -1 * this_event_statement['revenues']['fees']])
 
         this_event_statement['expenses'] = {
-            'instruction': event.expenseitem_set.filter(category__id=getConstant('financial__classInstructionExpenseCatID')).aggregate(Sum('total'))['total__sum'] or 0,
-            'venue': event.expenseitem_set.filter(category__id=getConstant('financial__venueRentalExpenseCatID')).aggregate(Sum('total'))['total__sum'] or 0,
-            'other': event.expenseitem_set.exclude(category__id=getConstant('financial__venueRentalExpenseCatID')).exclude(category__id=getConstant('financial__classInstructionExpenseCatID')).aggregate(Sum('total'))['total__sum'] or 0,
+            'instruction': event.expenseitem_set.filter(category=getConstant('financial__classInstructionExpenseCat')).aggregate(Sum('total'))['total__sum'] or 0,
+            'venue': event.expenseitem_set.filter(category=getConstant('financial__venueRentalExpenseCat')).aggregate(Sum('total'))['total__sum'] or 0,
+            'other': event.expenseitem_set.exclude(category=getConstant('financial__venueRentalExpenseCat')).exclude(category=getConstant('financial__classInstructionExpenseCat')).aggregate(Sum('total'))['total__sum'] or 0,
             'fees': event.expenseitem_set.aggregate(Sum('fees'))['fees__sum'] or 0
         }
         this_event_statement['expenses']['total'] = sum([this_event_statement['expenses']['instruction'],

@@ -3,8 +3,9 @@ This file defines a variety of preferences that must be set in the DB,
 but can be changed dynamically.
 '''
 
-from django.forms import HiddenInput
 from django.utils.translation import ugettext_lazy as _
+from django.db import connection
+from django.template.loader import get_template
 
 from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, FloatPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
@@ -13,6 +14,7 @@ from cms.models import Page
 from cms.forms.fields import PageSelectFormField
 
 from .utils.serializers import PageModelSerializer
+from .models import EventStaffCategory, EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
 
 # we create some section objects to link related preferences together
 
@@ -74,47 +76,55 @@ class DefaultAdminSuccessPage(IntegerPreference):
 
 
 @global_preferences_registry.register
-class StaffCategoryInstructor(IntegerPreference):
+class StaffCategoryInstructor(ModelChoicePreference):
     section = general
-    name = 'eventStaffCategoryInstructorID'
-    widget = HiddenInput
-    verbose_name = _('ID of automatically-generated Instructor EventStaffCategory')
+    name = 'eventStaffCategoryInstructor'
+    verbose_name = _('Instructor Event Staff Category')
+    model = EventStaffCategory
+    queryset = EventStaffCategory.objects.all()
 
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return EventStaffCategory.objects.get_or_create(name=_('Class Instruction'))[0]
 
 
 @global_preferences_registry.register
-class StaffCategoryAssistant(IntegerPreference):
+class StaffCategoryAssistant(ModelChoicePreference):
     section = general
-    name = 'eventStaffCategoryAssistantID'
-    widget = HiddenInput
-    verbose_name = _('ID of automatically-generated Assistant Instructor EventStaffCategory')
+    name = 'eventStaffCategoryAssistant'
+    verbose_name = _('Assistant Instructor Event Staff Category')
+    model = EventStaffCategory
+    queryset = EventStaffCategory.objects.all()
 
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return EventStaffCategory.objects.get_or_create(name=_('Assistant Class Instruction'))[0]
 
 
 @global_preferences_registry.register
-class StaffCategorySubstitute(IntegerPreference):
+class StaffCategorySubstitute(ModelChoicePreference):
     section = general
-    name = 'eventStaffCategorySubstituteID'
-    widget = HiddenInput
-    verbose_name = _('ID of automatically-generated Substitute Teacher EventStaffCategory')
+    name = 'eventStaffCategorySubstitute'
+    verbose_name = _('Substitute Teacher Event Staff Category')
+    model = EventStaffCategory
+    queryset = EventStaffCategory.objects.all()
 
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return EventStaffCategory.objects.get_or_create(name=_('Substitute Teaching'))[0]
 
 
 @global_preferences_registry.register
-class StaffCategoryOther(IntegerPreference):
+class StaffCategoryOther(ModelChoicePreference):
     section = general
-    name = 'eventStaffCategoryOtherID'
-    widget = HiddenInput
-    verbose_name = _('ID of automatically-generated Other Staff EventStaffCategory')
+    name = 'eventStaffCategoryOther'
+    verbose_name = _('Other Staff Event Staff Category')
+    model = EventStaffCategory
+    queryset = EventStaffCategory.objects.all()
 
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return EventStaffCategory.objects.get_or_create(name=_('Other Staff'))[0]
 
 
 #################################
@@ -367,25 +377,61 @@ class ErrorEmailsTo(StringPreference):
 
 
 @global_preferences_registry.register
-class RegSuccessEmailTemplate(IntegerPreference):
+class RegSuccessEmailTemplate(ModelChoicePreference):
     section = email
-    name = 'registrationSuccessTemplateID'
-    widget = HiddenInput
-    verbose_name = _('ID of template used for successful email registrations')
+    name = 'registrationSuccessTemplate'
+    verbose_name = _('Email template used for successful email registrations')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
 
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('email/registration_success.html')
+        with open(initial_template.origin.name,'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Registration Confirmation Email'),
+            defaults={
+                'subject': _('Registration Confirmation'),
+                'content': content or '',
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
 
 
 @global_preferences_registry.register
-class InvoiceEmailTemplate(IntegerPreference):
+class InvoiceEmailTemplate(ModelChoicePreference):
     section = email
-    name = 'invoiceTemplateID'
-    widget = HiddenInput
-    verbose_name = _('ID of template used for invoice creation')
+    name = 'invoiceTemplate'
+    verbose_name = _('Email template used for invoice email creation')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
 
-    # Default is treated as undefined, but it should be set by apps.py when the site is initialized
-    default = 0
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('email/invoice_initial.html')
+        with open(initial_template.origin.name,'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Registration Invoice Email'),
+            defaults={
+                'subject': _('Registration Invoice'),
+                'content': content or '',
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
 
 
 ############################

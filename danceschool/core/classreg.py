@@ -158,15 +158,18 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         # Although there will typically only be one handler that responds to
         # the apply_discounts signal firing, to be safe, we will always look
         # for and apply the minimum price anyway, to avoid exception issues.
+        discount_code = None
+        discounted_total = initial_price
+        discount_amount = 0
+
         try:
-            discount_responses.sort(key=lambda k: k[1][1])
-            discount_code, discounted_total = discount_responses[0][1]
-            discount_amount = max(initial_price - discounted_total, 0)
+            discount_responses.sort(key=lambda k: k[1][1] if k[1] and len(k[1]) > 1 else initial_price)
+            if discount_responses[0][1]:
+                discount_code, discounted_total = discount_responses[0][1]
+                discounted_total = max(discounted_total,0)
+                discount_amount = min(max(initial_price - discounted_total, 0), initial_price)
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
-            discount_code = None
-            discounted_total = initial_price
-            discount_amount = 0
 
         if discount_code:
             apply_discount.send(
@@ -184,7 +187,8 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         addons = []
         for response in addon_responses:
             try:
-                addons += list(addon_responses[1])
+                if response[1]:
+                    addons += list(response[1])
             except (IndexError, TypeError) as e:
                 logger.error('Error in applying addons: %s' % e)
 

@@ -40,6 +40,9 @@ def checkVoucherCode(sender,**kwargs):
     if id == '':
         return
 
+    if not getConstant('vouchers__enableVouchers'):
+        raise ValidationError({'gift': _('Vouchers are disabled.')})
+
     if session.get('gift','') != '':
         raise ValidationError({'gift': _('Can\'t have more than one voucher')})
 
@@ -133,12 +136,12 @@ def applyTemporaryVouchers(sender,**kwargs):
     logger.debug('Signal fired to apply temporary vouchers.')
 
     # Put referral vouchers first, so that they are applied last in the loop.
-    referral_cat_id = getConstant('referrals__referrerCategoryID')
+    referral_cat = getConstant('referrals__referrerCategory')
 
     tvus = list(reg.temporaryvoucheruse_set.filter(
-        voucher__category__id=referral_cat_id
+        voucher__category=referral_cat
     )) + list(reg.temporaryvoucheruse_set.exclude(
-        voucher__category__id=referral_cat_id
+        voucher__category=referral_cat
     ))
 
     if not tvus:

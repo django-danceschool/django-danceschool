@@ -107,6 +107,27 @@ class DiscountCombo(models.Model):
         component_list.sort(key=lambda x: x.quantity, reverse=True)
         return component_list
 
+    def save(self, *args, **kwargs):
+        '''
+        Don't save any passed values related to a type of discount
+        that is not the specified type
+        '''
+
+        if self.discountType != self.DiscountType.flatPrice:
+            self.onlineStudentPrice = None
+            self.onlineGeneralPrice = None
+            self.doorStudentPrice = None
+            self.doorGeneralPrice = None
+
+        if self.discountType != self.DiscountType.dollarDiscount:
+            self.dollarDiscount = None
+
+        if self.discountType != self.DiscountType.percentDiscount:
+            self.percentDiscount = None
+            self.percentUniversallyApplied = False
+
+        super(DiscountCombo, self).save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 

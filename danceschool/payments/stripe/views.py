@@ -21,8 +21,6 @@ def handle_stripe_checkout(request):
 
     logger.info('Received request for Stripe Checkout payment.')
 
-    print(request.POST)
-
     stripeToken = request.POST.get('stripeToken')
     stripeEmail = request.POST.get('stripeEmail')
     submissionUserId = request.POST.get('submissionUser')

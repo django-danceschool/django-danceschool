@@ -229,7 +229,7 @@ class SingleClassRegistrationView(ClassRegistrationView):
 
     def get_allEvents(self):
         try:
-            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid',''))
+            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid','')).exclude(status=Event.RegStatus.hidden)
         except ValueError:
             raise Http404()
 
@@ -796,16 +796,16 @@ class IndividualClassView(FinancialContextMixin, TemplateView):
 
     def get(self,request,*args,**kwargs):
         # These are passed via the URL
-        year = self.kwargs.get('year',timezone.now().year)
-        month = self.kwargs.get('month',0)
+        year = self.kwargs.get('year')
+        month = self.kwargs.get('month')
         slug = self.kwargs.get('slug','')
 
         try:
-            month_number = list(month_name).index(month)
+            month_number = list(month_name).index(month or 0)
         except ValueError:
-            return Http404(_('Invalid month.'))
+            raise Http404(_('Invalid month.'))
 
-        seriesset = get_list_or_404(Series,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,classDescription__slug=slug)
+        seriesset = get_list_or_404(Series,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year or None,month=month_number or None,classDescription__slug=slug)
 
         # This will pass through to the context data by default
         kwargs.update({'seriesset': seriesset})
@@ -833,7 +833,7 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
         try:
             month_number = list(month_name).index(month)
         except ValueError:
-            return Http404(_('Invalid month.'))
+            raise Http404(_('Invalid month.'))
 
         eventset = get_list_or_404(PublicEvent,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,slug=slug)
 

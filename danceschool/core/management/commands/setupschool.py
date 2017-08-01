@@ -349,24 +349,18 @@ values by editing the rate in the appropriate Expense Category in the admin inte
             prefs['financial__autoGenerateExpensesCompletedEvents'] = generate_staff
 
             if generate_staff:
-                instruction_cat_id = prefs.get('financial__classInstructionExpenseCatID',None)
-                assistant_cat_id = prefs.get('financial__assistantClassInstructionExpenseCatID',None)
-                other_cat_id = prefs.get('financial__otherStaffExpenseCatID',None)
-
-                financial_models = import_module('danceschool.financial.models')
-
-                if instruction_cat_id:
-                    instruction_cat = financial_models.ExpenseCategory.objects.get(pk=instruction_cat_id)
+                instruction_cat = prefs.get('financial__classInstructionExpenseCat',None)
+                if instruction_cat:
                     instruction_cat.defaultRate = self.float_input('Default compensation rate for class instruction [0]',default=0)
                     instruction_cat.save()
 
-                if assistant_cat_id:
-                    assistant_cat = financial_models.ExpenseCategory.objects.get(pk=assistant_cat_id)
+                assistant_cat = prefs.get('financial__assistantClassInstructionExpenseCat',None)
+                if assistant_cat:
                     assistant_cat.defaultRate = self.float_input('Default compensation rate for assistant instructors [0]',default=0)
                     assistant_cat.save()
 
-                if other_cat_id:
-                    other_cat = financial_models.ExpenseCategory.objects.get(pk=other_cat_id)
+                other_cat = prefs.get('financial__otherStaffExpenseCat',None)
+                if other_cat:
                     other_cat.defaultRate = self.float_input('Default compensation rate for other event-related staff expenses [0]',default=0)
                     other_cat.save()
 

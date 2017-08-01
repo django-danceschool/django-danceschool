@@ -25,7 +25,7 @@ class PrivateCalendarView(DetailView):
     def get_object(self,queryset=None):
         if hasattr(self.request.user,'staffmember') and self.request.user.staffmember.feedKey:
             return self.request.user.staffmember
-        return Http404(_('Not a valid staff member.'))
+        raise Http404(_('Not a valid staff member.'))
 
     def get_context_data(self,**kwargs):
         ''' Specify the list of feeds in the view so that the template can be agnostic about this '''

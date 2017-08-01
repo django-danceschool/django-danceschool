@@ -175,50 +175,11 @@ def getAddonItems(sender, **kwargs):
             newCustomer = False
             break
 
-    availableAddons = DiscountCombo.objects.filter(discountType=DiscountCombo.DiscountType.addOn,active=True)
-    if not newCustomer:
-        availableAddons = availableAddons.filter(newCustomersOnly=False)
-
     # No need to get all objects, just the ones that could qualify one for an add-on
     cart_object_list = reg.temporaryeventregistration_set.filter(dropIn=False).filter(Q(event__series__pricingTier__isnull=False) | Q(event__publicevent__pricingTier__isnull=False))
 
-    # Start out with a blank list of codes and fill the list
-    appliedAddons = []
-
-    for x in availableAddons:
-        # Create two lists, one that starts with all of the items necessary for the discount to apply,
-        # and one that starts empty.  As we find an item in the cart that matches an item in the discount
-        # requirements, move the item in the discount requirements from the first list to the second list.
-        # If, after all items have been checked, the first list is empty and the second list is full, then
-        # the discount is applicable to the cart.  The third list keeps track of the items used to apply
-        # the discount.  Note that for addons, it doesn't matter which items are used to apply the addon,
-        # since addons do not affect pricing.
-        necessary_discount_items = x.getComponentList()[:]
-        count_necessary_items = len(necessary_discount_items)
-        matched_discount_items = []
-        matched_cart_items = []
-
-        # For each item in the cart
-        for y in cart_object_list:
-            # for each component of the potential discount that has not already been matched
-            for j,z in enumerate(necessary_discount_items):
-                # If pricing tiers match, then check each of the other attributes.
-                # If they all match too, then we have a match, which should be checked off
-                if y.event.pricingTier == z.pricingTier:
-                    match_flag = True
-                    for attribute in ['level','weekday']:
-                        if getattr(y.event,attribute) != getattr(z,attribute) and getattr(z,attribute) is not None:
-                            match_flag = False
-                            break
-                    if match_flag:
-                        matched_discount_items.append(necessary_discount_items.pop(j))
-                        matched_cart_items.append(y)
-                        break
-
-        if len(necessary_discount_items) == 0 and len(matched_discount_items) == count_necessary_items:
-            appliedAddons += [x]
-
-    return appliedAddons
+    availableAddons = getApplicableDiscountCombos(cart_object_list, newCustomer, addOn=True)
+    return [x.code.name for x in availableAddons]
 
 
 @receiver(post_registration)
