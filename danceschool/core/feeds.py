@@ -32,8 +32,10 @@ class EventFeedItem(object):
         self.id_number = object.event.id
         self.title = object.event.name
         self.description = object.event.description
-        self.start = timezone.localtime(object.startTime,timeZone)
-        self.end = timezone.localtime(object.endTime,timeZone)
+        self.start = timezone.localtime(object.startTime,timeZone) \
+            if timezone.is_aware(object.startTime) else object.startTime
+        self.end = timezone.localtime(object.endTime,timeZone) \
+            if timezone.is_aware(object.endTime) else object.endTime
         self.color = object.event.displayColor
         self.url = object.event.get_absolute_url()
         if hasattr(object,'event.location'):
