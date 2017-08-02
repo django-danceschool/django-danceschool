@@ -130,7 +130,7 @@ site. In that case, you will need to do the following:
    project's root directory, or to the templates folder within a custom
    app.
 2. Add the template's filename and a brief description to the setting
-   ``CMS_TEMPLATES`` within your project's settings\_local.py
+   ``CMS_TEMPLATES`` within your project's settings.py
 3. Restart the server for your Django project so that the settings are
    reloaded.
 

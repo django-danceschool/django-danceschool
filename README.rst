@@ -140,26 +140,19 @@ What you need:
 
 -  You'll have to use homebrew to ``brew install`` dependencies above.
    Beware you may run into the zlib issue which can be `answered
-   here <http://andinfinity.de/posts/2014-07-17-quick-note-homebrew-installed-python-fails-to-import-zlib.html>`__.
+   here <http://andinfinity.de/posts/2014-07-17-quick-note-homebrew-installed-python-fails-to-import-zlib.html>`_.
 
 Basic Installation Process
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Download this repository (you will be
-   prompted for username and password)
-
-   ::
-
-       git clone https://github.com/leetucker/django-danceschool
-
-2. Create a subfolder for the project, and enter it:
+1. Create a subfolder for your new Django project, and enter it:
 
    ::
 
        mkdir django
        cd django
 
-3. Create a new virtual environment and enter it:
+2. Create a new virtual environment and enter it:
 
    ::
 
@@ -171,11 +164,11 @@ Basic Installation Process
       matter which method you use, be sure that your environment is set
       to use Python 3 by default.
 
-4. Install the django-danceschool package that you downloaded, which will
-   also install all of the necessary dependencies (this may take
-   awhile & you may have to use sudo)
+3. Install the django-danceschool from `PyPi <https://pypi.python.org/pypi>`_.
+   This will also install all of the necessary dependencies (which may take
+   awhile)
 
-   ``pip install /path/to/django-danceschool``
+   ``pip install django-danceschool``
 
    *Note:* Additionally, depending on your operating system, you may
    need to install certain program dependencies in order to install the
@@ -183,29 +176,29 @@ Basic Installation Process
    requirements.txt). If you run into issues at this step of the
    installation, look for these issues first.
 
-5. Start your Django project, using the ``django-admin`` command.  To avoid
+4. Start your Django project, using the ``django-admin`` command.  To avoid
    having to set a large number of settings manually, we strongly recommend
    that you use the preexisting installation template as follows.  Make sure
    that you are in the folder where you would like your project to be located when you do this.
 
    ::
 
-      django-admin startproject --template http://leetucker.net/django-danceschool/danceschool_default_setup.zip <your_project_name>
+      django-admin startproject --template https://raw.githubusercontent.com/leetucker/django-danceschool/master/setup/default_setup.zip <your_project_name>
 
-6. Perform initial database migrations
+5. Perform initial database migrations
 
    ::
 
        python manage.py migrate
 
-7. Create a superuser so that you can log into the admin interface (you
+6. Create a superuser so that you can log into the admin interface (you
    will be prompted for username and password)
 
    ::
 
        python manage.py createsuperuser
 
-8. **Optional, but strongly recommended:** Run the easy-installer setup
+7. **Optional, but strongly recommended:** Run the easy-installer setup
    script, and follow all prompts.  This script will guide you through
    the process of setting initial values for many things, creating a few
    initial pages that many school use, and setting up user groups and
@@ -216,14 +209,14 @@ Basic Installation Process
 
        python manage.py setupschool
 
-9. Run the server and try to log in!
+8. Run the server and try to log in!
 
    ::
 
        python manage.py runserver
 
 
-Following steps 1-9 above will give you a working installation for testing
+Following steps 1-8 above will give you a working installation for testing
 purposes.  However, additional steps are needed to setup emails,
 payment processor integration, and other automated processes.  For details,
 see the Installation page of the documentation.
@@ -232,9 +225,20 @@ see the Installation page of the documentation.
 Contribution guidelines
 -----------------------
 
-Our long-term goal is to make an extensible code base that can be used
-by other dance schools. Bug fixes, or other contributions that serve
-that goal, may be submitted as pull requests directly to this repo.
+The goal of this project is to make an extensible code base that can be used
+by other dance schools.  We can especially use help with:
+
+- Bug fixes
+- Creation and improvement of unit tests
+- Documentation improvements
+- Planning and implementing any significant new functionality that may be
+  valuable to your dance school and also to other schools,
+
+Issues and bugs may be submitted directly to the
+`issue tracker <https://github.com/leetucker/django-danceschool/issues>`_.
+
+Bug fixes, or other contributions that serve the goals of the project may
+be submitted as pull requests directly to this repo.
 
 If you wish to extend this project with considerable functionality or major
 modifications, please get in touch with Lee and Andrew.

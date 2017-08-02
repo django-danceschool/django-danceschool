@@ -2,23 +2,16 @@ Installation
 ============
 
 Basic Installation Process
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Download this repository (you will be
-   prompted for username and password)
-
-   ::
-
-       git clone https://github.com/leetucker/django-danceschool
-
-2. Create a subfolder for the project, and enter it:
+1. Create a subfolder for your new Django project, and enter it:
 
    ::
 
        mkdir django
        cd django
 
-3. Create a new virtual environment and enter it:
+2. Create a new virtual environment and enter it:
 
    ::
 
@@ -30,11 +23,11 @@ Basic Installation Process
       matter which method you use, be sure that your environment is set
       to use Python 3 by default.
 
-4. Install the django-danceschool package that you downloaded, which will
-   also install all of the necessary dependencies (this may take
-   awhile & you may have to use sudo)
+3. Install the django-danceschool from `PyPi <https://pypi.python.org/pypi>`_.
+   This will also install all of the necessary dependencies (which may take
+   awhile)
 
-   ``pip install /path/to/django-danceschool``
+   ``pip install django-danceschool``
 
    *Note:* Additionally, depending on your operating system, you may
    need to install certain program dependencies in order to install the
@@ -42,31 +35,29 @@ Basic Installation Process
    requirements.txt). If you run into issues at this step of the
    installation, look for these issues first.
 
-5. Start your Django project, using the ``django-admin`` command.  To avoid
+4. Start your Django project, using the ``django-admin`` command.  To avoid
    having to set a large number of settings manually, we strongly recommend
    that you use the preexisting installation template as follows.  Make sure
    that you are in the folder where you would like your project to be located when you do this.
 
    ::
 
-      django-admin startproject --template http://leetucker.net/django-danceschool/danceschool_default_setup.zip <your_project_name>
+      django-admin startproject --template https://raw.githubusercontent.com/leetucker/django-danceschool/master/setup/default_setup.zip <your_project_name>
 
-  If you would prefer to install manually, then follow the instructions in the :ref:`manual_project_setup`.
-
-6. Perform initial database migrations
+5. Perform initial database migrations
 
    ::
 
        python manage.py migrate
 
-7. Create a superuser so that you can log into the admin interface (you
+6. Create a superuser so that you can log into the admin interface (you
    will be prompted for username and password)
 
    ::
 
        python manage.py createsuperuser
 
-8. **Optional, but strongly recommended:** Run the easy-installer setup
+7. **Optional, but strongly recommended:** Run the easy-installer setup
    script, and follow all prompts.  This script will guide you through
    the process of setting initial values for many things, creating a few
    initial pages that many school use, and setting up user groups and
@@ -77,11 +68,12 @@ Basic Installation Process
 
        python manage.py setupschool
 
-9. Run the server and try to log in!
+8. Run the server and try to log in!
 
    ::
 
        python manage.py runserver
+
 
 Settings Customization and Production Deployment
 ------------------------------------------------
@@ -96,25 +88,58 @@ There are two types of settings in this project:
 1. Hard-coded settings needed to run the project at all (located in
    settings.py)
 2. Runtime settings that customize the site's functionality (stored in
-   the database using the django-dynamic-preferences app, and then
-   cached)
+   the database using the 
+   `django-dynamic-preferences <http://django-dynamic-preferences.readthedocs.io/en/latest/>`_
+   app, and then cached)
 
-In order to facilitate the easy deployment of development instances, all
-of the default settings for this project are settings that can be used
-in a dev instance. For example, debug mode is on, and the server uses a
-SQLite backend instead of PostgreSQL. The only exceptions are features
-such as email and the Paypal/Stripe integration, which cannot be enabled by
-default until you have entered credentials for those services. However,
-before you deploy this project for "production" purposes, you will need,
-*at a minimum*, to customize settings for Paypal, email, the database,
-and the site's "secret key." Also, often time, if your workflow involves
+If you have used the default setup provided in step 4 above, then you have
+already been provided with appropriate default settings for a development
+instance of the project. For example, Django's debug mode is on, and the
+project uses a SQLite backend to store data instead of a production database
+such as PostgreSQL.  Before thoroughly testing out the project, the only
+settings that you are required so set in ``settings.py`` are for features
+such as email and the Paypal/Stripe integration, because these features
+cannot be enabled by default until you have entered credentials for those
+services. However, before you deploy this project for "production" purposes,
+you will need, *at a minimum*, to customize settings for Paypal/Stripe, email,
+and a production-appropriate database.  Also, often time, if your workflow involves
 both a development installation and a production installation, there
 will be different settings required for each installation.
 
 Here is a list of settings that typically need to be customized in
 ``settings.py`` before running:
 
+**Django email settings (needed for confirmation emails, etc.)**
 
+- host: ``EMAIL_HOST``
+- port: ``EMAIL_PORT``
+- username: ``EMAIL_HOST_USER``
+- password: ``EMAIL_HOST_PASSWORD``
+- use_tls: ``EMAIL_USE_TLS``
+- use_ssl: ``EMAIL_USE_SSL``
+  
+**Django database settings (recommended to change from default SQLite)**:
+
+- ``DATABASES['default']['ENGINE']``
+- ``DATABASES['default']['NAME']``
+- ``DATABASES['default']['USER']``
+- ``DATABASES['default']['PASSWORD']``
+- ``DATABASES['default']['HOST']``
+- ``DATABASES['default']['PORT']``
+
+** Payment processors **
+
+These are just the settings listed above in :ref:`paypal_setup` and :ref:`stripe_setup`.
+
+For Paypal:
+
+- ``PAYPAL_MODE`` (either "sandbox" or "live")
+- ``PAYPAL_CLIENT_ID``
+- ``PAYPAL_CLIENT_SECRET``
+
+For Stripe:
+- ``STRIPE_PUBLIC_KEY``
+- ``STRIPE_PRIVATE_KEY``
 
 
 Customizing runtime settings is even easier. Simply log in as the
@@ -122,7 +147,7 @@ superuser account that you previously created, and go to
 http://yoursite/settings/global/. There, you will see organized pages in
 which you can change runtime settings associated with various functions
 of the site.  If you have run the ``setupschool`` command as instructed
-in step 8 above, you will find that all of the most important runtime
+in step 7 above, you will find that all of the most important runtime
 settings have already been put into place for you.
 
 Email Settings
@@ -131,9 +156,8 @@ Email Settings
 In order for your project to send emails, you need to specify an SMTP
 server that will allow you to send those emails, as well as any
 credentials needed to log into that server. These settings are contained
-in settings.py (and can therefore be changed by defining them in
-``settings_local.py``). Look for settings such as ``EMAIL_HOST``,
-``EMAIL_HOST_USER``, ``EMAIL_HOST_PASSWORD``, etc.
+in ``settings.py``. Look for settings such as ``EMAIL_HOST``,
+``EMAIL_HOST_USER``, ``EMAIL_HOST_PASSWORD``, etc. to modify them.
 
 For more details, see the `Django
 documentation <https://docs.djangoproject.com/en/dev/topics/email/>`.
@@ -171,7 +195,7 @@ as long as both Redis and Huey continue to run.
 
 Production deployment of Huey is beyond the scope of this documentation.
 However, solutions such as `Supervisord <http://supervisord.org/>` are
-generally the preferred approach.
+generally a preferred approach.
 
 .. _paypal_setup:
 
@@ -203,7 +227,7 @@ REST API Setup
    then choose "sandbox" credentials so that you can test transactions
    without using actual money.  For your public installation, use
    "live" credentials.
-6. Edit ``settings_local.py`` to add:
+6. Edit ``settings.py`` to add:
     -  ``PAYPAL_MODE``: Either "sandbox" or "live"
     -  ``PAYPAL_CLIENT_ID``: The value of "Client ID"
     -  ``PAYPAL_CLIENT_SECRET``: The value of "Secret".  **Do not share
@@ -254,7 +278,7 @@ use the popular Stripe payment processor in place of Paypal.  As with
 Paypal, Stripe integration makes use of a modern API that does not
 require you to store any sensitive financial information on your own
 server, and it requires only that you enable the app and place your
-API keys in your ``settings.py`` or ``settings_local.py`` file.
+API keys in your ``settings.py`` file.
 
 Stripe API Setup
 ~~~~~~~~~~~~~~~~
@@ -269,7 +293,7 @@ Stripe API Setup
     to your API keys.
 4.  You will see test credentials, and if your account has been activated,
     you will also see live credentials.  Enter the following settings into
-    your ``settings_local.py`` file:
+    your ``settings.py`` file:
    -  ``STRIPE_PUBLIC_KEY``: Your publishable key.
    -  ``STRIPE_PRIVATE_KEY``: Your secret key.  **Do not share
     this value with anyone, or store it anywhere that could be publicly
