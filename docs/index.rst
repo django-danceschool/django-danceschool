@@ -17,6 +17,7 @@ Welcome to Django-danceschool's documentation!
    usage_advanced
    customization_basic
    customization_advanced
+   version_history
 
 Indices and tables
 ==================
