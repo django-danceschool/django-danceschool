@@ -76,10 +76,23 @@ class EmailRecipientMixin(object):
 
         # For security reasons, the following tags are removed from the template before parsing:
         # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}
-        content = re.sub('\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}','',content)
+        content = re.sub(
+            '\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
+            '',
+            content
+        )
         t = Template(content)
-
         rendered_content = t.render(Context(template_context))
+
+        if email_kwargs.get('html_content'):
+            html_content = re.sub(
+                '\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
+                '',
+                email_kwargs.get('html_content')
+            )
+            t = Template(html_content)
+            email_kwargs['html_content'] = t.render(Context(template_context))
+
         sendEmail(subject,rendered_content,**email_kwargs)
 
     def get_email_context(self,**kwargs):
