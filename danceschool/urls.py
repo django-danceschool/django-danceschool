@@ -53,5 +53,8 @@ if apps.is_installed('danceschool.vouchers'):
 if apps.is_installed('danceschool.payments.paypal'):
     urlpatterns.append(url(r'^paypal/', include('danceschool.payments.paypal.urls')),)
 
+if apps.is_installed('danceschool.payments.paypal_here'):
+    urlpatterns.append(url(r'^paypal/', include('danceschool.payments.paypal_here.urls')),)
+
 if apps.is_installed('danceschool.payments.stripe'):
     urlpatterns.append(url(r'^stripe/', include('danceschool.payments.stripe.urls')),)

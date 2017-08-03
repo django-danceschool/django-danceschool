@@ -1,0 +1,35 @@
+{% load cms_tags sekizai_tags i18n %}
+
+{% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
+
+{% addtoblock "js" %}
+    <script type="text/javascript">
+    $('#paypal-here-button').click(function() {
+        $.ajax({
+            url: "{% url 'createPaypalHerePayment' %}",
+            method: "POST",
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}',
+                {% if user.is_authenticated %}
+                user_id: {{ user.id }},
+                {% endif %}
+                {% if registration %}
+                reg_id: {{ registration.id }},
+                {% elif invoice %}
+                invoice_id: '{{ invoice.id }}',
+                {% endif %}
+            },
+            success: function(data, textStatus, jqXHR) {
+                window.location.href = data.redirectUrl;
+            },
+            error: function() {
+                $('#error-here-payment').addClass('alert alert-danger');
+                $('#error-here-payment').text('{{ unknown_error }}');
+            },
+        });
+    });
+    </script>
+{% endaddtoblock %}
+
+<div id="error-here-payment"></div>
+<button id="paypal-here-button" class="btn btn-primary">{% trans "Submit via Paypal Here" %}</button>
