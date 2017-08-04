@@ -1,6 +1,13 @@
 Version History
 ===============
 
+0.1.2
+-----
+
+- Fixed bug where default navigation menu would not expand on mobile browsers
+- Added automatic creation of a Logout link to the default navigation using the setupschool script.
+
+
 0.1.1
 -----
 
