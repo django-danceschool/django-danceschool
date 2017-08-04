@@ -366,7 +366,7 @@ class Room(models.Model):
     '''
     Locations may have multiple rooms, each of which may have its own capacity.
     '''
-    name = models.CharField(_('Name'),max_length=80,unique=True,help_text=_('Give this room a name.'))
+    name = models.CharField(_('Name'),max_length=80,help_text=_('Give this room a name.'))
     location = models.ForeignKey(Location,verbose_name=_('Location'))
 
     rentalRate = models.FloatField(_('Hourly Rental Rate (optional)'),null=True,blank=True,help_text=_('When ExpenseItems are created for renting this room, this rental rate will be used to calculate the total cost of rental.  If no value is specified, then the default for the Location will be used.'),validators=[MinValueValidator(0)])
@@ -378,6 +378,7 @@ class Room(models.Model):
         return self.name
 
     class Meta:
+        unique_together = ('location','name')
         verbose_name = _('Room')
         verbose_name_plural = _('Rooms')
         ordering = ('location__name','name',)
