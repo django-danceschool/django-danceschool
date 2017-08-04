@@ -53,7 +53,7 @@
 				{% endif %}
 			{% endfor %}
 			</td>
-			<td>{{ series.location.name }}</td>
+			<td>{{ series.location.name }}{% if series.room.name %} - {{ series.room.name }}{% endif %}</td>
 			<td>{{ series.startTime|date:'l, h:i A' }}</td>
 			<td>{{ series.numRegistered }}</td>
 	</tr>
@@ -108,7 +108,7 @@
 			{% with eventreg.event as event %}
 			<td>{{ event.month|readable_month }} {{ event.year }}</td>
 			<td>{{ event.name }}</td>
-			<td>{{ event.location.name }}</td>
+			<td>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</td>
 			<td>{{ event.startTime|date:'D., h:i A' }}</td>
 			<td>
 			{% for instructor in event.teachers %}
@@ -159,7 +159,7 @@
 			{% with eventreg.event as event %}
 			<td>{{ event.month|readable_month }} {{ event.year }}</td>
 			<td>{{ event.name }}</td>
-			<td>{{ event.location.name }}</td>
+			<td>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</td>
 			<td>{{ event.startTime|date:'D., h:i A' }}</td>
 			<td>
 			{% for instructor in event.teachers %}
@@ -209,7 +209,7 @@
 			{% with eventreg.event as event %}
 			<td>{{ event.month|readable_month }} {{ event.year }}</td>
 			<td>{{ event.name }}</td>
-			<td>{{ event.location.name }}</td>
+			<td>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</td>
 			<td>{{ event.startTime|date:'D., h:i A' }}</td>
 			<td>
 			{% for instructor in event.teachers %}

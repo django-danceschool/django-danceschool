@@ -1,4 +1,4 @@
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.db.models.functions import ExtractYear, ExtractMonth
 from django.http import HttpResponse
 from django.utils import timezone
@@ -122,21 +122,20 @@ def getRevenueItemsCSV(queryset):
 # Create associated tasks for items
 def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
 
-    filters = {'venueexpense': None,'location__rentalRate__gt': 0}
+    filters = Q(venueexpense__isnull=True) & (Q(location__rentalRate__gt=0) | Q(room__rentalRate__gt=0))
 
     if datetimeTuple:
         timelist = list(datetimeTuple)
         timelist.sort()
 
-        filters['eventoccurrence__startTime__gte'] = timelist[0]
-        filters['eventoccurrence__startTime__lte'] = timelist[1]
+        filters = filters & Q(eventoccurrence__startTime__gte=timelist[0]) & Q(eventoccurrence__startTime__lte=timelist[1])
     else:
         c = getConstant('financial__autoGenerateExpensesVenueRentalWindow') or 0
         if c > 0:
-            filters['eventoccurrence__startTime__gte'] = timezone.now() - relativedelta(months=c)
+            filters = filters & Q(eventoccurrence__startTime__gte=timezone.now() - relativedelta(months=c))
 
     # Only create expense items for venues with a positive rental rate
-    for event in Event.objects.filter(**filters).distinct():
+    for event in Event.objects.filter(filters).distinct():
         replacements = {
             'month': month_name[event.month],
             'year': event.year,
@@ -153,7 +152,12 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
             submissionUser = None
 
         hoursRented = event.duration
-        rentalRate = event.location.rentalRate
+
+        if event.room and event.room.rentalRate:
+            rentalRate = event.room.rentalRate
+        elif event.location and event.location.rentalRate:
+            rentalRate = event.location.rentalRate
+
         total = hoursRented * rentalRate
 
         this_category = getConstant('financial__venueRentalExpenseCat')

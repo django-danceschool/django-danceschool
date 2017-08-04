@@ -8,9 +8,9 @@ from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 
-from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem
+from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
-from .forms import LocationWithCapacityWidget
+from .forms import LocationWithDataWidget
 
 
 ######################################
@@ -383,8 +383,16 @@ class CustomerAdmin(admin.ModelAdmin):
     inlines = [CustomerRegistrationInline,]
 
 
+class RoomInline(admin.StackedInline):
+    model = Room
+    extra = 1
+    fields = (('name', 'defaultCapacity', 'rentalRate'),'description')
+
+
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
+    inlines = [RoomInline,]
+
     list_display = ('name','address','city','orderNum','status')
     list_display_links = ('name',)
     list_editable = ('orderNum','status')
@@ -553,7 +561,7 @@ class SeriesAdminForm(ModelForm):
         model = Series
         exclude = []
         widgets = {
-            'location': LocationWithCapacityWidget,
+            'location': LocationWithDataWidget,
         }
 
     class Media:
@@ -582,7 +590,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription','location','pricingTier',('special','allowDropins'),('uuidLink',)),
+            'fields': ('classDescription',('location','room'),'pricingTier',('special','allowDropins'),('uuidLink',)),
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse',),
@@ -620,7 +628,7 @@ class PublicEventAdminForm(ModelForm):
     # Use the custom location capacity widget to ensure that Javascript can update location specific capacities.
     class Meta:
         widgets = {
-            'location': LocationWithCapacityWidget,
+            'location': LocationWithDataWidget,
             'submissionUser': HiddenInput(),
         }
 
@@ -641,7 +649,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('title','slug','category','location')
+            'fields': ('title','slug','category',('location','room'),)
         }),
         (_('Registration/Visibility'), {
             'fields': ('status',('pricingTier','capacity'),),

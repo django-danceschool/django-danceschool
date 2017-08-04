@@ -362,6 +362,28 @@ class Location(models.Model):
 
 
 @python_2_unicode_compatible
+class Room(models.Model):
+    '''
+    Locations may have multiple rooms, each of which may have its own capacity.
+    '''
+    name = models.CharField(_('Name'),max_length=80,unique=True,help_text=_('Give this room a name.'))
+    location = models.ForeignKey(Location,verbose_name=_('Location'))
+
+    rentalRate = models.FloatField(_('Hourly Rental Rate (optional)'),null=True,blank=True,help_text=_('When ExpenseItems are created for renting this room, this rental rate will be used to calculate the total cost of rental.  If no value is specified, then the default for the Location will be used.'),validators=[MinValueValidator(0)])
+    defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this room.'))
+
+    description = HTMLField(_('Description'),help_text=_('By default, only room names are listed publicly.  However, you may insert any descriptive information that you would like about this room here.'), null=True, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Room')
+        verbose_name_plural = _('Rooms')
+        ordering = ('location__name','name',)
+
+
+@python_2_unicode_compatible
 class PricingTier(models.Model):
     name = models.CharField(max_length=50,unique=True,help_text=_('Give this pricing tier a name (e.g. \'Default 4-week series\')'))
 
@@ -474,6 +496,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     submissionUser = models.ForeignKey(User,verbose_name=_('Submitted by user'),null=True,blank=True,related_name='eventsubmissions')
 
     location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True)
+    room = models.ForeignKey(Room,verbose_name=_('Room'),null=True,blank=True)
+
     capacity = models.PositiveIntegerField(_('Event capacity'),null=True,blank=True)
 
     # These were formerly methods that were given a property decorator, but
@@ -820,6 +844,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     def clean(self):
         if self.status in [Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen] and not self.capacity:
             raise ValidationError(_('If registration is enabled then a capacity must be set.'))
+        if self.room and self.location and self.room.location != self.location:
+            raise ValidationError(_('Selected room is not part of selected location.'))
 
     def save(self, fromUpdateRegistrationStatus=False, *args, **kwargs):
         logger.debug('Save method for Event or subclass called.')
@@ -836,7 +862,12 @@ class Event(EmailRecipientMixin, PolymorphicModel):
                 self.endTime = self.eventoccurrence_set.order_by('endTime').last().endTime
                 self.duration = sum([x.duration for x in self.eventoccurrence_set.all() if not x.cancelled])
 
-            if self.location and not self.capacity:
+            if self.room and not self.location:
+                self.location = self.room.location
+
+            if self.room and self.room.defaultCapacity and not self.capacity:
+                self.capacity = self.room.defaultCapacity
+            elif self.location and not self.capacity:
                 self.capacity = self.location.defaultCapacity
 
             modified, open = self.updateRegistrationStatus(saveMethod=True)

@@ -26,10 +26,10 @@ from .utils.emails import get_text_for_html
 logger = logging.getLogger(__name__)
 
 
-class LocationWithCapacityWidget(Select):
+class LocationWithDataWidget(Select):
     '''
-    Override render_option to permit extra data of default capacity to be used by JQuery
-    This could be optimized to reduce database calls by overriding the render function.
+    Override render_option to permit extra data of default capacity
+    and room options to be used by JQuery.
     '''
 
     def render_option(self, selected_choices, option_value, option_label):
@@ -44,16 +44,21 @@ class LocationWithCapacityWidget(Select):
         else:
             selected_html = ''
 
-        # Pass the default wage rate as an option
+        # Pass the default location capacity as an option
         if option_value:
-            defaultCapacity = Location.objects.filter(id=int(option_value)).first().defaultCapacity
-            extra_value_data = ' data-defaultCapacity=' + str(defaultCapacity)
+            this_location = Location.objects.filter(id=int(option_value)).first()
+            defaultCapacity = this_location.defaultCapacity
+            room_options = [{'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity} for x in this_location.room_set.all()]
+
+            extra_value_data = format_html(
+                ' data-defaultCapacity="{}" data-roomOptions="{}"',
+                defaultCapacity, json.dumps(room_options))
         else:
             extra_value_data = ''
 
         return format_html('<option value="{}"{}{}>{}</option>',
                            option_value,
-                           selected_html,
+                           mark_safe(selected_html),
                            extra_value_data,
                            force_text(option_label))
 

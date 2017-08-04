@@ -37,7 +37,7 @@
 	</p>
 
 	<p class='address'>
-	<strong>{{ event.location.name }}</strong><br />
+	<strong>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</strong><br />
 	{{ event.location.address }}<br />
 	{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
 	{% page_url 'directions' as directions_url %}

@@ -83,7 +83,7 @@
 		</p>
 
 		<p class='address'>
-		<strong>{{ series.location.name }}</strong><br />
+		<strong>{{ series.location.name }}{% if series.room.name %} - {{ series.room.name }}{% endif %}</strong><br />
 		{{ series.location.address }}<br />
 		{{ series.location.city }}, {{ series.location.state }} {{ series.location.zip }}<br />
 		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ series.location.name|slugify }}">{% trans "More Info" %}</a>

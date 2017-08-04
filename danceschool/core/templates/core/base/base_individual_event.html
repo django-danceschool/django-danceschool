@@ -32,7 +32,7 @@
 		<h3>{{ event.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ event.eventoccurrence_set.all.first.endTime|date:'h:i A' }}</h3>
 
 		<p class='address'>
-		<strong>{{ event.location.name }}</strong><br />
+		<strong>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</strong><br />
 		{{ event.location.address }}<br />
 		{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
 		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ event.location.name|slugify }}">{% trans "Map this" %}</a>

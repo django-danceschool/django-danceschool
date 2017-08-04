@@ -7,7 +7,7 @@
 
 <dl>
 	<dt>{% trans "Total Students" %}:</dt><dd>{{ series.numRegistered }}</dd>
-	<dt>{% trans "Location" %}:</dt><dd>{{ series.location.name }}</dd>
+	<dt>{% trans "Location" %}:</dt><dd>{{ series.location.name }}{% if series.room.name %} - {{ series.room.name }}{% endif %}</dd>
 	<dt>{% trans "Time" %}:</dt><dd>{{ series.startTime|date:'l, h:i A' }}</dd>
 	<dt>{% trans "Drop-Ins Permitted" %}:</dt><dd>{{ series.allowDropins|yesno }}</dd>
 </dl>
