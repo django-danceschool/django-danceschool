@@ -483,7 +483,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 publish_page(stats_page, this_user, initial_language)
                 self.stdout.write('School performance stats page added.\n')
 
-        add_login_link = self.boolean_input('Add login and account links to the main navigation bar [Y/n]', True)
+        add_login_link = self.boolean_input('Add login/logout and account links to the main navigation bar [Y/n]', True)
         if add_login_link:
             create_page(
                 'Login', 'cms/home.html', initial_language,
@@ -497,6 +497,12 @@ Remember, all page settings and content can be changed later via the admin inter
                 in_navigation=True, limit_visibility_in_menu=VISIBILITY_USERS, published=True
             )
             self.stdout.write('\'My Account\' link added.\n')
+            create_page(
+                'Logout', 'cms/home.html', initial_language,
+                menu_title='Logout', slug='logout', overwrite_url=reverse('account_logout'),
+                in_navigation=True, limit_visibility_in_menu=VISIBILITY_USERS, published=True
+            )
+            self.stdout.write('Logout link added.\n')
 
         if apps.is_installed('danceschool.payments.paypal'):
             add_paypal_paynow = self.boolean_input('Add Paypal Pay Now link to the registration summary view to allow students to pay [Y/n]', True)
