@@ -4,6 +4,7 @@ $(document).ready(function(){
 	function updateRoomOptions(updateCapacity, setRoomVal, allowEmptyRoomVal) {
 
 		this_roomOptions = $('#id_location option:selected').data('roomoptions');
+		
 		if (!this_roomOptions) {
 			this_roomOptions = [];
 		}
@@ -28,7 +29,6 @@ $(document).ready(function(){
 	}
 
 	$('#id_location').change(function(){
-		var this_default = $('#id_location option:selected').data('defaultcapacity');
 		updateRoomOptions(true);
 	});
 	$('#id_room').change(function(){

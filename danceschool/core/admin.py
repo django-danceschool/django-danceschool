@@ -3,10 +3,13 @@ from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
+from django.template.response import SimpleTemplateResponse
 
 from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
+import json
+import six
 
 from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
@@ -400,6 +403,71 @@ class LocationAdmin(admin.ModelAdmin):
 
     ordering = ('status','orderNum')
 
+    def response_add(self, request, obj, post_url_continue=None):
+        '''
+        This just modifies the normal ModelAdmin process in order to
+        pass capacity and room options for the added Location along with
+        the location's name and ID.
+        '''
+
+        IS_POPUP_VAR = '_popup'
+        TO_FIELD_VAR = '_to_field'
+
+        if IS_POPUP_VAR in request.POST:
+            to_field = request.POST.get(TO_FIELD_VAR)
+            if to_field:
+                attr = str(to_field)
+            else:
+                attr = obj._meta.pk.attname
+            value = obj.serializable_value(attr)
+            popup_response_data = json.dumps({
+                'value': six.text_type(value),
+                'obj': six.text_type(obj),
+                # Add this extra data
+                'defaultCapacity': obj.defaultCapacity,
+                'roomOptions': json.dumps([{'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity} for x in obj.room_set.all()]),
+            })
+
+            # Return a modified template
+            return SimpleTemplateResponse('core/admin/location_popup_response.html', {
+                'popup_response_data': popup_response_data,
+            })
+
+        # Otherwise just use the standard ModelAdmin method
+        return super(LocationAdmin,self).response_add(request, obj, post_url_continue)
+
+    def response_change(self, request, obj):
+        '''
+        This just modifies the normal ModelAdmin process in order to
+        pass capacity and room options for the modified Location along with
+        the location's name and ID.
+        '''
+
+        IS_POPUP_VAR = '_popup'
+        TO_FIELD_VAR = '_to_field'
+
+        if IS_POPUP_VAR in request.POST:
+            to_field = request.POST.get(TO_FIELD_VAR)
+            attr = str(to_field) if to_field else obj._meta.pk.attname
+            # Retrieve the `object_id` from the resolved pattern arguments.
+            value = request.resolver_match.args[0]
+            new_value = obj.serializable_value(attr)
+            popup_response_data = json.dumps({
+                'action': 'change',
+                'value': six.text_type(value),
+                'obj': six.text_type(obj),
+                'new_value': six.text_type(new_value),
+                # Add this extra data
+                'defaultCapacity': obj.defaultCapacity,
+                'roomOptions': json.dumps([{'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity} for x in obj.room_set.all()]),
+            })
+
+            # Return a modified template
+            return SimpleTemplateResponse('core/admin/location_popup_response.html', {
+                'popup_response_data': popup_response_data,
+            })
+        return super(LocationAdmin,self).response_change(request, obj)
+
 
 @admin.register(PricingTier)
 class PricingTierAdmin(admin.ModelAdmin):
@@ -565,7 +633,7 @@ class SeriesAdminForm(ModelForm):
         }
 
     class Media:
-        js = ('js/serieslocation_capacity_change.js',)
+        js = ('js/serieslocation_capacity_change.js','js/location_related_objects_lookup.js')
 
 
 @admin.register(Series)
