@@ -402,9 +402,11 @@ class PricingTier(models.Model):
     basePrice.fget.short_description = _('Base price')
 
     def __str__(self):
+        return self.name
+
+    class Meta:
         verbose_name = _('Pricing tier')
         verbose_name_plural = _('Pricing tiers')
-        return self.name
 
 
 @python_2_unicode_compatible
