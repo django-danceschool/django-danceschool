@@ -32,7 +32,7 @@ class DiscountComboAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('name','active','newCustomersOnly','discountType',)
+            'fields': ('name',('active','expirationDate'),'newCustomersOnly','daysInAdvanceRequired','discountType',)
         }),
         (_('Flat-Price Discount (in default currency)'), {
             'classes': ('type_flatPrice',),

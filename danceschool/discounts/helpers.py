@@ -1,5 +1,8 @@
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
+
+from datetime import timedelta
 
 from .models import DiscountCombo
 
@@ -37,9 +40,9 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,addOn=False):
 
     # Existing customers can't get discounts marked for new customers only.  Add-ons are handled separately.
     if addOn:
-        availableDiscountCodes = DiscountCombo.objects.filter(active=True,discountType=DiscountCombo.DiscountType.addOn)
+        availableDiscountCodes = DiscountCombo.objects.filter(active=True,discountType=DiscountCombo.DiscountType.addOn).exclude(expirationDate__lte=timezone.now())
     else:
-        availableDiscountCodes = DiscountCombo.objects.filter(active=True).exclude(discountType=DiscountCombo.DiscountType.addOn)
+        availableDiscountCodes = DiscountCombo.objects.filter(active=True).exclude(discountType=DiscountCombo.DiscountType.addOn).exclude(expirationDate__lte=timezone.now())
 
     if not newCustomer:
         availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)
@@ -52,6 +55,14 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,addOn=False):
             for y in range(0,cart_item.event.pricingTier.pricingtiergroup.points or 0):
                 pointbased_cart_object_list += [cart_item]
     pointbased_cart_object_list.sort(key=lambda x: x.event.pricingTier.pricingtiergroup.points, reverse=True)
+
+    # Discounts that require registration a number of days in advance are evaluated against
+    # midnight local time of the day of registration (so that discounts always close at
+    # midnight local time).  Because installations may have timezone support enabled or disabled,
+    # calculate the threshold time in advance.
+    today_midnight = (
+        timezone.localtime(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()
+    ).replace(hour=0,minute=0,second=0,microsecond=0)
 
     # Look for exact match. If multiple are found, return them all.
     # If one is not found, then make a list of all subsets of cart_object_list
@@ -85,9 +96,19 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,addOn=False):
                     # Check for matches in weekdays and levels:
                     if z.weekday and y.event.weekday != z.weekday:
                         match_flag = False
-                    if z.level and hasattr(y.event,'series') and y.event.series.classDescription.danceTypeLevel != z.level:
+                    elif z.level and hasattr(y.event,'series') and y.event.series.classDescription.danceTypeLevel != z.level:
+                        match_flag = False
+                    # Check that if the discount combo requires that all elements be a
+                    # certain number of days in the future, that this event begins at least
+                    # that many days in the future from the beginning of today.
+                    elif (
+                        x.daysInAdvanceRequired is not None and
+                        y.event.startTime - today_midnight < timedelta(days=x.daysInAdvanceRequired)
+                    ):
                         match_flag = False
 
+                    # If we found no reason that it's not a match, then it's a match,
+                    # and we can move on to the next object in the cart.
                     if match_flag:
                         matched_discount_items.append(necessary_discount_items.pop(j))
                         matched_cart_items.append(y)
