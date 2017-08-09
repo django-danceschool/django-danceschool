@@ -188,7 +188,8 @@ Basic Installation Process
 5. Perform initial database migrations
 
    ::
-
+       
+       cd <your_project_name>
        python manage.py migrate
 
 6. Create a superuser so that you can log into the admin interface (you
