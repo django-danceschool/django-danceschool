@@ -37,7 +37,7 @@ class RegistrationOfflineView(TemplateView):
     '''
     If registration is offline, just say so.
     '''
-    template_name = 'core/registration_offline.html'
+    template_name = 'core/registration/registration_offline.html'
 
 
 class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
@@ -103,7 +103,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
     all of the subsequent views in the process are in classreg.py
     '''
     form_class = ClassChoiceForm
-    template_name = 'core/event_registration.html'
+    template_name = 'core/registration/event_registration.html'
     voucher_id = None
 
     def get(self, request, *args, **kwargs):
@@ -202,7 +202,6 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 
             publicEvents = allEvents.instance_of(PublicEvent)
             allSeries = allEvents.instance_of(Series)
-            regularSeries = allSeries.filter(series__special=False)
 
             self.listing = {
                 'allEvents': allEvents,
@@ -210,12 +209,24 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
                 'closedEvents': closedEvents,
                 'publicEvents': publicEvents,
                 'allSeries': allSeries,
-                'regularSeries': regularSeries,
-                'regOpenEvents': publicEvents.filter(registrationOpen=True),
-                'regClosedEvents': publicEvents.filter(registrationOpen=False),
-                'regOpenSeries': regularSeries.filter(registrationOpen=True),
-                'regClosedSeries': regularSeries.filter(registrationOpen=False),
-                'specialSeries': allSeries.filter(series__special=True,registrationOpen=True),
+                'regOpenEvents': publicEvents.filter(registrationOpen=True).filter(
+                    Q(publicevent__category__isnull=True) | Q(publicevent__category__separateOnRegistrationPage=False)
+                ),
+                'regClosedEvents': publicEvents.filter(registrationOpen=False).filter(
+                    Q(publicevent__category__isnull=True) | Q(publicevent__category__separateOnRegistrationPage=False)
+                ),
+                'categorySeparateEvents': publicEvents.filter(
+                    publicevent__category__separateOnRegistrationPage=True
+                ).order_by('publicevent__category'),
+                'regOpenSeries': allSeries.filter(registrationOpen=True).filter(
+                    Q(series__category__isnull=True) | Q(series__category__separateOnRegistrationPage=False)
+                ),
+                'regClosedSeries': allSeries.filter(registrationOpen=False).filter(
+                    Q(series__category__isnull=True) | Q(series__category__separateOnRegistrationPage=False)
+                ),
+                'categorySeparateSeries': allSeries.filter(
+                    series__category__separateOnRegistrationPage=True
+                ).order_by('series__category'),
             }
         return self.listing
 
@@ -225,7 +236,7 @@ class SingleClassRegistrationView(ClassRegistrationView):
     This view is called only via a link, and it allows a person to register for a single
     class without seeing all other classes.
     '''
-    template_name = 'core/single_event_registration.html'
+    template_name = 'core/registration/single_event_registration.html'
 
     def get_allEvents(self):
         try:

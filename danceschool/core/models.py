@@ -420,8 +420,6 @@ class EventCategory(models.Model):
     name = models.CharField(_('Name'),max_length=100,unique=True,help_text=_('Category name will be displayed.'))
     description = models.TextField(_('Description'),null=True,blank=True,help_text=_('Add an optional description.'))
 
-    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
-
     def __str__(self):
         return self.name
 
@@ -433,10 +431,27 @@ class EventCategory(models.Model):
 
 
 @python_2_unicode_compatible
+class SeriesCategory(EventCategory):
+    '''
+    Categorization for class series events, inherits from EventCategory.
+    '''
+    slug = models.SlugField(_('Slug'),max_length=50,help_text=_('This slug is used primarily for custom templates in registration, if the category is shown separately on the registration page.  You can override the default.'))
+    separateOnRegistrationPage = models.BooleanField(_('Show category separately on registration page'),default=False)
+
+    class Meta:
+        verbose_name = _('Series category')
+        verbose_name_plural = _('Series categories')
+
+
+@python_2_unicode_compatible
 class PublicEventCategory(EventCategory):
     '''
     Categorization for public events, inherits from EventCategory.
     '''
+    slug = models.SlugField(_('Slug'),max_length=50,help_text=_('This slug is used primarily for custom templates in registration, if the category is shown separately on the registration page.  You can override the default.'))
+    separateOnRegistrationPage = models.BooleanField(_('Show category separately on registration page'),default=False)
+    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
+
     class Meta:
         verbose_name = _('Public event category')
         verbose_name_plural = _('Public event categories')
@@ -1015,9 +1030,8 @@ class Series(Event):
     '''
 
     classDescription = models.ForeignKey(ClassDescription,verbose_name=_('Class description'))
-
-    special = models.BooleanField(_('Special class/series'),default=False,help_text=_('Special classes (e.g. one-offs, visiting instructors) may be listed separately on the class page.  Leave this unchecked for regular monthly series classes.'))
-    allowDropins = models.BooleanField(_('Allow class drop-ins'), default=False, help_text=_('If checked, then staff will be able to register students as drop-ins.'))
+    category = models.ForeignKey(SeriesCategory,verbose_name=_('Series category (optional)'),null=True,blank=True,help_text=_('Custom series categories may be used to display special series (e.g. one-offs, visiting instructors) separately on your registration page.'))
+    allowDropins = models.BooleanField(_('Allow class drop-ins'), default=False, help_text=_('If checked, then all staff will be able to register students as drop-ins.'))
 
     def getTeachers(self,includeSubstitutes=False):
         seriesTeachers = SeriesTeacher.objects.filter(event=self)
@@ -1214,7 +1228,7 @@ class PublicEvent(Event):
     title = models.CharField(_('Title'),max_length=100,help_text=_('Give the event a title'))
     slug = models.SlugField(_('Slug'),max_length=100,help_text=_('This is for the event page URL, you can override the default.'))
 
-    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category'))
+    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category (optional)'),help_text=_('Custom event categories may be used to display special types of events (e.g. practice sessions) separately on your registration page.  They may also be displayed in different colors on the public calendar.'))
     descriptionField = HTMLField(_('Description'),null=True,blank=True,help_text=_('Describe the event for the event page.'))
     link = models.URLField(_('External link to event (if applicable)'),blank=True,null=True,help_text=_('Optionally include the URL to a page for this Event.  If set, then the site\'s auto-generated Event page will instead redirect to this URL.'))
 

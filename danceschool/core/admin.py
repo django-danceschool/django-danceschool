@@ -8,7 +8,7 @@ from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 
-from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem
+from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem
 from .constants import getConstant
 from .forms import LocationWithCapacityWidget
 
@@ -567,8 +567,8 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
-    list_display = ('name','series_month','location','class_time','pricingTier','special','customers')
-    list_filter = ('location','special','pricingTier')
+    list_display = ('name','series_month','location','class_time','pricingTier','category','customers')
+    list_filter = ('location','category','pricingTier')
 
     def customers(self,obj):
         return obj.numRegistered
@@ -582,7 +582,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription','location','pricingTier',('special','allowDropins'),('uuidLink',)),
+            'fields': ('classDescription','location','pricingTier',('category','allowDropins'),('uuidLink',)),
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse',),
@@ -673,9 +673,20 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
     polymorphic_list = True
 
 
+@admin.register(PublicEventCategory)
+class PublicEventCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'separateOnRegistrationPage','displayColor']
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(SeriesCategory)
+class SeriesCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'separateOnRegistrationPage']
+    prepopulated_fields = {'slug': ('name',)}
+
+
 # These admin classes are registered but need nothing additional
 admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
-admin.site.register(PublicEventCategory)
 admin.site.register(EventStaffCategory)

@@ -4,6 +4,8 @@ from django.core.exceptions import ValidationError
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
+from colorful.fields import RGBColorField
+
 from danceschool.core.models import Event, EventCategory, EventOccurrence
 
 
@@ -14,6 +16,7 @@ class PrivateEventCategory(EventCategory):
     though the schema is the same because they both inherit from EventCategory.
     '''
     requiredGroup = models.ForeignKey(Group,verbose_name=_('Group required to add events to this category.'),null=True,blank=True)
+    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
 
     class Meta:
         verbose_name = _('Private events category')
