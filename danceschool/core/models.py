@@ -344,7 +344,6 @@ class Location(models.Model):
 
     orderNum = models.FloatField(_('Order number'),default=0,help_text=_('This determines the order that the locations show up on the Locations page.'))
 
-    rentalRate = models.FloatField(_('Hourly Rental Rate (optional)'),null=True,blank=True,help_text=_('When ExpenseItems are created for renting this location, this rental rate will be used to calculate the total cost of rental.'),validators=[MinValueValidator(0)])
     defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this venue.'))
 
     @property
@@ -369,7 +368,6 @@ class Room(models.Model):
     name = models.CharField(_('Name'),max_length=80,help_text=_('Give this room a name.'))
     location = models.ForeignKey(Location,verbose_name=_('Location'))
 
-    rentalRate = models.FloatField(_('Hourly Rental Rate (optional)'),null=True,blank=True,help_text=_('When ExpenseItems are created for renting this room, this rental rate will be used to calculate the total cost of rental.  If no value is specified, then the default for the Location will be used.'),validators=[MinValueValidator(0)])
     defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this room.'))
 
     description = HTMLField(_('Description'),help_text=_('By default, only room names are listed publicly.  However, you may insert any descriptive information that you would like about this room here.'), null=True, blank=True)

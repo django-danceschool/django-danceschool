@@ -388,8 +388,22 @@ class CustomerAdmin(admin.ModelAdmin):
 
 class RoomInline(admin.StackedInline):
     model = Room
-    extra = 1
-    fields = (('name', 'defaultCapacity', 'rentalRate'),'description')
+    extra = 0
+    fields = (('name', 'defaultCapacity'),'description')
+
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    inlines = []
+
+    list_display = ('name','location__name','defaultCapacity')
+    list_display_links = ('name',)
+    list_editable = ('defaultCapacity',)
+    list_filter = ('location',)
+
+    ordering = ('location__name','name')
+
+    fields = ('name','defaultCapacity','description')
 
 
 @admin.register(Location)

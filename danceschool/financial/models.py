@@ -2,14 +2,17 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.encoding import python_2_unicode_compatible
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
 from filer.fields.file import FilerFileField
 from filer.models import Folder
+import math
+from djchoices import DjangoChoices, ChoiceItem
+from calendar import day_name
 
-from danceschool.core.models import EventStaffMember, Event, InvoiceItem, Location
+from danceschool.core.models import EventStaffMember, Event, InvoiceItem, Location, Room
 from danceschool.core.constants import getConstant
 
 
@@ -52,7 +55,6 @@ class ExpenseItem(models.Model):
     paymentMethod = models.CharField(_('Payment method'),max_length=50,null=True,blank=True)
 
     comments = models.TextField(_('Comments/Notes'),null=True,blank=True)
-    # attachment = models.FileField('Attach File (optional)',null=True,blank=True,max_length=200,storage=PrivateMediaStorage(),upload_to='board/expenses/%Y/%m/')
     attachment = FilerFileField(verbose_name=_('Attach File (optional)'),null=True,blank=True,related_name='expense_attachment')
 
     # These are foreign key relations for the things that expenses can be be related to.
@@ -61,10 +63,15 @@ class ExpenseItem(models.Model):
     # event if it is a determined event expense.  This allows for simpler lookups,
     # like, "get all expenses associated with this event."
     eventstaffmember = models.OneToOneField(EventStaffMember,null=True,blank=True,verbose_name=_('Staff member'))
-
     eventvenue = models.ForeignKey(Event,null=True,blank=True,related_name='venueexpense',verbose_name=_('Event venue'))
     event = models.ForeignKey(Event,null=True,blank=True,verbose_name=_('Event'),help_text=_('If this item is associated with an Event, enter it here.'))
 
+    # For periodic expenses (e.g. daily/weekly/monthly venue rental)
+    periodStart = models.DateTimeField(_('Expense period start'),null=True,blank=True)
+    periodEnd = models.DateTimeField(_('Expense period end'),null=True,blank=True)
+
+    # An expense can be directly associated with a user (like an instructor) or
+    # a location, or the name of another party can be entered.
     payToUser = models.ForeignKey(User,null=True,blank=True,related_name='payToUser',verbose_name=_('Pay to user'))
     payToLocation = models.ForeignKey(Location,null=True,blank=True,verbose_name=_('Pay to location'))
     payToName = models.CharField(_('Pay to (enter name)'),max_length=50, null=True,blank=True)
@@ -352,3 +359,80 @@ class RevenueItem(models.Model):
             ('view_finances_byevent',_('View school finances by Event')),
             ('view_finances_detail',_('View school finances as detailed statement')),
         )
+
+
+class RentalInfo(models.Model):
+    '''
+    This abstract base class defines the pieces of information
+    needed to
+    '''
+
+    class RateRuleChoices(DjangoChoices):
+        hourly = ChoiceItem('H',_('Per hour'))
+        daily = ChoiceItem('D',_('Per day of scheduled events'))
+        weekly = ChoiceItem('W',_('Per week'))
+        monthly = ChoiceItem('M',_('Per month'))
+        disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
+
+    def ordinal(n):
+        return "%d%s" % (n,"tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4])
+
+    rentalRate = models.FloatField(
+        _('Rental Rate'),null=True,blank=True,validators=[MinValueValidator(0)]
+    )
+
+    applyRateRule = models.CharField(
+        _('Apply this rate'),
+        max_length=1,
+        choices=RateRuleChoices.choices,
+        default=RateRuleChoices.hourly,
+        help_text=_('When ExpenseItems are created for rentals, the given rate will be applied for this unit of time to compute the total cost of rental.'))
+
+    weekStarts = models.PositiveSmallIntegerField(
+        _('Rental week starts on'),
+        choices=[(x,day_name[x]) for x in range(0,7)],
+        default=0,
+        validators=[MinValueValidator(0),MaxValueValidator(6)]
+    )
+
+    monthStarts = models.PositiveSmallIntegerField(
+        _('Rental month starts on'),
+        choices=[(x, ordinal(x)) for x in range(1,29)],
+        default=1,
+        validators=[MinValueValidator(1),MaxValueValidator(28)]
+    )
+
+    class Meta:
+        abstract = True
+
+
+class LocationRentalInfo(RentalInfo):
+    '''
+    This model is used to store information on rental periods and rates
+    for locations.
+    '''
+    location = models.OneToOneField(Location,related_name='rentalinfo',verbose_name=_('Location'))
+
+    def __str__(self):
+        return(_('Rental information for %s' % self.location.name))
+
+    class Meta:
+        verbose_name = _('Location rental information')
+        verbose_name_plural = _('Locations\' rental information')
+
+
+class RoomRentalInfo(RentalInfo):
+    '''
+    This model is used to store information on rental periods and rates
+    for individual rooms.  If a rental rate does not exist for a room,
+    or if it is specified that the room rental rate not be applied,
+    then the location's rental rate and parameters are used instead.
+    '''
+    room = models.OneToOneField(Room,related_name='rentalinfo',verbose_name=_('Room'))
+
+    def __str__(self):
+        return(_('Rental information for %s at %s' % (self.room.name, self.room.location.name)))
+
+    class Meta:
+        verbose_name = _('Room rental information')
+        verbose_name_plural = _('Rooms\' rental information')

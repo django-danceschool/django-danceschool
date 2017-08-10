@@ -9,7 +9,9 @@ from django.utils.translation import ugettext_lazy as _
 from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
+from danceschool.core.models import Location, Room
+
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, LocationRentalInfo, RoomRentalInfo
 from .forms import ExpenseCategoryWidget
 from .autocomplete_light_registry import get_method_list
 
@@ -51,7 +53,7 @@ class ExpenseItemAdmin(admin.ModelAdmin):
 
     list_display = ('category','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
-    search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name')
+    search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
     list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter))
     readonly_fields = ('submissionUser',)
 
@@ -64,7 +66,7 @@ class ExpenseItemAdmin(admin.ModelAdmin):
         }),
         (_('Approval/Payment Status'), {
             'classes': ('collapse',),
-            'fields': ('approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','eventstaffmember','event','payToUser','payToLocation','payToName')
+            'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','eventstaffmember','event','payToUser','payToLocation','payToName')
         }),
     )
 
@@ -184,7 +186,35 @@ class RevenueItemAdmin(admin.ModelAdmin):
         obj.save()
 
 
+class LocationRentalInfoInline(admin.TabularInline):
+    model = LocationRentalInfo
+    extra = 1
+    exclude = []
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class RoomRentalInfoInline(admin.TabularInline):
+    model = RoomRentalInfo
+    extra = 1
+    exclude = []
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 admin.site.register(ExpenseItem,ExpenseItemAdmin)
 admin.site.register(ExpenseCategory)
 admin.site.register(RevenueItem,RevenueItemAdmin)
 admin.site.register(RevenueCategory)
+
+# This adds inlines to Location and Room without subclassing
+admin.site._registry[Location].inlines.insert(0,LocationRentalInfoInline)
+admin.site._registry[Room].inlines.insert(0,RoomRentalInfoInline)
