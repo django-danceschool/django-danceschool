@@ -416,7 +416,7 @@ class LocationRentalInfo(RentalInfo):
     location = models.OneToOneField(Location,related_name='rentalinfo',verbose_name=_('Location'))
 
     def __str__(self):
-        return(_('Rental information for %s' % self.location.name))
+        return str(_('Rental information for %s' % self.location.name))
 
     class Meta:
         verbose_name = _('Location rental information')
@@ -433,7 +433,7 @@ class RoomRentalInfo(RentalInfo):
     room = models.OneToOneField(Room,related_name='rentalinfo',verbose_name=_('Room'))
 
     def __str__(self):
-        return(_('Rental information for %s at %s' % (self.room.name, self.room.location.name)))
+        return str(_('Rental information for %s at %s' % (self.room.name, self.room.location.name)))
 
     class Meta:
         verbose_name = _('Room rental information')

@@ -396,19 +396,14 @@ class RoomInline(admin.StackedInline):
 class RoomAdmin(admin.ModelAdmin):
     inlines = []
 
-    list_display = ('name','name_of_location','defaultCapacity')
+    list_display = ('name','location','defaultCapacity')
     list_display_links = ('name',)
     list_editable = ('defaultCapacity',)
     list_filter = ('location',)
 
     ordering = ('location__name','name')
 
-    fields = ('name','defaultCapacity','description')
-
-    def name_of_location(self, obj):
-        ''' Allow foreign key to show up on the changelist page '''
-        return obj.location.name
-    name_of_location.short_description = _('Location')
+    fields = ('location','name','defaultCapacity','description')
 
 
 @admin.register(Location)
@@ -628,6 +623,10 @@ class SeriesAdminForm(ModelForm):
         # Locations are required for Series even though they are not for all events.
         self.fields['location'].required = True
 
+        # Allow adding additional rooms from a popup on Location, but not a popup on Room
+        self.fields['room'].widget.can_add_related = False
+        self.fields['room'].widget.can_change_related = False
+
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out former locations for new records
@@ -703,10 +702,17 @@ class PublicEventAdminForm(ModelForm):
 
         self.fields['status'].initial = Event.RegStatus.disabled
 
+        # Allow adding additional rooms from a popup on Location, but not a popup on Room
+        self.fields['room'].widget.can_add_related = False
+        self.fields['room'].widget.can_change_related = False
+
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out former locations
             self.fields['location'].queryset = Location.objects.exclude(status=Location.StatusChoices.former)
+
+            # Filter out Pricing Tiers that are expired (i.e. no longer in use)
+            self.fields['pricingTier'].queryset = PricingTier.objects.filter(expired=False)
 
             # Set initial values for capacity here because they will automatically update if the
             # constant is changed
