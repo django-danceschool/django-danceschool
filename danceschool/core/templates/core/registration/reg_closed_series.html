@@ -35,10 +35,10 @@
 								at
 									{% if directions_url %}
 									<a href = "{{ directions_url }}#{{ event.location.name|slugify }}">
-										{{ event.location.name }}
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
 									</a>
 									{% else %}
-										{{ event.location.name }}
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
 									{% endif %}
 
                                     {% if event.url %}<small><a href="{{ event.url }}">{% trans "more info" %}</a></small>{% endif %}
