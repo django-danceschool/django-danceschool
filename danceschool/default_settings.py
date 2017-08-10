@@ -6,9 +6,11 @@
 #
 # All settings can then be overridden in settings.py as needed.
 
-# These imports allow Huey to set up a Redis ConnectionPool.
-from huey import RedisHuey
-from redis import ConnectionPool
+# This import allows Huey to use a SQLite backend
+from huey.contrib.sqlitedb import SqliteHuey
+
+import sys
+from os import path
 
 # Required for Django CMS.  Override in your own settings.py
 LANGUAGES = [('en', 'English'),]
@@ -96,9 +98,25 @@ CKEDITOR_SETTINGS = {
 TEXT_ADDITIONAL_TAGS = ('iframe',)
 TEXT_ADDITIONAL_ATTRIBUTES = ('scrolling', 'allowfullscreen', 'frameborder')
 
-# For Huey task queue and scheduling.
-pool = ConnectionPool(host='localhost', port=6379, max_connections=20)
-HUEY = RedisHuey('danceschool',connection_pool=pool)
+# For Huey task queue and scheduling.  By default, this project uses the SQLite
+# backend for easy testing.  For production purposes, it is strongly recommended
+# that you use Huey's Redis backend by copying the lines below and pasting them
+# into your project's settings.py file.
+HUEY = SqliteHuey(
+    'danceschool',
+    filename=path.join(
+        path.dirname(
+            path.abspath(
+                getattr(sys.modules['__main__'],'__file__',path.dirname(__file__)),
+            )
+        ),
+        'huey.sqlite3'
+    )
+)
+# from huey import RedisHuey
+# from redis import ConnectionPool
+# pool = ConnectionPool(host='localhost', port=6379, max_connections=20)
+# HUEY = RedisHuey('danceschool',connection_pool=pool)
 
 # For Crispy forms Bootstrap templates
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

@@ -48,6 +48,7 @@ Basic Installation Process
 
    ::
 
+       cd <your_project_name> 
        python manage.py migrate
 
 6. Create a superuser so that you can log into the admin interface (you
@@ -159,43 +160,77 @@ credentials needed to log into that server. These settings are contained
 in ``settings.py``. Look for settings such as ``EMAIL_HOST``,
 ``EMAIL_HOST_USER``, ``EMAIL_HOST_PASSWORD``, etc. to modify them.
 
+Until you set these email settings, you should expect that signing up
+new users will return an error, because the app that handles sending
+confirmation emails to new users will fail to connect to an email server.
+
 For more details, see the `Django
-documentation <https://docs.djangoproject.com/en/dev/topics/email/>`.
+documentation <https://docs.djangoproject.com/en/dev/topics/email/>`_.
 
-Additionally, because emails in this project are sent asynchronously,
-you will need to setup Redis and Huey as described below.
+Additionally, because most emails in this project are sent asynchronously,
+you will need to run Huey as described below.  If Huey is not running, then
+these tasks will be silently queued until Huey is later run.
 
-Redis and Huey setup for production
------------------------------------
+Huey (and Redis) setup for production
+-------------------------------------
 
 Certain website tasks are best run asynchronously.  For example, when
 a student successfully registers for a class, the website does not
 need to wait for the confirmation email to be sent in order for the
 process to proceed.  Similarly, other tasks such as closing of class
 registration are run at regular intervals and do not depend on user
-interaction.  For these reasons, this project uses a combination of
-the `Huey <https://github.com/coleifer/huey>` task queue and the
-popular `Redis <https://redis.io/>` cache server.
+interaction.  For these reasons, this project uses
+the `Huey <https://github.com/coleifer/huey>`_ task queue.  Huey is run as
+a separate process from your webserver, and when tasks are submitted
+to Huey via functions in each app's ``tasks.py``, they are handled by
+this separate process.
 
-If you followed the quick start instructions, then Huey and Redis should
-both already be installed for you.  However, to get them running so that
-your site can send emails, etc., you will need to take a couple of steps.
+If you followed the quick start instructions, then Huey is already installed
+and a default setup is enabled that will enable you to get going quickly.
+On a separate command line from your test server, simply type in 
+``python manage.py run_huey`` to run a Huey instance that will handle
+sending emails, etc., automatically.  Your site will continue to these
+features as well as recurring tasks for as long as this process continues
+to run.  
+
+The default settings for Huey involve storing the task queue data in
+SQLite-based file storage.  Upon running Huey, you will see a newly
+created SQLite file in the same directory as your project's
+manage.py file, which stores the task queue data.  Although this approach
+allows for convenient setup for testing purposes using the project's
+default settings, it is not recommended to use Huey's SQLite storage backend for
+production purposes.  Instead, it is strongly recommended that you set up
+the popular `Redis <https://redis.io/>`_ cache server, and modify your
+``settings.py`` file to use Huey's Redis integration.
+
 Note that These instructions are designed for Linux, and they assume that
 you will be running Redis locally using default settings. Getting Redis
 running on Windows may require a slightly different process, and
 configuring Huey to use a remote Redis installation will also involve
 modifying site settings.
 
-1.  Start the Redis server: `sudo service redis-server start`
-2.  Run Huey in its own command shell: `python manage.py run_huey`
+1.  Install the Redis client for Python: ``pip install redis``
+2.  Start the Redis server: ``sudo service redis-server start``
+3.  Add the following to ``settings.py`` (this basic setup can be customized,
+    see the `Huey documentation <https://huey.readthedocs.io/en/latest/contrib.html#django>`_).
+
+   ::
+
+      from huey import RedisHuey
+      from redis import ConnectionPool
+      pool = ConnectionPool(host='localhost', port=6379, max_connections=20)
+      HUEY = RedisHuey('danceschool',connection_pool=pool)
+
+4.  As before, run Huey in its own command shell: `python manage.py run_huey`
 
 With these two steps, your installation should now be able to send
 emails programmatically, and your site should also run recurring tasks
 as long as both Redis and Huey continue to run.
 
-Production deployment of Huey is beyond the scope of this documentation.
-However, solutions such as `Supervisord <http://supervisord.org/>` are
-generally a preferred approach.
+Production deployment of your Django project and of Huey is beyond the scope
+of this documentation.  However, solutions such as
+`Supervisord <http://supervisord.org/>`_ are generally a preferred approach
+to creating a persistent process.
 
 .. _paypal_setup:
 
@@ -205,7 +240,7 @@ Paypal Settings (if using Paypal)
 In order to accept and process Paypal payments, you will need to set up
 the credentials for your Paypal account.  As of version 0.1.0 of this
 repository, the Django danceschool project uses the
-`Paypal REST SDK <https://github.com/paypal/PayPal-Python-SDK>`.  Older
+`Paypal REST SDK <https://github.com/paypal/PayPal-Python-SDK>`_.  Older
 versions of this repository used the Paypal IPN system, but this
 software is no longer maintained, and it is highly recommended that you
 upgrade to using the REST API.
@@ -215,7 +250,7 @@ REST API Setup
 
 1. Enter your ``settings.py`` file and ensure that the app
    ``danceschool.payments.paypal`` is listed in ``INSTALLED_APPS``.
-3. Go to the `Paypal developer website <https://developer.paypal.com/>`
+3. Go to the `Paypal developer website <https://developer.paypal.com/>`_
    and log in using the Paypal account at which you wish to accept
    payments.
 4. On the dashboard, under "My Apps & Credentials", find the heading
@@ -285,7 +320,7 @@ Stripe API Setup
 
 1. Enter your ``settings.py`` file and ensure that the app
    ``danceschool.payments.stripe`` is listed in ``INSTALLED_APPS``.
-2.  Go to `Stripe.com <https://www.stripe.com/>` and log into your
+2.  Go to `Stripe.com <https://www.stripe.com/>`_ and log into your
     account, or sign up for a new account (**Note:** Before running
     transactions in live mode, you will need to activate your account,
     which may involve providing a Tax ID, etc.)
@@ -364,50 +399,16 @@ Installed Apps
 
 In addition to the various apps that are components of the danceschool project, there are several other apps that need to be added to your project's ``INSTALLED_APPS``.  It is important to note that the order in which apps are added often matters.  In particular, because Django's template loading and URL pattern matching functions use the first matching template/pattern, some apps need to be loaded before others in order for them to function correctly.
 
-First, be sure that the following django contrib apps are all listed in ``INSTALLED_APPS``:
+First, list the Django CMS app in ``INSTALLED_APPS``, followed by the Django dynamic preferences app.  These apps go first so that they can find and register CMS plugins and dynamic preferences from other apps:
 
    ::
-
-      'django.contrib.auth',
-      'django.contrib.contenttypes',
-      'django.contrib.sessions',
-      'django.contrib.messages',
-      'django.contrib.staticfiles',
-      'django.contrib.sites',
-      'django.contrib.sitemaps',
-      'django.contrib.admin',
-
-Then, after ``django.contrib.auth`` but *before* ``django.contrib.admin``, add the following:
-
-   ::
-
-      'allauth',
-      'allauth.account',
-      'allauth.socialaccount',
-      'polymorphic',
-      'adminsortable2',
-      'dal',
-      'dal_select2',
-      'easy_thumbnails',
-      'filer',
-      'djangocms_admin_style',
-
-Then, *after* ``django.contrib.admin``, add the following:
-
-   ::
-
-      'ckeditor_filebrowser_filer',
-      'huey.contrib.djhuey',
-      'crispy_forms',
-      'daterange_filter',
-      'easy_pdf',
-      'dynamic_preferences',
-      'sekizai',
       'cms',
-      'menus',
-      'treebeard',
-      'djangocms_text_ckeditor',
-      'djangocms_forms',
+      'dynamic_preferences',
+
+Next, list the core danceschool app, which provides all of the necessary functionality of the project, and is required.  If you have setup any custom app which overrides the templates used by the danceschool project, then this should also be listed here:
+
+   ::
+      # '<your_custom_app>',
       'danceschool.core',
 
 The ``danceschool.core`` app contains all of the necessary basic functionality of the project.  However, depending on your needs, you may want to install some of all of the following apps by adding them to ``INSTALLED_APPS``:
@@ -425,7 +426,44 @@ The ``danceschool.core`` app contains all of the necessary basic functionality o
       'danceschool.payments.paypal',  # Paypal Express Checkout payment processor
       'danceschool.payments.stripe',  # Stripe Checkout payment processor
 
-Finally, if you are developing your own custom app that overrides the core danceschool app's templates or URLs, then you will want to ensure that your app is listed *before* ``danceschool.core`` in INSTALLED_APPS.
+Then, before including the Django contrib apps, add the following apps (the order of these does not matter, but some apps *must* be listed before ``django.contrib.admin``):
+
+   ::
+
+      'adminsortable2',
+      'allauth',
+      'allauth.account',
+      'allauth.socialaccount',
+      'ckeditor_filebrowser_filer',
+      'crispy_forms',
+      'dal',
+      'dal_select2',
+      'daterange_filter',
+      'djangocms_admin_style',
+      'djangocms_forms',
+      'djangocms_text_ckeditor',
+      'easy_pdf',
+      'easy_thumbnails',
+      'filer',
+      'huey.contrib.djhuey',
+      'menus',
+      'polymorphic',
+      'sekizai',
+      'treebeard',
+
+Finally, be sure that the following django contrib apps are all listed in ``INSTALLED_APPS`` at the bottom:
+
+   ::
+
+      'django.contrib.auth',
+      'django.contrib.contenttypes',
+      'django.contrib.sessions',
+      'django.contrib.messages',
+      'django.contrib.staticfiles',
+      'django.contrib.sites',
+      'django.contrib.sitemaps',
+      'django.contrib.admin',
+
 
 Template settings
 ^^^^^^^^^^^^^^^^^
@@ -512,7 +550,7 @@ that are commonly modified for each installation, and that you will
 likely wish to modify.
 
 For more information on these settings, see the 
-`Django documentation <https://docs.djangoproject.com/en/dev/ref/settings/>`.
+`Django documentation <https://docs.djangoproject.com/en/dev/ref/settings/>`_.
 
 **Static file storage/upload settings**:
 
@@ -542,7 +580,7 @@ For more information on these settings, see the
 
 **Django-filer settings**
 
-See the `Django-filer documentation <https://django-filer.readthedocs.io/en/latest/installation.html>`
+See the `Django-filer documentation <https://django-filer.readthedocs.io/en/latest/installation.html>`_
 for more details:
 
 - ``FILER_STORAGES``
