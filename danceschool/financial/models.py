@@ -16,6 +16,11 @@ from danceschool.core.models import EventStaffMember, Event, InvoiceItem, Locati
 from danceschool.core.constants import getConstant
 
 
+def ordinal(n):
+    ''' This is just used to populate ordinal day of the month choices '''
+    return "%d%s" % (n,"tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4])
+
+
 @python_2_unicode_compatible
 class ExpenseCategory(models.Model):
     '''
@@ -373,9 +378,6 @@ class RentalInfo(models.Model):
         weekly = ChoiceItem('W',_('Per week'))
         monthly = ChoiceItem('M',_('Per month'))
         disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
-
-    def ordinal(n):
-        return "%d%s" % (n,"tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4])
 
     rentalRate = models.FloatField(
         _('Rental Rate'),null=True,blank=True,validators=[MinValueValidator(0)]

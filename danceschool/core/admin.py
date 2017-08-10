@@ -396,7 +396,7 @@ class RoomInline(admin.StackedInline):
 class RoomAdmin(admin.ModelAdmin):
     inlines = []
 
-    list_display = ('name','location__name','defaultCapacity')
+    list_display = ('name','name_of_location','defaultCapacity')
     list_display_links = ('name',)
     list_editable = ('defaultCapacity',)
     list_filter = ('location',)
@@ -404,6 +404,11 @@ class RoomAdmin(admin.ModelAdmin):
     ordering = ('location__name','name')
 
     fields = ('name','defaultCapacity','description')
+
+    def name_of_location(self, obj):
+        ''' Allow foreign key to show up on the changelist page '''
+        return obj.location.name
+    name_of_location.short_description = _('Location')
 
 
 @admin.register(Location)
