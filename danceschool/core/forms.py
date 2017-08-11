@@ -829,3 +829,23 @@ class InstructorBioChangeForm(forms.ModelForm):
     class Meta:
         model = Instructor
         fields = ['publicEmail','privateEmail','phone','availableForPrivates']
+
+
+class RepeatEventForm(forms.Form):
+
+    startDate = forms.DateField(label=_('First event occurs on'))
+    repeatEvery = forms.IntegerField(label=_('Repeat every'),min_value=1, initial=1)
+    periodicity = forms.ChoiceField(label=_('Period'),choices=(('D',_('Days')),('W',_('Weeks')),('M',_('Months')),), initial='W')
+    quantity = forms.IntegerField(label=_('Repeat this many times'),min_value=1,max_value=99,required=False)
+    endDate = forms.DateField(label=_('Repeat until this date'),required=False)
+
+    def clean(self):
+        startDate = self.cleaned_data.get('startDate')
+        endDate = self.cleaned_data.get('endDate')
+        quantity = self.cleaned_data.get('quantity')
+
+        if endDate and not endDate >= startDate:
+            self.add_error('endDate',ValidationError(_('End date must be after start date.')))
+
+        if quantity and endDate:
+            self.add_error('quantity',ValidationError(_('Please specify either a number of repeats or an end date, not both.')))

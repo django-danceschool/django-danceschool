@@ -11,7 +11,7 @@ from bisect import bisect
 from calendar import month_name
 
 from danceschool.core.models import Customer, Series, EventOccurrence, Registration, EventRegistration, DanceTypeLevel, Location, DanceRole
-from danceschool.core.utils.timezone import getDateTimeFromGet
+from danceschool.core.utils.requests import getDateTimeFromGet
 
 
 def getAveragesByClassType(startDate=None,endDate=None):

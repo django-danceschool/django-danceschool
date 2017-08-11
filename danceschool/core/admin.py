@@ -4,6 +4,8 @@ from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.template.response import SimpleTemplateResponse
+from django.contrib.contenttypes.models import ContentType
+from django.http import HttpResponseRedirect
 
 from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
@@ -14,6 +16,19 @@ import six
 from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
 from .forms import LocationWithDataWidget
+
+
+######################################
+# Admin action for repeating events
+
+
+def repeat_events(modeladmin, request, queryset):
+    selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+    ct = ContentType.objects.get_for_model(queryset.model)
+    return HttpResponseRedirect(reverse('repeatEvents') + "?ct=%s&ids=%s" % (ct.pk, ",".join(selected)))
+
+
+repeat_events.short_description = _('Duplicate selected events')
 
 
 ######################################
@@ -591,6 +606,8 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
 
     readonly_fields = ['uuidLink',]
 
+    actions = [repeat_events,]
+
     def uuidLink(self,obj):
         address = reverse('singleClassRegistration', args=[obj.uuid,])
         return mark_safe('<a href="%s">%s</a>' % (address, address))
@@ -661,8 +678,9 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
-    list_display = ('name','series_month','location','class_time','pricingTier','category','customers')
-    list_filter = ('location','category','pricingTier')
+    list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','customers')
+    list_editable = ('status','category')
+    list_filter = ('location','status','registrationOpen','category','pricingTier')
 
     def customers(self,obj):
         return obj.numRegistered
@@ -732,8 +750,9 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     form = PublicEventAdminForm
     show_in_index = True
 
-    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','pricingTier','registrationOpen','numRegistered')
-    list_filter = ('location','registrationOpen','pricingTier')
+    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','status','registrationOpen','pricingTier','category','numRegistered')
+    list_filter = ('location','status','registrationOpen','pricingTier','category')
+    list_editable = ('status','category')
     search_fields = ('name',)
     ordering = ('-endTime',)
     prepopulated_fields = {'slug': ('title',)}
@@ -770,8 +789,11 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
 
     base_model = Event
     child_models = (Series,PublicEvent)
-    list_filter = (PolymorphicChildModelFilter,'status','location')
+    list_filter = (PolymorphicChildModelFilter,'status','registrationOpen','location')
+    list_editable = ('status',)
     polymorphic_list = True
+
+    actions = [repeat_events,]
 
 
 @admin.register(PublicEventCategory)

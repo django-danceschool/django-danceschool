@@ -1,4 +1,7 @@
 from django.core.urlresolvers import reverse
+from django.utils import timezone
+
+from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.utils.tests import DefaultSchoolTestCase
@@ -35,6 +38,8 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
             percentUniversallyApplied=kwargs.get('percentUniversallyApplied',False),
             active=kwargs.get('active',True),
             newCustomersOnly=kwargs.get('newCustomersOnly',False),
+            daysInAdvanceRequired=kwargs.get('daysInAdvanceRequired',None),
+            expirationDate=kwargs.get('expirationDate',None),
         )
         test_combo.save()
 
@@ -103,6 +108,24 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_code_name'))
 
+    def test_expired_discount(self):
+        '''
+        Create an expired discount and make sure that it doesn't work.
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(expirationDate=timezone.now() + timedelta(days=-1))
+        s = self.create_series(pricingTier=self.defaultPricing)
+
+        response = self.register_to_check_discount(s)
+        self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
+        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
+        self.assertEqual(response.context_data.get('netPrice'),response.context_data.get('totalPrice'))
+        self.assertEqual(response.context_data.get('is_free'),False)
+        self.assertEqual(response.context_data.get('total_discount_amount'),0)
+        self.assertFalse(response.context_data.get('addonItems'))
+        self.assertFalse(response.context_data.get('discount_code_name'))
+
     def test_discounts_disabled(self):
         ''' Disable discounts and check that they don't work anymore '''
 
@@ -138,6 +161,26 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_code_name'))
 
+    def test_noearlybird(self):
+        '''
+        Create an early registration discount that requires three day
+        advance registration and ensure that it does not work less than
+        three days in advance.
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(daysInAdvanceRequired=3)
+        s = self.create_series(pricingTier=self.defaultPricing,startTime=timezone.now() + timedelta(days=1))
+
+        response = self.register_to_check_discount(s)
+        self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
+        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
+        self.assertEqual(response.context_data.get('netPrice'),response.context_data.get('totalPrice'))
+        self.assertEqual(response.context_data.get('is_free'),False)
+        self.assertEqual(response.context_data.get('total_discount_amount'),0)
+        self.assertFalse(response.context_data.get('addonItems'))
+        self.assertFalse(response.context_data.get('discount_code_name'))
+
 
 class DiscountsTypesTest(BaseDiscountsTest):
 
@@ -149,6 +192,26 @@ class DiscountsTypesTest(BaseDiscountsTest):
         updateConstant('general__discountsEnabled', True)
         test_combo, test_component = self.create_discount()
         s = self.create_series(pricingTier=self.defaultPricing)
+
+        response = self.register_to_check_discount(s)
+        self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
+        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
+        self.assertEqual(response.context_data.get('netPrice'),response.context_data.get('totalPrice') - 5)
+        self.assertEqual(response.context_data.get('is_free'),False)
+        self.assertEqual(response.context_data.get('total_discount_amount'),5)
+        self.assertFalse(response.context_data.get('addonItems'))
+        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+    def test_earlybird(self):
+        '''
+        Create an early registration discount that requires three day
+        advance registration and ensure that it works more than
+        three days in advance.
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(daysInAdvanceRequired=3)
+        s = self.create_series(pricingTier=self.defaultPricing,startTime=timezone.now() + timedelta(days=4))
 
         response = self.register_to_check_discount(s)
         self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
