@@ -584,8 +584,9 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
-    list_display = ('name','series_month','location','class_time','pricingTier','category','customers')
-    list_filter = ('location','category','pricingTier')
+    list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','customers')
+    list_editable = ('status','category')
+    list_filter = ('location','status','registrationOpen','category','pricingTier')
 
     def customers(self,obj):
         return obj.numRegistered
@@ -648,8 +649,9 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     form = PublicEventAdminForm
     show_in_index = True
 
-    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','pricingTier','registrationOpen','numRegistered')
-    list_filter = ('location','registrationOpen','pricingTier')
+    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','status','registrationOpen','pricingTier','category','numRegistered')
+    list_filter = ('location','status','registrationOpen','pricingTier','category')
+    list_editable = ('status','category')
     search_fields = ('name',)
     ordering = ('-endTime',)
     prepopulated_fields = {'slug': ('title',)}
@@ -686,7 +688,8 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
 
     base_model = Event
     child_models = (Series,PublicEvent)
-    list_filter = (PolymorphicChildModelFilter,'status','location')
+    list_filter = (PolymorphicChildModelFilter,'status','registrationOpen','location')
+    list_editable = ('status',)
     polymorphic_list = True
 
     actions = [repeat_events,]
