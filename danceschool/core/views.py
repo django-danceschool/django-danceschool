@@ -179,9 +179,13 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
         '''
 
         if not hasattr(self,'allEvents'):
+            timeFilters = {'endTime__gte': timezone.now()}
+            if getConstant('registration__displayLimitDays') or 0 > 0:
+                timeFilters['startTime__lte'] = timezone.now() + timedelta(days=getConstant('registration__displayLimitDays'))
+
             # Get the Event listing here to avoid duplicate queries
             self.allEvents = Event.objects.filter(
-                endTime__gte=timezone.now()
+                **timeFilters
             ).filter(
                 Q(instance_of=PublicEvent) |
                 Q(instance_of=Series)
@@ -190,6 +194,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
                 Q(status=Event.RegStatus.regHidden) |
                 Q(status=Event.RegStatus.linkOnly)
             ).order_by('year','month','startTime')
+
         return self.allEvents
 
     def get_listing(self):
