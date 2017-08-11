@@ -3,14 +3,29 @@ from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.contenttypes.models import ContentType
+from django.http import HttpResponseRedirect
 
 from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 
-from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem
+from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem
 from .constants import getConstant
 from .forms import LocationWithCapacityWidget
+
+
+######################################
+# Admin action for repeating events
+
+
+def repeat_events(modeladmin, request, queryset):
+    selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+    ct = ContentType.objects.get_for_model(queryset.model)
+    return HttpResponseRedirect(reverse('repeatEvents') + "?ct=%s&ids=%s" % (ct.pk, ",".join(selected)))
+
+
+repeat_events.short_description = _('Duplicate selected events')
 
 
 ######################################
@@ -501,6 +516,8 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
 
     readonly_fields = ['uuidLink',]
 
+    actions = [repeat_events,]
+
     def uuidLink(self,obj):
         address = reverse('singleClassRegistration', args=[obj.uuid,])
         return mark_safe('<a href="%s">%s</a>' % (address, address))
@@ -567,8 +584,8 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
-    list_display = ('name','series_month','location','class_time','pricingTier','special','customers')
-    list_filter = ('location','special','pricingTier')
+    list_display = ('name','series_month','location','class_time','pricingTier','category','customers')
+    list_filter = ('location','category','pricingTier')
 
     def customers(self,obj):
         return obj.numRegistered
@@ -582,7 +599,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription','location','pricingTier',('special','allowDropins'),('uuidLink',)),
+            'fields': ('classDescription','location','pricingTier',('category','allowDropins'),('uuidLink',)),
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse',),
@@ -672,10 +689,23 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
     list_filter = (PolymorphicChildModelFilter,'status','location')
     polymorphic_list = True
 
+    actions = [repeat_events,]
+
+
+@admin.register(PublicEventCategory)
+class PublicEventCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'separateOnRegistrationPage','displayColor']
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(SeriesCategory)
+class SeriesCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'separateOnRegistrationPage']
+    prepopulated_fields = {'slug': ('name',)}
+
 
 # These admin classes are registered but need nothing additional
 admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
-admin.site.register(PublicEventCategory)
 admin.site.register(EventStaffCategory)

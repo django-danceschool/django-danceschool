@@ -1,9 +1,6 @@
 from django.conf import settings
 from django.utils import timezone
 
-from datetime import datetime
-from urllib.parse import unquote
-
 
 def ensure_timezone(dateTime,timeZone=None):
     '''
@@ -18,17 +15,3 @@ def ensure_timezone(dateTime,timeZone=None):
         return timezone.make_aware(dateTime,timezone=timeZone)
     # If neither condition is met, then we can return what was passed
     return dateTime
-
-
-def getDateTimeFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it in datetime format, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    if request.GET.get(key,''):
-        try:
-            return ensure_timezone(datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d'))
-        except (ValueError, TypeError):
-            pass
-    return None

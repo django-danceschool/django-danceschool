@@ -10,14 +10,14 @@
 {% endblock %}
 
 {% block meta_description %}
-	{% blocktrans with name=eventset.0.name startTime=eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' endTime=eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' location=eventset.0.location.name
-	Join us for our event, {{ name }}, held {{ startTime }} - {{ endTime }} at {{ location %}.
+	{% blocktrans with name=eventset.0.name startTime=eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' endTime=eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' location=eventset.0.location.name %}
+	Join us for our event, {{ name }}, held {{ startTime }} - {{ endTime }} at {{ location }}.
 	{% endblocktrans %}
 {% endblock %}
 
 {% block facebook_og_description %}
-	{% blocktrans with name=eventset.0.name startTime=eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' endTime=eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' location=eventset.0.location.name
-	Join us for our event, {{ name }}, held {{ startTime }} - {{ endTime }} at {{ location %}.
+	{% blocktrans with name=eventset.0.name startTime=eventset.0.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' endTime=eventset.0.eventoccurrence_set.all.first.endTime|date:'h:i A' location=eventset.0.location.name %}
+	Join us for our event, {{ name }}, held {{ startTime }} - {{ endTime }} at {{ location }}.
 	{% endblocktrans %}
 {% endblock %}
 

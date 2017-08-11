@@ -48,6 +48,7 @@ Basic Installation Process
 
    ::
 
+       cd <your_project_name> 
        python manage.py migrate
 
 6. Create a superuser so that you can log into the admin interface (you
@@ -398,50 +399,16 @@ Installed Apps
 
 In addition to the various apps that are components of the danceschool project, there are several other apps that need to be added to your project's ``INSTALLED_APPS``.  It is important to note that the order in which apps are added often matters.  In particular, because Django's template loading and URL pattern matching functions use the first matching template/pattern, some apps need to be loaded before others in order for them to function correctly.
 
-First, be sure that the following django contrib apps are all listed in ``INSTALLED_APPS``:
+First, list the Django CMS app in ``INSTALLED_APPS``, followed by the Django dynamic preferences app.  These apps go first so that they can find and register CMS plugins and dynamic preferences from other apps:
 
    ::
-
-      'django.contrib.auth',
-      'django.contrib.contenttypes',
-      'django.contrib.sessions',
-      'django.contrib.messages',
-      'django.contrib.staticfiles',
-      'django.contrib.sites',
-      'django.contrib.sitemaps',
-      'django.contrib.admin',
-
-Then, after ``django.contrib.auth`` but *before* ``django.contrib.admin``, add the following:
-
-   ::
-
-      'allauth',
-      'allauth.account',
-      'allauth.socialaccount',
-      'polymorphic',
-      'adminsortable2',
-      'dal',
-      'dal_select2',
-      'easy_thumbnails',
-      'filer',
-      'djangocms_admin_style',
-
-Then, *after* ``django.contrib.admin``, add the following:
-
-   ::
-
-      'ckeditor_filebrowser_filer',
-      'huey.contrib.djhuey',
-      'crispy_forms',
-      'daterange_filter',
-      'easy_pdf',
-      'dynamic_preferences',
-      'sekizai',
       'cms',
-      'menus',
-      'treebeard',
-      'djangocms_text_ckeditor',
-      'djangocms_forms',
+      'dynamic_preferences',
+
+Next, list the core danceschool app, which provides all of the necessary functionality of the project, and is required.  If you have setup any custom app which overrides the templates used by the danceschool project, then this should also be listed here:
+
+   ::
+      # '<your_custom_app>',
       'danceschool.core',
 
 The ``danceschool.core`` app contains all of the necessary basic functionality of the project.  However, depending on your needs, you may want to install some of all of the following apps by adding them to ``INSTALLED_APPS``:
@@ -459,7 +426,44 @@ The ``danceschool.core`` app contains all of the necessary basic functionality o
       'danceschool.payments.paypal',  # Paypal Express Checkout payment processor
       'danceschool.payments.stripe',  # Stripe Checkout payment processor
 
-Finally, if you are developing your own custom app that overrides the core danceschool app's templates or URLs, then you will want to ensure that your app is listed *before* ``danceschool.core`` in INSTALLED_APPS.
+Then, before including the Django contrib apps, add the following apps (the order of these does not matter, but some apps *must* be listed before ``django.contrib.admin``):
+
+   ::
+
+      'adminsortable2',
+      'allauth',
+      'allauth.account',
+      'allauth.socialaccount',
+      'ckeditor_filebrowser_filer',
+      'crispy_forms',
+      'dal',
+      'dal_select2',
+      'daterange_filter',
+      'djangocms_admin_style',
+      'djangocms_forms',
+      'djangocms_text_ckeditor',
+      'easy_pdf',
+      'easy_thumbnails',
+      'filer',
+      'huey.contrib.djhuey',
+      'menus',
+      'polymorphic',
+      'sekizai',
+      'treebeard',
+
+Finally, be sure that the following django contrib apps are all listed in ``INSTALLED_APPS`` at the bottom:
+
+   ::
+
+      'django.contrib.auth',
+      'django.contrib.contenttypes',
+      'django.contrib.sessions',
+      'django.contrib.messages',
+      'django.contrib.staticfiles',
+      'django.contrib.sites',
+      'django.contrib.sitemaps',
+      'django.contrib.admin',
+
 
 Template settings
 ^^^^^^^^^^^^^^^^^

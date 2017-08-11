@@ -48,34 +48,35 @@ def getSchoolName():
     return getConstant('contact__businessName')
 
 
-# This one is only used for the series registration check-in page
-@register.simple_tag
-def getSeriesPriceForMonth(reg,month,year):
-    date = datetime.datetime(year=year,month=month,day=2)
-    return reg.getPriceForMonth(date)
-
-
-# This one allows us to specify group-based permissions in templates
 @register.filter(name='has_group')
 def has_group(user, group_name):
+    '''
+    This allows specification group-based permissions in templates.
+    In most instances, creating model-based permissions and giving
+    them to the desired group is preferable.
+    '''
     if user.groups.filter(name=group_name).exists():
         return True
     return False
 
 
-# This one allows us to get a specific key from a dictionary, where
-# the key can be a variable name.
 @register.filter
 def get_item(dictionary, key):
+    '''
+    This allows us to get a specific key from a dictionary, where
+    the key can be a variable name.
+    '''
     return dictionary.get(key)
 
 
-# This one allows us to get one or more items from a list of
-# dictionaries based on the value of a specified key, where
-# both the key and the value can be variable names.  Does
-# not work with None or null string passed values.
 @register.simple_tag
 def get_item_by_key(passed_list, key, value):
+    '''
+    This one allows us to get one or more items from a list of
+    dictionaries based on the value of a specified key, where
+    both the key and the value can be variable names.  Does
+    not work with None or null string passed values.
+    '''
 
     if value in [None,'']:
         return
@@ -90,12 +91,27 @@ def get_item_by_key(passed_list, key, value):
     return sub_list
 
 
-# This tag allows one to get a specific series or event form field
-# in the series view.
 @register.simple_tag
 def get_field_for_object(field_type,field_id, form):
+    '''
+    This tag allows one to get a specific series or event form field
+    in registration views.
+    '''
     field_name = field_type + '_' + str(field_id)
     return form.__getitem__(field_name)
+
+
+@register.filter
+def template_exists(template_name):
+    '''
+    Determine if a given template exists so that it can be loaded
+    if so, or a default alternative can be used if not.
+    '''
+    try:
+        template.loader.get_template(template_name)
+        return True
+    except template.TemplateDoesNotExist:
+        return False
 
 
 @register.simple_tag

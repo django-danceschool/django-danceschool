@@ -1,0 +1,344 @@
+{% extends "cms/home.html" %}
+{% load cms_tags danceschool_tags sekizai_tags static i18n %}
+
+{% block content %}
+
+{% page_url 'directions' as directions_url %}
+{% page_url 'calendar' as calendar_url %}
+
+<div class="row">
+
+<div class="col-md-12 top-col">
+	{% block top %}
+		{% static_placeholder 'registration_top' %}
+	{% endblock %}
+</div>
+
+<div class="col-md-12 content-col">
+
+{% block coming_soon %}
+	{% if not allSeries and not allEvents %}
+		<h2>{% trans "More Classes and Events Coming Soon!" %}</h2>
+		<p>{% blocktrans %}Our upcoming classes have not yet been posted, but don't worry, they will be posted here soon!  Check back soon for more information.{% endblocktrans %}</p>
+		{% if calendar_url %}<p>{% blocktrans %}In the meantime, check out our <a href="{{ calendar_url }}">calendar</a> for more information about our past and current classes.</p>{% endblocktrans %}{% endif %}
+	{% elif not allSeries %}
+		<h2>{% trans "More Classes Coming Soon!" %}</h2>
+		<p>{% blocktrans %}Our upcoming classes have not yet been posted, but don't worry, they will be posted here soon!  Check back soon for more information.{% endblocktrans %}</p>
+		{% if calendar_url %}<p>{% blocktrans %}In the meantime, check out our <a href="{{ calendar_url }}">calendar</a> for more information about our past and current classes.</p>{% endblocktrans %}{% endif %}
+	{% endif %}
+{% endblock %}
+
+{% if allSeries or allEvents %}
+
+{% block registration_form %}
+<form id="classregform" name="input" action="" method="post">
+    {% csrf_token %}
+    {{ form.voucher_id }}
+
+    {% block door_reg %}
+	    {% if perms.core.accept_door_payments %}
+	    <div class="alert alert-info" role="alert">
+		    <h4>{% trans "Is this a door/invoice registration?" %}<br />
+		    <small>({% trans "to be filled out only by school staff" %})</small>
+		    </h4>
+		    <p>{% trans "This is a door/invoice registration" %} {{ form.payAtDoor }}</p>
+	    </div>
+	    {% endif %}
+    {% endblock %}
+    
+    <div id="classes">
+        <div id="validation">
+            {{ form.non_field_errors }}
+        </div>
+
+        {# List of Category-separated Series #}
+        {% block category_separate_series %}
+        	{% regroup categorySeparateSeries by category as category_separated_list %}
+
+        	{% for category_list in category_separated_list %}
+        		{% if "core/registration/series_category_"|add:category_list.grouper.slug|add:".html"|template_exists %}
+        			{% include "core/registration/series_category_"|add:category_list.grouper.slug|add:".html" %}
+        		{% else %}
+        			{% include "core/registration/series_category__default.html" %}
+        		{% endif %}
+        	{% endfor %}
+		{% endblock %}
+
+        {# List of Class Series with Open Registration #}
+        {% block reg_open_series %}
+        	{% include "core/registration/reg_open_series.html" %}
+		{% endblock %}
+
+		{# List of Category-separated Public Events #}
+		{% block category_separate_events %}
+        	{% regroup categorySeparateEvents by category as category_separated_list %}
+
+        	{% for category_list in category_separated_list %}
+        		{% if "core/registration/event_category_"|add:category_list.grouper.slug|add:".html"|template_exists %}
+        			{% include "core/registration/event_category_"|add:category_list.grouper.slug|add:".html" %}
+        		{% else %}
+        			{% include "core/registration/event_category__default.html" %}
+        		{% endif %}
+        	{% endfor %}
+		{% endblock %}
+
+        {# List of Upcoming Public Events with Open Registration #}
+        {% block reg_open_events %}
+        	{% include "core/registration/reg_open_events.html" %}
+		{% endblock %}
+
+        {# List of Upcoming Public Events without/with closed Registration #}
+        {% block reg_closed_events %}
+        	{% include "core/registration/reg_closed_events.html" %}
+		{% endblock %}
+
+        {# List of Ongoing Class Series with closed Registration #}
+        {% block reg_closed_series %}
+        	{% include "core/registration/reg_closed_series.html" %}
+		{% endblock %}
+
+    </div>
+</form>
+{% endblock %}
+
+</div>
+</div>
+
+{% block content_js %}
+	{% addtoblock "js" %}
+	<script type="text/javascript" src="{% static 'ekko-lightbox/ekko-lightbox.min.js' %}"></script>
+	<script type="text/javascript">
+	$(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {
+	    event.preventDefault();
+	    $(this).ekkoLightbox();
+	});
+	</script>
+	{% endaddtoblock %}
+
+	{% addtoblock "js" %}
+		<script type="text/javascript">
+		$( document ).ready(function() {
+			$('.pricingPopover').popover();	
+		});
+		</script>
+	{% endaddtoblock %}
+{% endblock %}
+
+{% block content_css %}
+	{% addtoblock "css" %}
+		<style type="text/css">
+		/* This CSS is used (and included) only on the class registration page */
+
+		/* Registration stuff */
+
+		#classes #validation {
+		    color: #db2d25;
+		    font-size: large;
+		}
+
+		#classes .classmonth, #classes .category_heading {
+		    position: relative;
+		}
+
+		#classes .classmonth>.btn, #classes .category_heading>.btn {
+		    position: absolute;
+		    top: 0px;
+		    right: 0px;
+		}
+
+		#classes .series {
+		    margin-bottom: 12px;
+		    display: inline-block;
+		    padding-left: 15px;
+		    width: 100%;
+		}
+
+		#classes .series div, #classes .series div {
+		    border: 0;
+		    padding: 0;
+		    margin: 0;
+		    vertical-align: top;
+		}
+
+		#classes .series .time {
+		    vertical-align: top;
+		    white-space: nowrap;
+		    width: 1px;
+		}
+
+		#classes .series .seriestype {
+		    font-weight: 700;
+		    font-size: 1.15em;
+		    border-bottom: 1px dotted #ccc;
+		}
+
+		#classes .series .dates {
+		    float: left;
+		}
+
+		#classes .series .leadfollow {
+		    float: right;
+		    margin-top: 10px;
+		    width: 200px;
+		    font-size: 16px;
+		}
+
+		.leadfollow-options {
+		    padding-left: 20px;
+		}
+
+		.leadfollow-options ul {
+		    list-style-type: none;
+		    padding-left: 0;
+		}
+
+		#classes .series .checkboxvalidation {
+		    color: #db2d25;
+		    clear: both;
+		    float: right;
+		}
+		/* Class summary */
+
+		.classregsummary {
+		    width: 100%;
+		}
+
+		#classes .weekdaygroup {
+		    display: inline-table;
+		    width: 100%;
+		}
+
+		#classes .weekday {
+		    width: 28px;
+		    padding: 0;
+		    margin: 0;
+		    border: 0;
+		    background-color: #85a2b2;
+		    border-left: 1px solid #477087;
+		    border-bottom: 1px dotted #ddd;
+		    display: table-cell;
+		}
+
+		#classes .weekday div {
+		    position: relative;
+		    min-height: 165px;
+		}
+
+		#classes .weekday div h3 {
+		    -webkit-transform: rotate(-90deg);
+		    -moz-transform: rotate(-90deg);
+		    position: absolute;
+		    display: block;
+		    width: 75px;
+		    top: 30px;
+		    left: -25px;
+		    direction: rtl;
+		    color: white;
+		    font-size: 20px;
+		    font-weight: bold;
+		    white-space: nowrap;
+		}
+
+		#classes .weekdaycontents {
+		    display: table-cell;
+		    vertical-align: top;
+		    border-top: 1px dotted #ddd;
+		}
+
+		#classes .weekdaycontents h3 {
+		    margin-top: 5px;
+		}
+
+		#classes .series .info {
+		    width: 100%;
+		}
+
+
+		#aboutus .bio img, #retired .bio img {
+		    padding-right: 7px;
+		    padding-bottom: 3px;
+		    float: left;
+		}
+
+		.SoldOut {
+		     text-align: center;
+		     color:red; 
+		     font-size: large;
+		}
+		.SoldOutSub {
+		     text-align: center;
+		     color:red; 
+		}
+
+		#classregform h4 {
+		    font-size: 18px;
+		}
+
+		#classregform h3.title {
+		    font-size: 22px;
+		}
+
+
+		@media screen and (max-width:767px) {
+		    #classes .weekdaygroup {
+		        border-left: 1px dotted #ddd;
+		        border-right: 1px dotted #ddd;
+		        border-bottom: 1px dotted #ddd;
+		    }
+
+		    #classes .weekday {
+		        width: 100%;
+		        border-bottom: 1px solid #477087;
+		        border-left: none;
+		        display: table-row;
+		    }
+		    #classes .weekday div {
+		        position: relative;
+		        height: 28px;
+		        min-height: 0;
+		        display: table-cell;
+		    }
+
+		    #classes .weekday div h3 {
+		        -webkit-transform: none;
+		        -moz-transform: none;
+		        direction: inherit;
+		        position: inherit;
+		        display: block;
+		        top: inherit;
+		        left: inherit;
+		        font-size: 20px;
+		        margin: 5px 10px;
+
+		    }
+
+		    #classes .weekdaycontents {
+		        display: table-row;
+		    }
+
+		    #classes .series {
+		        width: 100%;
+		        margin-bottom: 10px;
+		        padding-left: 10px;
+		    }
+
+		    #classes .series .time {
+		        padding-left: 0;
+		    }
+
+		    #classes .series .info {
+		        padding-right: 10px;
+		    }
+		}
+
+		@media screen and (max-width:479px) {
+		    #classes .series .leadfollow {
+		        float: left;
+		    }
+		}
+	</style>
+	{% endaddtoblock %}
+{% endblock %}
+{% endif %}
+
+{% endblock %}

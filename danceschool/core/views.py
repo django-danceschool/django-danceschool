@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -11,9 +11,11 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import AccessMixin
+from django.contrib.contenttypes.models import ContentType
 
 from calendar import month_name
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import json
 from urllib.parse import unquote_plus, unquote
 from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin, StaffuserRequiredMixin
@@ -22,11 +24,12 @@ from cms.models import Page
 import re
 import logging
 
-from .models import Event, Series, PublicEvent, EventRegistration, StaffMember, Instructor, Invoice
-from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, ClassChoiceForm
+from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice
+from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, ClassChoiceForm, RepeatEventForm
 from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from .signals import get_customer_data
+from .utils.requests import getIntFromGet
 
 
 # Define logger for this file
@@ -37,7 +40,7 @@ class RegistrationOfflineView(TemplateView):
     '''
     If registration is offline, just say so.
     '''
-    template_name = 'core/registration_offline.html'
+    template_name = 'core/registration/registration_offline.html'
 
 
 class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
@@ -103,7 +106,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
     all of the subsequent views in the process are in classreg.py
     '''
     form_class = ClassChoiceForm
-    template_name = 'core/event_registration.html'
+    template_name = 'core/registration/event_registration.html'
     voucher_id = None
 
     def get(self, request, *args, **kwargs):
@@ -202,7 +205,6 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 
             publicEvents = allEvents.instance_of(PublicEvent)
             allSeries = allEvents.instance_of(Series)
-            regularSeries = allSeries.filter(series__special=False)
 
             self.listing = {
                 'allEvents': allEvents,
@@ -210,12 +212,24 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
                 'closedEvents': closedEvents,
                 'publicEvents': publicEvents,
                 'allSeries': allSeries,
-                'regularSeries': regularSeries,
-                'regOpenEvents': publicEvents.filter(registrationOpen=True),
-                'regClosedEvents': publicEvents.filter(registrationOpen=False),
-                'regOpenSeries': regularSeries.filter(registrationOpen=True),
-                'regClosedSeries': regularSeries.filter(registrationOpen=False),
-                'specialSeries': allSeries.filter(series__special=True,registrationOpen=True),
+                'regOpenEvents': publicEvents.filter(registrationOpen=True).filter(
+                    Q(publicevent__category__isnull=True) | Q(publicevent__category__separateOnRegistrationPage=False)
+                ),
+                'regClosedEvents': publicEvents.filter(registrationOpen=False).filter(
+                    Q(publicevent__category__isnull=True) | Q(publicevent__category__separateOnRegistrationPage=False)
+                ),
+                'categorySeparateEvents': publicEvents.filter(
+                    publicevent__category__separateOnRegistrationPage=True
+                ).order_by('publicevent__category'),
+                'regOpenSeries': allSeries.filter(registrationOpen=True).filter(
+                    Q(series__category__isnull=True) | Q(series__category__separateOnRegistrationPage=False)
+                ),
+                'regClosedSeries': allSeries.filter(registrationOpen=False).filter(
+                    Q(series__category__isnull=True) | Q(series__category__separateOnRegistrationPage=False)
+                ),
+                'categorySeparateSeries': allSeries.filter(
+                    series__category__separateOnRegistrationPage=True
+                ).order_by('series__category'),
             }
         return self.listing
 
@@ -225,7 +239,7 @@ class SingleClassRegistrationView(ClassRegistrationView):
     This view is called only via a link, and it allows a person to register for a single
     class without seeing all other classes.
     '''
-    template_name = 'core/single_event_registration.html'
+    template_name = 'core/registration/single_event_registration.html'
 
     def get_allEvents(self):
         try:
@@ -854,6 +868,130 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
                 request.toolbar.add_button(this_title, reverse('admin:core_publicevent_change', args=([this_event.id,])), side=RIGHT)
 
         return super(IndividualEventView,self).get(request,*args,**kwargs)
+
+
+#####################################
+# View for Repeating Events from admin
+class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FormView):
+    '''
+    This view is for an admin action to repeat events.
+    '''
+    template_name = 'core/repeat_events.html'
+    form_class = RepeatEventForm
+    permission_required = 'core.add_event'
+    success_message = _('Repeated events created successfully.')
+
+    def dispatch(self, request, *args, **kwargs):
+        ids = request.GET.getlist('ids')
+        ct = getIntFromGet(request,'ct')
+
+        try:
+            contentType = ContentType.objects.get(id=ct)
+            self.objectClass = contentType.model_class()
+        except (ValueError, ObjectDoesNotExist):
+            return HttpResponseBadRequest(_('Invalid content type passed.'))
+
+        # This view only deals with subclasses of Events (Public Events, Series, etc.)
+        if not isinstance(self.objectClass(),Event):
+            return HttpResponseBadRequest(_('Invalid content type passed.'))
+
+        try:
+            self.queryset = self.objectClass.objects.filter(id__in=[int(x) for x in ids])
+        except ValueError:
+            return HttpResponseBadRequest(_('Invalid ids passed'))
+
+        return super(RepeatEventsView,self).dispatch(request,*args,**kwargs)
+
+    def get_context_data(self,**kwargs):
+        context = super(RepeatEventsView,self).get_context_data(**kwargs)
+        context.update({
+            'events': self.queryset,
+        })
+
+        return context
+
+    def form_valid(self, form):
+        ''' For each object in the queryset, create the duplicated objects '''
+
+        startDate = form.cleaned_data.get('startDate')
+        repeatEvery = form.cleaned_data.get('repeatEvery')
+        periodicity = form.cleaned_data.get('periodicity')
+        quantity = form.cleaned_data.get('quantity')
+        endDate = form.cleaned_data.get('endDate')
+
+        # Create a list of start dates, based on the passed  values of repeatEvery,
+        # periodicity, quantity and endDate.  This list will be iterated through to
+        # create the new instances for each event.
+        if periodicity == 'D':
+            delta = {'days': repeatEvery}
+        elif periodicity == 'W':
+            delta = {'weeks': repeatEvery}
+        elif periodicity == 'M':
+            delta = {'months': repeatEvery}
+
+        repeat_list = []
+        this_date = startDate
+
+        if quantity:
+            for k in range(0,quantity):
+                repeat_list.append(this_date)
+                this_date = this_date + relativedelta(**delta)
+        elif endDate:
+            while (this_date <= endDate):
+                repeat_list.append(this_date)
+                this_date = this_date + relativedelta(**delta)
+
+        # Now, loop through the events in the queryset to create duplicates of them
+        for event in self.queryset:
+
+            # For each new occurrence, we determine the new startime by the distance from
+            # midnight of the first occurrence date, where the first occurrence date is
+            # replaced by the date given in repeat list
+            old_min_time = event.startTime.replace(hour=0,minute=0,second=0,microsecond=0)
+
+            old_occurrence_data = [
+                (x.startTime - old_min_time, x.endTime - old_min_time, x.cancelled)
+                for x in event.eventoccurrence_set.all()
+            ]
+
+            old_role_data = [(x.role, x.capacity) for x in event.eventrole_set.all()]
+
+            for instance_date in repeat_list:
+
+                # Ensure that time zones are treated properly
+                new_datetime = timezone.now().replace(
+                    year=instance_date.year,month=instance_date.month,day=instance_date.day,
+                    hour=0,minute=0,second=0,microsecond=0
+                )
+
+                # Removing the pk and ID allow new instances of the event to
+                # be created upon saving with automatically generated ids.
+                event.id = None
+                event.pk = None
+                event.save()
+
+                # Create new occurrences
+                for occurrence in old_occurrence_data:
+                    EventOccurrence.objects.create(
+                        event=event,
+                        startTime=new_datetime + occurrence[0],
+                        endTime=new_datetime + occurrence[1],
+                        cancelled=occurrence[2],
+                    )
+
+                # Create new event-specific role data
+                for role in old_role_data:
+                    EventRole.objects.create(
+                        event=event,
+                        role=role[0],
+                        capacity=role[1],
+                    )
+
+                # Need to save twice to ensure that startTime etc. get
+                # updated properly.
+                event.save()
+
+            return super(RepeatEventsView,self).form_valid(form)
 
 
 ############################################################
