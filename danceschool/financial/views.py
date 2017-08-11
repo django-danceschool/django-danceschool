@@ -16,24 +16,13 @@ from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFo
 from danceschool.core.models import Instructor, Location, Event
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
-from danceschool.core.utils.timezone import ensure_timezone, getDateTimeFromGet
+from danceschool.core.utils.timezone import ensure_timezone
+from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
 from .forms import ExpenseReportingForm, RevenueReportingForm
 from .constants import EXPENSE_BASES
-
-
-def getIntFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it as an integer, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    try:
-        return int(request.GET.get(key))
-    except (ValueError, TypeError):
-        return None
 
 
 class ExpenseReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, SuccessMessageMixin, CreateView):
