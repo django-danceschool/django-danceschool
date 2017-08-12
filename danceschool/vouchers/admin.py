@@ -36,6 +36,7 @@ class CustomerVoucherInline(admin.StackedInline):
     model = CustomerVoucher
     form = CustomerVoucherInlineForm
     extra = 1
+    classes = ['collapse',]
 
 
 class CustomerAdminWithVouchers(CustomerAdmin):
@@ -73,11 +74,13 @@ class TemporaryRegistrationVoucherInline(admin.TabularInline):
 class DanceTypeVoucherInline(admin.StackedInline):
     model = DanceTypeVoucher
     extra = 1
+    classes = ['collapse',]
 
 
 class ClassVoucherInline(admin.StackedInline):
     model = ClassVoucher
     extra = 1
+    classes = ['collapse',]
 
 
 class VoucherUseInline(admin.TabularInline):

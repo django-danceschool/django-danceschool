@@ -28,10 +28,11 @@ class RequirementAdmin(admin.ModelAdmin):
             'fields': ('name',('applicableLevel','applicableClass'),'booleanRule','enforcementMethod',)
         }),
         (_('Role Options'), {
+            'classes': ('collapse',),
             'fields': ('roleEnforced','applicableRole'),
         }),
         (_('Date and Time'), {
-            'classes': 'collapse',
+            'classes': ('collapse',),
             'fields': ('submissionDate','modifiedDate'),
         })
     )
