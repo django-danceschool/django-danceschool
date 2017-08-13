@@ -2112,11 +2112,6 @@ class Invoice(EmailRecipientMixin, models.Model):
         return new_invoice
 
     @property
-    def url(self):
-        return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
-    url.fget.short_description = _('Invoice URL')
-
-    @property
     def unpaid(self):
         return (self.status != self.PaymentStatus.paid)
     unpaid.fget.short_description = _('Unpaid')
@@ -2166,6 +2161,18 @@ class Invoice(EmailRecipientMixin, models.Model):
     def statusLabel(self):
         return self.PaymentStatus.values.get(self.status,'')
     statusLabel.fget.short_description = _('Status')
+
+    @property
+    def url(self):
+        if self.id:
+            return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
+    url.fget.short_description = _('Invoice URL')
+
+    def get_absolute_url(self):
+        '''
+        For adding 'View on Site' links to the admin
+        '''
+        return reverse('viewInvoice', args=[self.id,])
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
