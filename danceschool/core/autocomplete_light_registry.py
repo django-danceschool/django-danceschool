@@ -17,7 +17,16 @@ class UserAutoComplete(autocomplete.Select2QuerySetView):
         qs = User.objects.all()
 
         if self.q:
-            qs = qs.filter(Q(first_name__istartswith=self.q) | Q(last_name__istartswith=self.q) | Q(email__istartswith=self.q))
+            words = self.q.split(' ')
+            lastName = words.pop()
+            firstName = words.pop() if words else lastName
+
+            print('Name is: %s %s' % (firstName, lastName))
+
+            qs = qs.filter(
+                Q(first_name__istartswith=firstName) | Q(last_name__istartswith=lastName) |
+                Q(email__istartswith=self.q)
+            )
 
         return qs
 
@@ -35,6 +44,15 @@ class CustomerAutoComplete(autocomplete.Select2QuerySetView):
         qs = Customer.objects.all()
 
         if self.q:
-            qs = qs.filter(Q(user__first_name__istartswith=self.q) | Q(user__last_name__istartswith=self.q) | Q(user__email__istartswith=self.q))
+            words = self.q.split(' ')
+            lastName = words.pop()
+            firstName = words.pop() if words else lastName
+
+            print('Name is: %s %s' % (firstName, lastName))
+
+            qs = qs.filter(
+                Q(first_name__istartswith=firstName) | Q(last_name__istartswith=lastName) |
+                Q(email__istartswith=self.q)
+            )
 
         return qs

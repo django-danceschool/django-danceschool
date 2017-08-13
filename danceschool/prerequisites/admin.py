@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.core.urlresolvers import reverse
+from django.forms import ModelForm, ModelChoiceField
 from django.utils.translation import ugettext_lazy as _
-from django.utils.html import format_html_join
+from django.utils.html import format_html_join, format_html
+
+from dal import autocomplete
 
 from danceschool.core.models import Customer
 from .models import Requirement, RequirementItem, CustomerRequirement
@@ -10,6 +13,7 @@ from .models import Requirement, RequirementItem, CustomerRequirement
 class RequirementItemInline(admin.TabularInline):
     model = RequirementItem
     extra = 0
+    verbose_name_plural = _('Requirement items (leave blank for requirement by audition only)')
 
 
 class CustomerRequirementInline(admin.StackedInline):
@@ -18,10 +22,36 @@ class CustomerRequirementInline(admin.StackedInline):
     readonly_fields = ['submissionDate','modifiedDate']
 
 
+class RequirementAdminForm(ModelForm):
+    customerCheck = ModelChoiceField(
+        label=_('Search for customer'),
+        help_text=_('Note that this function does not yet work for requirements for which roles are enforced.'),
+        queryset=Customer.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2(
+            url='autocompleteCustomer',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a customer name'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 4,
+                'class': 'modern-style',
+            }
+        )
+    )
+
+    class Meta:
+        model = Requirement
+        exclude = []
+
+
 @admin.register(Requirement)
 class RequirementAdmin(admin.ModelAdmin):
+    form = RequirementAdminForm
     inlines = [RequirementItemInline,]
-    readonly_fields = ['submissionDate','modifiedDate','customerMeetsListing','customerDoesNotMeetListing']
+    readonly_fields = ['submissionDate','modifiedDate','customerAjaxDiv']
     list_display = ['name','applicableLevel','applicableClass','enforcementMethod']
     list_editable = ['enforcementMethod',]
 
@@ -35,7 +65,7 @@ class RequirementAdmin(admin.ModelAdmin):
         }),
         (_('Customers Meeting Requirement'),{
             'classes': ('collapse',),
-            'fields': ('customerMeetsListing','customerDoesNotMeetListing'),
+            'fields': ('customerCheck','customerAjaxDiv'),
         }),
         (_('Date and Time'), {
             'classes': ('collapse',),
@@ -43,30 +73,22 @@ class RequirementAdmin(admin.ModelAdmin):
         })
     )
 
-    def customerMeetsListing(self,obj):
-        ''' Provide a list of customers meeting the requirement '''
-        return format_html_join(
-            '\n','<a href="{}">{}</a><br />',
-            [
-                (reverse('admin:core_customer_change', args=(customer.id,)),customer.fullName)
-                for customer in obj.customerrequirement_set.filter(met=True)
-            ]
+    def customerAjaxDiv(self,obj):
+        '''
+        This creates a div in which it will be shown whether a customer meets or does not meet
+        the requirement, and in which it is possible to explicitly give or deny a requirement for
+        a specific customer. All of the actual work is done in the Javascript file which is
+        contained in the overridden change_form.html for this model.
+        '''
+        return format_html(
+            '<div id="customerrequirement_ajax_div" data-requirementId="{}"></div>' + \
+            '<div id="customerrequirement_buttons_div">' + \
+            '<button class="btn customerrequirement_change" data-met="true">{}</button><button class="btn customerrequirement_change" data-met="false">{}</button></div>',
+            obj.id,
+            _('Requirement is met'),
+            _('Requirement is not met'),
         )
-    customerMeetsListing.allow_tags = True
-    customerMeetsListing.short_description = _('Customers explicitly meeting requirement')
-
-    def customerDoesNotMeetListing(self,obj):
-        ''' Provide a list of customers meeting the requirement '''
-        return format_html_join(
-            '\n','<a href="{}">{}</a><br />',
-            [
-                (reverse('admin:core_customer_change', args=(customer.id,)),customer.fullName)
-                for customer in obj.customerrequirement_set.filter(met=False)
-            ]
-        )
-    customerDoesNotMeetListing.allow_tags = True
-    customerDoesNotMeetListing.short_description = _('Customers explicitly not meeting requirement')
-
-
+    customerAjaxDiv.allow_tags = True
+    customerAjaxDiv.short_description = _('Requirement status')
 
 admin.site._registry[Customer].inlines.insert(0,CustomerRequirementInline)

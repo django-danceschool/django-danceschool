@@ -1315,12 +1315,12 @@ class Customer(models.Model):
     @property
     def numClassSeries(self):
         return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).count()
-    numEventRegistrations.fget.short_description = _('# Series registered')
+    numClassSeries.fget.short_description = _('# Series registered')
 
     @property
     def numPublicEvents(self):
         return EventRegistration.objects.filter(registration__customer=self,event__publicevent__isnull=False).count()
-    numEventRegistrations.fget.short_description = _('# Public events registered')
+    numPublicEvents.fget.short_description = _('# Public events registered')
 
     @property
     def firstSeries(self):

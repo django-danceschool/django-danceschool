@@ -381,13 +381,13 @@ class CustomerRegistrationInline(admin.StackedInline):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('__str__','numClassSeries','numPublicEvents')
+    list_display = ('fullName','numClassSeries','numPublicEvents')
     search_fields = ('=first_name','=last_name','email')
     readonly_fields = ('data','numClassSeries','numPublicEvents')
 
     fieldsets = (
         (None, {
-            'fields': ('user','numClassSeries','numPublicEvents','phone',)
+            'fields': (('first_name','last_name'),'email','phone','user','numClassSeries','numPublicEvents',)
         }),
         (_('Additional Customer Data'), {
             'classes': ('collapse',),
