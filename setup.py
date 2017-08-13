@@ -48,6 +48,7 @@ setup(
         'easy-thumbnails>=2.3',
         'huey>=1.3.1',
         'icalendar>=3.9.0',
+        'intervaltree>=2.1.0',
         'paypalrestsdk>=1.12.0',
         'peewee>=2.10.1',
         'Pillow>=3.4.2',

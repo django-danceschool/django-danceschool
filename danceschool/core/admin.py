@@ -743,6 +743,9 @@ class PublicEventAdminForm(ModelForm):
             'submissionUser': HiddenInput(),
         }
 
+    class Media:
+        js = ('js/location_related_objects_lookup.js',)
+
 
 @admin.register(PublicEvent)
 class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):

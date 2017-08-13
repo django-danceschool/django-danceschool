@@ -6,19 +6,282 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
+from polymorphic.models import PolymorphicModel
 from filer.fields.file import FilerFileField
 from filer.models import Folder
 import math
 from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
+from datetime import time, timedelta
+from dateutil.relativedelta import relativedelta
 
-from danceschool.core.models import EventStaffMember, Event, InvoiceItem, Location, Room
+from intervaltree import IntervalTree
+
+from danceschool.core.models import StaffMember, EventStaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room
 from danceschool.core.constants import getConstant
 
 
 def ordinal(n):
     ''' This is just used to populate ordinal day of the month choices '''
     return "%d%s" % (n,"tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4])
+
+
+class RepeatedExpenseRule(PolymorphicModel):
+    '''
+    This base class defines the pieces of information
+    needed for any type of repeated expense creation, such
+    as daily/weekly/monthly expense generation for venues
+    and instructors, as well as generic repeated expenses.
+    '''
+
+    class RateRuleChoices(DjangoChoices):
+        hourly = ChoiceItem('H',_('Per hour'))
+        daily = ChoiceItem('D',_('Per day of scheduled events'))
+        weekly = ChoiceItem('W',_('Per week'))
+        monthly = ChoiceItem('M',_('Per month'))
+        disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
+
+    rentalRate = models.FloatField(
+        _('Expense Rate'),null=True,blank=True,validators=[MinValueValidator(0)]
+    )
+
+    applyRateRule = models.CharField(
+        _('Apply this rate'),
+        max_length=1,
+        choices=RateRuleChoices.choices,
+        default=RateRuleChoices.hourly,
+        help_text=_('When ExpenseItems are created for rentals, the given rate will be applied for this unit of time to compute the total cost of rental.'))
+
+    dayStarts = models.PositiveSmallIntegerField(
+        _('Day starts at'),
+        choices=[(i, time(i).strftime('%-I:00 %p')) for i in range(24)],
+        default=0,
+        validators=[MinValueValidator(0),MaxValueValidator(23)],
+        help_text=_('If you run events after midnight, set this to avoid creation of duplicate expense items'),
+    )
+
+    weekStarts = models.PositiveSmallIntegerField(
+        _('Week starts on'),
+        choices=[(x,day_name[x]) for x in range(0,7)],
+        default=0,
+        validators=[MinValueValidator(0),MaxValueValidator(6)]
+    )
+
+    monthStarts = models.PositiveSmallIntegerField(
+        _('Month starts on'),
+        choices=[(x, ordinal(x)) for x in range(1,29)],
+        default=1,
+        validators=[MinValueValidator(1),MaxValueValidator(28)]
+    )
+
+    startDate = models.DateField(
+        _('Start date'),
+        null=True,
+        blank=True,
+        help_text=_('If specified, then expense items will not be generated prior to this date.')
+    )
+
+    endDate = models.DateField(
+        _('Start date'),
+        null=True,
+        blank=True,
+        help_text=_('If specified, then expense items will not be generated after this date.  Leave blank for expenses to be generated indefinitely.')
+    )
+
+    advanceDays = models.PositiveSmallIntegerField(
+        _('Generate expenses up to __ days in advance'),
+        help_text=_('By default, expense items are generated from rules up to 30 days in advance.  To generate expense items further (or less far) in advance, enter the number of days here.'),
+        default=30,
+    )
+
+    priorDays = models.PositiveSmallIntegerField(
+        _('Generate expenses up to __ days in the past'),
+        help_text=_('By default, expense items are generated from rules up to 180 days in the past.  To generate expense items further (or less far) in the past, enter the number of days here.  Leave blank for no limit.'),
+        default=180,
+        null=True,
+        blank=True
+    )
+
+    def splitIntervalDays(self,start,end,intervalDays=1):
+        # Take a single datetime interval of multiple months
+        # and return a generator for a set of intervals
+        days = relativedelta(end, start).days
+        intervals = math.ceil(days / intervalDays)
+        for k in range(intervals):
+            yield (start + relativedelta(days=k * intervalDays),start + relativedelta(months=(k + 1) * intervalDays))
+
+    def splitIntervalMonths(self,start,end):
+        # Take a single datetime interval of multiple months
+        # and return a generator for a set of intervals
+        months = relativedelta(end, start).months
+        for k in range(months):
+            yield (start + relativedelta(months=k),start + relativedelta(months=k + 1))
+
+    def getMissingIntervals(self,intervalList):
+        '''
+        If there are existing expenses applied under the same expense generation rule,
+        then we need to determine the interval or intervals over which there are not
+        already expenses, so that expense items can be generated for those intervals only.
+        '''
+        startTime = min([x[0] for x in intervalList])
+        endTime = max([x[1] for x in intervalList])
+
+        overlapping = self.expenseitem_set.filter(
+            (models.Q(periodStart__lte=endTime) & models.Q(periodStart__gte=startTime)) |
+            (models.Q(periodEnd__gte=startTime) & models.Q(periodEnd__lte=endTime)) |
+            (models.Q(periodStart__lte=startTime) & models.Q(periodEnd__gte=endTime))
+        )
+
+        if overlapping.count() == 0:
+            return intervalList
+
+        # This just removes from the interval any intervals for which there
+        # is already an expense item.
+        tree = IntervalTree.from_tuples(intervalList)
+        for item in overlapping:
+            tree.chop(item.periodStart, item.periodEnd)
+
+        # Return the one or more intervals that remain
+        return [(x.begin, x.end) for x in tree]
+
+    def getWindowsAndTotals(self,startTime,endTime):
+        if self.applyRateRule == self.RateRuleChoices.daily:
+            # Period is the date or dates of the occurrence
+            this_window_start = startTime.replace(hour=self.dayStarts,minute=0,second=0,microsecond=0)
+            this_window_end = (endTime + timedelta(days=1)).replace(hour=self.dayStarts,minute=0,second=0,microsecond=0)
+
+            # For daily rentals, we don't need to split intervals, but do need to remove
+            # intervals for which their are already expenses
+            intervals = self.getMissingIntervals([(this_window_start,this_window_end)])
+            for interval in intervals:
+                num_days = relativedelta(interval[1], interval[0]).days
+
+                if num_days > 1:
+                    description = str(_('%(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
+                else:
+                    description = interval[0].strftime('%Y-%m-%d')
+
+                # total is the rate times the number of days in the window (usually 1)
+                total = self.rentalRate * num_days
+                yield (interval[0], interval[1], total, description)
+
+        if self.applyRateRule == self.RateRuleChoices.weekly:
+            # Period is the week of the occurrence, starting from the start date specified for
+            # the Location.
+            if startTime.weekday() > self.weekStarts:
+                start_offset = self.weekStarts - startTime.weekday()
+            else:
+                start_offset = self.weekStarts - startTime.weekday() - 7
+
+            if endTime.weekday() > self.weekStarts or (endTime.weekday() == self.weekStarts and (endTime.hour > self.dayStarts or (endTime.hour == self.dayStarts and endTime.minute > 0))):
+                end_offset = 7 + self.weekStarts - endTime.weekday()
+            else:
+                end_offset = self.weekStarts - endTime.weekday()
+
+            this_window_start = (startTime + timedelta(days=start_offset)).replace(hour=self.dayStarts, minute=0, second=0, microsecond=0)
+            this_window_end = (endTime + timedelta(days=end_offset)).replace(hour=self.dayStarts, minute=0, second=0, microsecond=0)
+
+            # Split the interval up into discrete weeks, then subtract any overlapping intervals
+            week_intervals = list(self.splitIntervalDays(this_window_start, this_window_end, 7))
+            intervals = self.getMissingIntervals(week_intervals)
+            for interval in intervals:
+                num_days = relativedelta(interval[1], interval[0]).days
+
+                if num_days == 7:
+                    description = str(_('week of %(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
+                    total = self.rentalRate
+                else:
+                    description = str(_('%(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
+                    total = self.rentalRate * (num_days / 7)
+                yield (interval[0], interval[1], total, description)
+
+        elif self.applyRateRule == self.RateRuleChoices.monthly:
+            # Period is the month of the occurrence, starting from the start date specified for
+            # the Location.
+            startDay = self.monthStarts
+
+            if startTime.day >= startDay:
+                this_window_start = startTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+            else:
+                this_window_start = (startTime + relativedelta(months=-1)).replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+            if endTime.day > startDay or (endTime.day == startDay and (endTime.hour > self.dayStarts or (endTime.hour == self.dayStarts and endTime.minute > 0))):
+                this_window_end = (endTime + relativedelta(months=1)).replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+            else:
+                this_window_end = endTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+
+            month_intervals = list(self.splitIntervalMonths(this_window_start, this_window_end))
+            intervals = self.getMissingIntervals(month_intervals)
+            for interval in intervals:
+                num_days = relativedelta(interval[1], interval[0]).days
+
+                # We need to know the number days in the month in order to allocate partial expenses
+                month_startDate = interval[0].replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+                month_startDate = month_startDate - relativedelta(months=1) if month_startDate > interval[0] else month_startDate
+                days_in_month = (month_startDate + relativedelta(months=1) - month_startDate).days
+
+                if num_days == days_in_month:
+                    description = str(_('month of %(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
+                    total = self.rentalRate
+                else:
+                    description = str(_('%(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
+                    total = self.rentalRate * (num_days / days_in_month)
+                yield (interval[0], interval[1], total, description)
+
+
+class LocationRentalInfo(RepeatedExpenseRule):
+    '''
+    This model is used to store information on rental periods and rates
+    for locations.
+    '''
+    location = models.OneToOneField(Location,related_name='rentalinfo',verbose_name=_('Location'))
+
+    def __str__(self):
+        return str(_('Rental expense information for %s' % self.location.name))
+
+    class Meta:
+        verbose_name = _('Location rental information')
+        verbose_name_plural = _('Locations\' rental information')
+
+
+class RoomRentalInfo(RepeatedExpenseRule):
+    '''
+    This model is used to store information on rental periods and rates
+    for individual rooms.  If a rental rate does not exist for a room,
+    or if it is specified that the room rental rate not be applied,
+    then the location's rental rate and parameters are used instead.
+    '''
+    room = models.OneToOneField(Room,related_name='rentalinfo',verbose_name=_('Room'))
+
+    def __str__(self):
+        return str(_('Rental expense information for %s at %s' % (self.room.name, self.room.location.name)))
+
+    class Meta:
+        verbose_name = _('Room rental information')
+        verbose_name_plural = _('Rooms\' rental information')
+
+
+class StaffMemberWageInfo(RepeatedExpenseRule):
+    '''
+    This model is used to store information on rental periods and rates
+    for individual rooms.  If a rental rate does not exist for a room,
+    or if it is specified that the room rental rate not be applied,
+    then the location's rental rate and parameters are used instead.
+    '''
+    staffMember = models.OneToOneField(StaffMember,related_name='expenseinfo',verbose_name=_('Staff member'))
+    category = models.OneToOneField(
+        EventStaffCategory,
+        verbose_name=_('Category'),
+        null=True,blank=True,
+        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for an instructor, then the default hourly rate for each category will be used.')
+    )
+
+    def __str__(self):
+        return str(_('Rental expense information for %s' % self.staffMember.fullName))
+
+    class Meta:
+        unique_together = ('staffMember', 'category')
+        verbose_name = _('Staff member salary information')
+        verbose_name_plural = _('Staff members\' wage/salary information')
 
 
 @python_2_unicode_compatible
@@ -71,7 +334,8 @@ class ExpenseItem(models.Model):
     eventvenue = models.ForeignKey(Event,null=True,blank=True,related_name='venueexpense',verbose_name=_('Event venue'))
     event = models.ForeignKey(Event,null=True,blank=True,verbose_name=_('Event'),help_text=_('If this item is associated with an Event, enter it here.'))
 
-    # For periodic expenses (e.g. daily/weekly/monthly venue rental)
+    # For periodic expenses (e.g. daily/weekly/monthly venue rental, instructor expenses, etc.
+    expenseRule = models.ForeignKey(RepeatedExpenseRule,verbose_name=_('Expense generation rule'),null=True,blank=True)
     periodStart = models.DateTimeField(_('Expense period start'),null=True,blank=True)
     periodEnd = models.DateTimeField(_('Expense period end'),null=True,blank=True)
 
@@ -364,77 +628,3 @@ class RevenueItem(models.Model):
             ('view_finances_byevent',_('View school finances by Event')),
             ('view_finances_detail',_('View school finances as detailed statement')),
         )
-
-
-class RentalInfo(models.Model):
-    '''
-    This abstract base class defines the pieces of information
-    needed to
-    '''
-
-    class RateRuleChoices(DjangoChoices):
-        hourly = ChoiceItem('H',_('Per hour'))
-        daily = ChoiceItem('D',_('Per day of scheduled events'))
-        weekly = ChoiceItem('W',_('Per week'))
-        monthly = ChoiceItem('M',_('Per month'))
-        disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
-
-    rentalRate = models.FloatField(
-        _('Rental Rate'),null=True,blank=True,validators=[MinValueValidator(0)]
-    )
-
-    applyRateRule = models.CharField(
-        _('Apply this rate'),
-        max_length=1,
-        choices=RateRuleChoices.choices,
-        default=RateRuleChoices.hourly,
-        help_text=_('When ExpenseItems are created for rentals, the given rate will be applied for this unit of time to compute the total cost of rental.'))
-
-    weekStarts = models.PositiveSmallIntegerField(
-        _('Rental week starts on'),
-        choices=[(x,day_name[x]) for x in range(0,7)],
-        default=0,
-        validators=[MinValueValidator(0),MaxValueValidator(6)]
-    )
-
-    monthStarts = models.PositiveSmallIntegerField(
-        _('Rental month starts on'),
-        choices=[(x, ordinal(x)) for x in range(1,29)],
-        default=1,
-        validators=[MinValueValidator(1),MaxValueValidator(28)]
-    )
-
-    class Meta:
-        abstract = True
-
-
-class LocationRentalInfo(RentalInfo):
-    '''
-    This model is used to store information on rental periods and rates
-    for locations.
-    '''
-    location = models.OneToOneField(Location,related_name='rentalinfo',verbose_name=_('Location'))
-
-    def __str__(self):
-        return str(_('Rental information for %s' % self.location.name))
-
-    class Meta:
-        verbose_name = _('Location rental information')
-        verbose_name_plural = _('Locations\' rental information')
-
-
-class RoomRentalInfo(RentalInfo):
-    '''
-    This model is used to store information on rental periods and rates
-    for individual rooms.  If a rental rate does not exist for a room,
-    or if it is specified that the room rental rate not be applied,
-    then the location's rental rate and parameters are used instead.
-    '''
-    room = models.OneToOneField(Room,related_name='rentalinfo',verbose_name=_('Room'))
-
-    def __str__(self):
-        return str(_('Rental information for %s at %s' % (self.room.name, self.room.location.name)))
-
-    class Meta:
-        verbose_name = _('Room rental information')
-        verbose_name_plural = _('Rooms\' rental information')

@@ -5,17 +5,17 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
 from calendar import month_name
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Location, Room
+from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room
 from danceschool.core.utils.timezone import ensure_timezone
 
 from .constants import EXPENSE_BASES
-from .models import ExpenseItem, RevenueItem, RentalInfo
+from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule, RoomRentalInfo
 
 
 def getExpenseItemsCSV(queryset, scope='instructor'):
@@ -133,67 +133,36 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
 
     # First, construct the various filters that are needed to filter events, locations,
     # and event occurrences
-    hourly_filters = Q(venueexpense__isnull=True) & ((Q(location__rentalinfo__rentalRate__gt=0) & Q(location__rentalinfo__applyRentalRate=RentalInfo.RateRuleChoices.hourly)) | (Q(room__rentalinfo__rentalRate__gt=0) & Q(room__rentalinfo__applyRentalRate=RentalInfo.RateRuleChoices.hourly)))
-    location_filters = Q(rentalinfo__rentalRate__gt=0) & ~Q(rentalinfo__applyRentalRate__in=[RentalInfo.RateRuleChoices.disabled,RentalInfo.RateRuleChoices.hourly]) & Q(event__venueexpense__isnull=True)
+    rule_filters = Q(rentalRate__gt=0) & ~Q(applyRateRule=RepeatedExpenseRule.RateRuleChoices.disabled) & \
+        (Q(locationrentalinfo__isnull=False) | Q(roomrentalinfo__isnull=False))
+    rulesToCheck = RepeatedExpenseRule.objects.filter(rule_filters).distinct()
+
     occurrence_filters = Q()
+    location_filters = Q(rentalinfo__repeatedexpenserule__in=rulesToCheck)
 
     if datetimeTuple:
         timelist = list(datetimeTuple)
         timelist.sort()
 
-        hourly_filters = hourly_filters & Q(eventoccurrence__startTime__gte=timelist[0]) & Q(eventoccurrence__startTime__lte=timelist[1])
         location_filters = location_filters & Q(event__eventoccurrence__startTime__gte=timelist[0]) & Q(event__eventoccurrence__startTime__lte=timelist[1])
         occurrence_filters = occurrence_filters & Q(event__startTime__gte=timelist[0]) & Q(event__startTime__lte=timelist[1])
+
     else:
         c = getConstant('financial__autoGenerateExpensesVenueRentalWindow') or 0
         if c > 0:
             limit_time = timezone.now() - relativedelta(months=c)
-            hourly_filters = hourly_filters & Q(eventoccurrence__startTime__gte=limit_time)
             location_filters = location_filters & Q(event__eventoccurrence__startTime__gte=limit_time)
-            occurrence_filters = occurrence_filters & Q(event__startTime__lte=limit_time)
-
-    # Now, loop through the Events that meet the hourly_filters conditions
-    # and create hourly expense items for them
-    for event in Event.objects.filter(hourly_filters).distinct():
-        replacements = {
-            'month': month_name[event.month],
-            'year': event.year,
-            'type': _('Event/Series venue rental'),
-            'location': event.location.name,
-            'for': _('for'),
-            'name': event.name,
-        }
-        expense_description = '%(month)s %(year)s %(type)s: %(location)s %(for)s %(name)s' % replacements
-        hoursRented = event.duration
-
-        # Rental rates can be specified by Location or by Room.
-        rentalUnit = event.location
-        if (
-            event.room and
-            event.room.rentalinfo.rentalRate and not
-            event.room.rentalinfo.applyRateRule == RentalInfo.RateRuleChoices.hourly
-        ):
-            rentalUnit = event.room
-
-        rentalRate = rentalUnit.rentalRate
-        total = hoursRented * rentalRate
-        ExpenseItem.objects.create(
-            eventvenue=event,
-            category=rental_category,
-            description=expense_description,
-            submissionUser=submissionUser,
-            hours=hoursRented,
-            wageRate=rentalRate,
-            total=total
-        )
+            occurrence_filters = occurrence_filters & Q(event__startTime__gte=limit_time)
 
     # Now, for non-hourly expense creation, we need to loop through each event occurrence
     # from events in the window, determine whether an existing expense item covers the
     # periods of time used by that occurrence, and if there is not such an expense item, create one.
     # Do this for rooms first, and then for locations
-    for venue in list(Room.objects.filter(location_filters).distinct()) + list(Location.objects.filter(location_filters).distinct()):
+    for rule in rulesToCheck:
 
+        venue = getattr(rule, 'location', None) if isinstance(rule,RoomRentalInfo) else getattr(rule, 'location', None)
         loc = getattr(venue,'location') if isinstance(venue,Room) else venue
+        loc_filter = Q(event__room=venue) if isinstance(venue,Room) else Q(event__location=venue)
 
         # For construction expense descriptions
         replacements = {
@@ -203,81 +172,30 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
             'for': _('for'),
         }
 
-        for occurrence in EventOccurrence.objects.filter(Q(event__room=venue) & occurrence_filters):
-            if venue.applyRateRule == RentalInfo.RateRuleChoices.daily:
-                # Period is the date or dates of the occurrence
-                this_window_start = occurrence.startTime.replace(hour=0,minute=0,second=0,microsecond=0)
-                this_window_end = (occurrence.endTime + timedelta(days=1)).replace(hour=0,minute=0,second=0,microsecond=0)
+        if rule.applyRateRule == rule.RateRuleChoices.hourly:
+            # Hourly expenses are always generated without checking for overlapping windows, because
+            # the periods over which hourly expenses are defined are disjoint.
+            replacements['name'] = event.name
+            continue
 
-                num_days = relativedelta(this_window_end, this_window_start).days
+        for occurrence in EventOccurrence.objects.filter(loc_filter & occurrence_filters):
+            remaining_intervals = rule.getWindowsAndTotals(occurrence.startTime, occurrence.endTime)
 
-                if num_days > 1:
-                    replacements['when'] = str(_('%(start)s to %(end)s' % {'start': this_window_start.strftime('%Y-%m-%d'), 'end': (this_window_end - timedelta(minutes=1)).strftime('%Y-%m-%d')}))
-                else:
-                    replacements['when'] = this_window_start.strftime('%Y-%m-%d')
+            min_startTime = min([x[0] for x in remaining_intervals])
 
-                # total is the rate times the number of days in the window (usually 1)
-                total = venue.rentalRate * (this_window_end - this_window_start).days
-
-            elif venue.applyRateRule == RentalInfo.RateRuleChoices.weekly:
-                # Period is the week of the occurrence, starting from the start date specified for
-                # the Location.
-                if occurrence.startTime.weekday() > venue.weekStarts:
-                    start_offset = venue.weekStarts - occurrence.startTime.weekday()
-                else:
-                    start_offset = venue.weekStarts - occurrence.startTime.weekday() - 7
-
-                if occurrence.endTime.weekday() > venue.weekStarts or (occurrence.endTime.weekday() == venue.weekStarts and (occurrence.endTime.hour > 0 or occurrence.endTime.minute > 0)):
-                    end_offset = 7 + venue.weekStarts - occurrence.endTime.weekday()
-                else:
-                    end_offset = venue.weekStarts - occurrence.endTime.weekday()
-
-                this_window_start = (occurrence.startTime + timedelta(days=start_offset)).replace(hour=0, minute=0, second=0, microsecond=0)
-                this_window_end = (occurrence.endTime + timedelta(days=end_offset)).replace(hour=0, minute=0, second=0, microsecond=0)
-
-                replacements['when'] = str(_('week of %(start)s to %(end)s' % {'start': this_window_start.strftime('%Y-%m-%d'), 'end': (this_window_end - timedelta(minutes=1)).strftime('%Y-%m-%d')}))
-
-                # total is the rate times the number of weeks in the window (usually 1)
-                total = venue.rentalRate * relativedelta(this_window_end,this_window_start).weeks
-
-            elif venue.applyRateRule == RentalInfo.RateRuleChoices.monthly:
-                # Period is the month of the occurrence, starting from the start date specified for
-                # the Location.
-                startDay = venue.monthStarts
-
-                if occurrence.startTime.day >= startDay:
-                    this_window_start = occurrence.startTime.replace(day=startDay,hour=0,minute=0,second=0,microsecond=0)
-                else:
-                    this_window_start = (occurrence.startTime + relativedelta(months=-1)).replace(day=startDay,hour=0,minute=0,second=0,microsecond=0)
-                if occurrence.endTime.day > startDay or (occurrence.endTime.day == startDay and (occurrence.endTime.hour > 0 or occurrence.endTime.minute > 0)):
-                    this_window_end = (occurrence.endTime + relativedelta(months=1)).replace(day=startDay,hour=0,minute=0,second=0,microsecond=0)
-                else:
-                    this_window_end = occurrence.endTime.replace(day=startDay,hour=0,minute=0,second=0,microsecond=0)
-
-                replacements['when'] = str(_('month of %(start)s to %(end)s' % {'start': this_window_start.strftime('%Y-%m-%d'), 'end': (this_window_end - timedelta(minutes=1)).strftime('%Y-%m-%d')}))
-
-                # total is the rate times the number of months in the window (usually 1)
-                total = venue.rentalRate * relativedelta(this_window_end,this_window_start).months
-            else:
-                # Ignore unspecified rate rules
-                continue
-
-            if not ExpenseItem.objects.filter(
-                category=rental_category,
-                payToLocation=loc,
-                periodStart__lte=this_window_start,
-                periodEnd__gte=this_window_end,
-            ):
+            for interval in remaining_intervals:
+                replacements['when'] = interval[3]
                 expense_description = '%(type)s %(of)s %(location)s %(for)s %(when)s' % replacements
 
                 ExpenseItem.objects.create(
                     category=rental_category,
                     payToLocation=loc,
-                    periodStart=this_window_start,
-                    periodEnd=this_window_end,
+                    periodStart=interval[0],
+                    periodEnd=interval[1],
                     description=expense_description,
                     submissionUser=submissionUser,
-                    total=total,
+                    total=interval[2],
+                    accrualDate=min_startTime,
                 )
 
 
