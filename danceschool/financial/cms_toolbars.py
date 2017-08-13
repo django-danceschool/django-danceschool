@@ -49,7 +49,7 @@ class FinancialToolbar(CMSToolbar):
             menu.add_link_item(_('Your Payment History'), url=reverse('instructorPayments'), position=newPosition)
 
         if addBreak:
-            menu.add_break('post_submission_break', position=newPosition)
+            menu.add_break('post_submission_break', position=newPosition + 1)
 
         if self.request.user.has_perm('financial.view_finances_bymonth'):
             menu, newPosition = self.addTheMenu()

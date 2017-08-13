@@ -143,7 +143,10 @@ class ExpenseItem(models.Model):
         if not self.accrualDate:
             if self.event and self.event.month:
                 self.accrualDate = self.event.eventoccurrence_set.order_by('endTime').filter(**{'endTime__month': self.event.month}).last().endTime
+            elif self.submissionDate:
+                self.accrualDate = self.submissionDate
             else:
+                self.submissionDate = timezone.now()
                 self.accrualDate = self.submissionDate
 
         # Set the total for hourly work
@@ -297,7 +300,10 @@ class RevenueItem(models.Model):
                 self.accrualDate = self.invoiceItem.invoice.creationDate
             elif self.receivedDate:
                 self.accrualDate = self.receivedDate
+            elif self.submissionDate:
+                self.accrualDate = self.submissionDate
             else:
+                self.submissionDate = timezone.now()
                 self.accrualDate = self.submissionDate
 
         # Now, set the registration property and check that this item is not attributed
