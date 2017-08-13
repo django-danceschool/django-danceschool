@@ -19,6 +19,7 @@ class CustomerRequirementInline(admin.StackedInline):
     model = CustomerRequirement
     extra = 0
     readonly_fields = ['submissionDate','modifiedDate']
+    classes = ('collapse',)
 
 
 class RequirementAdminForm(ModelForm):

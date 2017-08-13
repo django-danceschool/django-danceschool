@@ -1447,6 +1447,39 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         return self.totalPrice - self.priceWithDiscount
     totalDiscount.fget.short_description = _('Total discounts')
 
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.temporaryeventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([x.event.startTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.temporaryeventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([x.event.endTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self,numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[x.event for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
+
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
         return [self.email,]
@@ -1648,6 +1681,39 @@ class Registration(EmailRecipientMixin, models.Model):
             return 0
         return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
     eventNetPrice.fget.short_description = _('Net price of public events')
+
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self,numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[x.event for x in self.eventregistration_set.filter(event__series__isnull=False)],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
 
     def getSeriesPriceForMonth(self,dateOfInterest):
         # get all series associated with this registration

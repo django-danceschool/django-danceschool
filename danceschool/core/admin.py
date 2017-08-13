@@ -387,11 +387,11 @@ class CustomerAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': (('first_name','last_name'),'email','phone','user','numClassSeries','numPublicEvents',)
+            'fields': (('first_name','last_name'),'email','phone','user',)
         }),
         (_('Additional Customer Data'), {
             'classes': ('collapse',),
-            'fields': ('data',),
+            'fields': (('numClassSeries','numPublicEvents',),'data',),
         }),
     )
 
