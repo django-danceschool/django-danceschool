@@ -84,10 +84,17 @@ class PricingTierGroupInline(admin.TabularInline):
     verbose_name_plural = _('pricing tier discount groups')
 
 
+class PointGroupAdmin(admin.ModelAdmin):
+    inlines = (PricingTierGroupInline,)
+
+    list_display = ('name',)
+    ordering = ('name',)
+
+
 # This adds the inlines to Registration and TemporyRegistration without subclassing
 admin.site._registry[Registration].inlines.insert(0,RegistrationDiscountInline)
 admin.site._registry[TemporaryRegistration].inlines.insert(0,TemporaryRegistrationDiscountInline)
 admin.site._registry[PricingTier].inlines.insert(0,PricingTierGroupInline)
 
 admin.site.register(DiscountCombo,DiscountComboAdmin)
-admin.site.register(PointGroup)
+admin.site.register(PointGroup,PointGroupAdmin)
