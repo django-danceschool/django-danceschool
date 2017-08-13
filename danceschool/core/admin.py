@@ -227,10 +227,12 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ['id','comments']
     ordering = ['-modifiedDate',]
     readonly_fields = ['id','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','links','submissionUser','collectedByUser']
+    view_on_site = True
 
     def viewInvoiceLink(self,obj):
-        change_url = reverse('viewInvoice', args=(obj.id,))
-        return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
+        if obj.id:
+            change_url = reverse('viewInvoice', args=(obj.id,))
+            return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
     viewInvoiceLink.allow_tags = True
     viewInvoiceLink.short_description = _('Invoice')
 
@@ -384,17 +386,17 @@ class CustomerRegistrationInline(admin.StackedInline):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('__str__','numClassSeries','numPublicEvents')
+    list_display = ('fullName','numClassSeries','numPublicEvents')
     search_fields = ('=first_name','=last_name','email')
     readonly_fields = ('data','numClassSeries','numPublicEvents')
 
     fieldsets = (
         (None, {
-            'fields': ('user','numClassSeries','numPublicEvents','phone',)
+            'fields': (('first_name','last_name'),'email','phone','user',)
         }),
         (_('Additional Customer Data'), {
             'classes': ('collapse',),
-            'fields': ('data',),
+            'fields': (('numClassSeries','numPublicEvents',),'data',),
         }),
     )
 

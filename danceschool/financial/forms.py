@@ -1,6 +1,8 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import ValidationError
+from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.forms.widgets import Select
 from django.utils.encoding import force_text
@@ -40,8 +42,10 @@ REVENUE_ASSOCIATION_CHOICES = (
 
 
 class ExpenseCategoryWidget(Select):
-    # Override render_option to permit extra data of default wage to be used by JQuery
-    # This could be optimized to reduce database calls by overriding the render function.
+    '''
+    Override render_option to permit extra data of default wage to be used by JQuery
+    This could be optimized to reduce database calls by overriding the render function.
+    '''
 
     def render_option(self, selected_choices, option_value, option_label):
         if option_value is None:
@@ -75,7 +79,8 @@ class ExpenseReportingForm(forms.ModelForm):
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
-        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete'),
+        label=_('Payment method'),
     )
 
     def __init__(self, *args, **kwargs):
@@ -100,7 +105,9 @@ class ExpenseReportingForm(forms.ModelForm):
                         'paymentMethod',
                         css_class='form-inline'
                     ),
-                    Field('accrualDate', type="hidden",value=timezone.now()),
+                    # The hidden input of accrual date must be passed as a naive datetime.
+                    # Django will take care of converting it to local time
+                    Field('accrualDate', type="hidden",value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()),
                     HTML('<p style="margin-top: 30px;"><strong>%s</strong> %s</p>' % (_('Note:'),_('For accounting purposes, please do not mark expenses as paid unless they have already been paid to the recipient.'))),
                     css_class='panel-body collapse',
                     id='collapsepayment',
@@ -109,6 +116,21 @@ class ExpenseReportingForm(forms.ModelForm):
         else:
             payment_section = None
 
+        # Add category button should only appear for users who are allowed to add categories
+        if user.has_perm('financial.add_expensecategory'):
+            related_url = reverse('admin:financial_expensecategory_add') + '?_to_field=id&_popup=1'
+            added_html = [
+                '<a href="%s" class="btn btn-default related-widget-wrapper-link add-related" id="add_id_category"> ' % related_url,
+                '<img src="%sadmin/img/icon-addlink.svg" width="10" height="10" alt="%s"/></a>' % (getattr(settings,'STATIC_URL','/static/'), _('Add Another'))
+            ]
+            category_field = Div(
+                Div('category',css_class='col-sm-11'),
+                Div(HTML('\n'.join(added_html)),css_class='col-sm-1',style='margin-top: 25px;'),
+                css_class='related-widget-wrapper row'
+            )
+        else:
+            category_field = Div('category')
+
         self.helper.layout = Layout(
             Field('submissionUser', type="hidden", value=user_id),
             Field('payToUser', type="hidden", value=user_id),
@@ -116,7 +138,7 @@ class ExpenseReportingForm(forms.ModelForm):
             'payBy',
             'payToLocation',
             'payToName',
-            'category',
+            category_field,
             'description',
             'hours',
             'total',
@@ -165,10 +187,12 @@ class ExpenseReportingForm(forms.ModelForm):
     class Meta:
         model = ExpenseItem
         fields = ['submissionUser','payToUser','payToLocation','payToName','category','description','hours','total','reimbursement','attachment','approved','paid','paymentDate','paymentMethod','accrualDate']
-        widgets = {'category': ExpenseCategoryWidget,}
+        widgets = {
+            'category': ExpenseCategoryWidget,
+        }
 
     class Media:
-        js = ('js/expense_reporting.js','jquery-ui/jquery-ui.min.js',)
+        js = ('admin/js/admin/RelatedObjectLookups.js','jquery-ui/jquery-ui.min.js','js/expense_reporting.js')
         css = {
             'all': ('jquery-ui/jquery-ui.min.css',),
         }
@@ -215,7 +239,8 @@ class RevenueReportingForm(forms.ModelForm):
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
-        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete'),
+        label=_('Payment method'),
     )
 
     def __init__(self, *args, **kwargs):

@@ -49,7 +49,7 @@ class FinancialToolbar(CMSToolbar):
             menu.add_link_item(_('Your Payment History'), url=reverse('instructorPayments'), position=newPosition)
 
         if addBreak:
-            menu.add_break('post_submission_break', position=newPosition)
+            menu.add_break('post_submission_break', position=newPosition + 1)
 
         if self.request.user.has_perm('financial.view_finances_bymonth'):
             menu, newPosition = self.addTheMenu()
@@ -82,7 +82,7 @@ class FinancialToolbar(CMSToolbar):
             self.request.user.has_perm('financial.change_expenseitem') or self.request.user.has_perm('financial.change_revenueitem') or
             self.request.user.has_perm('financial.change_expensecategory') or self.request.user.has_perm('financial.change_revenuecategory')
         ):
-            related_menu = menu.get_or_create_menu('financial-related',_('Related Items'), position=newPosition)
+            related_menu = menu.get_or_create_menu('financial-related',_('Related Items'), position=newPosition + 2)
 
             if self.request.user.has_perm('financial.change_expensecategory'):
                 related_menu.add_link_item(_('Expense Categories'), url=reverse('admin:financial_expensecategory_changelist'))

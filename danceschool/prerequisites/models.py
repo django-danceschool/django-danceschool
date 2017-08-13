@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from djchoices import DjangoChoices, ChoiceItem
@@ -74,21 +75,42 @@ class Requirement(models.Model):
             if self.roleEnforced:
                 filter_dict['role'] = danceRole
 
-            priors_matches = cust_priors.filter(**filter_dict).count()
             current_matches = 0
-            if registration and item.concurrentRule != item.ConcurrencyRule.prohibited:
+            overlap_matches = 0
+            nonconcurrent_filter = {'event__endTime__lte': timezone.now()}
+
+            if registration:
+
                 if isinstance(registration,Registration):
                     current_matches = registration.eventregistration_set.filter(**filter_dict).count()
                 elif isinstance(registration,TemporaryRegistration):
                     current_matches = registration.temporaryeventregistration_set.filter(**filter_dict).count()
 
+                nonconcurrent_filter = {'event__endTime__lte': registration.firstSeriesStartTime}
+                overlap_matches = cust_priors.filter(**filter_dict).exclude(**nonconcurrent_filter).filter(
+                    event__startTime__lte=registration.lastSeriesEndTime,
+                ).count()
+
+            priors_matches = cust_priors.filter(**filter_dict).filter(**nonconcurrent_filter).count()
+
             # The number of matches depends on the concurrency rule for this item
             if item.concurrentRule == item.ConcurrencyRule.prohibited:
                 matches = priors_matches
+            elif item.concurrentRule == item.ConcurrencyRule.allowOneOverlapClass:
+                matches = priors_matches + \
+                    cust_priors.filter(**filter_dict).exclude(**nonconcurrent_filter).filter(
+                        event__startTime__lte=registration.getTimeOfClassesRemaining(1)
+                    ).count()
+            elif item.concurrentRule == item.ConcurrencyRule.allowTwoOverlapClasses:
+                matches = priors_matches + \
+                    cust_priors.filter(**filter_dict).exclude(**nonconcurrent_filter).filter(
+                        event__startTime__lte=registration.getTimeOfClassesRemaining(2)
+                    ).count()
             elif item.concurrentRule == item.ConcurrencyRule.allowed:
-                matches = priors_matches + current_matches
+                matches = priors_matches + overlap_matches + \
+                    (current_matches if isinstance(registration,TemporaryRegistration) else 0)
             elif item.concurrentRule == item.ConcurrencyRule.required:
-                matches = current_matches
+                matches = overlap_matches + current_matches
 
             if matches >= item.quantity:
                 # If this is an 'or' or a 'not' requirement, then we are done
@@ -130,6 +152,8 @@ class RequirementItem(models.Model):
 
     class ConcurrencyRule(DjangoChoices):
         prohibited = ChoiceItem('P',_('Must have previously taken'))
+        allowOneOverlapClass = ChoiceItem('1',_('May register/begin with one class remaining'))
+        allowTwoOverlapClasses = ChoiceItem('1',_('May register/begin with two classes remaining'))
         allowed = ChoiceItem('A',_('Concurrent registration allowed'))
         required = ChoiceItem('R',_('Concurrent registration required'))
 

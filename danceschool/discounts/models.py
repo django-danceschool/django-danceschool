@@ -37,6 +37,9 @@ class PricingTierGroup(models.Model):
     pricingTier = models.OneToOneField(PricingTier,verbose_name=_('Pricing tier'))
     points = models.PositiveIntegerField(_('# of Points'),default=0)
 
+    def __str__(self):
+        return str(_('%s points for pricing tier %s' % (self.group.name, self.pricingTier.name)))
+
     class Meta:
         ''' Only one pricingtiergroup per pricingtier and group combo '''
         unique_together = (('pricingTier','group'),)

@@ -44,6 +44,9 @@ urlpatterns = [
 if apps.is_installed('danceschool.financial'):
     urlpatterns.append(url(r'^financial/', include('danceschool.financial.urls')),)
 
+if apps.is_installed('danceschool.prerequisites'):
+    urlpatterns.append(url(r'^prerequisites/', include('danceschool.prerequisites.urls')),)
+
 if apps.is_installed('danceschool.private_events'):
     urlpatterns.append(url(r'^private_events/', include('danceschool.private_events.urls')),)
 

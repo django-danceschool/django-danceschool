@@ -1345,12 +1345,12 @@ class Customer(models.Model):
     @property
     def numClassSeries(self):
         return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).count()
-    numEventRegistrations.fget.short_description = _('# Series registered')
+    numClassSeries.fget.short_description = _('# Series registered')
 
     @property
     def numPublicEvents(self):
         return EventRegistration.objects.filter(registration__customer=self,event__publicevent__isnull=False).count()
-    numEventRegistrations.fget.short_description = _('# Public events registered')
+    numPublicEvents.fget.short_description = _('# Public events registered')
 
     @property
     def firstSeries(self):
@@ -1476,6 +1476,39 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     def totalDiscount(self):
         return self.totalPrice - self.priceWithDiscount
     totalDiscount.fget.short_description = _('Total discounts')
+
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.temporaryeventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([x.event.startTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.temporaryeventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([x.event.endTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self,numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[x.event for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -1678,6 +1711,39 @@ class Registration(EmailRecipientMixin, models.Model):
             return 0
         return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
     eventNetPrice.fget.short_description = _('Net price of public events')
+
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self,numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[x.event for x in self.eventregistration_set.filter(event__series__isnull=False)],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
 
     def getSeriesPriceForMonth(self,dateOfInterest):
         # get all series associated with this registration
@@ -2076,11 +2142,6 @@ class Invoice(EmailRecipientMixin, models.Model):
         return new_invoice
 
     @property
-    def url(self):
-        return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
-    url.fget.short_description = _('Invoice URL')
-
-    @property
     def unpaid(self):
         return (self.status != self.PaymentStatus.paid)
     unpaid.fget.short_description = _('Unpaid')
@@ -2130,6 +2191,18 @@ class Invoice(EmailRecipientMixin, models.Model):
     def statusLabel(self):
         return self.PaymentStatus.values.get(self.status,'')
     statusLabel.fget.short_description = _('Status')
+
+    @property
+    def url(self):
+        if self.id:
+            return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
+    url.fget.short_description = _('Invoice URL')
+
+    def get_absolute_url(self):
+        '''
+        For adding 'View on Site' links to the admin
+        '''
+        return reverse('viewInvoice', args=[self.id,])
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
