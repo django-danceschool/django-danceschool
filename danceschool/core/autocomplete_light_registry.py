@@ -21,8 +21,6 @@ class UserAutoComplete(autocomplete.Select2QuerySetView):
             lastName = words.pop()
             firstName = words.pop() if words else lastName
 
-            print('Name is: %s %s' % (firstName, lastName))
-
             qs = qs.filter(
                 Q(first_name__istartswith=firstName) | Q(last_name__istartswith=lastName) |
                 Q(email__istartswith=self.q)
@@ -47,8 +45,6 @@ class CustomerAutoComplete(autocomplete.Select2QuerySetView):
             words = self.q.split(' ')
             lastName = words.pop()
             firstName = words.pop() if words else lastName
-
-            print('Name is: %s %s' % (firstName, lastName))
 
             qs = qs.filter(
                 Q(first_name__istartswith=firstName) | Q(last_name__istartswith=lastName) |

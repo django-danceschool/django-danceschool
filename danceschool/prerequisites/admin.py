@@ -1,8 +1,7 @@
 from django.contrib import admin
-from django.core.urlresolvers import reverse
 from django.forms import ModelForm, ModelChoiceField
 from django.utils.translation import ugettext_lazy as _
-from django.utils.html import format_html_join, format_html
+from django.utils.html import format_html
 
 from dal import autocomplete
 
@@ -25,7 +24,6 @@ class CustomerRequirementInline(admin.StackedInline):
 class RequirementAdminForm(ModelForm):
     customerCheck = ModelChoiceField(
         label=_('Search for customer'),
-        help_text=_('Note that this function does not yet work for requirements for which roles are enforced.'),
         queryset=Customer.objects.all(),
         required=False,
         widget=autocomplete.ModelSelect2(
@@ -81,14 +79,16 @@ class RequirementAdmin(admin.ModelAdmin):
         contained in the overridden change_form.html for this model.
         '''
         return format_html(
-            '<div id="customerrequirement_ajax_div" data-requirementId="{}"></div>' + \
-            '<div id="customerrequirement_buttons_div">' + \
-            '<button class="btn customerrequirement_change" data-met="true">{}</button><button class="btn customerrequirement_change" data-met="false">{}</button></div>',
+            '<p><div id="customerrequirement_ajax_div" data-requirementId="{}"></div></p>' +
+            '<p><div id="customerrequirement_buttons_div">' +
+            '<button class="btn customerrequirement_change" data-met="true">{}</button>' +
+            '<button class="btn customerrequirement_change" data-met="false">{}</button></div></p>',
             obj.id,
             _('Requirement is met'),
             _('Requirement is not met'),
         )
     customerAjaxDiv.allow_tags = True
     customerAjaxDiv.short_description = _('Requirement status')
+
 
 admin.site._registry[Customer].inlines.insert(0,CustomerRequirementInline)

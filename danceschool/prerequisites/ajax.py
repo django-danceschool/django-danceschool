@@ -17,7 +17,10 @@ class CustomerRequirementAjaxView(PermissionRequiredMixin, View):
         customerId = request.POST.get('customerId')
         requirementId = request.POST.get('requirementId')
         roleId = request.POST.get('roleId')
+        roleEnforced = str(request.POST.get('roleEnforced',''))
         setMet = str(request.POST.get('setMet',''))
+
+        roleEnforced = True if roleEnforced.lower() == 'true' else False
 
         if setMet.lower() == 'true':
             setMet = True
@@ -54,10 +57,19 @@ class CustomerRequirementAjaxView(PermissionRequiredMixin, View):
                 'customerRequirementCreated': created,
             })
         else:
-            # This is the check status case.
-            meets = req.customerMeetsRequirement(customer,danceRole=role)
-            response.update({
-                'customerStatus': meets,
-            })
+            if not (roleEnforced and not role):
+                # This is the check status case.
+                meets = req.customerMeetsRequirement(customer,danceRole=role)
+                response.update({
+                    'customerStatus': meets,
+                })
+            else:
+                # We have to check all roles individually
+                roles = DanceRole.objects.all()
+                response['customerStatus'] = {}
+
+                for role in roles:
+                    meets = req.customerMeetsRequirement(customer,danceRole=role)
+                    response['customerStatus'][role.name] = meets
 
         return JsonResponse(response)
