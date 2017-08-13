@@ -119,7 +119,7 @@ class Voucher(models.Model):
         return amount
 
     amountLeft = property(fget=getAmountLeft)
-    isValidForAnyClass.fget.short_description = _('Amount remaining')
+    amountLeft.fget.short_description = _('Amount remaining')
 
     def validateForCustomerAndSeriess(self,customer,seriess):
         # check whether it's expired

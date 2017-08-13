@@ -26,9 +26,10 @@ class DiscountComboAdmin(admin.ModelAdmin):
     inlines = [DiscountComboComponentInline,]
     form = DiscountComboAdminForm
 
-    list_display = ('name','discountType','newCustomersOnly','active')
-    list_filter = ('discountType','newCustomersOnly','active')
+    list_display = ('name','discountType','active','expirationDate','restrictions')
+    list_filter = ('discountType','active','newCustomersOnly','expirationDate')
     ordering = ('name',)
+    actions = ['enableDiscount','disableDiscount']
 
     fieldsets = (
         (None, {
@@ -47,6 +48,33 @@ class DiscountComboAdmin(admin.ModelAdmin):
             'fields': ('percentDiscount','percentUniversallyApplied'),
         }),
     )
+
+    def restrictions(self,obj):
+        text = []
+        if obj.newCustomersOnly:
+            text.append(_('First-time customer'))
+        if obj.daysInAdvanceRequired:
+            text.append(_('%s day advance registration' % obj.daysInAdvanceRequired))
+        return ', '.join(text)
+    restrictions.short_description = _('Restrictions')
+
+    def disableDiscount(self, request, queryset):
+        rows_updated = queryset.update(active=False)
+        if rows_updated == 1:
+            message_bit = "1 discount was"
+        else:
+            message_bit = "%s discounts were" % rows_updated
+        self.message_user(request, "%s successfully disabled." % message_bit)
+    disableDiscount.short_description = _('Disable selected Discounts')
+
+    def enableDiscount(self, request, queryset):
+        rows_updated = queryset.update(active=True)
+        if rows_updated == 1:
+            message_bit = "1 discount was"
+        else:
+            message_bit = "%s discounts were" % rows_updated
+        self.message_user(request, "%s successfully enabled." % message_bit)
+    enableDiscount.short_description = _('Enable selected Discounts')
 
 
 class RegistrationDiscountInline(admin.TabularInline):

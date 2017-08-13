@@ -116,10 +116,11 @@ class VoucherCreditInline(admin.TabularInline):
 
 class VoucherAdmin(admin.ModelAdmin):
     inlines = [DanceTypeVoucherInline,ClassVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
-    list_display = ['voucherId','name','category','description','originalAmount','expirationDate','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
-    list_filter = ['category','expirationDate','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
+    list_display = ['voucherId','name','category','amountLeft','maxAmountPerUse','expirationDate','isEnabled','restrictions']
+    list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
     search_fields = ['voucherId','name','type',]
     readonly_fields = ['refundAmount','creationDate']
+    actions = ['enableVoucher','disableVoucher']
 
     fieldsets = (
         (None, {
@@ -133,6 +134,46 @@ class VoucherAdmin(admin.ModelAdmin):
             'fields': ('creationDate','refundAmount'),
         }),
     )
+
+    def isEnabled(self,obj):
+        return obj.disabled is False
+    isEnabled.short_description = _('Enabled')
+    isEnabled.boolean = True
+
+    def restrictions(self,obj):
+        text = []
+        if obj.singleUse:
+            text.append(_('Single use'))
+        if obj.forFirstTimeCustomersOnly:
+            text.append(_('First-time customer'))
+        if obj.forPreviousCustomersOnly:
+            text.append(_('Previous customer'))
+        if obj.customervoucher_set.all().exists():
+            text.append(_('Specific customer'))
+        if obj.classvoucher_set.all().exists():
+            text.append(_('Specific class'))
+        if obj.dancetypevoucher_set.all().exists():
+            text.append(_('Specific dance type/level'))
+        return ', '.join(text)
+    restrictions.short_description = _('Restrictions')
+
+    def disableVoucher(self, request, queryset):
+        rows_updated = queryset.update(disabled=True)
+        if rows_updated == 1:
+            message_bit = "1 voucher was"
+        else:
+            message_bit = "%s vouchers were" % rows_updated
+        self.message_user(request, "%s successfully disabled." % message_bit)
+    disableVoucher.short_description = _('Disable selected Vouchers')
+
+    def enableVoucher(self, request, queryset):
+        rows_updated = queryset.update(disabled=False)
+        if rows_updated == 1:
+            message_bit = "1 voucher was"
+        else:
+            message_bit = "%s vouchers were" % rows_updated
+        self.message_user(request, "%s successfully enabled." % message_bit)
+    enableVoucher.short_description = _('Enable selected Vouchers')
 
 
 # This adds inlines to Registration and TemporaryRegistration without subclassing
