@@ -54,6 +54,7 @@ class ExpenseItemAdmin(admin.ModelAdmin):
     search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name')
     list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter))
     readonly_fields = ('submissionUser',)
+    actions = ('approveExpense','unapproveExpense')
 
     fieldsets = (
         (_('Basic Info'), {
@@ -67,6 +68,24 @@ class ExpenseItemAdmin(admin.ModelAdmin):
             'fields': ('approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','eventstaffmember','event','payToUser','payToLocation','payToName')
         }),
     )
+
+    def approveExpense(self, request, queryset):
+        rows_updated = queryset.update(approved=True)
+        if rows_updated == 1:
+            message_bit = "1 expense item was"
+        else:
+            message_bit = "%s expense items were" % rows_updated
+        self.message_user(request, "%s successfully marked as approved." % message_bit)
+    approveExpense.short_description = _('Mark Expense Items as approved')
+
+    def unapproveExpense(self, request, queryset):
+        rows_updated = queryset.update(approved=False)
+        if rows_updated == 1:
+            message_bit = "1 expense item was"
+        else:
+            message_bit = "%s expense items were" % rows_updated
+        self.message_user(request, "%s successfully marked as not approved." % message_bit)
+    unapproveExpense.short_description = _('Mark Expense Items as not approved')
 
     class Media:
         js = ('js/update_task_wages.js',)
@@ -100,7 +119,6 @@ class RevenueItemAdminForm(ModelForm):
         widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
     )
 
-
     class Meta:
         model = RevenueItem
         exclude = []
@@ -114,6 +132,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
     search_fields = ('description','comments','invoiceItem__id','invoiceItem__invoice__id')
     list_filter = ('category','received','paymentMethod',('receivedDate',DateRangeFilter),('accrualDate',DateRangeFilter),('submissionDate',DateRangeFilter))
     readonly_fields = ('netRevenue','submissionUserLink','relatedRevItemsLink','eventLink','paymentMethod','invoiceNumber','invoiceLink')
+    actions = ('markReceived','markNotReceived')
 
     fieldsets = (
         (_('Basic Info'), {
@@ -163,7 +182,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
     def invoiceLink(self,obj):
         ''' If vouchers app is enabled and there is a voucher, this will link to it. '''
         if hasattr(obj,'invoiceItem') and obj.invoiceItem:
-            return self.get_admin_change_link('core','invoice',obj.invoiceItem.invoice.id,obj.invoiceItem.invoice.id)
+            return self.get_admin_change_link('core','invoice',obj.invoiceItem.invoice.id,_('Invoice'))
     invoiceLink.allow_tags = True
     invoiceLink.short_description = _('Invoice')
 
@@ -178,6 +197,24 @@ class RevenueItemAdmin(admin.ModelAdmin):
         return ', '.join(link)
     submissionUserLink.allow_tags = True
     submissionUserLink.short_description = _('Submitted')
+
+    def markReceived(self, request, queryset):
+        rows_updated = queryset.update(received=True)
+        if rows_updated == 1:
+            message_bit = "1 revenue item was"
+        else:
+            message_bit = "%s revenue items were" % rows_updated
+        self.message_user(request, "%s successfully marked as received." % message_bit)
+    markReceived.short_description = _('Mark Revenue Items as received')
+
+    def markNotReceived(self, request, queryset):
+        rows_updated = queryset.update(received=False)
+        if rows_updated == 1:
+            message_bit = "1 revenue item was"
+        else:
+            message_bit = "%s revenue items were" % rows_updated
+        self.message_user(request, "%s successfully marked as not received." % message_bit)
+    markNotReceived.short_description = _('Mark Revenue Items as not received')
 
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
