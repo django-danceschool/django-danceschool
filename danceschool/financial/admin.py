@@ -32,7 +32,7 @@ class ExpenseItemAdminForm(ModelForm):
             }
         )
     )
-    paymentMethod = autocomplete.Select2ListChoiceField(
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
         widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
@@ -87,12 +87,16 @@ class ExpenseItemAdmin(admin.ModelAdmin):
         self.message_user(request, "%s successfully marked as not approved." % message_bit)
     unapproveExpense.short_description = _('Mark Expense Items as not approved')
 
-    class Media:
-        js = ('js/update_task_wages.js',)
+    def get_changelist_form(self, request, **kwargs):
+        ''' Ensures that the autocomplete view works for payment methods. '''
+        return ExpenseItemAdminForm
 
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
         obj.save()
+
+    class Media:
+        js = ('js/update_task_wages.js',)
 
 
 class RevenueItemAdminForm(ModelForm):
