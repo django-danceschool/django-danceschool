@@ -9,7 +9,9 @@ from django.utils.translation import ugettext_lazy as _
 from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
+from danceschool.core.models import Location, Room
+
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, LocationRentalInfo, RoomRentalInfo
 from .forms import ExpenseCategoryWidget
 from .autocomplete_light_registry import get_method_list
 
@@ -32,7 +34,7 @@ class ExpenseItemAdminForm(ModelForm):
             }
         )
     )
-    paymentMethod = autocomplete.Select2ListChoiceField(
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
         widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
@@ -51,9 +53,10 @@ class ExpenseItemAdmin(admin.ModelAdmin):
 
     list_display = ('category','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
-    search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name')
+    search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
     list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter))
     readonly_fields = ('submissionUser',)
+    actions = ('approveExpense','unapproveExpense')
 
     fieldsets = (
         (_('Basic Info'), {
@@ -64,16 +67,38 @@ class ExpenseItemAdmin(admin.ModelAdmin):
         }),
         (_('Approval/Payment Status'), {
             'classes': ('collapse',),
-            'fields': ('approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','eventstaffmember','event','payToUser','payToLocation','payToName')
+            'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','eventstaffmember','event','payToUser','payToLocation','payToName')
         }),
     )
 
-    class Media:
-        js = ('js/update_task_wages.js',)
+    def approveExpense(self, request, queryset):
+        rows_updated = queryset.update(approved=True)
+        if rows_updated == 1:
+            message_bit = "1 expense item was"
+        else:
+            message_bit = "%s expense items were" % rows_updated
+        self.message_user(request, "%s successfully marked as approved." % message_bit)
+    approveExpense.short_description = _('Mark Expense Items as approved')
+
+    def unapproveExpense(self, request, queryset):
+        rows_updated = queryset.update(approved=False)
+        if rows_updated == 1:
+            message_bit = "1 expense item was"
+        else:
+            message_bit = "%s expense items were" % rows_updated
+        self.message_user(request, "%s successfully marked as not approved." % message_bit)
+    unapproveExpense.short_description = _('Mark Expense Items as not approved')
+
+    def get_changelist_form(self, request, **kwargs):
+        ''' Ensures that the autocomplete view works for payment methods. '''
+        return ExpenseItemAdminForm
 
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
         obj.save()
+
+    class Media:
+        js = ('js/update_task_wages.js',)
 
 
 class RevenueItemAdminForm(ModelForm):
@@ -100,7 +125,6 @@ class RevenueItemAdminForm(ModelForm):
         widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
     )
 
-
     class Meta:
         model = RevenueItem
         exclude = []
@@ -114,6 +138,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
     search_fields = ('description','comments','invoiceItem__id','invoiceItem__invoice__id')
     list_filter = ('category','received','paymentMethod',('receivedDate',DateRangeFilter),('accrualDate',DateRangeFilter),('submissionDate',DateRangeFilter))
     readonly_fields = ('netRevenue','submissionUserLink','relatedRevItemsLink','eventLink','paymentMethod','invoiceNumber','invoiceLink')
+    actions = ('markReceived','markNotReceived')
 
     fieldsets = (
         (_('Basic Info'), {
@@ -163,7 +188,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
     def invoiceLink(self,obj):
         ''' If vouchers app is enabled and there is a voucher, this will link to it. '''
         if hasattr(obj,'invoiceItem') and obj.invoiceItem:
-            return self.get_admin_change_link('core','invoice',obj.invoiceItem.invoice.id,obj.invoiceItem.invoice.id)
+            return self.get_admin_change_link('core','invoice',obj.invoiceItem.invoice.id,_('Invoice'))
     invoiceLink.allow_tags = True
     invoiceLink.short_description = _('Invoice')
 
@@ -179,12 +204,58 @@ class RevenueItemAdmin(admin.ModelAdmin):
     submissionUserLink.allow_tags = True
     submissionUserLink.short_description = _('Submitted')
 
+    def markReceived(self, request, queryset):
+        rows_updated = queryset.update(received=True)
+        if rows_updated == 1:
+            message_bit = "1 revenue item was"
+        else:
+            message_bit = "%s revenue items were" % rows_updated
+        self.message_user(request, "%s successfully marked as received." % message_bit)
+    markReceived.short_description = _('Mark Revenue Items as received')
+
+    def markNotReceived(self, request, queryset):
+        rows_updated = queryset.update(received=False)
+        if rows_updated == 1:
+            message_bit = "1 revenue item was"
+        else:
+            message_bit = "%s revenue items were" % rows_updated
+        self.message_user(request, "%s successfully marked as not received." % message_bit)
+    markNotReceived.short_description = _('Mark Revenue Items as not received')
+
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
         obj.save()
+
+
+class LocationRentalInfoInline(admin.TabularInline):
+    model = LocationRentalInfo
+    extra = 1
+    exclude = []
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class RoomRentalInfoInline(admin.TabularInline):
+    model = RoomRentalInfo
+    extra = 1
+    exclude = []
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 admin.site.register(ExpenseItem,ExpenseItemAdmin)
 admin.site.register(ExpenseCategory)
 admin.site.register(RevenueItem,RevenueItemAdmin)
 admin.site.register(RevenueCategory)
+
+# This adds inlines to Location and Room without subclassing
+admin.site._registry[Location].inlines.insert(0,LocationRentalInfoInline)
+admin.site._registry[Room].inlines.insert(0,RoomRentalInfoInline)

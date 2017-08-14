@@ -4,7 +4,6 @@ but can be changed dynamically.
 '''
 
 from django.utils.translation import ugettext_lazy as _
-from django.db import connection
 from django.template.loader import get_template
 
 from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, FloatPreference, ModelChoicePreference, Section
@@ -264,6 +263,15 @@ class RegistrationClosesAfterDays(IntegerPreference):
     verbose_name = _('Close Registration Days After Beginning')
     help_text = _('By default, online registration closes automatically this many days from the beginning of an Event or Series (e.g. Enter 2 to close two days after beginning, or enter -3 to close three days before beginning).  This value can be overridden for individual Events.')
     default = 7
+
+
+@global_preferences_registry.register
+class RegistrationDisplayLimitDays(IntegerPreference):
+    section = registration
+    name = 'displayLimitDays'
+    verbose_name = _('Do Not Show Registration for Events that Begin More Than __ Days in the Future')
+    help_text = _('By default, events are shown on the registration page as soon as they are created.  If you list events far into the future, set this value, and events that begin more than this many days in the future will not be shown in the registration page.  Enter 0 for no restriction.')
+    default = 0
 
 
 @global_preferences_registry.register

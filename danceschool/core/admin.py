@@ -3,14 +3,32 @@ from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
+from django.template.response import SimpleTemplateResponse
+from django.contrib.contenttypes.models import ContentType
+from django.http import HttpResponseRedirect
 
 from calendar import month_name
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
+import json
+import six
 
-from .models import Event, PublicEventCategory, Series, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
+from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
 from .forms import LocationWithDataWidget
+
+
+######################################
+# Admin action for repeating events
+
+
+def repeat_events(modeladmin, request, queryset):
+    selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+    ct = ContentType.objects.get_for_model(queryset.model)
+    return HttpResponseRedirect(reverse('repeatEvents') + "?ct=%s&ids=%s" % (ct.pk, ",".join(selected)))
+
+
+repeat_events.short_description = _('Duplicate selected events')
 
 
 ######################################
@@ -209,10 +227,12 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ['id','comments']
     ordering = ['-modifiedDate',]
     readonly_fields = ['id','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','links','submissionUser','collectedByUser']
+    view_on_site = True
 
     def viewInvoiceLink(self,obj):
-        change_url = reverse('viewInvoice', args=(obj.id,))
-        return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
+        if obj.id:
+            change_url = reverse('viewInvoice', args=(obj.id,))
+            return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
     viewInvoiceLink.allow_tags = True
     viewInvoiceLink.short_description = _('Invoice')
 
@@ -366,17 +386,17 @@ class CustomerRegistrationInline(admin.StackedInline):
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-    list_display = ('__str__','numClassSeries','numPublicEvents')
+    list_display = ('fullName','numClassSeries','numPublicEvents')
     search_fields = ('=first_name','=last_name','email')
     readonly_fields = ('data','numClassSeries','numPublicEvents')
 
     fieldsets = (
         (None, {
-            'fields': ('user','numClassSeries','numPublicEvents','phone',)
+            'fields': (('first_name','last_name'),'email','phone','user',)
         }),
         (_('Additional Customer Data'), {
             'classes': ('collapse',),
-            'fields': ('data',),
+            'fields': (('numClassSeries','numPublicEvents',),'data',),
         }),
     )
 
@@ -385,8 +405,22 @@ class CustomerAdmin(admin.ModelAdmin):
 
 class RoomInline(admin.StackedInline):
     model = Room
-    extra = 1
-    fields = (('name', 'defaultCapacity', 'rentalRate'),'description')
+    extra = 0
+    fields = (('name', 'defaultCapacity'),'description')
+
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    inlines = []
+
+    list_display = ('name','location','defaultCapacity')
+    list_display_links = ('name',)
+    list_editable = ('defaultCapacity',)
+    list_filter = ('location',)
+
+    ordering = ('location__name','name')
+
+    fields = ('location','name','defaultCapacity','description')
 
 
 @admin.register(Location)
@@ -399,6 +433,71 @@ class LocationAdmin(admin.ModelAdmin):
     list_filter = ('status','city')
 
     ordering = ('status','orderNum')
+
+    def response_add(self, request, obj, post_url_continue=None):
+        '''
+        This just modifies the normal ModelAdmin process in order to
+        pass capacity and room options for the added Location along with
+        the location's name and ID.
+        '''
+
+        IS_POPUP_VAR = '_popup'
+        TO_FIELD_VAR = '_to_field'
+
+        if IS_POPUP_VAR in request.POST:
+            to_field = request.POST.get(TO_FIELD_VAR)
+            if to_field:
+                attr = str(to_field)
+            else:
+                attr = obj._meta.pk.attname
+            value = obj.serializable_value(attr)
+            popup_response_data = json.dumps({
+                'value': six.text_type(value),
+                'obj': six.text_type(obj),
+                # Add this extra data
+                'defaultCapacity': obj.defaultCapacity,
+                'roomOptions': json.dumps([{'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity} for x in obj.room_set.all()]),
+            })
+
+            # Return a modified template
+            return SimpleTemplateResponse('core/admin/location_popup_response.html', {
+                'popup_response_data': popup_response_data,
+            })
+
+        # Otherwise just use the standard ModelAdmin method
+        return super(LocationAdmin,self).response_add(request, obj, post_url_continue)
+
+    def response_change(self, request, obj):
+        '''
+        This just modifies the normal ModelAdmin process in order to
+        pass capacity and room options for the modified Location along with
+        the location's name and ID.
+        '''
+
+        IS_POPUP_VAR = '_popup'
+        TO_FIELD_VAR = '_to_field'
+
+        if IS_POPUP_VAR in request.POST:
+            to_field = request.POST.get(TO_FIELD_VAR)
+            attr = str(to_field) if to_field else obj._meta.pk.attname
+            # Retrieve the `object_id` from the resolved pattern arguments.
+            value = request.resolver_match.args[0]
+            new_value = obj.serializable_value(attr)
+            popup_response_data = json.dumps({
+                'action': 'change',
+                'value': six.text_type(value),
+                'obj': six.text_type(obj),
+                'new_value': six.text_type(new_value),
+                # Add this extra data
+                'defaultCapacity': obj.defaultCapacity,
+                'roomOptions': json.dumps([{'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity} for x in obj.room_set.all()]),
+            })
+
+            # Return a modified template
+            return SimpleTemplateResponse('core/admin/location_popup_response.html', {
+                'popup_response_data': popup_response_data,
+            })
+        return super(LocationAdmin,self).response_change(request, obj)
 
 
 @admin.register(PricingTier)
@@ -509,6 +608,8 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
 
     readonly_fields = ['uuidLink',]
 
+    actions = [repeat_events,]
+
     def uuidLink(self,obj):
         address = reverse('singleClassRegistration', args=[obj.uuid,])
         return mark_safe('<a href="%s">%s</a>' % (address, address))
@@ -541,6 +642,10 @@ class SeriesAdminForm(ModelForm):
         # Locations are required for Series even though they are not for all events.
         self.fields['location'].required = True
 
+        # Allow adding additional rooms from a popup on Location, but not a popup on Room
+        self.fields['room'].widget.can_add_related = False
+        self.fields['room'].widget.can_change_related = False
+
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out former locations for new records
@@ -565,7 +670,7 @@ class SeriesAdminForm(ModelForm):
         }
 
     class Media:
-        js = ('js/serieslocation_capacity_change.js',)
+        js = ('js/serieslocation_capacity_change.js','js/location_related_objects_lookup.js')
 
 
 @admin.register(Series)
@@ -575,8 +680,9 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
-    list_display = ('name','series_month','location','class_time','pricingTier','special','customers')
-    list_filter = ('location','special','pricingTier')
+    list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','customers')
+    list_editable = ('status','category')
+    list_filter = ('location','status','registrationOpen','category','pricingTier')
 
     def customers(self,obj):
         return obj.numRegistered
@@ -590,7 +696,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription',('location','room'),'pricingTier',('special','allowDropins'),('uuidLink',)),
+            'fields': ('classDescription',('location','room'),'pricingTier',('category','allowDropins'),('uuidLink',)),
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse',),
@@ -616,10 +722,17 @@ class PublicEventAdminForm(ModelForm):
 
         self.fields['status'].initial = Event.RegStatus.disabled
 
+        # Allow adding additional rooms from a popup on Location, but not a popup on Room
+        self.fields['room'].widget.can_add_related = False
+        self.fields['room'].widget.can_change_related = False
+
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out former locations
             self.fields['location'].queryset = Location.objects.exclude(status=Location.StatusChoices.former)
+
+            # Filter out Pricing Tiers that are expired (i.e. no longer in use)
+            self.fields['pricingTier'].queryset = PricingTier.objects.filter(expired=False)
 
             # Set initial values for capacity here because they will automatically update if the
             # constant is changed
@@ -632,6 +745,9 @@ class PublicEventAdminForm(ModelForm):
             'submissionUser': HiddenInput(),
         }
 
+    class Media:
+        js = ('js/location_related_objects_lookup.js',)
+
 
 @admin.register(PublicEvent)
 class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
@@ -639,8 +755,9 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     form = PublicEventAdminForm
     show_in_index = True
 
-    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','pricingTier','registrationOpen','numRegistered')
-    list_filter = ('location','registrationOpen','pricingTier')
+    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','status','registrationOpen','pricingTier','category','numRegistered')
+    list_filter = ('location','status','registrationOpen','pricingTier','category')
+    list_editable = ('status','category')
     search_fields = ('name',)
     ordering = ('-endTime',)
     prepopulated_fields = {'slug': ('title',)}
@@ -677,13 +794,27 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
 
     base_model = Event
     child_models = (Series,PublicEvent)
-    list_filter = (PolymorphicChildModelFilter,'status','location')
+    list_filter = (PolymorphicChildModelFilter,'status','registrationOpen','location')
+    list_editable = ('status',)
     polymorphic_list = True
+
+    actions = [repeat_events,]
+
+
+@admin.register(PublicEventCategory)
+class PublicEventCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'separateOnRegistrationPage','displayColor']
+    prepopulated_fields = {'slug': ('name',)}
+
+
+@admin.register(SeriesCategory)
+class SeriesCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'separateOnRegistrationPage']
+    prepopulated_fields = {'slug': ('name',)}
 
 
 # These admin classes are registered but need nothing additional
 admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
-admin.site.register(PublicEventCategory)
 admin.site.register(EventStaffCategory)

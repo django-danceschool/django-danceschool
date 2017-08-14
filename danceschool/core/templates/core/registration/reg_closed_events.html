@@ -1,0 +1,66 @@
+{% load danceschool_tags i18n %}
+
+{% if regClosedEvents %}
+	<h2>{% trans "Upcoming Events (No Registration Required)" %}</h2>
+	<hr />
+{% regroup regClosedEvents|dictsort:"month" by month as open_list %}
+	{% for month in open_list %}
+	<div class="classmonth">
+        <h3>{{ month.grouper|readable_month }} {% trans "Events" %}</h3>
+		<div class="table serieslist">
+			{% for event in month.list %}
+				<div class="weekdaygroup">
+					<div class="weekday">
+						<div><h3>{% if event.numOccurrences > 1 %}{% trans "Begins" %} {% endif %}{{ event.firstOccurrenceTime|date:"N j" }}</h3></div>
+					</div>
+					<div class="weekdaycontents">
+					<a name="{{ event.slug }}"></a>
+                    <table class="series" id="eventtable_{{ event.id}}">
+                        <tr>
+                            <th class="time">
+								<h4>{{ event.startTime|date:"g:i A" }} - <br />
+								{{ event.endTime|date:"g:i A" }} </h4>
+							</th>
+                            <td class="info">
+                                <h3 class="title">{{ event.name }}</h3>
+                                <h4>
+								{% if event.teachers %}
+									{% trans "with" %} {{ event.teachers|join:" &amp; "}}
+								{% endif %}
+
+								at
+									{% if directions_url %}
+									<a href = "{{ directions_url }}#{{ event.location.name|slugify }}">
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+									</a>
+									{% else %}
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+									{% endif %}
+
+                                    {% if event.url %}<small><a href="{{ event.url }}">{% trans "more info" %}</a></small>{% endif %}
+                                </h4>
+                                <div class="dates">
+								{% for occurrence in event.eventoccurrence_set.all %}
+									{% if occurrence.startTime.date == occurrence.endTime.date and event.numOccurrences == 1 %}
+										{{ occurrence.startTime|date:"g:i A" }}
+									{% else %}
+										{{ occurrence.startTime|date:"D. N j, g:i A" }}
+									{% endif %}
+									-
+									{% if occurrence.startTime.date == occurrence.endTime.date %}
+										{{ occurrence.endTime|date:"g:i A" }}
+									{% else %}
+										{{ occurrence.endTime|date:"D. N j, g:i A" }}
+									{% endif %}<br />
+								{% endfor %}
+								</div>
+                            </td>
+                        </tr>
+                    </table>
+					</div>
+				</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endfor %}
+{% endif %}

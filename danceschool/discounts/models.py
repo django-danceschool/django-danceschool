@@ -37,6 +37,9 @@ class PricingTierGroup(models.Model):
     pricingTier = models.OneToOneField(PricingTier,verbose_name=_('Pricing tier'))
     points = models.PositiveIntegerField(_('# of Points'),default=0)
 
+    def __str__(self):
+        return str(_('%s points for pricing tier %s' % (self.group.name, self.pricingTier.name)))
+
     class Meta:
         ''' Only one pricingtiergroup per pricingtier and group combo '''
         unique_together = (('pricingTier','group'),)
@@ -57,7 +60,15 @@ class DiscountCombo(models.Model):
     name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Give this discount combination a name (e.g. \'Two 4-week series\')'))
     active = models.BooleanField(_('Active'),default=True,help_text=_('Uncheck this to \'turn off\' this discount'))
 
+    # If null, then there is no expiration date
+    expirationDate = models.DateTimeField(_('Expiration Date'), null=True,blank=True,help_text=_('Leave blank for no expiration.'))
+
     newCustomersOnly = models.BooleanField(verbose_name=_('Discount for New Customers only'),default=False)
+    daysInAdvanceRequired = models.PositiveIntegerField(
+        _('Must register __ days in advance'),
+        null=True, blank=True,
+        help_text=_('For this discount to apply, all components must be satisfied by events that begin this many days in the future (measured from midnight of the date of registration).  Leave blank for no restriction.'),
+    )
 
     discountType = models.CharField(_('Discount type'),max_length=1,help_text=_('Is this a flat price, a dollar amount discount, a \'percentage off\' discount, or a free add-on?'),choices=DiscountType.choices,default=DiscountType.dollarDiscount)
 

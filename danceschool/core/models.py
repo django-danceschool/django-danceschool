@@ -344,7 +344,6 @@ class Location(models.Model):
 
     orderNum = models.FloatField(_('Order number'),default=0,help_text=_('This determines the order that the locations show up on the Locations page.'))
 
-    rentalRate = models.FloatField(_('Hourly Rental Rate (optional)'),null=True,blank=True,help_text=_('When ExpenseItems are created for renting this location, this rental rate will be used to calculate the total cost of rental.'),validators=[MinValueValidator(0)])
     defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this venue.'))
 
     @property
@@ -369,7 +368,6 @@ class Room(models.Model):
     name = models.CharField(_('Name'),max_length=80,help_text=_('Give this room a name.'))
     location = models.ForeignKey(Location,verbose_name=_('Location'))
 
-    rentalRate = models.FloatField(_('Hourly Rental Rate (optional)'),null=True,blank=True,help_text=_('When ExpenseItems are created for renting this room, this rental rate will be used to calculate the total cost of rental.  If no value is specified, then the default for the Location will be used.'),validators=[MinValueValidator(0)])
     defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this room.'))
 
     description = HTMLField(_('Description'),help_text=_('By default, only room names are listed publicly.  However, you may insert any descriptive information that you would like about this room here.'), null=True, blank=True)
@@ -425,9 +423,11 @@ class PricingTier(models.Model):
     basePrice.fget.short_description = _('Base price')
 
     def __str__(self):
+        return self.name
+
+    class Meta:
         verbose_name = _('Pricing tier')
         verbose_name_plural = _('Pricing tiers')
-        return self.name
 
 
 @python_2_unicode_compatible
@@ -441,8 +441,6 @@ class EventCategory(models.Model):
     name = models.CharField(_('Name'),max_length=100,unique=True,help_text=_('Category name will be displayed.'))
     description = models.TextField(_('Description'),null=True,blank=True,help_text=_('Add an optional description.'))
 
-    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
-
     def __str__(self):
         return self.name
 
@@ -454,10 +452,27 @@ class EventCategory(models.Model):
 
 
 @python_2_unicode_compatible
+class SeriesCategory(EventCategory):
+    '''
+    Categorization for class series events, inherits from EventCategory.
+    '''
+    slug = models.SlugField(_('Slug'),max_length=50,help_text=_('This slug is used primarily for custom templates in registration, if the category is shown separately on the registration page.  You can override the default.'))
+    separateOnRegistrationPage = models.BooleanField(_('Show category separately on registration page'),default=False)
+
+    class Meta:
+        verbose_name = _('Series category')
+        verbose_name_plural = _('Series categories')
+
+
+@python_2_unicode_compatible
 class PublicEventCategory(EventCategory):
     '''
     Categorization for public events, inherits from EventCategory.
     '''
+    slug = models.SlugField(_('Slug'),max_length=50,help_text=_('This slug is used primarily for custom templates in registration, if the category is shown separately on the registration page.  You can override the default.'))
+    separateOnRegistrationPage = models.BooleanField(_('Show category separately on registration page'),default=False)
+    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
+
     class Meta:
         verbose_name = _('Public event category')
         verbose_name_plural = _('Public event categories')
@@ -1045,9 +1060,8 @@ class Series(Event):
     '''
 
     classDescription = models.ForeignKey(ClassDescription,verbose_name=_('Class description'))
-
-    special = models.BooleanField(_('Special class/series'),default=False,help_text=_('Special classes (e.g. one-offs, visiting instructors) may be listed separately on the class page.  Leave this unchecked for regular monthly series classes.'))
-    allowDropins = models.BooleanField(_('Allow class drop-ins'), default=False, help_text=_('If checked, then staff will be able to register students as drop-ins.'))
+    category = models.ForeignKey(SeriesCategory,verbose_name=_('Series category (optional)'),null=True,blank=True,help_text=_('Custom series categories may be used to display special series (e.g. one-offs, visiting instructors) separately on your registration page.'))
+    allowDropins = models.BooleanField(_('Allow class drop-ins'), default=False, help_text=_('If checked, then all staff will be able to register students as drop-ins.'))
 
     def getTeachers(self,includeSubstitutes=False):
         seriesTeachers = SeriesTeacher.objects.filter(event=self)
@@ -1244,7 +1258,7 @@ class PublicEvent(Event):
     title = models.CharField(_('Title'),max_length=100,help_text=_('Give the event a title'))
     slug = models.SlugField(_('Slug'),max_length=100,help_text=_('This is for the event page URL, you can override the default.'))
 
-    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category'))
+    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category (optional)'),help_text=_('Custom event categories may be used to display special types of events (e.g. practice sessions) separately on your registration page.  They may also be displayed in different colors on the public calendar.'))
     descriptionField = HTMLField(_('Description'),null=True,blank=True,help_text=_('Describe the event for the event page.'))
     link = models.URLField(_('External link to event (if applicable)'),blank=True,null=True,help_text=_('Optionally include the URL to a page for this Event.  If set, then the site\'s auto-generated Event page will instead redirect to this URL.'))
 
@@ -1331,12 +1345,12 @@ class Customer(models.Model):
     @property
     def numClassSeries(self):
         return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).count()
-    numEventRegistrations.fget.short_description = _('# Series registered')
+    numClassSeries.fget.short_description = _('# Series registered')
 
     @property
     def numPublicEvents(self):
         return EventRegistration.objects.filter(registration__customer=self,event__publicevent__isnull=False).count()
-    numEventRegistrations.fget.short_description = _('# Public events registered')
+    numPublicEvents.fget.short_description = _('# Public events registered')
 
     @property
     def firstSeries(self):
@@ -1462,6 +1476,39 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     def totalDiscount(self):
         return self.totalPrice - self.priceWithDiscount
     totalDiscount.fget.short_description = _('Total discounts')
+
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.temporaryeventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([x.event.startTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.temporaryeventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([x.event.endTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self,numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[x.event for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -1664,6 +1711,39 @@ class Registration(EmailRecipientMixin, models.Model):
             return 0
         return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
     eventNetPrice.fget.short_description = _('Net price of public events')
+
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self,numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[x.event for x in self.eventregistration_set.filter(event__series__isnull=False)],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
 
     def getSeriesPriceForMonth(self,dateOfInterest):
         # get all series associated with this registration
@@ -2062,11 +2142,6 @@ class Invoice(EmailRecipientMixin, models.Model):
         return new_invoice
 
     @property
-    def url(self):
-        return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
-    url.fget.short_description = _('Invoice URL')
-
-    @property
     def unpaid(self):
         return (self.status != self.PaymentStatus.paid)
     unpaid.fget.short_description = _('Unpaid')
@@ -2116,6 +2191,18 @@ class Invoice(EmailRecipientMixin, models.Model):
     def statusLabel(self):
         return self.PaymentStatus.values.get(self.status,'')
     statusLabel.fget.short_description = _('Status')
+
+    @property
+    def url(self):
+        if self.id:
+            return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
+    url.fget.short_description = _('Invoice URL')
+
+    def get_absolute_url(self):
+        '''
+        For adding 'View on Site' links to the admin
+        '''
+        return reverse('viewInvoice', args=[self.id,])
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''

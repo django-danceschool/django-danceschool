@@ -254,18 +254,18 @@ Remember, you can always rename these initial values or add/delete dance levels 
 ROLES
 -----
 
-Most partnered dance schools define 'Lead' and 'Follow' roles that are used in
+Most partnered dance schools define 'Leader' and 'Follower' roles that are used in
 the registration process.  If your dance school does not use these roles, or
 if you do not ask students to register for a particular role, then answer 'No' below.
 
             """
         )
 
-        define_roles = self.boolean_input('Define \'Lead\' and \'Follow\' roles [Y/n]: ', True)
+        define_roles = self.boolean_input('Define \'Leader\' and \'Follower\' roles [Y/n]: ', True)
         if define_roles:
-            DanceRole.objects.get_or_create(name='Lead',defaults={'pluralName': 'Leads', 'order':1.0})
-            DanceRole.objects.get_or_create(name='Follow',defaults={'pluralName': 'Follows', 'order': 2.0})
-            initial_dancetype_object[0].roles = DanceRole.objects.filter(name__in=['Lead','Follow'])
+            DanceRole.objects.get_or_create(name='Leader',defaults={'pluralName': 'Leaders', 'order':1.0})
+            DanceRole.objects.get_or_create(name='Follower',defaults={'pluralName': 'Followers', 'order': 2.0})
+            initial_dancetype_object[0].roles = DanceRole.objects.filter(name__in=['Leader','Follower'])
             initial_dancetype_object[0].save()
 
         self.stdout.write(
