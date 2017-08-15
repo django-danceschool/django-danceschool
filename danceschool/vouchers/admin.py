@@ -118,7 +118,7 @@ class VoucherAdmin(admin.ModelAdmin):
     inlines = [DanceTypeVoucherInline,ClassVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
     list_display = ['voucherId','name','category','amountLeft','maxAmountPerUse','expirationDate','isEnabled','restrictions']
     list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
-    search_fields = ['voucherId','name','type',]
+    search_fields = ['voucherId','name','description']
     readonly_fields = ['refundAmount','creationDate']
     actions = ['enableVoucher','disableVoucher']
 
