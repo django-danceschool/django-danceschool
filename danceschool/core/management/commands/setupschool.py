@@ -334,35 +334,26 @@ FINANCIAL MANAGEMENT
 
 This project contains a financial app which allows you to manage revenues and expenses
 in an automated way. In particular, it is possible for expense items related to instruction
-and venue rental to be automatically generated when a series ends, and it is possible for
+and venue rental to be automatically generated, and it is possible for
 revenue items related to registrations to be automatically generated as well.  However,
 if you do not want these features, then you may disable them below.
 
-If you enable auto-generation of staff expenses, you will also be asked about default
-rates of compensation for instructors and other staff.  You may always change these
-values by editing the rate in the appropriate Expense Category in the admin interface.
+In order to automatic generation of expenses to be functional, you will also need
+to set compensation rates for your Locations and Instructors as you create them.
+Expenses may be generated on an hourly basis (for hourly rental/compensation), or on
+a daily/weekly/monthly ongoing basis as well.
 
                 """
             )
 
             generate_staff = self.boolean_input('Auto-generate staff expense items for completed events [Y/n]', True)
-            prefs['financial__autoGenerateExpensesCompletedEvents'] = generate_staff
+            prefs['financial__autoGenerateExpensesEventStaff'] = generate_staff
 
             if generate_staff:
-                instruction_cat = prefs.get('financial__classInstructionExpenseCat',None)
-                if instruction_cat:
-                    instruction_cat.defaultRate = self.float_input('Default compensation rate for class instruction [0]',default=0)
-                    instruction_cat.save()
-
-                assistant_cat = prefs.get('financial__assistantClassInstructionExpenseCat',None)
-                if assistant_cat:
-                    assistant_cat.defaultRate = self.float_input('Default compensation rate for assistant instructors [0]',default=0)
-                    assistant_cat.save()
-
-                other_cat = prefs.get('financial__otherStaffExpenseCat',None)
-                if other_cat:
-                    other_cat.defaultRate = self.float_input('Default compensation rate for other event-related staff expenses [0]',default=0)
-                    other_cat.save()
+                # This just ensures that the standard staff categories are created before launch
+                prefs.get('financial__classInstructionExpenseCat',None)
+                prefs.get('financial__assistantClassInstructionExpenseCat',None)
+                prefs.get('financial__otherStaffExpenseCat',None)
 
             generate_venue = self.boolean_input('Auto-generate hourly venue rental expense items for completed events [Y/n]', True)
             prefs['financial__autoGenerateExpensesVenueRental'] = generate_venue

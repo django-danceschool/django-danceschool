@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
@@ -42,7 +42,7 @@ class RepeatedExpenseRule(PolymorphicModel):
         disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
 
     rentalRate = models.FloatField(
-        _('Expense Rate'),null=True,blank=True,validators=[MinValueValidator(0)],help_text=_('In default currency')
+        _('Expense Rate'),validators=[MinValueValidator(0)],help_text=_('In default currency')
     )
 
     applyRateRule = models.CharField(

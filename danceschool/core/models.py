@@ -992,15 +992,13 @@ class EventRole(models.Model):
 
 @python_2_unicode_compatible
 class EventStaffCategory(models.Model):
-
     name = models.CharField(_('Name'),max_length=50,unique=True)
-    defaultRate = models.FloatField(_('Default rate'),null=True,blank=True,help_text=_('If the financials app is enabled with automatic generation of expense items, then this is the rate that will be used for staff payments for staff of this type.'),validators=[MinValueValidator(0)])
 
     def __str__(self):
         return self.name
 
     class Meta:
-        verbose_name= _('Event staff category')
+        verbose_name = _('Event staff category')
         verbose_name_plural = _('Event staff categories')
 
 

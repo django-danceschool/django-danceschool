@@ -158,6 +158,16 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None):
             event_timefilters = event_timefilters & Q(startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays:
             event_timefilters = event_timefilters & Q(startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+        if rule.startDate:
+            event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
+                year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
+                hour=0,minute=0,second=0,microsecond=0,
+            ))
+        if rule.endDate:
+            event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now().replace(
+                year=rule.endDate.year,month=rule.endDate.month,day=rule.endDate.day,
+                hour=0,minute=0,second=0,microsecond=0,
+            ))
 
         # For construction of expense descriptions
         replacements = {
@@ -231,9 +241,10 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None):
     # First, construct the set of rules that need to be checked for affiliated events
     rule_filters = Q(rentalRate__gt=0) & ~Q(applyRateRule=RepeatedExpenseRule.RateRuleChoices.disabled) & \
         Q(staffmemberwageinfo__isnull=False)
-    rulesToCheck = RepeatedExpenseRule.objects.filter(rule_filters).distinct()
+    rulesToCheck = RepeatedExpenseRule.objects.filter(
+        rule_filters).distinct().order_by('-staffmemberwageinfo__category')
 
-    # These are the filters place on Events that overlap the window in which expenses are being generated.
+    # These are the filters placed on Events that overlap the window in which expenses are being generated.
     if datetimeTuple:
         timelist = list(datetimeTuple)
         timelist.sort()
@@ -244,8 +255,11 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None):
     # Now, we loop through the set of rules that need to be applied, then loop through the
     # Events in the window in question that involved the staff member indicated by the rule.
     for rule in rulesToCheck:
-        staffMember = getattr(rule,'staffMember',None)
+        staffMember = rule.staffMember
         staffCategory = getattr(rule,'category',None)
+
+        if not staffMember:
+            continue
 
         # For construction of expense descriptions
         replacements = {
@@ -258,10 +272,16 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None):
         # This is the generic category for all Event staff, but it may be overridden below
         expense_category = getConstant('financial__otherStaffExpenseCat')
 
-        eventstaff_filter = Q(staffMember=staffMember)
         if staffCategory:
-            eventstaff_filter = eventstaff_filter & Q(category=staffCategory)
+            eventstaff_filter = Q(staffMember=staffMember) & Q(category=staffCategory)
             replacements['type'] = staffCategory.name
+        else:
+            # We don't want to generate duplicate expenses when there is both a category-limited
+            # rule and a non-limited rule for the same person, so we have to construct the list
+            # of categories that are to be excluded if no category is specified by this rule.
+            coveredCategories = list(staffMember.expenserules.filter(
+                category__isnull=False).values_list('category__id',flat=True))
+            eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
             # For standard categories of staff, map the EventStaffCategory to
             # an ExpenseCategory using the stored constants.  Otherwise, the
@@ -278,6 +298,16 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None):
             event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays:
             event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+        if rule.startDate:
+            event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
+                year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
+                hour=0,minute=0,second=0,microsecond=0,
+            ))
+        if rule.endDate:
+            event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now().replace(
+                year=rule.endDate.year,month=rule.endDate.month,day=rule.endDate.day,
+                hour=0,minute=0,second=0,microsecond=0,
+            ))
 
         # Loop through EventStaffMembers for which there are not already directly allocated expenses under this rule,
         # and create new ExpenseItems for them depending on whether the rule requires hourly expenses or
