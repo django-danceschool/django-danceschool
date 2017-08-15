@@ -316,6 +316,7 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
 
     class Meta:
         unique_together = ('staffMember', 'category')
+        ordering = ('staffMember','category__name')
         verbose_name = _('Staff member salary information')
         verbose_name_plural = _('Staff members\' wage/salary information')
 

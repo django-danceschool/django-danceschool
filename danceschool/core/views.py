@@ -887,7 +887,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
     success_message = _('Repeated events created successfully.')
 
     def dispatch(self, request, *args, **kwargs):
-        ids = request.GET.getlist('ids')
+        ids = request.GET.get('ids')
         ct = getIntFromGet(request,'ct')
 
         try:
@@ -901,7 +901,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
             return HttpResponseBadRequest(_('Invalid content type passed.'))
 
         try:
-            self.queryset = self.objectClass.objects.filter(id__in=[int(x) for x in ids])
+            self.queryset = self.objectClass.objects.filter(id__in=[int(x) for x in ids.split(',')])
         except ValueError:
             return HttpResponseBadRequest(_('Invalid ids passed'))
 

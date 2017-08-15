@@ -574,6 +574,8 @@ class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
     base_model = Instructor
     show_in_index = True
 
+    # Allows overriding from other apps
+    actions = []
     inlines = []
 
     list_display = ('fullName','privateEmail','availableForPrivates','status')
@@ -597,7 +599,10 @@ class StaffMemberParentAdmin(PolymorphicParentModelAdmin):
     base_model = StaffMember
     child_models = (Instructor,)
     list_filter = (PolymorphicChildModelFilter,)
+
+    # Allows overriding from other apps
     inlines = []
+    actions = []
 
 
 ######################################

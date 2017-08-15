@@ -1,10 +1,12 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.utils.html import format_html
 from django.forms import ModelForm, ModelChoiceField
 from django.utils.translation import ugettext_lazy as _
+from django.http import HttpResponseRedirect
 
 from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
@@ -245,9 +247,6 @@ class RoomRentalInfoInline(admin.StackedInline):
     def has_add_permission(self, request, obj=None):
         return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
-
 
 class StaffMemberWageInfoInline(admin.StackedInline):
     model = StaffMemberWageInfo
@@ -255,6 +254,19 @@ class StaffMemberWageInfoInline(admin.StackedInline):
     extra = 0
     fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
     classes = ('collapse',)
+
+
+def updateStaffCompensationInfo(self, request, queryset):
+    '''
+    This action is added to the list for instructors to permit bulk
+    updating of compensation information for staff members.
+    '''
+    selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+    ct = ContentType.objects.get_for_model(queryset.model)
+    return HttpResponseRedirect(reverse('updateCompensationRules') + "?ct=%s&ids=%s" % (ct.pk, ",".join(selected)))
+
+
+updateStaffCompensationInfo.short_description = _('Update compensation rules')
 
 
 admin.site.register(ExpenseItem,ExpenseItemAdmin)
@@ -267,3 +279,5 @@ admin.site._registry[Location].inlines.insert(0,LocationRentalInfoInline)
 admin.site._registry[Room].inlines.insert(0,RoomRentalInfoInline)
 admin.site._registry[StaffMember].inlines.insert(0,StaffMemberWageInfoInline)
 admin.site._registry[Instructor].inlines.insert(0,StaffMemberWageInfoInline)
+admin.site._registry[StaffMember].actions.insert(0,updateStaffCompensationInfo)
+admin.site._registry[Instructor].actions.insert(0,updateStaffCompensationInfo)

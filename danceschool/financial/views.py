@@ -1,8 +1,10 @@
-from django.views.generic import DetailView, TemplateView, CreateView, View
+from django.views.generic import DetailView, TemplateView, CreateView, View, FormView
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseBadRequest
 from django.db.models import Q, Sum, F, Min
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
@@ -13,15 +15,15 @@ from calendar import month_name
 from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 
-from danceschool.core.models import Instructor, Location, Event
+from danceschool.core.models import Instructor, Location, Event, StaffMember
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from danceschool.core.utils.timezone import ensure_timezone
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
-from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory
+from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
-from .forms import ExpenseReportingForm, RevenueReportingForm
+from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm
 from .constants import EXPENSE_BASES
 
 
@@ -535,6 +537,57 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         })
 
         return super(self.__class__,self).get_context_data(**context)
+
+
+class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FinancialContextMixin, FormView):
+    '''
+    This view is for an admin action to repeat events.
+    '''
+    template_name = 'financial/update_staff_compensation_rules.html'
+    form_class = CompensationRuleUpdateForm
+    permission_required = 'core.change_staffmember'
+    success_message = _('Staff member compensation rules updated successfully.')
+
+    def dispatch(self, request, *args, **kwargs):
+        ids = request.GET.get('ids')
+        ct = getIntFromGet(request,'ct')
+
+        try:
+            contentType = ContentType.objects.get(id=ct)
+            self.objectClass = contentType.model_class()
+        except (ValueError, ObjectDoesNotExist):
+            return HttpResponseBadRequest(_('Invalid content type passed.'))
+
+        # This view only deals with subclasses of StaffMember (Instructor, etc.)
+        if not isinstance(self.objectClass(),StaffMember):
+            return HttpResponseBadRequest(_('Invalid content type passed.'))
+
+        try:
+            self.queryset = self.objectClass.objects.filter(id__in=[int(x) for x in ids.split(',')])
+        except ValueError:
+            return HttpResponseBadRequest(_('Invalid ids passed'))
+
+        return super(CompensationRuleUpdateView,self).dispatch(request,*args,**kwargs)
+
+    def get_context_data(self,**kwargs):
+        context = super(CompensationRuleUpdateView,self).get_context_data(**kwargs)
+        context.update({
+            'staffmembers': self.queryset,
+            'rateRuleValues': RepeatedExpenseRule.RateRuleChoices.values,
+        })
+
+        return context
+
+    def form_valid(self, form):
+        category = form.cleaned_data.pop('category',None)
+
+        for staffmember in self.queryset:
+            staffmember.expenserules.update_or_create(
+                category=category,
+                defaults=form.cleaned_data,
+            )
+
+        return super(CompensationRuleUpdateView,self).form_valid(form)
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):

@@ -14,7 +14,7 @@
 			<li>
 				{% if event.url %}<a href="{{ event.url }}" target="_blank">{% endif %}{{ event.name }}{% if event.url %}</a>{% endif %}: 
 				{% with event.numOccurrences as count %}
-				{% blocktrans with pluralize=single_occurrence|pluralize first_time=event.firstOccurrenceTime last_time=event.lastOccurrenceTime %}
+				{% blocktrans with pluralize=count|pluralize first_time=event.firstOccurrenceTime last_time=event.lastOccurrenceTime %}
 				{{ count }} occurrence{{ pluralize }} from {{ first_time }} to {{ last_time }}
 				{% endblocktrans %}
 				{% endwith %}

@@ -19,7 +19,7 @@ import logging
 
 from danceschool.core.models import InvoiceItem
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo
 from .autocomplete_light_registry import get_method_list
 
 
@@ -293,3 +293,15 @@ class RevenueReportingForm(forms.ModelForm):
 
     class Media:
         js = ('js/revenue_reporting.js',)
+
+
+class CompensationRuleUpdateForm(forms.ModelForm):
+    ''' Used for bulk update of Instructor compensation rules. '''
+
+    def save(self, commit=True):
+        ''' Handle the update logic for this in the view, not the form '''
+        pass
+
+    class Meta:
+        model = StaffMemberWageInfo
+        fields = ['category', 'rentalRate','applyRateRule','dayStarts','weekStarts','monthStarts']
