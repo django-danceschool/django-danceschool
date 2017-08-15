@@ -211,7 +211,7 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
         for x in statementByEvent:
             role_set.update(list(x.get('registrations').keys()))
         role_list = list(role_set)
-        role_list.sort()
+        sorted(role_list, key=lambda x: (x is None, x))
         context['roles'] = role_list
 
         return super(self.__class__,self).get_context_data(**context)

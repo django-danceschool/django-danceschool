@@ -3,6 +3,7 @@ This file contains basic tests for the core app.
 """
 
 from django.core.urlresolvers import reverse
+from django.conf import settings
 from django.utils import timezone
 
 from datetime import timedelta
@@ -35,16 +36,19 @@ class RevenueTest(DefaultSchoolTestCase):
         self.assertIn(3, [x[0] for x in response.context_data.get('form').fields['associateWith'].choices])
 
         # Create a Revenue item that is not associated with a Series/Event for $10
-        self.client.post(reverse('submitRevenues'),{
-            'amount': 10,
+        response = self.client.post(reverse('submitRevenues'),{
+            'total': 10,
             'category': default_rev_cat.id,
             'associateWith': 3,
             'description': 'Test Revenue Item',
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
+            'submissionUser': self.superuser.id,
+            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.redirect_chain)
+        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
+        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
         self.assertTrue(RevenueItem.objects.filter(description='Test Revenue Item').exists())
 
         ri = RevenueItem.objects.get(description='Test Revenue Item')
@@ -55,18 +59,21 @@ class RevenueTest(DefaultSchoolTestCase):
         self.assertFalse(ri.received)
 
         # Create a second Revenue item that is associated with Series s for $20
-        self.client.post(reverse('submitRevenues'),{
-            'amount': 20,
+        response = self.client.post(reverse('submitRevenues'),{
+            'total': 20,
             'category': default_rev_cat.id,
             'associateWith': 2,
             'event': s.id,
             'description': 'Test Associated Revenue Item',
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
+            'submissionUser': self.superuser.id,
+            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.redirect_chain)
+        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
+        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
         self.assertTrue(RevenueItem.objects.filter(description='Test Associated Revenue Item').exists())
 
         ri = RevenueItem.objects.get(description='Test Associated Revenue Item')
@@ -107,45 +114,52 @@ class ExpensesTest(DefaultSchoolTestCase):
         self.assertIn(('Cash','Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
 
         # Create an expense item for 1 hour of work, paid at default rate ($20)
-        self.client.post(reverse('submitExpenses'),{
+        response = self.client.post(reverse('submitExpenses'),{
             'hours': 1,
             'category': default_expense_cat.id,
             'payTo': 1,
+            'payToUser': self.superuser.id,
             'payBy': 1,
             'description': 'Test Expense Item',
             'paymentMethod': 'Cash',
             'reimbursement': False,
             'paid': True,
             'approved': True,
+            'submissionUser': self.superuser.id,
+            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.redirect_chain)
+        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
+        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
         self.assertTrue(ExpenseItem.objects.filter(description='Test Expense Item').exists())
 
-        ei = RevenueItem.objects.get(description='Test Expense Item')
+        ei = ExpenseItem.objects.get(description='Test Expense Item')
 
         self.assertEqual(ei.total, 20)
         self.assertTrue(ei.approved and ei.paid)
         self.assertEqual(ei.payToUser, self.superuser)
 
         # Create a second expense item for $50, paid to a location
-        self.client.post(reverse('submitExpenses'),{
+        response = self.client.post(reverse('submitExpenses'),{
             'total': 50,
             'category': default_expense_cat.id,
             'payTo': 2,
             'payBy': 2,
-            'payToLocation': self.defaultLocation,
+            'payToLocation': self.defaultLocation.id,
             'description': 'Test Venue Expense Item',
             'paymentMethod': 'Cash',
             'reimbursement': False,
             'paid': False,
             'approved': False,
+            'submissionUser': self.superuser.id,
+            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.redirect_chain)
+        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
+        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
         self.assertTrue(ExpenseItem.objects.filter(description='Test Venue Expense Item').exists())
 
-        ei = RevenueItem.objects.get(description='Test Venue Expense Item')
+        ei = ExpenseItem.objects.get(description='Test Venue Expense Item')
 
         self.assertEqual(ei.total, 50)
         self.assertFalse(ei.approved or ei.paid)
@@ -203,6 +217,9 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ei, ri = self.create_initial_items()
 
         response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year})
+        self.assertEqual(response.status_code, 302)
+        self.client.login(username=self.superuser.username,password='pass')
+        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year})
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -230,7 +247,11 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ei, ri = self.create_initial_items()
 
         response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'month': timezone.now().month})
+        self.assertEqual(response.status_code, 302)
+        self.client.login(username=self.superuser.username,password='pass')
+        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'month': timezone.now().month})
         self.assertEqual(response.status_code, 200)
+
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
 
@@ -255,10 +276,16 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
 
     def test_summary_bymonth(self):
         s = self.create_series()
-
         response = self.client.get(reverse('financesByMonth'))
-        self.assertEqual(self.status_code, 200)
-        
+        self.assertEqual(response.status_code, 302)
+        self.client.login(username=self.superuser.username,password='pass')
+        response = self.client.get(reverse('financesByMonth'))
+        self.assertEqual(response.status_code, 200)
 
     def test_summary_byevent(self):
         s = self.create_series()
+        response = self.client.get(reverse('financesByEvent'))
+        self.assertEqual(response.status_code, 302)
+        self.client.login(username=self.superuser.username,password='pass')
+        response = self.client.get(reverse('financesByEvent'))
+        self.assertEqual(response.status_code, 200)

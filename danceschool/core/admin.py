@@ -186,7 +186,7 @@ class EventOccurrenceInline(admin.TabularInline):
     extra = 1
 
     class Media:
-        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','js/eventadmin_pickers.js')
+        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','datepair/datepair.min.js','moment/moment.min.js','datepair/jquery.datepair.min.js','js/eventadmin_pickers.js')
         css = {'all':('timepicker/jquery.timepicker.css','jquery-ui/jquery-ui.min.css',)}
 
 
@@ -574,6 +574,8 @@ class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
     base_model = Instructor
     show_in_index = True
 
+    inlines = []
+
     list_display = ('fullName','privateEmail','availableForPrivates','status')
     list_display_links = ('fullName',)
     list_editable = ('availableForPrivates','privateEmail','status')
@@ -590,11 +592,12 @@ class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
 @admin.register(StaffMember)
 class StaffMemberParentAdmin(PolymorphicParentModelAdmin):
     '''
-    The parent model admin for Events
+    The parent model admin for Staff members
     '''
     base_model = StaffMember
     child_models = (Instructor,)
     list_filter = (PolymorphicChildModelFilter,)
+    inlines = []
 
 
 ######################################

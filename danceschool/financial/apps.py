@@ -108,8 +108,8 @@ class FinancialAppConfig(AppConfig):
         # already been paid when accepting SubstituteTeacher submissions.
         @property
         def paidOut(self):
-            ''' Add a property to Series indicating whether it has been paid out. '''
-            return (True in self.expenseitem_set.filter(eventstaffmember__isnull=False).values_list('paid',flat=True))
+            ''' Add a property to Event indicating whether hourly expenses have been paid out. '''
+            return (True in self.expenseitem_set.filter(expenseRule__staffmemberwageinfo__isnull=False).values_list('paid',flat=True))
         Event.add_to_class('paidOut', paidOut)
 
         def validate_EnsureNotPaidOut(event_pk):

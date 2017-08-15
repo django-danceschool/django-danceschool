@@ -17,7 +17,7 @@ import json
 import logging
 from djangocms_text_ckeditor.widgets import TextEditorWidget
 
-from .models import SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
+from .models import EventStaffMember, SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 from .utils.emails import get_text_for_html
@@ -815,6 +815,35 @@ class SubstituteReportingForm(forms.ModelForm):
         if event and staffMember:
             if staffMember in [x.staffMember for x in event.eventstaffmember_set.filter(category__in=[getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')])]:
                 self.add_error('event',ValidationError(_('You cannot substitute teach for a class in which you were an instructor.'),code='invalid'))
+
+    def validate_unique(self):
+        '''
+        We don't need to check the unique_together constraint in this form, because if the
+        constraint is not satisfied, then the form will just update the existing instance
+        in the save() method below.
+        '''
+        pass
+
+    def save(self, commit=True):
+        '''
+        If a staff member is reporting substitute teaching for a second time, then we should update
+        the list of occurrences for which they are a substitute on their existing EventStaffMember
+        record, rather than creating a new record and creating database issues.
+        '''
+        existing_record = EventStaffMember.objects.filter(
+            staffMember=self.cleaned_data.get('staffMember'),
+            event=self.cleaned_data.get('event'),
+            category=getConstant('general__eventStaffCategorySubstitute'),
+            replacedStaffMember=self.cleaned_data.get('replacedStaffMember'),
+        )
+        if existing_record.exists():
+            record = existing_record.first()
+            for x in self.cleaned_data.get('occurrences'):
+                record.occurrences.add(x)
+            record.save()
+            return record
+        else:
+            return super(SubstituteReportingForm,self).save()
 
     class Meta:
         model = SubstituteTeacher

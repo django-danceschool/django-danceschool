@@ -2,8 +2,6 @@
 This file defines a variety of preferences that must be set in the DB,
 but can be changed dynamically.
 '''
-
-from django.db import connection
 from django.utils.translation import ugettext_lazy as _
 
 from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
@@ -22,19 +20,10 @@ financial = Section('financial',_('Financial App'))
 @global_preferences_registry.register
 class GenerateEventStaffExpensesEnabled(BooleanPreference):
     section = financial
-    name = 'autoGenerateExpensesCompletedEvents'
+    name = 'autoGenerateExpensesEventStaff'
     verbose_name = _('Auto-generate ExpenseItems for completed events')
     help_text = _('Uncheck to disable the automatic generation of ExpenseItems for class series instructors in the financial app.')
     default = True
-
-
-@global_preferences_registry.register
-class GenerateEventStaffExpensesWindow(IntegerPreference):
-    section = financial
-    name = 'autoGenerateExpensesCompletedEventsWindow'
-    verbose_name = _('Completed events autogeneration window (months)')
-    help_text = _('Set how many months back back from the date of execution to autogenerate ExpenseItems for class series instructors in the financial app, or set to 0 to autogenerate with no time restriction.')
-    default = 0
 
 
 @global_preferences_registry.register
@@ -44,15 +33,6 @@ class GenerateVenueExpensesEnabled(BooleanPreference):
     verbose_name = _('Auto-generate ExpenseItems for venue rental')
     help_text = _('Uncheck to disable the automatic generation of ExpenseItems for venue rental in the financial app.')
     default = True
-
-
-@global_preferences_registry.register
-class GenerateVenueExpensesWindow(IntegerPreference):
-    section = financial
-    name = 'autoGenerateExpensesVenueRentalWindow'
-    verbose_name = _('Venue rental autogeneration window (months)')
-    help_text = _('Set how many months back back from the date of execution to autogenerate ExpenseItems for venue rental in the financial app, or set to 0 to autogenerate with no time restriction.')
-    default = 0
 
 
 @global_preferences_registry.register

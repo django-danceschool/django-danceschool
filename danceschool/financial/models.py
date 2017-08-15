@@ -17,7 +17,7 @@ from dateutil.relativedelta import relativedelta
 
 from intervaltree import IntervalTree
 
-from danceschool.core.models import StaffMember, EventStaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room
+from danceschool.core.models import StaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room
 from danceschool.core.constants import getConstant
 
 
@@ -42,7 +42,7 @@ class RepeatedExpenseRule(PolymorphicModel):
         disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
 
     rentalRate = models.FloatField(
-        _('Expense Rate'),null=True,blank=True,validators=[MinValueValidator(0)]
+        _('Expense Rate'),null=True,blank=True,validators=[MinValueValidator(0)],help_text=_('In default currency')
     )
 
     applyRateRule = models.CharField(
@@ -50,14 +50,14 @@ class RepeatedExpenseRule(PolymorphicModel):
         max_length=1,
         choices=RateRuleChoices.choices,
         default=RateRuleChoices.hourly,
-        help_text=_('When ExpenseItems are created for rentals, the given rate will be applied for this unit of time to compute the total cost of rental.'))
+    )
 
     dayStarts = models.PositiveSmallIntegerField(
         _('Day starts at'),
         choices=[(i, time(i).strftime('%-I:00 %p')) for i in range(24)],
         default=0,
         validators=[MinValueValidator(0),MaxValueValidator(23)],
-        help_text=_('If you run events after midnight, set this to avoid creation of duplicate expense items'),
+        help_text=_('If you run events after midnight, avoids creation of duplicate expense items'),
     )
 
     weekStarts = models.PositiveSmallIntegerField(
@@ -90,41 +90,112 @@ class RepeatedExpenseRule(PolymorphicModel):
 
     advanceDays = models.PositiveSmallIntegerField(
         _('Generate expenses up to __ days in advance'),
-        help_text=_('By default, expense items are generated from rules up to 30 days in advance.  To generate expense items further (or less far) in advance, enter the number of days here.'),
         default=30,
     )
 
     priorDays = models.PositiveSmallIntegerField(
         _('Generate expenses up to __ days in the past'),
-        help_text=_('By default, expense items are generated from rules up to 180 days in the past.  To generate expense items further (or less far) in the past, enter the number of days here.  Leave blank for no limit.'),
+        help_text=_('Leave blank for no limit.'),
         default=180,
         null=True,
         blank=True
     )
 
-    def splitIntervalDays(self,start,end,intervalDays=1):
-        # Take a single datetime interval of multiple months
-        # and return a generator for a set of intervals
-        days = relativedelta(end, start).days
-        intervals = math.ceil(days / intervalDays)
-        for k in range(intervals):
-            yield (start + relativedelta(days=k * intervalDays),start + relativedelta(months=(k + 1) * intervalDays))
-
-    def splitIntervalMonths(self,start,end):
-        # Take a single datetime interval of multiple months
-        # and return a generator for a set of intervals
-        months = relativedelta(end, start).months
-        for k in range(months):
-            yield (start + relativedelta(months=k),start + relativedelta(months=k + 1))
-
-    def getMissingIntervals(self,intervalList):
+    def timeAtThreshold(self,dateTime):
         '''
-        If there are existing expenses applied under the same expense generation rule,
-        then we need to determine the interval or intervals over which there are not
-        already expenses, so that expense items can be generated for those intervals only.
+        A convenience method for checking when a time is on the start/end boundary
+        for this rule.verbose_name
         '''
-        startTime = min([x[0] for x in intervalList])
-        endTime = max([x[1] for x in intervalList])
+
+        # Anything that's not at a day boundary is for sure not at a threshold.
+        if not (
+            dateTime.hour == self.dayStarts and dateTime.minute == 0 and
+            dateTime.second == 0 and dateTime.microsecond == 0
+        ):
+            return False
+
+        if self.applyRateRule == self.RateRuleChoices.daily:
+            return True
+        elif self.applyRateRule == self.RateRuleChoices.weekly:
+            return (dateTime == self.weekStarts)
+        elif self.applyRateRule == self.RateRuleChoices.monthly:
+            return (dateTime.day == self.monthStarts)
+
+        # Everything else is nonsensical, so False.
+        return False
+
+    def getWindowsAndTotals(self,intervals):
+
+        # Ensure that the intervals are passed with startTime and endTime in order, and reduce
+        # the intervals down to non-overlapping intervals.
+        intervals = [sorted(x) for x in intervals]
+        tree = IntervalTree.from_tuples(intervals)
+        tree.merge_overlaps()
+
+        # This is the set of times at which weekly or monthly intervals need to be sliced
+        # (i.e. the start of each new week or month period).
+        slice_times = set()
+
+        # Using the set of passed intervals, construct the set of day,
+        # week, or monthly intervals specified by the expense rule.
+        for startTime, endTime in [(x.begin, x.end) for x in tree]:
+
+            if self.applyRateRule == self.RateRuleChoices.daily:
+                # Period is the date or dates of the occurrence
+                this_window_start = startTime.replace(hour=self.dayStarts,minute=0,second=0,microsecond=0)
+                this_window_end = (endTime + timedelta(days=1)).replace(hour=self.dayStarts,minute=0,second=0,microsecond=0) \
+                    if not self.timeAtThreshold(endTime) else endTime
+            elif self.applyRateRule == self.RateRuleChoices.weekly:
+                # Period is the week of the occurrence, starting from the start date specified for
+                # the Location.
+                if startTime.weekday() > self.weekStarts:
+                    start_offset = self.weekStarts - startTime.weekday()
+                else:
+                    start_offset = self.weekStarts - startTime.weekday() - 7
+
+                if endTime.weekday() > self.weekStarts or (endTime.weekday() == self.weekStarts and not self.timeAtThreshold(endTime)):
+                    end_offset = 7 + self.weekStarts - endTime.weekday()
+                else:
+                    end_offset = self.weekStarts - endTime.weekday()
+
+                this_window_start = (startTime + timedelta(days=start_offset)).replace(hour=self.dayStarts, minute=0, second=0, microsecond=0)
+                this_window_end = (endTime + timedelta(days=end_offset)).replace(hour=self.dayStarts, minute=0, second=0, microsecond=0)
+
+                # Add the weekly slice times to the set
+                t0 = this_window_start
+                while t0 <= this_window_end:
+                    slice_times.add(t0)
+                    t0 = t0 + timedelta(days=7)
+
+            elif self.applyRateRule == self.RateRuleChoices.monthly:
+                # Period is the month of the occurrence, starting from the start date specified for
+                # the Location.
+                startDay = self.monthStarts
+
+                if startTime.day >= startDay:
+                    this_window_start = startTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+                else:
+                    this_window_start = (startTime + relativedelta(months=-1)).replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+                if endTime.day > startDay or (endTime.day == startDay and not self.timeAtThreshold(endTime)):
+                    this_window_end = (endTime + relativedelta(months=1)).replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+                else:
+                    this_window_end = endTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+
+                # Add the monthly slice times to the set
+                t0 = this_window_start
+                while t0 <= this_window_end:
+                    slice_times.add(t0)
+                    t0 = t0 + relativedelta(months=1)
+
+            # Add the newly constructed interval to the tree of intervals
+            tree.addi(this_window_start, this_window_end)
+
+        # Remove all overlapping intervals and also chop out any intervals for which there is already an
+        # expense item existing.  (we will split again by week or month afterward.)
+        tree.merge_overlaps()
+
+        startTime = tree.begin()
+        endTime = tree.end()
 
         overlapping = self.expenseitem_set.filter(
             (models.Q(periodStart__lte=endTime) & models.Q(periodStart__gte=startTime)) |
@@ -132,100 +203,64 @@ class RepeatedExpenseRule(PolymorphicModel):
             (models.Q(periodStart__lte=startTime) & models.Q(periodEnd__gte=endTime))
         )
 
-        if overlapping.count() == 0:
-            return intervalList
-
-        # This just removes from the interval any intervals for which there
-        # is already an expense item.
-        tree = IntervalTree.from_tuples(intervalList)
         for item in overlapping:
             tree.chop(item.periodStart, item.periodEnd)
 
-        # Return the one or more intervals that remain
-        return [(x.begin, x.end) for x in tree]
+        # Now merge the intervals again, and split at the split times if needed
+        tree.merge_overlaps()
+        for slice_time in slice_times:
+            tree.slice(slice_time)
 
-    def getWindowsAndTotals(self,startTime,endTime):
-        if self.applyRateRule == self.RateRuleChoices.daily:
-            # Period is the date or dates of the occurrence
-            this_window_start = startTime.replace(hour=self.dayStarts,minute=0,second=0,microsecond=0)
-            this_window_end = (endTime + timedelta(days=1)).replace(hour=self.dayStarts,minute=0,second=0,microsecond=0)
+        # Now, loop through the items of the finalized tree and yield the times,
+        # a description and total expense for the interval allocated by the fraction
+        # of a full week/month interval contained in the interval so that new
+        # ExpenseItems may be created.
+        for startTime, endTime in [(x.begin, x.end) for x in tree]:
 
-            # For daily rentals, we don't need to split intervals, but do need to remove
-            # intervals for which their are already expenses
-            intervals = self.getMissingIntervals([(this_window_start,this_window_end)])
-            for interval in intervals:
-                num_days = relativedelta(interval[1], interval[0]).days
+            # Default description is overridden below as appropriate
+            description = str(_('%(start)s to %(end)s' % {
+                'start': startTime.strftime('%Y-%m-%d'),
+                'end': (endTime - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')
+            }))
 
-                if num_days > 1:
-                    description = str(_('%(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
-                else:
-                    description = interval[0].strftime('%Y-%m-%d')
-
-                # total is the rate times the number of days in the window (usually 1)
+            if self.applyRateRule == self.RateRuleChoices.daily:
+                num_days = (endTime - startTime).days
                 total = self.rentalRate * num_days
-                yield (interval[0], interval[1], total, description)
 
-        if self.applyRateRule == self.RateRuleChoices.weekly:
-            # Period is the week of the occurrence, starting from the start date specified for
-            # the Location.
-            if startTime.weekday() > self.weekStarts:
-                start_offset = self.weekStarts - startTime.weekday()
-            else:
-                start_offset = self.weekStarts - startTime.weekday() - 7
+                if num_days == 1:
+                    description = startTime.strftime('%Y-%m-%d')
 
-            if endTime.weekday() > self.weekStarts or (endTime.weekday() == self.weekStarts and (endTime.hour > self.dayStarts or (endTime.hour == self.dayStarts and endTime.minute > 0))):
-                end_offset = 7 + self.weekStarts - endTime.weekday()
-            else:
-                end_offset = self.weekStarts - endTime.weekday()
-
-            this_window_start = (startTime + timedelta(days=start_offset)).replace(hour=self.dayStarts, minute=0, second=0, microsecond=0)
-            this_window_end = (endTime + timedelta(days=end_offset)).replace(hour=self.dayStarts, minute=0, second=0, microsecond=0)
-
-            # Split the interval up into discrete weeks, then subtract any overlapping intervals
-            week_intervals = list(self.splitIntervalDays(this_window_start, this_window_end, 7))
-            intervals = self.getMissingIntervals(week_intervals)
-            for interval in intervals:
-                num_days = relativedelta(interval[1], interval[0]).days
+            elif self.applyRateRule == self.RateRuleChoices.weekly:
+                num_days = (endTime - startTime).days
+                total = self.rentalRate * (num_days / 7)
 
                 if num_days == 7:
-                    description = str(_('week of %(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
-                    total = self.rentalRate
-                else:
-                    description = str(_('%(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
-                    total = self.rentalRate * (num_days / 7)
-                yield (interval[0], interval[1], total, description)
+                    description = str(_('week of %(start)s to %(end)s' % {
+                        'start': startTime.strftime('%Y-%m-%d'),
+                        'end': (endTime - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')
+                    }))
 
-        elif self.applyRateRule == self.RateRuleChoices.monthly:
-            # Period is the month of the occurrence, starting from the start date specified for
-            # the Location.
-            startDay = self.monthStarts
-
-            if startTime.day >= startDay:
-                this_window_start = startTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
-            else:
-                this_window_start = (startTime + relativedelta(months=-1)).replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
-            if endTime.day > startDay or (endTime.day == startDay and (endTime.hour > self.dayStarts or (endTime.hour == self.dayStarts and endTime.minute > 0))):
-                this_window_end = (endTime + relativedelta(months=1)).replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
-            else:
-                this_window_end = endTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
-
-            month_intervals = list(self.splitIntervalMonths(this_window_start, this_window_end))
-            intervals = self.getMissingIntervals(month_intervals)
-            for interval in intervals:
-                num_days = relativedelta(interval[1], interval[0]).days
+            elif self.applyRateRule == self.RateRuleChoices.monthly:
+                num_days = (endTime - startTime).days
 
                 # We need to know the number days in the month in order to allocate partial expenses
-                month_startDate = interval[0].replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
-                month_startDate = month_startDate - relativedelta(months=1) if month_startDate > interval[0] else month_startDate
+                month_startDate = startTime.replace(day=startDay,hour=self.dayStarts,minute=0,second=0,microsecond=0)
+                month_startDate = month_startDate - relativedelta(months=1) if month_startDate > startTime else month_startDate
                 days_in_month = (month_startDate + relativedelta(months=1) - month_startDate).days
+                total = self.rentalRate * (num_days / days_in_month)
 
                 if num_days == days_in_month:
-                    description = str(_('month of %(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
-                    total = self.rentalRate
-                else:
-                    description = str(_('%(start)s to %(end)s' % {'start': interval[0].strftime('%Y-%m-%d'), 'end': (interval[1] - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')}))
-                    total = self.rentalRate * (num_days / days_in_month)
-                yield (interval[0], interval[1], total, description)
+                    description = str(_('month of %(start)s to %(end)s' % {
+                        'start': startTime.strftime('%Y-%m-%d'),
+                        'end': (endTime - timedelta(hours=self.dayStarts,minutes=1)).strftime('%Y-%m-%d')
+                    }))
+
+            # Yield the information for this interval
+            yield (startTime, endTime, total, description)
+
+    def __str__(self):
+        ''' Should be overridden by child classes with something more descriptive. '''
+        return str(_('Repeated expense rule: %s %s' % (self.rentalRate, self.values.get(self.applyRateRule,self.applyRateRule))))
 
 
 class LocationRentalInfo(RepeatedExpenseRule):
@@ -267,12 +302,13 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
     or if it is specified that the room rental rate not be applied,
     then the location's rental rate and parameters are used instead.
     '''
-    staffMember = models.OneToOneField(StaffMember,related_name='expenseinfo',verbose_name=_('Staff member'))
-    category = models.OneToOneField(
+    staffMember = models.ForeignKey(StaffMember,related_name='expenserules',verbose_name=_('Staff member'))
+    category = models.ForeignKey(
         EventStaffCategory,
         verbose_name=_('Category'),
         null=True,blank=True,
-        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for an instructor, then the default hourly rate for each category will be used.')
+        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for an instructor, then the default hourly rate for each category will be used.'),
+        on_delete=models.SET_NULL,
     )
 
     def __str__(self):
@@ -307,48 +343,84 @@ class ExpenseItem(models.Model):
     Expenses may be associated with EventStaff or with Events, or they may be associated with nothing
     '''
 
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submission user'),related_name='expensessubmittedby',null=True, blank=True)
+    submissionUser = models.ForeignKey(
+        User,
+        verbose_name=_('Submission user'),
+        related_name='expensessubmittedby',
+        null=True,blank=True,on_delete=models.SET_NULL,)
     submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
 
-    category = models.ForeignKey(ExpenseCategory,verbose_name=_('Category'))
+    category = models.ForeignKey(ExpenseCategory,verbose_name=_('Category'),null=True,on_delete=models.SET_NULL,)
 
     description = models.CharField(_('Description'),max_length=200,null=True,blank=True)
 
-    hours = models.FloatField(_('Hours'),help_text=_('Please indicate the number of hours to be paid for.'),null=True,blank=True,validators=[MinValueValidator(0)])
-    wageRate = models.FloatField(_('Wage rate'),help_text=_('This should be filled automatically, but can be changed as needed.'),null=True,blank=True,validators=[MinValueValidator(0)])
+    hours = models.FloatField(
+        _('Hours'),
+        help_text=_('Please indicate the number of hours to be paid for.'),
+        null=True,blank=True,validators=[MinValueValidator(0)])
+    wageRate = models.FloatField(
+        _('Wage rate'),
+        help_text=_('This should be filled automatically, but can be changed as needed.'),
+        null=True,blank=True,validators=[MinValueValidator(0)])
     total = models.FloatField(_('Total amount'),null=True,blank=True,validators=[MinValueValidator(0)])
-    adjustments = models.FloatField(_('Adjustments/refunds'),help_text=_('Record any ex-post adjustments to the amount (e.g. refunds) in this field. A positive amount increases the netExpense, a negative amount reduces the netExpense.'),default=0)
-    fees = models.FloatField(_('Fees'),help_text=_('The sum of any transaction fees (e.g. Paypal fees) that were paid <strong>by us</strong>, and should therefore be added to net expense.'),default=0)
+    adjustments = models.FloatField(
+        _('Adjustments/refunds'),
+        help_text=_('Record any ex-post adjustments to the amount (e.g. refunds) in this field. A positive amount increases the netExpense, a negative amount reduces the netExpense.'),
+        default=0)
+    fees = models.FloatField(
+        _('Fees'),
+        help_text=_('The sum of any transaction fees (e.g. Paypal fees) that were paid <strong>by us</strong>, and should therefore be added to net expense.'),
+        default=0)
 
     paymentMethod = models.CharField(_('Payment method'),max_length=50,null=True,blank=True)
 
     comments = models.TextField(_('Comments/Notes'),null=True,blank=True)
     attachment = FilerFileField(verbose_name=_('Attach File (optional)'),null=True,blank=True,related_name='expense_attachment')
 
-    # These are foreign key relations for the things that expenses can be be related to.
-    # An expense item should only be populated by one of eventstaffmember
-    # or eventvenue.  However, an event will automatically be populated by the associated
-    # event if it is a determined event expense.  This allows for simpler lookups,
-    # like, "get all expenses associated with this event."
-    eventstaffmember = models.OneToOneField(EventStaffMember,null=True,blank=True,verbose_name=_('Staff member'))
-    eventvenue = models.ForeignKey(Event,null=True,blank=True,related_name='venueexpense',verbose_name=_('Event venue'))
-    event = models.ForeignKey(Event,null=True,blank=True,verbose_name=_('Event'),help_text=_('If this item is associated with an Event, enter it here.'))
+    # An expense item will automatically be associated with an event if it is an automatically-generated
+    # _hourly_ expense for venue rental or for event staff.  This facilitates event-level financial statements.
+    # Non-hourly generated expense items are not automatically affiliated with events.  It is also possible
+    # to affiliate an Expense Item with an event via the Expense Reporting Form.
+    event = models.ForeignKey(
+        Event,
+        null=True,blank=True,
+        verbose_name=_('Event'),
+        help_text=_('If this item is associated with an Event, enter it here.'),on_delete=models.SET_NULL,)
 
-    # For periodic expenses (e.g. daily/weekly/monthly venue rental, instructor expenses, etc.
-    expenseRule = models.ForeignKey(RepeatedExpenseRule,verbose_name=_('Expense generation rule'),null=True,blank=True)
+    # For periodic expenses (e.g. hourly/daily/weekly/monthly venue rental, instructor expenses, etc.  This foreign key
+    # also replaces the prior relations eventstaffmember and eventvenue, because all automatically generated expenses
+    # are now generated against specific repeated expense rules.
+    expenseRule = models.ForeignKey(
+        RepeatedExpenseRule,
+        verbose_name=_('Expense generation rule'),
+        null=True,blank=True,on_delete=models.SET_NULL,)
+
+    # For daily/weekly/monthly automatically-generate expenses, this defines the period over which
+    # this expense item applies.
     periodStart = models.DateTimeField(_('Expense period start'),null=True,blank=True)
     periodEnd = models.DateTimeField(_('Expense period end'),null=True,blank=True)
 
     # An expense can be directly associated with a user (like an instructor) or
     # a location, or the name of another party can be entered.
-    payToUser = models.ForeignKey(User,null=True,blank=True,related_name='payToUser',verbose_name=_('Pay to user'))
+    payToUser = models.ForeignKey(
+        User,null=True,blank=True,
+        related_name='payToUser',verbose_name=_('Pay to user'),on_delete=models.SET_NULL,)
     payToLocation = models.ForeignKey(Location,null=True,blank=True,verbose_name=_('Pay to location'))
     payToName = models.CharField(_('Pay to (enter name)'),max_length=50, null=True,blank=True)
 
-    reimbursement = models.BooleanField(_('Reimbursement'),help_text=_('Check to indicate that this is a reimbursement expense (i.e. not compensation).'),default=False)
+    reimbursement = models.BooleanField(
+        _('Reimbursement'),
+        help_text=_('Check to indicate that this is a reimbursement expense (i.e. not compensation).'),
+        default=False)
 
-    approved = models.BooleanField(_('Approved'),help_text=_('Check to indicate that expense is approved for payment.'),default=False)
-    paid = models.BooleanField(_('Paid'),help_text=_('Check to indicate that payment has been made.'),default=False)
+    approved = models.BooleanField(
+        _('Approved'),
+        help_text=_('Check to indicate that expense is approved for payment.'),
+        default=False)
+    paid = models.BooleanField(
+        _('Paid'),
+        help_text=_('Check to indicate that payment has been made.'),
+        default=False)
 
     approvalDate = models.DateTimeField(_('Approval date'),null=True,blank=True)
     paymentDate = models.DateTimeField(_('Payment date'),null=True,blank=True)
@@ -397,21 +469,18 @@ class ExpenseItem(models.Model):
             if self.paid and not self.paymentDate and not self.__paymentDate:
                 self.paymentDate = timezone.now()
 
-        # Ensure that each expense is attribued to only one series or event.
-        if len([x for x in [
-                self.eventstaffmember,
-                self.eventvenue,] if x]) > 1:
-            raise ValidationError(_('This expense cannot be attributed to multiple categories.'),code='invalid')
-
         # Fill out the series and event properties to permit easy calculation of
         # revenues and expenses by series or by event.
-        if self.eventstaffmember:
-            self.event = self.eventstaffmember.event
-            if hasattr(self.eventstaffmember.staffMember,'userAccount'):
-                self.payToUser = self.eventstaffmember.staffMember.userAccount
-        if self.eventvenue:
-            self.event = self.eventvenue
-            self.payToLocation = self.eventvenue.location
+        if (
+            self.expenseRule and hasattr(self.expenseRule,'staffMember') and
+            hasattr(self.expenseRule.staffMember,'userAccount') and not self.payToUser
+        ):
+            self.payToUser = self.expenseRule.staffMember.userAccount
+        if (
+            self.expenseRule and hasattr(self.expenseRule,'location') and
+            not self.payToLocation
+        ):
+            self.payToLocation = self.expenseRule.location
 
         # Set the accrual date.  The method for events ensures that the accrualDate month
         # is the same as the reported month of the series/event by accruing to the end date of the last
@@ -499,10 +568,12 @@ class RevenueItem(models.Model):
     All revenue-producing transactions (e.g. class payments, other payments) should have an associated RevenueItem
     '''
 
-    submissionUser = models.ForeignKey(User,null=True,blank=True,related_name='revenuessubmittedby',verbose_name=_('Submission user'))
+    submissionUser = models.ForeignKey(
+        User,null=True,blank=True,related_name='revenuessubmittedby',
+        verbose_name=_('Submission user'),on_delete=models.SET_NULL,)
     submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
 
-    category = models.ForeignKey(RevenueCategory,verbose_name=_('Category'))
+    category = models.ForeignKey(RevenueCategory,verbose_name=_('Category'),null=True,on_delete=models.SET_NULL,)
     description = models.CharField(_('Description'),max_length=200,null=True,blank=True)
     total = models.FloatField(_('Total'),help_text=_('The total revenue received, net of any discounts or voucher uses.  This is what we actually receive.'),validators=[MinValueValidator(0)])
     grossTotal = models.FloatField(_('Gross Total'),help_text=_('The gross total billed before the application of any discounts, or the use of any vouchers.'),validators=[MinValueValidator(0)])

@@ -9,9 +9,9 @@ from django.utils.translation import ugettext_lazy as _
 from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
 
-from danceschool.core.models import Location, Room
+from danceschool.core.models import Location, Room, StaffMember, Instructor
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, LocationRentalInfo, RoomRentalInfo
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, LocationRentalInfo, RoomRentalInfo, StaffMemberWageInfo
 from .forms import ExpenseCategoryWidget
 from .autocomplete_light_registry import get_method_list
 
@@ -67,7 +67,7 @@ class ExpenseItemAdmin(admin.ModelAdmin):
         }),
         (_('Approval/Payment Status'), {
             'classes': ('collapse',),
-            'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','eventstaffmember','event','payToUser','payToLocation','payToName')
+            'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','expenseRule','event','payToUser','payToLocation','payToName')
         }),
     )
 
@@ -227,10 +227,11 @@ class RevenueItemAdmin(admin.ModelAdmin):
         obj.save()
 
 
-class LocationRentalInfoInline(admin.TabularInline):
+class LocationRentalInfoInline(admin.StackedInline):
     model = LocationRentalInfo
     extra = 1
-    exclude = []
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
+    classes = ('collapse',)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -239,16 +240,24 @@ class LocationRentalInfoInline(admin.TabularInline):
         return False
 
 
-class RoomRentalInfoInline(admin.TabularInline):
+class RoomRentalInfoInline(admin.StackedInline):
     model = RoomRentalInfo
     extra = 1
-    exclude = []
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
 
     def has_add_permission(self, request, obj=None):
         return False
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+class StaffMemberWageInfoInline(admin.StackedInline):
+    model = StaffMemberWageInfo
+    min_num = 1
+    extra = 0
+    fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
+    classes = ('collapse',)
 
 
 admin.site.register(ExpenseItem,ExpenseItemAdmin)
@@ -259,3 +268,5 @@ admin.site.register(RevenueCategory)
 # This adds inlines to Location and Room without subclassing
 admin.site._registry[Location].inlines.insert(0,LocationRentalInfoInline)
 admin.site._registry[Room].inlines.insert(0,RoomRentalInfoInline)
+admin.site._registry[StaffMember].inlines.insert(0,StaffMemberWageInfoInline)
+admin.site._registry[Instructor].inlines.insert(0,StaffMemberWageInfoInline)

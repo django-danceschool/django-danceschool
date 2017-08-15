@@ -67,7 +67,6 @@ class DefaultSchoolTestCase(TestCase):
             state='MA',
             zip='02114',
             directions='These are directions to the default location.',
-            rentalRate=50,
             defaultCapacity=50,
         )
 

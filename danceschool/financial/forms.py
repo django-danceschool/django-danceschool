@@ -166,7 +166,7 @@ class ExpenseReportingForm(forms.ModelForm):
 
         # Automatically marks expenses that are paid
         # upon submission as accruing at the date of payment.
-        if paid:
+        if paid and paymentDate:
             self.cleaned_data['accrualDate'] = paymentDate
         else:
             self.cleaned_data.pop('paymentDate',None)
@@ -271,7 +271,7 @@ class RevenueReportingForm(forms.ModelForm):
 
     def clean_invoiceNumber(self):
         ''' Create a unique invoice number '''
-        return 'SUBMITTED_%s_%s' % (self.cleaned_data['submissionUser'].id,timezone.now().strftime('%Y%m%d%H%M%S'))
+        return 'SUBMITTED_%s_%s' % (getattr(self.cleaned_data['submissionUser'],'id','None'),timezone.now().strftime('%Y%m%d%H%M%S'))
 
     def clean(self):
         # Custom cleaning ensures that revenues are not attributed

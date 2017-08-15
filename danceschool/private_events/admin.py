@@ -1,33 +1,14 @@
 from django.contrib import admin
-from django.forms import ModelForm, SplitDateTimeField
-from django.utils.translation import ugettext_lazy as _
 
-from danceschool.core.admin import EventChildAdmin
-from danceschool.core.models import EventOccurrence, Event
+from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline
+from danceschool.core.models import Event
 
 from .models import PrivateEvent, PrivateEventCategory, EventReminder
-
-# Register your models here.
-
-
-class EventOccurrenceInlineForm(ModelForm):
-    startTime = SplitDateTimeField(required=True,label=_('Start Date/Time'))
-    endTime = SplitDateTimeField(required=True,label=_('End Date/Time'))
 
 
 class EventReminderInline(admin.StackedInline):
     model = EventReminder
     extra = 0
-
-
-class EventOccurrenceInline(admin.TabularInline):
-    model = EventOccurrence
-    form = EventOccurrenceInlineForm
-    extra = 1
-
-    class Media:
-        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','js/eventadmin_pickers.js')
-        css = {'all':('timepicker/jquery.timepicker.css','jquery-ui/jquery-ui.min.css',)}
 
 
 class PrivateEventAdmin(EventChildAdmin):

@@ -715,7 +715,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         Returns the set of roles for this event.  Since roles are not always custom specified for
         event, this looks for the set of available roles in multiple places.  If no roles are found,
-        then the method returns None, in which case it can be assumed that the event's registration
+        then the method returns an empty list, in which case it can be assumed that the event's registration
         is not role-specific.
         '''
         eventRoles = self.eventrole_set.filter(capacity__gt=0)
@@ -723,6 +723,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             return [x.role for x in eventRoles]
         elif isinstance(self,Series):
             return self.classDescription.danceTypeLevel.danceType.roles.all()
+        return []
     availableRoles.fget.short_description = _('Applicable dance roles')
 
     def numRegisteredForRole(self, role):
@@ -736,7 +737,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         Return a dictionary listing registrations by all available roles (including no role)
         '''
-        return {getattr(x,'name',None):self.numRegisteredForRole(x) for x in list(self.availableRoles) + [None,]}
+        role_list = list(self.availableRoles) + [None,]
+        return {getattr(x,'name',None):self.numRegisteredForRole(x) for x in role_list}
     numRegisteredByRole.fget.short_description = _('# Registered by role')
 
     def capacityForRole(self,role):
@@ -1047,6 +1049,7 @@ class EventStaffMember(models.Model):
         return '%(type)s: %(name)s %(as)s %(category)s %(for)s %(eventName)s' % replacements
 
     class Meta:
+        unique_together = ('staffMember','event','category','replacedStaffMember')
         verbose_name = _('Event staff member')
         verbose_name_plural = _('Event staff members')
 
