@@ -110,8 +110,7 @@ Basic installation
 What you need:
 ~~~~~~~~~~~~~~
 
--  Python 3.4+ (code may still run on Python 2.7, but it is untested,
-   and the ``requirements.txt`` file works with Python 3 only)
+-  Python 3.4+
 -  The ability to create a virtual environment (on Linux, install the
    ``python-virtualenv`` package)
 -  pip - the Python package manager
@@ -121,7 +120,7 @@ What you need:
 -  External library dependencies for Pillow, used for basic image
    processing (see the `Pillow
    Documentation <http://pillow.readthedocs.io/en/3.4.x/installation.html>`__).
--  `Redis server <https://redis.io/>` for asynchronous handling of emails and other tasks
+-  **Recommended for production use:** `Redis server <https://redis.io/>` for asynchronous handling of emails and other tasks
 -  **For Paypal integration only:** SSL and FFI libraries needed to use the Paypal REST SDK (see `the Github repo <https://github.com/paypal/PayPal-Python-SDK>` for details)
 
 **Linux**
