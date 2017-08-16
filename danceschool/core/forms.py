@@ -658,25 +658,45 @@ class EmailContactForm(forms.Form):
         user = kwargs.pop('user',None)
         months = kwargs.pop('months',[])
         recentseries = kwargs.pop('recentseries',[])
+        customers = kwargs.pop('customers',[])
+
         super(EmailContactForm, self).__init__(*args, **kwargs)
-        self.fields['month'].choices = months
-        self.fields['series'].choices = recentseries
+
+        if customers:
+            self.fields['customers'] = forms.MultipleChoiceField(
+                required=True,
+                label=_('Selected customers'),
+                widget=forms.CheckboxSelectMultiple(),
+                choices=[(x.id,'%s <%s>' % (x.fullName, x.email)) for x in customers]
+            )
+            self.fields['customers'].initial = [x.id for x in customers]
+            self.fields.pop('month',None)
+            self.fields.pop('series',None)
+            self.fields.pop('sendToSet',None)
+
+            # Move the customer list to the top of the form
+            self.fields.move_to_end('customers',last=False)
+
+        else:
+            self.fields['month'].choices = months
+            self.fields['series'].choices = recentseries
 
         if user:
             self.fields['template'].queryset = EmailTemplate.objects.filter(Q(groupRequired__isnull=True) | Q(groupRequired__in=user.groups.all())).filter(hideFromForm=False)
 
     def clean(self):
         # Custom cleaning ensures email is only sent to one of
-        # a series or a month
+        # a series, a month, or a set of customers
         super(EmailContactForm, self).clean()
 
         sendToSet = self.cleaned_data.get('sendToSet')
+        customers = self.cleaned_data.get('customers')
 
-        # We set to empty lists and don't pop the keys out to prevent
+        # We set to None and don't pop the keys out to prevent
         # KeyError issues with the subsequent view
-        if sendToSet == 'series':
+        if sendToSet == 'series' or customers:
             self.cleaned_data['month'] = None
-        if sendToSet == 'month':
+        if sendToSet == 'month' or customers:
             self.cleaned_data['series'] = None
 
         # If this is an HTML email, then ignore the plain text content

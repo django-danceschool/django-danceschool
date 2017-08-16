@@ -39,15 +39,20 @@
 	      <div class="panel-body">
 
 			<h4>
-				{% if month and not series %}
+				{% if month and not series and not customers_to_send %}
 					{% blocktrans %}Events in {{ month }}{% endblocktrans %}:
-				{% else %}
+				{% elif series and not customers_to_send %}
 					{% trans "Students Registered for Events" %}:
+				{% elif customers_to_send %}
+					{% trans "Specific Customers" %}:
 				{% endif %}
 			</h4>
 			<ul>
 				{% for s in events_to_send %}
 					<li>{{ s.name }}</li>
+				{% endfor %}
+				{% for s in customers_to_send %}
+					<li>{{ s.fullName }} &lt;{{ s.email }}&gt;</li>
 				{% endfor %}
 			</ul>
 

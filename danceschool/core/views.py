@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, RedirectView, ListView
-from django.db.models import Min, Q
+from django.db.models import Min, Q, Count
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -24,7 +24,7 @@ from cms.models import Page
 import re
 import logging
 
-from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice
+from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, ClassChoiceForm, RepeatEventForm
 from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
@@ -50,7 +50,11 @@ class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
     template_name = 'core/events_bymonth_viewregistration_list.html'
     permission_required = 'core.view_registration_summary'
 
-    queryset = Event.objects.filter(startTime__gte=timezone.now() - timedelta(days=90))
+    queryset = Event.objects.filter(
+        startTime__gte=timezone.now() - timedelta(days=90)
+    ).annotate(count=Count('eventregistration')).exclude(
+        Q(count=0) & Q(status__in=[Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled])
+    )
 
 
 class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
@@ -62,7 +66,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
 
     def get_object(self, queryset=None):
         return get_object_or_404(
-            Series.objects.filter(id=self.kwargs.get('series_id')))
+            Event.objects.filter(id=self.kwargs.get('series_id')))
 
     def get_context_data(self,**kwargs):
         ''' Add the list of registrations for the given series '''
@@ -530,6 +534,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         testemail = self.form_data.pop('testemail')
         month = self.form_data.pop('month')
         series = self.form_data.pop('series')
+        customers = self.form_data.pop('customers',[])
 
         email_kwargs = {
             'from_name': self.form_data['from_name'],
@@ -542,23 +547,31 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
                 'html_message': html_message,
             })
 
-        events_to_send = []
+        items_to_send = []
         if month is not None and month != '':
-            events_to_send += Series.objects.filter(month=datetime.strptime(month,'%m-%Y').month, year=datetime.strptime(month,'%m-%Y').year)
+            items_to_send += list(Series.objects.filter(month=datetime.strptime(month,'%m-%Y').month, year=datetime.strptime(month,'%m-%Y').year))
         if series not in [None,'',[],['']]:
-            events_to_send += [Event.objects.get(id=x) for x in series]
+            items_to_send += list(Event.objects.filter(id__in=series))
+        if customers:
+            items_to_send.append(list(Customer.objects.filter(id__in=customers)))
 
         # We always call one email per series so that the series-level tags
-        # can be passed.
-        for s in events_to_send:
-            regs = EventRegistration.objects.filter(event=s,cancelled=False)
+        # can be passed.  The entire list of customers is also a single item
+        # in the items_to_send list, because they can be processed all at once.
+        for s in items_to_send:
+            if isinstance(s,Event):
+                regs = EventRegistration.objects.filter(event=s,cancelled=False)
+                emails = []
+                for x in regs:
+                    emails += x.get_default_recipients() or []
+            else:
+                # Customers are themselves the list.
+                regs = s
+                emails = [x.email for x in s]
+
             email_kwargs['cc'] = []
             if cc_myself:
                 email_kwargs['cc'].append(email_kwargs['from_address'])
-
-            emails = []
-            for x in regs:
-                emails += x.get_default_recipients() or []
 
             email_kwargs['bcc'] = [email_kwargs['from_address'] or getConstant('email__defaultEmailFrom'),]
 
@@ -594,6 +607,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
 
         month = self.form_data['month']
         series = self.form_data['series']
+        customers = self.form_data.get('customers')
         from_address = self.form_data['from_address']
         cc_myself = self.form_data['cc_myself']
 
@@ -607,7 +621,9 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         # can be passed.
         regs = EventRegistration.objects.filter(event__in=events_to_send)
 
-        emails = [r.customer.email for r in regs]
+        customerSet = Customer.objects.filter(id__in=customers) if customers else []
+
+        emails = [r.customer.email for r in regs] + [r.email for r in customerSet]
         cc = []
         if cc_myself:
             cc.append(from_address)
@@ -615,6 +631,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
 
         context.update({
             'events_to_send': events_to_send,
+            'customers_to_send': customerSet,
             'emails': emails,
             'cc': cc,
             'bcc': bcc,
@@ -628,10 +645,25 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
     permission_required = 'core.send_email'
     template_name = 'cms/forms/display_form_classbased_admin.html'
 
-    def __init__(self, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
+        ''' If a list of customers was passed, then parse it '''
+        ids = request.GET.get('customers')
+
+        if ids:
+            try:
+                self.customers = Customer.objects.filter(id__in=[int(x) for x in ids.split(',')])
+            except ValueError:
+                return HttpResponseBadRequest(_('Invalid customer ids passed'))
+        else:
+            self.customers = None
+
+        return super(SendEmailView,self).dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self, **kwargs):
         '''
         Get the list of recent months and recent series to pass to the form
         '''
+
         numMonths = 12
         lastStart = Event.objects.annotate(Min('eventoccurrence__startTime')).order_by('-eventoccurrence__startTime__min').values_list('eventoccurrence__startTime__min',flat=True).first()
         if lastStart:
@@ -652,19 +684,16 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
             monthStr = newdate.strftime("%B, %Y")
             months.append((newdateStr,monthStr))
 
-        self.months = months
-
         cutoff = timezone.now() - timedelta(days=120)
 
         allEvents = Event.objects.filter(startTime__gte=cutoff).order_by('-startTime')
 
-        self.recentseries = [('','None')] + [(x.id,'%s %s: %s' % (month_name[x.month],x.year,x.name)) for x in allEvents]
-
-        super(SendEmailView,self).__init__(**kwargs)
-
-    def get_form_kwargs(self, **kwargs):
         kwargs = super(SendEmailView, self).get_form_kwargs(**kwargs)
-        kwargs.update({"months": self.months, "recentseries": self.recentseries})
+        kwargs.update({
+            "months": months,
+            "recentseries": [('','None')] + [(x.id,'%s %s: %s' % (month_name[x.month],x.year,x.name)) for x in allEvents],
+            "customers": self.customers,
+        })
         return kwargs
 
     def get_initial(self):

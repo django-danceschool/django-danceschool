@@ -1315,7 +1315,7 @@ class PublicEvent(Event):
 
 
 @python_2_unicode_compatible
-class Customer(models.Model):
+class Customer(EmailRecipientMixin, models.Model):
     '''
     Not all customers choose to log in when they sign up for classes, and sometimes Users register their spouses, friends,
     or other customers.  However, we still need to keep track of those customers' registrations.  So, Customer objects
@@ -1412,6 +1412,22 @@ class Customer(models.Model):
                 return [str(x[1]) + 'x: ' + x[0].__str__() for x in multireg_list]
         elif multireg_list:
             return '%sx registration' % max([x[1] for x in multireg_list])
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [self.email,]
+
+    def get_email_context(self,**kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        context = super(Customer,self).get_email_context(**kwargs)
+        context.update({
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'email': self.email,
+            'fullName': self.fullName,
+            'phone': self.phone,
+        })
+        return context
 
     def __str__(self):
         return '%s: %s' % (self.fullName, self.email)

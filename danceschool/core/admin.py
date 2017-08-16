@@ -400,7 +400,14 @@ class CustomerAdmin(admin.ModelAdmin):
         }),
     )
 
+    def emailCustomers(self, request, queryset):
+        # Allows use of the email view to contact specific customers.
+        selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+        return HttpResponseRedirect(reverse('emailStudents') + "?customers=%s" % (",".join(selected)))
+    emailCustomers.short_description = _('Email selected customers')
+
     inlines = [CustomerRegistrationInline,]
+    actions = ['emailCustomers']
 
 
 class RoomInline(admin.StackedInline):
