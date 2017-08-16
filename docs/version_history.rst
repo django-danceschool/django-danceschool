@@ -1,6 +1,11 @@
 Version History
 ===============
 
+0.2.1 - August 16, 2017
+-----------------------
+
+- Fixed bug in which adding voucher/discount restrictions caused the changelist admin to fail.
+
 
 0.2.0 - August 15, 2017
 -----------------------
