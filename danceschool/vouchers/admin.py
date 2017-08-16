@@ -154,7 +154,7 @@ class VoucherAdmin(admin.ModelAdmin):
             text.append(_('Specific class'))
         if obj.dancetypevoucher_set.all().exists():
             text.append(_('Specific dance type/level'))
-        return ', '.join(text)
+        return ', '.join(str(text))
     restrictions.short_description = _('Restrictions')
 
     def disableVoucher(self, request, queryset):

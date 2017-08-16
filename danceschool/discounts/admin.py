@@ -55,7 +55,7 @@ class DiscountComboAdmin(admin.ModelAdmin):
             text.append(_('First-time customer'))
         if obj.daysInAdvanceRequired:
             text.append(_('%s day advance registration' % obj.daysInAdvanceRequired))
-        return ', '.join(text)
+        return ', '.join(str(text))
     restrictions.short_description = _('Restrictions')
 
     def disableDiscount(self, request, queryset):
