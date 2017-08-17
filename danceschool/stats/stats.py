@@ -54,25 +54,25 @@ def getAveragesByClassType(startDate=None,endDate=None):
         type_name = ' '.join((str(list_item[0]),str(list_item[1])))
 
         results[type_name] = {
-            'registrations': list_item[2],
+            str(_('Registrations')): list_item[2],
         }
         m = 3
         for this_role in role_list:
-            results[type_name]['total' + this_role.pluralName] = list_item[m]
+            results[type_name][str(_('Total %s' % this_role.pluralName))] = list_item[m]
             m += 1
 
     for k,count in class_counter.items():
         type_name = ' '.join((str(k[0]),str(k[1])))
         results[type_name].update({
-            'series': count
+            str(_('Series')): count
         })
     for k,v in results.items():
         if results[k].get('series'):
             results[k].update({
-                'avgRegistrations': (results[k]['registrations'] or 0) / float(results[k]['series']),
+                str(_('Avg. Registrations')): (results[k][str(_('Registrations'))] or 0) / float(results[k][str(_('Series'))]),
             })
             for this_role in role_list:
-                results[k]['avg' + this_role.pluralName] = (results[k]['total' + this_role.pluralName] or 0) / float(results[k]['series'])
+                results[k][str(_('Avg. %s' % this_role.pluralName))] = (results[k][str(_('Total %s' % this_role.pluralName))] or 0) / float(results[k][str(_('Series'))])
 
     return results
 
@@ -88,8 +88,8 @@ def AveragesByClassTypeJSON(request):
     # Needs to return a list, not a dict
     # Also, filter out types with no series or registrations
     # and sort descending
-    results_list = [dict({'type': k},**dict(v)) for k,v in results.items() if v.get('series') or v.get('registrations')]
-    sorted_list = sorted(results_list, key=lambda k: k['series'],reverse=True)
+    results_list = [dict({'type': k},**dict(v)) for k,v in results.items() if v.get(str(_('Series'))) or v.get(str(_('Registrations')))]
+    sorted_list = sorted(results_list, key=lambda k: k[str(_('Series'))],reverse=True)
     return JsonResponse(sorted_list,safe=False)
 
 
@@ -106,11 +106,11 @@ def AveragesByClassTypeCSV(request):
 
     results = getAveragesByClassType(startDate,endDate)
 
-    role_names = [x.replace('avg','') for x in results.keys() if x.startswith('avg')]
+    role_names = [x.replace(str(_('Avg. ')),'') for x in results.keys() if x.startswith(str(_('Avg. ')))]
 
-    header_list = ['Class Type','Total Classes','Total Students','Avg. Students/Class']
+    header_list = [str(_('Class Type')),str(_('Total Classes')),str(_('Total Students')),str(_('Avg. Students/Class'))]
     for this_role in role_names:
-        header_list += ['Total ' + this_role, 'Avg. ' + this_role + '/Class']
+        header_list += [str(_('Total %s' % this_role)), str(_('Avg. %s/Class' % this_role))]
 
     # Note: These are not translated because the chart Javascript looks for these keys
     writer.writerow(header_list)
@@ -118,14 +118,14 @@ def AveragesByClassTypeCSV(request):
     for key,value in results.items():
         this_row = [
             key,
-            value.get('series',0),
-            value.get('registrations',0),
-            value.get('avgRegistrations',None),
+            value.get(str(_('Series')),0),
+            value.get(str(_('Registrations')),0),
+            value.get(str(_('Avg. Registrations')),None),
         ]
         for this_role in role_names:
             this_row += [
-                value.get('total' + this_role, 0),
-                value.get('avg' + this_role, 0)
+                value.get(str(_('Total %s' % this_role)), 0),
+                value.get(str(_('Avg. %s' % this_role)), 0)
             ]
         writer.writerow(this_row)
 
@@ -293,7 +293,7 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
         if this_bin[0] == this_bin[1]:
             this_label = '%s' % this_bin[0]
         elif this_bin[1] == 99999:
-            this_label = '%s or more' % this_bin[0]
+            this_label = str(_('%s or more' % this_bin[0]))
         else:
             this_label = '%s-%s' % this_bin
 
@@ -307,8 +307,8 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
         results.update({
             this_label:
             {
-                '# Students': (i_all - lastAll),
-                '% Students': 100 * (i_all - lastAll) / float(totalCustomers),
+                str(_('# Students')): (i_all - lastAll),
+                str(_('% Students')): 100 * (i_all - lastAll) / float(totalCustomers),
                 'bin': this_bin,
             },
         })
