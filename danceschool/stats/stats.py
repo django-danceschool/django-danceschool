@@ -211,12 +211,12 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
 def ClassTypeMonthlyJSON(request):
     try:
         year = int(request.GET.get('year'))
-    except ValueError:
+    except (ValueError, TypeError):
         year = None
 
     try:
         typeLimit = int(request.GET.get('typeLimit'))
-    except ValueError:
+    except (ValueError, TypeError):
         typeLimit = None
 
     series = request.GET.get('series')
@@ -523,8 +523,7 @@ def MonthlyPerformanceCSV(request):
 
 def getLocationPerformance(startDate=None,endDate=None):
 
-    # This time filter ensures that only non-special Series are included.
-    timeFilters = {'event__series__special': False}
+    timeFilters = {}
 
     if startDate:
         timeFilters['event__startTime__gte'] = startDate
