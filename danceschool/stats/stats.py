@@ -67,12 +67,12 @@ def getAveragesByClassType(startDate=None,endDate=None):
             str(_('Series')): count
         })
     for k,v in results.items():
-        if results[k].get('series'):
+        if results[k].get(str(_('Series'))):
             results[k].update({
-                str(_('Avg. Registrations')): (results[k][str(_('Registrations'))] or 0) / float(results[k][str(_('Series'))]),
+                str(_('Average Registrations')): (results[k][str(_('Registrations'))] or 0) / float(results[k][str(_('Series'))]),
             })
             for this_role in role_list:
-                results[k][str(_('Avg. %s' % this_role.pluralName))] = (results[k][str(_('Total %s' % this_role.pluralName))] or 0) / float(results[k][str(_('Series'))])
+                results[k][str(_('Average %s' % this_role.pluralName))] = (results[k][str(_('Total %s' % this_role.pluralName))] or 0) / float(results[k][str(_('Series'))])
 
     return results
 
@@ -106,7 +106,7 @@ def AveragesByClassTypeCSV(request):
 
     results = getAveragesByClassType(startDate,endDate)
 
-    role_names = [x.replace(str(_('Avg. ')),'') for x in results.keys() if x.startswith(str(_('Avg. ')))]
+    role_names = [x.replace(str(_('Average ')),'') for x in results.keys() if x.startswith(str(_('Average ')))]
 
     header_list = [str(_('Class Type')),str(_('Total Classes')),str(_('Total Students')),str(_('Avg. Students/Class'))]
     for this_role in role_names:
@@ -120,12 +120,12 @@ def AveragesByClassTypeCSV(request):
             key,
             value.get(str(_('Series')),0),
             value.get(str(_('Registrations')),0),
-            value.get(str(_('Avg. Registrations')),None),
+            value.get(str(_('Average Registrations')),None),
         ]
         for this_role in role_names:
             this_row += [
                 value.get(str(_('Total %s' % this_role)), 0),
-                value.get(str(_('Avg. %s' % this_role)), 0)
+                value.get(str(_('Average %s' % this_role)), 0)
             ]
         writer.writerow(this_row)
 
@@ -308,14 +308,14 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
             this_label:
             {
                 str(_('# Students')): (i_all - lastAll),
-                str(_('% Students')): 100 * (i_all - lastAll) / (float(totalCustomers) or 1),
+                str(_('Percentage')): 100 * (i_all - lastAll) / (float(totalCustomers) or 1),
                 'bin': this_bin,
             },
         })
         for this_role in role_list:
             results[this_label].update({
                 '# ' + this_role.pluralName: (iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]),
-                '% ' + this_role.pluralName: 100 * (
+                'Percentage ' + this_role.pluralName: 100 * (
                     iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]
                 ) /
                 (float(totalsByRole[this_role.pluralName]['customers']) or 1),

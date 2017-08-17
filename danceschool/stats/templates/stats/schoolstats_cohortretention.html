@@ -30,7 +30,7 @@ Note that a student who has taken classes in multiple roles will show up in each
 $(document).ready(function(){
 
   var totalClassesTakenChart = null;
-  var initialShowList = ['% Students']
+  var initialShowList = ['Percentage']
   var dataKey = 'bin'
 
   function loadClassesTakenChart(url) {
@@ -55,7 +55,7 @@ $(document).ready(function(){
           json: data,
           type: 'bar',
           hide: hideList,
-          x: '# of Classes',
+          x: 'Number of Classes',
           keys: {
             x: 'bin_label',
             value: xkeys,
