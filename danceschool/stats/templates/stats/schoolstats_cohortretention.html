@@ -7,9 +7,7 @@
 <h2>{% trans "Number of Classes Taken By Starting Cohort" %}</h2>
 
 <p>{% blocktrans %}How many people decide to progress beyond beginner and how many students stick with us a while?
-Note that students are not classified as leaders or follower in the data, so a student who takes
-classes in both roles will show up in both series depending on the number of series they've taken in
-each.{% endblocktrans %}</p>
+Note that a student who has taken classes in multiple roles will show up in each role's data series depending on the number of series they've taken in each.{% endblocktrans %}</p>
 
 <div class="btn-group" role="group" aria-label="...">
   <button type="button" class="btn btn-default active studentRetentionButton">{% trans "All Students" %}</button>
@@ -31,48 +29,68 @@ each.{% endblocktrans %}</p>
 <script type="text/javascript">
 $(document).ready(function(){
 
-  var totalClassesTakenChart = c3.generate({
-      bindto: '#totalClassesTaken',
-    data: {
-      url: "{% url 'ClassCountHistogramJSON' %}",
-      mimeType: 'json',
-      x: '# of Classes',
-      type: 'bar',
-      hide: ['# Students','# Leads','# Follows'],
-      keys: {
-        x: 'bin_label',
-        value: ['# Students','# Leads','# Follows', '% Students','% Leads','% Follows'],
-      }
-    },
-    axis: {
-        x: {
-            type: 'category' // this needed to load string x value
-        }
-    },
-    bar: {
-    width: {
-      ratio: 0.8
-    }
-  }
-  });
+  var totalClassesTakenChart = null;
+  var initialShowList = ['% Students']
+  var dataKey = 'bin'
 
-  $('.studentRetentionButton').click(function() {
+  function loadClassesTakenChart(url) {
+
+    $.getJSON(url, function(data) {
+
+        xKeySet = {}
+        for(var i in data) for(var k in data[i]) xKeySet[k] = true;
+
+        xkeys = []
+        for(var i in xKeySet) if (i != dataKey) xkeys.push(i);
+
+        var hideList = xkeys.slice();
+
+        for (var s in initialShowList) {
+           var index = hideList.indexOf(initialShowList[s]);
+           if (index > -1) hideList.splice(index, 1);
+        }
+
+        var chartData = {
+          unload: true,
+          json: data,
+          type: 'bar',
+          hide: hideList,
+          x: '# of Classes',
+          keys: {
+            x: 'bin_label',
+            value: xkeys,
+          }
+        }
+
+        if (totalClassesTakenChart == null) {
+          totalClassesTakenChart = c3.generate({
+            bindto: '#totalClassesTaken',
+            data: chartData,
+            axis: {
+              x: {
+                type: 'category' // this needed to load string x value
+              }
+            },
+            bar: {
+              width: {
+                ratio: 0.8
+              }
+            },
+          });
+        }
+        else {
+          totalClassesTakenChart.load(chartData);
+        }
+    });
+  }
+
+  // Set the initial data on load
+  loadClassesTakenChart("{% url 'ClassCountHistogramJSON' %}");
+
+  $('.studentRetentionButton').click(function(){
       var cohortStart = $(this).attr('data-cohortStart');
       var cohortEnd = $(this).attr('data-cohortEnd');
-
-      totalClassesTakenChart.load({
-        unload: true,
-        url: "{% url 'ClassCountHistogramJSON' %}?cohortStart=" + cohortStart + "&cohortEnd=" + cohortEnd,
-        mimeType: 'json',
-        x: '# of Classes',
-        type: 'bar',
-        hide: ['# Students','# Leads','# Follows'],
-        keys: {
-          x: 'bin_label',
-          value: ['# Students','# Leads','# Follows', '% Students','% Leads','% Follows'],
-        }
-      });
-
+      loadClassesTakenChart("{% url 'ClassCountHistogramJSON' %}?cohortStart=" + cohortStart + "&cohortEnd=" + cohortEnd);
       $('.studentRetentionButton').removeClass('active');
       $(this).addClass('active');
   });

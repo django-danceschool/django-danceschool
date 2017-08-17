@@ -27,39 +27,61 @@
 <script type="text/javascript">
 $(document).ready(function(){
 
-  var avgAttendanceChart = c3.generate({
-      bindto: '#ClassTypePerformance',
-    data: {
-      url: "{% url 'AveragesByClassTypeJSON' %}?startDate={{ limitMonthDates.12 }}",
-      mimeType: 'json',
-      type: 'bar',
-      hide: ['registrations','leads','follows','avgLeads','avgFollows'],
-      keys: {
-        x: 'type',
-        value: ['series','registrations','leads','follows','avgRegistrations','avgLeads','avgFollows'],
-      }
-    },
-    axis: {
-        x: {
-            type: 'category' // this needed to load string x value
+  var avgAttendanceChart = null;
+  var initialShowList = ['Series', 'Avg. Registrations']
+  var dataKey = 'type'
+
+  function loadClassPerformanceChart(url) {
+
+    $.getJSON(url, function(data) {
+
+        xKeySet = {}
+        for(var i in data) for(var k in data[i]) xKeySet[k] = true;
+
+        xkeys = []
+        for(var i in xKeySet) if (i != dataKey) xkeys.push(i);
+
+        var hideList = xkeys.slice();
+
+        for (var s in initialShowList) {
+           var index = hideList.indexOf(initialShowList[s]);
+           if (index > -1) hideList.splice(index, 1);
         }
-    }
-  });
+
+        var chartData = {
+          json: data,
+          type: 'bar',
+          hide: hideList,
+          keys: {
+            x: dataKey,
+            value: xkeys,
+          }
+        }
+
+        if(avgAttendanceChart == null) {
+          avgAttendanceChart = c3.generate({
+            bindto: '#ClassTypePerformance',
+            data: chartData,
+            axis: {
+              x: {
+                type: 'category' // this needed to load string x value
+              }
+            },
+          });
+        }
+        else {
+          avgAttendanceChart.load(chartData);
+        }
+
+    });
+  }
+
+  // Set the initial data on load
+  loadClassPerformanceChart("{% url 'AveragesByClassTypeJSON' %}?startDate={{ limitMonthDates.12 }}");
 
   $('.classTypeButton').click(function(){
       var startDate = $(this).attr('data-startDate');
-
-      avgAttendanceChart.load({
-        url: "{% url 'AveragesByClassTypeJSON' %}?startDate=" + startDate,
-        mimeType: 'json',
-        type: 'bar',
-        hide: ['registrations','leads','follows','avgLeads','avgFollows'],
-        keys: {
-          x: 'type',
-          value: ['series','registrations','leads','follows','avgRegistrations','avgLeads','avgFollows'],
-        }
-      });
-
+      loadClassPerformanceChart("{% url 'AveragesByClassTypeJSON' %}?startDate=" + startDate);
       $('.classTypeButton').removeClass('active');
       $(this).addClass('active');
   });
