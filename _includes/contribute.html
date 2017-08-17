@@ -1,0 +1,28 @@
+<section id="contribute">
+	<div class="banner">
+		<div class="container">
+
+			<div class="row">
+				<div class="col-lg-6">
+					<h2>Contribute to the Project:</h2>
+				</div>
+				<div class="col-lg-6">
+					<p>
+						Django Dance School is an open source project, supported by the dancers that use it themselves.  Want to contribute?  Get in touch with the project administrators on Github!
+					</p>
+					<ul class="list-inline banner-social-buttons">
+						{% for social in site.social %}
+						<li>
+							<a href="{{ social.url }}" class="btn btn-default btn-lg">{% if social.fa_icon_class %}<i class="fa fa-{{ social.fa_icon_class }} fa-fw"></i>{% endif %} <span class="network-name">{{ social.title }}</span></a>
+						</li>
+						{% endfor %}
+					</ul>
+				</div>
+			</div>
+
+		</div>
+		<!-- /.container -->
+
+	</div>
+</section>
+<!-- /.banner -->

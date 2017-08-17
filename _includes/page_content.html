@@ -1,6 +1,6 @@
-<section id="services">
+<section id="features">
 <!-- Page Content -->
-{% for post in site.posts reversed %}
+{% for post in site.highlights %}
   {% capture thecycle %}{% cycle 'odd', 'even' %}{% endcapture %}
     {% if thecycle == 'odd' %}
     <div class="content-section-a">
@@ -14,9 +14,14 @@
                     <h2 class="section-heading">{{ post.title }}</h2>
                     <div class="lead">{{ post.content }}</div>
                 </div>
+                {% if post.img %}
                 <div class="col-lg-5 col-lg-offset-2 col-sm-6">
-                    <img class="img-responsive" src="img/services/{{ post.img }}" alt="">
+                    <img class="img-responsive" src="img/highlights/{{ post.img }}" alt="">
+                    {% if post.img2 %}
+                    <img class="img-responsive" src="img/highlights/{{ post.img2 }}" alt="">
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
 
         </div>
@@ -37,9 +42,14 @@
                     <h2 class="section-heading">{{ post.title }}</h2>
                     <div class="lead">{{ post.content }}</div>
                 </div>
+                {% if post.img %}
                 <div class="col-lg-5 col-sm-pull-6  col-sm-6">
-                  <img class="img-responsive" src="img/services/{{ post.img }}" alt="">
+                    <img class="img-responsive" src="img/highlights/{{ post.img }}" alt="">
+                    {% if post.img2 %}
+                    <img class="img-responsive" src="img/highlights/{{ post.img2 }}" alt="">
+                    {% endif %}
                 </div>
+                {% endif %}
             </div>
 
         </div>

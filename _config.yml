@@ -2,16 +2,18 @@
 #      Main Configs       #
 # ----------------------- #
 
-url: http://yoursite.com
-title: Your Awesome Site
-email: your-email@domain.com
-author: Your Name
+url: https://django-danceschool.org/
+title: Django Dance School
+# email: your-email@domain.com
+author: Lee Tucker
 description: > # "Write an awesome description for your new site here. 
-  You can edit this line in _config.yml. It will appear in your document 
-  head meta (for Google search results) and in your feed.xml site 
-  description.
-copyright: 'Copyright &copy; 2015 Your Name. All Rights Reserved.'
-credits: 'Credits: Landing Page is a free to use, open source Bootstrap theme created by <a href="http://startbootstrap.com/">Start Bootstrap</a>.'
+  The Django Dance School Project is a django CMS based project for running partnered dance schools of
+  all types.  It includes features for easy management of registration, instructors, discounts, vouchers,
+  prerequisites, and financial management, as well as easy integration with both Paypal and Stripe payment
+  processors.  It is designed to be flexible, modular, and easy to set up for dance schools and studios
+  of all types. 
+copyright: 'Copyright &copy; 2017 Lee Tucker. All Rights Reserved.'
+credits: 'Credits: Landing Page theme created by <a href="http://startbootstrap.com/">Start Bootstrap</a>.'
 
 # ----------------------- #
 #    Jekyll & Plugins     #
@@ -21,14 +23,19 @@ credits: 'Credits: Landing Page is a free to use, open source Bootstrap theme cr
 markdown: kramdown
 permalink: pretty
 
+collections:
+  highlights:
+    title: Highlights
+
+
 # ----------------------- #
 #   3rd Party Settings    #
 # ----------------------- #
 
 social:
-  - title: twitter
-    url: https://twitter.com/SBootstrap
-  - title: github
-    url: https://github.com/IronSummitMedia/startbootstrap
-  - title: linkedin
-    url: 
+  - title: Github
+    url: https://github.com/leetucker/django-danceschool
+    fa_icon_class: github
+  - title: Read the Docs
+    url: http://django-danceschool.readthedocs.io/en/latest/
+    fa_icon_class: book

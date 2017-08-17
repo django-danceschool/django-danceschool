@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html>
+	<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="The Django Dance School Project is a django CMS based project for running partnered dance schools of all types.  It includes features for easy management of registration, instructors, discounts, vouchers, prerequisites, and financial management, as well as easy integration with both Paypal and Stripe payment processors.  It is designed to be flexible, modular, and easy to set up for dance schools and studios of all types. 
+">
+    <meta name="author" content="Lee Tucker">
+
+    <title>Django Dance School</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/landing-page.css" rel="stylesheet">
+
+    <!-- Custom Fonts -->
+    <link href="font-awesome-4.1.0/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+	<body>
+		<!-- Navigation -->
+<nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand page-scroll" href="#home">Django Dance School</a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav navbar-right">  
+            	<li>
+                    <a class="page-scroll" href="#about">About</a>
+                </li>            
+                <li>
+                    <a class="page-scroll" href="#features">Features</a>
+                </li>
+                <li>
+                    <a class="page-scroll" href="#contribute">Contribute</a>
+                </li>
+            </ul>
+        </div>
+        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.container -->
+</nav>
+
+<section id="home">
+<!-- Header -->
+	<div class="intro-header">
+		<div class="container-fluid">
+            <div class="row">
+                    <div class="intro-message">
+                        <h1>Django Dance School</h1>
+                        <h3>Dance More, Work Less</h3>
+                        <hr class="intro-divider">
+                        <ul class="list-inline intro-social-buttons">
+                            
+                            <li>
+                                <a href="https://github.com/leetucker/django-danceschool" class="btn btn-default btn-lg"><i class="fa fa-github fa-fw"></i> <span class="network-name">Github</span></a>
+                            </li>
+                            
+                            <li>
+                                <a href="http://django-danceschool.readthedocs.io/en/latest/" class="btn btn-default btn-lg"><i class="fa fa-book fa-fw"></i> <span class="network-name">Read the Docs</span></a>
+                            </li>
+                            
+                        </ul>
+                    </div>
+            </div>
+        </div>
+		<!-- /.container -->
+
+	</div>
+	<!-- /.intro-header -->
+</section>
+
+		    <!-- About Section -->
+    <section id="about" class="container content-section text-center">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2">
+              <br/><br/>
+              <h2>About the Project</h2>
+
+              <p>Partnered social dance schools are complicated. We run regular class
+series in all sorts of different configurations, which may require
+prerequisites, auditions, complex pricing, etc. We also often run public
+events, some of which require registration, and some of which do not. We
+often manage numerous instructors, teach in numerous locations, and have
+to manage schedules and finances for all of these things.</p>
+
+<p>At the same time, partnered social dance schools are often run by
+amateurs, with limited time and resources. The founders of this project
+are all Lindy Hoppers, and in that community, even many of the most
+prominent and successful dance schools have zero full-time staff. We
+have seen many instances of schools that are simply unable to grow or
+expand their reach, because they lack the time and resources to manage
+all of the logistical details. Those constraints are a disservice to the
+dance.</p>
+
+<p>Over a period of several years, in Boston, we have sought to address
+these issues by building our own custom registration system, complete
+with all of the features needed to run a sophisticated dance school.
+Surprisingly, the commercial options for dance schools are very limited,
+inflexible, and often expensive. We ended up with software that suits
+our needs well, but that is also adaptable enough to be suited to a wide
+range of dance schools, including partnered social dances of all types,
+but also to many other types of dance. This project is the result of
+those efforts.</p>
+
+
+              </div>
+        </div>
+    </section>
+
+		<section id="features">
+<!-- Page Content -->
+
+  
+    
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Fully Integrated with django CMS and Bootstrap</h2>
+                    <div class="lead"><p>The sophisticated <a href="https://www.django-cms.org/">django CMS</a> system handles your front-end content and allows you or your staff to manage your website’s content without knowledge of HTML.  It includes features such as front-end content editing, drafts, and sophisticated plugin features that make it simple to keep your school’s site polished.</p>
+
+<p>Customizing your site’s layout can be a pain, but Django Dance School is built to use the popular <a href="http://getbootstrap.com/">Bootstrap</a> library, so you can get your own designs up and running quickly.</p>
+</div>
+                </div>
+                
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <img class="img-responsive" src="img/highlights/djangocms_green.png" alt="">
+                    
+                    <img class="img-responsive" src="img/highlights/bootstrap-medium.png" alt="">
+                    
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+    
+
+  
+    
+
+    <div class="content-section-b">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Track your school's performance</h2>
+                    <div class="lead"><p>Built in graphs using <a href="http://c3js.org/">C3.js</a> make it easy to track overall performance as well as things like student retention, performance by class type and location, and top students.</p>
+</div>
+                </div>
+                
+                <div class="col-lg-5 col-sm-pull-6  col-sm-6">
+                    <img class="img-responsive" src="img/highlights/school_performance_graph.png" alt="">
+                    
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+    
+
+  
+    
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Easy Paypal and Stripe Checkout Integration</h2>
+                    <div class="lead"><p>You can start accepting online payment quickly!</p>
+
+<p>The system also handles invoice payments (for things like over-the-phone registration) and refunds for cancellations.  Need to use another payment processor?  Django Dance School is built to be easily extensible to use other payment systems.</p>
+</div>
+                </div>
+                
+                <div class="col-lg-5 col-lg-offset-2 col-sm-6">
+                    <img class="img-responsive" src="img/highlights/registration_example.png" alt="">
+                    
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+    
+
+  
+    
+
+    <div class="content-section-b">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Integrated Financial Management Tools</h2>
+                    <div class="lead"><p><strong>Don’t fly blind!</strong>  Keep track of your revenue and expenses in one place.  Automatic generation of expense items makes it easy to figure out who needs to be paid when, and Django Dance School easily generates financial summaries by month, year, or by individual class series or event.</p>
+</div>
+                </div>
+                
+                <div class="col-lg-5 col-sm-pull-6  col-sm-6">
+                    <img class="img-responsive" src="img/highlights/finances_menu.png" alt="">
+                    
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+    
+
+  
+    
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Flexible discount system</h2>
+                    <div class="lead"><p>Want to give your students a discount for taking multiple classes?  Or maybe you want an “early bird” discount for preregistration?  Or even an “all-in” class pass for the month?  No problem.</p>
+</div>
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+    
+
+  
+    
+
+    <div class="content-section-b">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Extensive voucher and gift certificate features</h2>
+                    <div class="lead"><p>Want to make discount voucher codes, reward your students for creating volunteer work, or even run a referral code program for new students?  Django Dance School does that.  Want to allow customers to buy gift certificate, with automatically-generated codes and PDF attachments that they can print?  Sure!</p>
+</div>
+                </div>
+                
+                <div class="col-lg-5 col-sm-pull-6  col-sm-6">
+                    <img class="img-responsive" src="img/highlights/vouchers_example.png" alt="">
+                    
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+    
+
+  
+    
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Prerequisites and Audition-Only Classes</h2>
+                    <div class="lead"><p>Do you run audition-only classes or classes with prerequisites?  Django Dance School has it covered.</p>
+</div>
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+    
+
+  
+    
+
+    <div class="content-section-b">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-lg-offset-1 col-sm-push-6  col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Modular and Customizable</h2>
+                    <div class="lead"><p>Don’t like the way that something works, or need a new feature?  The Django Dance School project is designed to be modular and easily extensible.  And, it runs on your own server, so you have complete control.</p>
+</div>
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-b -->
+    
+
+  
+    
+    <div class="content-section-a">
+
+        <div class="container">
+
+            <div class="row">
+                <div class="col-lg-5 col-sm-6">
+                    <hr class="section-heading-spacer">
+                    <div class="clearfix"></div>
+                    <h2 class="section-heading">Open Source and Free</h2>
+                    <div class="lead"><p>Whether you’re a small school running one or two classes per week, or a large and established school, you don’t need to be paying hundreds of dollars per year in fees to use third-party tools.  Try out Django Dance School today!</p>
+</div>
+                </div>
+                
+            </div>
+
+        </div>
+        <!-- /.container -->
+
+    </div>
+    <!-- /.content-section-a -->
+    
+
+</section>
+
+		<section id="contribute">
+	<div class="banner">
+		<div class="container">
+
+			<div class="row">
+				<div class="col-lg-6">
+					<h2>Contribute to the Project:</h2>
+				</div>
+				<div class="col-lg-6">
+					<p>
+						Django Dance School is an open source project, supported by the dancers that use it themselves.  Want to contribute?  Get in touch with the project administrators on Github!
+					</p>
+					<ul class="list-inline banner-social-buttons">
+						
+						<li>
+							<a href="https://github.com/leetucker/django-danceschool" class="btn btn-default btn-lg"><i class="fa fa-github fa-fw"></i> <span class="network-name">Github</span></a>
+						</li>
+						
+						<li>
+							<a href="http://django-danceschool.readthedocs.io/en/latest/" class="btn btn-default btn-lg"><i class="fa fa-book fa-fw"></i> <span class="network-name">Read the Docs</span></a>
+						</li>
+						
+					</ul>
+				</div>
+			</div>
+
+		</div>
+		<!-- /.container -->
+
+	</div>
+</section>
+<!-- /.banner -->
+		<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <ul class="list-inline">
+                    <li>
+                        <a href="#home">Home</a>
+                    </li>
+                    <li class="footer-menu-divider">&sdot;</li>
+                    <li>
+                        <a href="#about">About</a>
+                    </li>
+                    <li class="footer-menu-divider">&sdot;</li>
+                    <li>
+                        <a href="#features">Features</a>
+                    </li>
+                    <li class="footer-menu-divider">&sdot;</li>
+                    <li>
+                        <a href="#contribute">Contribute</a>
+                    </li>
+                </ul>
+                <p class="copyright text-muted small">Copyright &copy; 2017 Lee Tucker. All Rights Reserved.</p>
+            </div>
+            <div class="col-md-4">
+                Credits: Landing Page theme created by <a href="http://startbootstrap.com/">Start Bootstrap</a>.
+            </div>
+        </div>
+    </div>
+</footer>
+
+		<!-- jQuery Version 1.11.0 -->
+<script src="js/jquery-1.11.0.js"></script>
+
+<!-- Plugin JavaScript -->
+    <script src="js/jquery.easing.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="js/landing-page.js"></script>
+
+	</body>
+</html>
