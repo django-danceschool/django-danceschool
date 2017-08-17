@@ -4,7 +4,7 @@
 
 url: https://django-danceschool.org/
 title: Django Dance School
-# email: your-email@domain.com
+email: info@django-danceschool.org
 author: Lee Tucker
 description: > # "Write an awesome description for your new site here. 
   The Django Dance School Project is a django CMS based project for running partnered dance schools of
@@ -12,7 +12,7 @@ description: > # "Write an awesome description for your new site here.
   prerequisites, and financial management, as well as easy integration with both Paypal and Stripe payment
   processors.  It is designed to be flexible, modular, and easy to set up for dance schools and studios
   of all types. 
-copyright: 'Copyright &copy; 2017 Lee Tucker. All Rights Reserved.'
+copyright: 'Copyright &copy; 2017 Lee Tucker.'
 credits: 'Credits: Landing Page theme created by <a href="http://startbootstrap.com/">Start Bootstrap</a>.'
 
 # ----------------------- #
