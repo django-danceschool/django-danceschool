@@ -308,7 +308,7 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
             this_label:
             {
                 str(_('# Students')): (i_all - lastAll),
-                str(_('% Students')): 100 * (i_all - lastAll) / float(totalCustomers),
+                str(_('% Students')): 100 * (i_all - lastAll) / (float(totalCustomers) or 1),
                 'bin': this_bin,
             },
         })
@@ -318,7 +318,7 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
                 '% ' + this_role.pluralName: 100 * (
                     iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]
                 ) /
-                float(totalsByRole[this_role.pluralName]['customers']),
+                (float(totalsByRole[this_role.pluralName]['customers']) or 1),
             })
 
         lastAll = i_all
