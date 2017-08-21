@@ -24,12 +24,16 @@ def createTemporaryRegistration(request):
 
     # first get reg info
     regSession = request.session.get(REG_VALIDATION_STR,{})
-    formData = regSession.pop('infoFormData',{})
-    if not regSession or not formData:
+    if not regSession or not regSession.get('infoFormData',{}):
         return HttpResponseServerError(_("Error: No registration information provided."))
 
-    pre_temporary_registration.send(sender=createTemporaryRegistration,data=regSession)
+    additionalItems = {}
+    preTempResponse = pre_temporary_registration.send(sender=createTemporaryRegistration,data=regSession)
+    for response in preTempResponse:
+        if len(response) > 1 and response[1] and isinstance(response[1], dict):
+            additionalItems.update(response[1])
 
+    formData = regSession.pop('infoFormData',{})
     firstName = formData.pop("firstName")
     lastName = formData.pop("lastName")
     email = formData.pop("email")
@@ -48,7 +52,8 @@ def createTemporaryRegistration(request):
         submissionUser = None
 
     # get the list of events for which to create registrations
-    eventids = regSession['regInfo'].get('events',None)
+    eventids = regSession['regInfo'].get('events',{})
+    eventids.update(additionalItems)
     eventset = Event.objects.filter(id__in=eventids.keys())
 
     # create registration

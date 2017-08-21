@@ -5,7 +5,10 @@ from django.dispatch import Signal
 # request.
 check_student_info = Signal(providing_args=['instance','formData','request'])
 
-# Fires before a TemporaryRegistration is created (passes the session data from the initial form)
+# Fires before a TemporaryRegistration is created (passes the session data from the initial form).
+# This hook can optionally be used to pass an additional set of items to be added to the
+# Temporary Registration by returning a dictionary with event ids as keys and a dict with {'register': True}
+# plus any additional information as the value for each key.
 pre_temporary_registration = Signal(providing_args=['data',])
 
 # Fires after a TemporaryRegistration is created (passes both the initial session data and the registration)
