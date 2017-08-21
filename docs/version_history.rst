@@ -1,6 +1,15 @@
 Version History
 ===============
 
+0.2.2 - August 21, 2017
+-----------------------
+
+- Removed hard-coded references to "Lead" and "Follow" roles in certain stats graphs so that they show stats based on all configurable roles.
+- Added default ordering to EventOccurrence and other fields to avoid unexpected ordering issues.
+- Added the ability to add Events to the registration using a "pre_temporary_registration" signal handler based on
+  information collected by the student information form.
+
+
 0.2.1 - August 16, 2017
 -----------------------
 
