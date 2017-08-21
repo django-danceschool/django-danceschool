@@ -27,14 +27,14 @@ class SchoolStatsView(PermissionRequiredMixin, TemplateView):
         (totalStudents,numSeries,totalSeriesRegs,totalTime) = getGeneralStats(request)
 
         bestCustomersLastTwelveMonths = Customer.objects.values(
-            'user__first_name','user__last_name'
+            'first_name','last_name'
         ).filter(**{
             'eventregistration__registration__dateTime__gte': ensure_timezone(datetime(timezone.now().year - 1,timezone.now().month,timezone.now().day)),
             'eventregistration__dropIn':False,'eventregistration__cancelled':False
         }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
 
         bestCustomersAllTime = Customer.objects.values(
-            'user__first_name','user__last_name'
+            'first_name','last_name'
         ).filter(**{
             'eventregistration__dropIn':False,
             'eventregistration__cancelled':False
