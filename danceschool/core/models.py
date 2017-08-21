@@ -196,6 +196,7 @@ class StaffMember(PolymorphicModel):
         unique_together = ('firstName', 'lastName')
         verbose_name = _('Staff member')
         verbose_name_plural = _('Staff members')
+        ordering = ('lastName','firstName')
 
         permissions = (
             ('view_staff_directory',_('Can access the staff directory view')),
@@ -426,6 +427,7 @@ class PricingTier(models.Model):
         return self.name
 
     class Meta:
+        ordering = ('name',)
         verbose_name = _('Pricing tier')
         verbose_name_plural = _('Pricing tiers')
 
@@ -975,6 +977,7 @@ class EventOccurrence(models.Model):
     class Meta:
         verbose_name = _('Event occurrence')
         verbose_name_plural = _('Event occurrences')
+        ordering = ('event','startTime')
 
 
 @python_2_unicode_compatible
@@ -998,6 +1001,7 @@ class EventStaffCategory(models.Model):
         return self.name
 
     class Meta:
+        ordering = ('name',)
         verbose_name = _('Event staff category')
         verbose_name_plural = _('Event staff categories')
 
@@ -1047,6 +1051,7 @@ class EventStaffMember(models.Model):
         return '%(type)s: %(name)s %(as)s %(category)s %(for)s %(eventName)s' % replacements
 
     class Meta:
+        ordering = ('event', 'staffMember__lastName', 'staffMember__firstName')
         unique_together = ('staffMember','event','category','replacedStaffMember')
         verbose_name = _('Event staff member')
         verbose_name_plural = _('Event staff members')
@@ -2000,6 +2005,7 @@ class EmailTemplate(models.Model):
         return self.name
 
     class Meta:
+        ordering = ('name',)
         verbose_name = _('Email template')
         verbose_name_plural = _('Email templates')
         permissions = (
@@ -2387,6 +2393,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         logger.debug('Invoice notification sent.')
 
     class Meta:
+        ordering = ('-modifiedDate',)
         verbose_name = _('Invoice')
         verbose_name_plural = _('Invoices')
         permissions = (
@@ -2505,6 +2512,7 @@ class PaymentRecord(PolymorphicModel):
         return False
 
     class Meta:
+        ordering = ('-modifiedDate',)
         verbose_name = _('Payment record')
         verbose_name_plural = _('Payment records')
 
