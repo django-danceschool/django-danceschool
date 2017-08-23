@@ -57,9 +57,9 @@ class ExpenseItemAdmin(admin.ModelAdmin):
 
     list_display = ('category','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
-    search_fields = ('description','comments','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
-    list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter))
-    readonly_fields = ('submissionUser',)
+    search_fields = ('description','comments','=category__name','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
+    list_filter = ('category','expenseRule','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter))
+    readonly_fields = ('submissionUser','expenseRule')
     actions = ('approveExpense','unapproveExpense')
 
     fieldsets = (
@@ -276,12 +276,13 @@ updateStaffCompensationInfo.short_description = _('Update compensation rules')
 class RepeatedExpenseRuleChildAdmin(PolymorphicChildModelAdmin):
     """ Base admin class for all child models """
     base_model = RepeatedExpenseRule
+    readonly_fields = ('lastRun',)
 
     # By using these `base_...` attributes instead of the regular ModelAdmin `form` and `fieldsets`,
     # the additional fields of the child models are automatically added to the admin form.
     base_fieldsets = (
         (None, {
-            'fields': ('rentalRate','applyRateRule','disabled')
+            'fields': ('rentalRate','applyRateRule','disabled','lastRun')
         }),
         (_('Generation rules'),{
             'fields': ('dayStarts','weekStarts','monthStarts','advanceDays','priorDays',),
@@ -347,7 +348,6 @@ class GenericRepeatedExpenseAdminForm(ModelForm):
 class GenericRepeatedExpenseAdmin(RepeatedExpenseRuleChildAdmin):
     base_model = GenericRepeatedExpense
     base_form = GenericRepeatedExpenseAdminForm
-    readonly_fields = ('lastRun',)
 
     base_fieldsets = (
         (None, {

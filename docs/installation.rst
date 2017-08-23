@@ -171,6 +171,9 @@ Additionally, because most emails in this project are sent asynchronously,
 you will need to run Huey as described below.  If Huey is not running, then
 these tasks will be silently queued until Huey is later run.
 
+
+.. _huey_setup:
+
 Huey (and Redis) setup for production
 -------------------------------------
 
