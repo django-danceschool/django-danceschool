@@ -1,7 +1,7 @@
 Version History
 ===============
 
-0.2.3 - August 21, 2017
+0.2.3 - August 23, 2017
 -----------------------
 
 - **New:** Added the ability to automatically generate "generic" expense items daily/weekly/monthly using
