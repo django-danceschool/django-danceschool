@@ -1,6 +1,14 @@
 Version History
 ===============
 
+0.2.3 - August 21, 2017
+-----------------------
+
+- **New:** Added the ability to automatically generate "generic" expense items daily/weekly/monthly using
+  the same rule-based logic as automatic generation of expenses for locations and staff members.
+- Minor admin cleanup in the Financial app.
+
+
 0.2.2 - August 21, 2017
 -----------------------
 
