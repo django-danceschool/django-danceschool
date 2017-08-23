@@ -80,7 +80,8 @@ class FinancialToolbar(CMSToolbar):
 
         if menu and (
             self.request.user.has_perm('financial.change_expenseitem') or self.request.user.has_perm('financial.change_revenueitem') or
-            self.request.user.has_perm('financial.change_expensecategory') or self.request.user.has_perm('financial.change_revenuecategory')
+            self.request.user.has_perm('financial.change_expensecategory') or self.request.user.has_perm('financial.change_revenuecategory') or
+            self.request.user.has_perm('financial.change_repeatedexpenserule')
         ):
             related_menu = menu.get_or_create_menu('financial-related',_('Related Items'), position=newPosition + 2)
 
@@ -88,7 +89,8 @@ class FinancialToolbar(CMSToolbar):
                 related_menu.add_link_item(_('Expense Categories'), url=reverse('admin:financial_expensecategory_changelist'))
             if self.request.user.has_perm('financial.change_expenseitem'):
                 related_menu.add_link_item(_('Expense Items'), url=reverse('admin:financial_expenseitem_changelist'))
-
+            if self.request.user.has_perm('financial.change_repeatedexpenserule'):
+                related_menu.add_link_item(_('Repeated Expense Rules'), url=reverse('admin:financial_repeatedexpenserule_changelist'))
             if self.request.user.has_perm('financial.change_revenuecategory'):
                 related_menu.add_link_item(_('Revenue Categories'), url=reverse('admin:financial_revenuecategory_changelist'))
             if self.request.user.has_perm('financial.change_revenueitem'):

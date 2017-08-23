@@ -10,10 +10,11 @@ from django.http import HttpResponseRedirect
 
 from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
+from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 
 from danceschool.core.models import Location, Room, StaffMember, Instructor
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, LocationRentalInfo, RoomRentalInfo, StaffMemberWageInfo
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, RepeatedExpenseRule, LocationRentalInfo, RoomRentalInfo, StaffMemberWageInfo, GenericRepeatedExpense
 from .forms import ExpenseCategoryWidget
 from .autocomplete_light_registry import get_method_list
 
@@ -50,6 +51,7 @@ class ExpenseItemAdminForm(ModelForm):
         }
 
 
+@admin.register(ExpenseItem)
 class ExpenseItemAdmin(admin.ModelAdmin):
     form = ExpenseItemAdminForm
 
@@ -132,6 +134,7 @@ class RevenueItemAdminForm(ModelForm):
         exclude = []
 
 
+@admin.register(RevenueItem)
 class RevenueItemAdmin(admin.ModelAdmin):
     form = RevenueItemAdminForm
 
@@ -232,7 +235,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
 class LocationRentalInfoInline(admin.StackedInline):
     model = LocationRentalInfo
     extra = 1
-    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'),'disabled')
     classes = ('collapse',)
 
     def has_add_permission(self, request, obj=None):
@@ -242,7 +245,8 @@ class LocationRentalInfoInline(admin.StackedInline):
 class RoomRentalInfoInline(admin.StackedInline):
     model = RoomRentalInfo
     extra = 1
-    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'),'disabled')
+    classes = ('collapse',)
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -252,7 +256,7 @@ class StaffMemberWageInfoInline(admin.StackedInline):
     model = StaffMemberWageInfo
     min_num = 1
     extra = 0
-    fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'))
+    fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'),'disabled')
     classes = ('collapse',)
 
 
@@ -269,9 +273,151 @@ def updateStaffCompensationInfo(self, request, queryset):
 updateStaffCompensationInfo.short_description = _('Update compensation rules')
 
 
-admin.site.register(ExpenseItem,ExpenseItemAdmin)
+class RepeatedExpenseRuleChildAdmin(PolymorphicChildModelAdmin):
+    """ Base admin class for all child models """
+    base_model = RepeatedExpenseRule
+
+    # By using these `base_...` attributes instead of the regular ModelAdmin `form` and `fieldsets`,
+    # the additional fields of the child models are automatically added to the admin form.
+    base_fieldsets = (
+        (None, {
+            'fields': ('rentalRate','applyRateRule','disabled')
+        }),
+        (_('Generation rules'),{
+            'fields': ('dayStarts','weekStarts','monthStarts','advanceDays','priorDays',),
+        }),
+        (_('Start and End Date (optional)'), {
+            'fields': ('startDate','endDate')
+        }),
+    )
+
+    def get_fieldsets(self, request, obj=None):
+        ''' Override polymorphic default to put the subclass-specific fields first '''
+        # If subclass declares fieldsets, this is respected
+        if (hasattr(self, 'declared_fieldset') and self.declared_fieldsets) \
+           or not self.base_fieldsets:
+            return super(PolymorphicChildModelAdmin, self).get_fieldsets(request, obj)
+
+        other_fields = self.get_subclass_fields(request, obj)
+
+        if other_fields:
+            return (
+                (self.extra_fieldset_title, {'fields': other_fields}),
+            ) + self.base_fieldsets
+        else:
+            return self.base_fieldsets
+
+
+@admin.register(LocationRentalInfo)
+class LocationRentalInfoAdmin(RepeatedExpenseRuleChildAdmin):
+    base_model = LocationRentalInfo
+    extra_fieldset_title = None
+
+
+@admin.register(RoomRentalInfo)
+class RoomRentalInfoAdmin(RepeatedExpenseRuleChildAdmin):
+    base_model = RoomRentalInfo
+    extra_fieldset_title = None
+
+
+@admin.register(StaffMemberWageInfo)
+class StaffMemberWageInfoAdmin(RepeatedExpenseRuleChildAdmin):
+    base_model = StaffMemberWageInfo
+    extra_fieldset_title = None
+
+
+class GenericRepeatedExpenseAdminForm(ModelForm):
+
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
+    )
+
+    def __init__(self,*args,**kwargs):
+        super(GenericRepeatedExpenseAdminForm,self).__init__(*args,**kwargs)
+
+        updatedChoices = RepeatedExpenseRule.RateRuleChoices.choices
+        index = [x[0] for x in updatedChoices].index('D')
+        updatedChoices = updatedChoices[:index] + (('D',_('Per day')),) + updatedChoices[index + 1:]
+        self.fields.get('applyRateRule').choices = updatedChoices
+
+
+@admin.register(GenericRepeatedExpense)
+class GenericRepeatedExpenseAdmin(RepeatedExpenseRuleChildAdmin):
+    base_model = GenericRepeatedExpense
+    base_form = GenericRepeatedExpenseAdminForm
+    readonly_fields = ('lastRun',)
+
+    base_fieldsets = (
+        (None, {
+            'fields': ('name','rentalRate','applyRateRule','disabled','lastRun')
+        }),
+        (_('Generation rules'),{
+            'fields': ('dayStarts','weekStarts','monthStarts','advanceDays','priorDays',),
+        }),
+        (_('Expense item parameters'),{
+            'fields': ('category','payToUser','payToLocation','payToName',)
+        }),
+        (_('Start and End Date (optional)'), {
+            'fields': ('startDate','endDate'),
+            'classes': ('collapse',)
+        }),
+        (_('Automated approval'),{
+            'fields': ('markApproved','markPaid','paymentMethod',),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(RepeatedExpenseRule)
+class RepeatedExpenseRuleAdmin(PolymorphicParentModelAdmin):
+    base_model = RepeatedExpenseRule
+    child_models = (LocationRentalInfo,RoomRentalInfo,StaffMemberWageInfo,GenericRepeatedExpense)
+    polymorphic_list = True
+
+    list_display = ('ruleName','applyRateRule','rentalRate','_enabled','lastRun')
+    list_filter = (PolymorphicChildModelFilter,'applyRateRule','startDate','endDate','lastRun')
+
+    actions = ('disableRules','enableRules','generateExpenses')
+
+    def _enabled(self,obj):
+        ''' Change the label '''
+        return obj.disabled is False
+    _enabled.short_description = _('Enabled')
+    _enabled.boolean = True
+
+    def disableRules(self, request, queryset):
+        rows_updated = queryset.update(disabled=True)
+        if rows_updated == 1:
+            message_bit = "1 rule was"
+        else:
+            message_bit = "%s rules were" % rows_updated
+        self.message_user(request, "%s successfully disabled." % message_bit)
+    disableRules.short_description = _('Disable selected repeated expense rules')
+
+    def enableRules(self, request, queryset):
+        rows_updated = queryset.update(disabled=False)
+        if rows_updated == 1:
+            message_bit = "1 rule was"
+        else:
+            message_bit = "%s rules were" % rows_updated
+        self.message_user(request, "%s successfully enabled." % message_bit)
+    enableRules.short_description = _('Enable selected repeated expense rules')
+
+    def generateExpenses(self, request, queryset):
+        rule_count = len(queryset)
+        generate_count = 0
+        for q in queryset:
+            generate_count += q.generateExpenses(request=request)
+        message_bit = 'Successfully generated %s expense item%s from %s rule%s.' % (
+            generate_count, 's' if generate_count != 1 else '', rule_count, 's' if rule_count != 1 else '')
+        self.message_user(request, message_bit)
+
+    generateExpenses.short_description = _('Generate expenses for selected repeated expense rules')
+
+
 admin.site.register(ExpenseCategory)
-admin.site.register(RevenueItem,RevenueItemAdmin)
 admin.site.register(RevenueCategory)
 
 # This adds inlines to Location and Room without subclassing

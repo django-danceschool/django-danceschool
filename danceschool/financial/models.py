@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
@@ -14,7 +14,6 @@ from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
 from datetime import time, timedelta
 from dateutil.relativedelta import relativedelta
-
 from intervaltree import IntervalTree
 
 from danceschool.core.models import StaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room
@@ -24,6 +23,40 @@ from danceschool.core.constants import getConstant
 def ordinal(n):
     ''' This is just used to populate ordinal day of the month choices '''
     return "%d%s" % (n,"tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4])
+
+
+@python_2_unicode_compatible
+class ExpenseCategory(models.Model):
+    '''
+    These are the different available categories of payment
+    '''
+
+    name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Different types of tasks and payments should have different category names'))
+    defaultRate = models.FloatField(_('Default rate'),help_text=_('This is the default hourly payment rate for this type of task.  For staff expenses and venue rentals, this will be overridden by the rate specified as default for the venue or staff type.'),null=True,blank=True,validators=[MinValueValidator(0)])
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Expense category')
+        verbose_name_plural = _('Expense categories')
+
+
+@python_2_unicode_compatible
+class RevenueCategory(models.Model):
+    '''
+    These are the different available categories of payment
+    '''
+
+    name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Different types of revenue fall under different categories.'))
+    defaultAmount = models.FloatField(_('Default amount'),help_text=_('This is the default amount of revenue for items in this category.'),null=True,blank=True,validators=[MinValueValidator(0)])
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Revenue category')
+        verbose_name_plural = _('Revenue categories')
 
 
 class RepeatedExpenseRule(PolymorphicModel):
@@ -39,7 +72,6 @@ class RepeatedExpenseRule(PolymorphicModel):
         daily = ChoiceItem('D',_('Per day of scheduled events'))
         weekly = ChoiceItem('W',_('Per week'))
         monthly = ChoiceItem('M',_('Per month'))
-        disabled = ChoiceItem('N',_('Do not generate expense items for this location'))
 
     rentalRate = models.FloatField(
         _('Expense Rate'),validators=[MinValueValidator(0)],help_text=_('In default currency')
@@ -82,7 +114,7 @@ class RepeatedExpenseRule(PolymorphicModel):
     )
 
     endDate = models.DateField(
-        _('Start date'),
+        _('End date'),
         null=True,
         blank=True,
         help_text=_('If specified, then expense items will not be generated after this date.  Leave blank for expenses to be generated indefinitely.')
@@ -101,10 +133,28 @@ class RepeatedExpenseRule(PolymorphicModel):
         blank=True
     )
 
+    disabled = models.BooleanField(
+        _('Disable autogeneration of expenses under this rule'),
+        default=False,
+        help_text=_(
+            'It is recommended to disable expense rules rather than delete them for ' +
+            'temporary purposes, to avoid the creation of duplicate expense items.'
+        ),
+    )
+
+    lastRun = models.DateTimeField(_('Last run time'),null=True,blank=True)
+
+    def generateExpenses(self,request=None,datetimeTuple=None):
+        '''
+        Child classes that define this method can have their expense rule run
+        from the admin interface.
+        '''
+        pass
+
     def timeAtThreshold(self,dateTime):
         '''
         A convenience method for checking when a time is on the start/end boundary
-        for this rule.verbose_name
+        for this rule.
         '''
 
         # Anything that's not at a day boundary is for sure not at a threshold.
@@ -258,9 +308,15 @@ class RepeatedExpenseRule(PolymorphicModel):
             # Yield the information for this interval
             yield (startTime, endTime, total, description)
 
+    @property
+    def ruleName(self):
+        ''' This should be overridden for child classes '''
+        return '%s %s' % (self.rentalRate, self.RateRuleChoices.values.get(self.applyRateRule,self.applyRateRule))
+    ruleName.fget.short_description = _('Rule name')
+
     def __str__(self):
         ''' Should be overridden by child classes with something more descriptive. '''
-        return str(_('Repeated expense rule: %s %s' % (self.rentalRate, self.values.get(self.applyRateRule,self.applyRateRule))))
+        return str(_('Repeated expense rule: %s' % self.name))
 
 
 class LocationRentalInfo(RepeatedExpenseRule):
@@ -270,8 +326,18 @@ class LocationRentalInfo(RepeatedExpenseRule):
     '''
     location = models.OneToOneField(Location,related_name='rentalinfo',verbose_name=_('Location'))
 
+    @property
+    def ruleName(self):
+        ''' overrides from parent class '''
+        return self.location.name
+    ruleName.fget.short_description = _('Rule name')
+
+    def generateExpenses(self,request=None,datetimeTuple=None):
+        from .helpers import createExpenseItemsForVenueRental
+        return createExpenseItemsForVenueRental(rule=self,request=request,datetimeTuple=datetimeTuple)
+
     def __str__(self):
-        return str(_('Rental expense information for %s' % self.location.name))
+        return str(_('Rental expense information for: %s' % self.location.name))
 
     class Meta:
         verbose_name = _('Location rental information')
@@ -287,8 +353,18 @@ class RoomRentalInfo(RepeatedExpenseRule):
     '''
     room = models.OneToOneField(Room,related_name='rentalinfo',verbose_name=_('Room'))
 
+    @property
+    def ruleName(self):
+        ''' overrides from parent class '''
+        return _('%s at %s' % (self.room.name, self.room.location.name))
+    ruleName.fget.short_description = _('Rule name')
+
+    def generateExpenses(self,request=None,datetimeTuple=None):
+        from .helpers import createExpenseItemsForVenueRental
+        return createExpenseItemsForVenueRental(rule=self,request=request,datetimeTuple=datetimeTuple)
+
     def __str__(self):
-        return str(_('Rental expense information for %s at %s' % (self.room.name, self.room.location.name)))
+        return str(_('Rental expense information for: %s at %s' % (self.room.name, self.room.location.name)))
 
     class Meta:
         verbose_name = _('Room rental information')
@@ -311,8 +387,18 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
         on_delete=models.SET_NULL,
     )
 
+    @property
+    def ruleName(self):
+        ''' overrides from parent class '''
+        return _('%s: %s' % (self.staffMember.fullName, self.category or 'All unspecified categories'))
+    ruleName.fget.short_description = _('Rule name')
+
+    def generateExpenses(self,request=None,datetimeTuple=None):
+        from .helpers import createExpenseItemsForEvents
+        return createExpenseItemsForEvents(rule=self,request=request,datetimeTuple=datetimeTuple)
+
     def __str__(self):
-        return str(_('Rental expense information for %s' % self.staffMember.fullName))
+        return str(_('%s wage/salary information for: %s' % (self.category or 'Rental', self.staffMember.fullName)))
 
     class Meta:
         unique_together = ('staffMember', 'category')
@@ -321,21 +407,59 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
         verbose_name_plural = _('Staff members\' wage/salary information')
 
 
-@python_2_unicode_compatible
-class ExpenseCategory(models.Model):
+class GenericRepeatedExpense(RepeatedExpenseRule):
     '''
-    These are the different available categories of payment
+    This model is used to store repeated expenses that are not specifically tied to location
+    rental or event staffing.  That is, expenses are generated under these rules regardless
+    of whether any series or events are booked.
     '''
 
-    name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Different types of tasks and payments should have different category names'))
-    defaultRate = models.FloatField(_('Default rate'),help_text=_('This is the default hourly payment rate for this type of task.  For staff expenses and venue rentals, this will be overridden by the rate specified as default for the venue or staff type.'),null=True,blank=True,validators=[MinValueValidator(0)])
+    name = models.CharField(_('Give this expense generation rule a name'),max_length=100,unique=True)
+
+    category = models.ForeignKey(ExpenseCategory,verbose_name=_('Category'),null=True,on_delete=models.SET_NULL,)
+
+    # An expense can be directly associated with a user (like an instructor) or
+    # a location, or the name of another party can be entered.
+    payToUser = models.ForeignKey(
+        User,null=True,blank=True,
+        verbose_name=_('Pay to user'),on_delete=models.SET_NULL,)
+    payToLocation = models.ForeignKey(Location,null=True,blank=True,verbose_name=_('Pay to location'))
+    payToName = models.CharField(_('Pay to (enter name)'),max_length=50, null=True,blank=True)
+
+    markApproved = models.BooleanField(_('Automatically mark this expense as approved'),default=False)
+    markPaid = models.BooleanField(_('Automatically mark this expense as paid'),default=False)
+    paymentMethod = models.CharField(
+        _('Payment method'),
+        max_length=50,null=True,blank=True,
+        help_text=_('This field is ignored unless you have chosen to automatically mark expenses as paid.')
+    )
+
+    @property
+    def ruleName(self):
+        ''' overrides from parent class '''
+        return self.name
+    ruleName.fget.short_description = _('Rule name')
+
+    def clean(self):
+        ''' priorDays is required for Generic Repeated Expenses to avoid infinite loops '''
+        if not self.priorDays and not self.startDate:
+            raise ValidationError(_(
+                'Either a start date or an "up to __ days in the past" limit is required ' +
+                'for repeated expense rules that are not associated with a venue or a staff member.'
+            ))
+        super(GenericRepeatedExpense,self).clean()
+
+    def generateExpenses(self,request=None,datetimeTuple=None):
+        from .helpers import createGenericExpenseItems
+        return createGenericExpenseItems(rule=self,request=request,datetimeTuple=datetimeTuple)
 
     def __str__(self):
-        return self.name
+        return str(_('Repeated expense rule: %s' % self.name))
 
     class Meta:
-        verbose_name = _('Expense category')
-        verbose_name_plural = _('Expense categories')
+        ordering = ('name',)
+        verbose_name = _('Other repeated expense')
+        verbose_name_plural = _('Other repeated expenses')
 
 
 @python_2_unicode_compatible
@@ -544,23 +668,6 @@ class ExpenseItem(models.Model):
         permissions = (
             ('mark_expenses_paid',_('Mark expenses as paid at the time of submission')),
         )
-
-
-@python_2_unicode_compatible
-class RevenueCategory(models.Model):
-    '''
-    These are the different available categories of payment
-    '''
-
-    name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Different types of revenue fall under different categories.'))
-    defaultAmount = models.FloatField(_('Default amount'),help_text=_('This is the default amount of revenue for items in this category.'),null=True,blank=True,validators=[MinValueValidator(0)])
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        verbose_name = _('Revenue category')
-        verbose_name_plural = _('Revenue categories')
 
 
 @python_2_unicode_compatible
