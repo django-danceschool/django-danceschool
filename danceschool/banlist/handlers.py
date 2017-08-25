@@ -3,10 +3,12 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.translation import ugettext
+from django.utils.translation import ugettext_lazy as _
 from django.db.models import Q
 
 from danceschool.core.signals import check_student_info
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
+from danceschool.core.tasks import sendEmail
 
 from .models import BannedPerson, BanFlaggedRecord
 
@@ -61,16 +63,35 @@ def checkBanlist(sender,**kwargs):
     # Generate an "error code" to reference so that it is easier to lookup
     # the record on why they were flagged.
     flagCode = ''.join(random.choice(string.ascii_uppercase) for x in range(8))
+    ip = get_client_ip(request)
+    respondTo = getConstant('registration__banListContactEmail') or getConstant('contact__businessEmail')
 
     for record in records:
-        BanFlaggedRecord.objects.create(
+        flagRecord = BanFlaggedRecord.objects.create(
             flagCode=flagCode,
             person=record,
-            ipAddress=get_client_ip(request),
+            ipAddress=ip,
             data={'session': session, 'formData': formData,}
         )
 
-    message = ugettext('There appears to be an issue with this registration.  Please contact %s to proceed with the registration process.  You may reference the error code %s.' % (getConstant('registration__banListContactEmail'), flagCode))
+    notify = getConstant('registration__banListNotificationEmail')
+    if notify:
+        send_from = getConstant('contact__businessEmail')
+        subject = _('Notice of attempted registration by banned individual')
+        message = _(
+            'This is an automated notification that the following individual has attempted ' +
+            'to register for a class series or event:\n\n' +
+            'Name: %s\n' % record.fullName +
+            'Email: %s\n' % email +
+            'Date/Time: %s\n' % flagRecord.dateTime +
+            'IP Address: %s\n\n' % ip +
+            'This individual has been prevented from finalizing their registration, and they ' +
+            'have been asked to notify the school at %s with code %s to proceed.' % (respondTo, flagCode)
+        )
+
+        sendEmail(subject,message,send_from,to=[notify])
+
+    message = ugettext('There appears to be an issue with this registration.  Please contact %s to proceed with the registration process.  You may reference the error code %s.' % (respondTo, flagCode))
 
     if request.user.has_perm('banlist.ignore_ban'):
         messages.warning(request, message)

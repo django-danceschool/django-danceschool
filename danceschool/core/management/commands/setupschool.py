@@ -585,11 +585,13 @@ Note: This process may take a minute or two to complete.
                 'danceschool.discounts',
                 'danceschool.faq',
                 'danceschool.news',
-                'danceschool.payments.paypal',
                 'danceschool.prerequisites',
                 'danceschool.private_events',
                 'danceschool.stats',
-                'danceschool.vouchers'
+                'danceschool.vouchers',
+                'danceschool.banlist',
+                'danceschool.payments.paypal',
+                'danceschool.payments.stripe',
             ]:
                 if apps.is_installed(this_app):
                     app_add_list.append(this_app.split('.')[1])
@@ -643,6 +645,7 @@ Note: This process may take a minute or two to complete.
                 ('add_privateevent', 'private_events', 'privateevent'),
                 ('change_privateevent', 'private_events', 'privateevent'),
                 ('delete_privateevent', 'private_events', 'privateevent'),
+                ('view_banlist', 'banlist','bannedperson'),
             ]
 
             for perm in Permission.objects.all():
@@ -669,6 +672,7 @@ Note: This process may take a minute or two to complete.
                 ('view_registration_summary', 'core', 'registration'),
                 ('view_staff_directory', 'core', 'staffmember'),
                 ('ignore_requirements', 'prerequisites', 'requirement'),
+                ('view_banlist', 'banlist','bannedperson'),
             ]
 
             for perm in Permission.objects.all():

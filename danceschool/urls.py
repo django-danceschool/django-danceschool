@@ -41,6 +41,9 @@ urlpatterns = [
 ]
 
 # If additional danceschool apps are installed, automatically add those URLs as well.
+if apps.is_installed('danceschool.banlist'):
+    urlpatterns.append(url(r'^banlist/', include('danceschool.banlist.urls')),)
+
 if apps.is_installed('danceschool.financial'):
     urlpatterns.append(url(r'^financial/', include('danceschool.financial.urls')),)
 

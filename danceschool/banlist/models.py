@@ -25,11 +25,27 @@ class BannedPerson(models.Model):
         default=False
     )
 
+    submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last updated'),auto_now=True)
+
+    @property
     def fullName(self):
         return ' '.join([self.firstName, self.lastName])
+    fullName.fget.short_description = _('Full name')
+
+    @property
+    def relatedEmails(self):
+        return [x.email for x in self.bannedemail_set.all()]
+    relatedEmails.fget.short_description = _('Email addresses')
+
+    def __str__(self):
+        return self.fullName
 
     class Meta:
-        permissions = (('ignore_ban',_('Can register users despite banned credentials')),)
+        permissions = (
+            ('view_banlist',_('Can view the list of banned individuals.')),
+            ('ignore_ban',_('Can register users despite banned credentials')),
+        )
 
         ordering = ('lastName', 'firstName')
         verbose_name = _('Banned individual')
@@ -41,7 +57,7 @@ class BannedEmail(models.Model):
     email = models.EmailField(_('Email address'), unique=True)
 
     class Meta:
-        verbose_name = _('Banned email adddress')
+        verbose_name = _('Banned email address')
         verbose_name_plural = _('Banned email addresses')
 
 
@@ -51,6 +67,9 @@ class BanFlaggedRecord(models.Model):
     ipAddress = models.GenericIPAddressField(_('IP address'),null=True,blank=True)
     flagCode = models.CharField(_('Flag code'),max_length=8,help_text=_('Search for this code for easier reference.'))
     data = JSONField(_('Session and form data'),default={})
+
+    def __str__(self):
+        return str(_('%s: %s at %s' % (self.person.fullName, self.person.dateTime, self.ipAddress)))
 
     class Meta:
         ordering = ('-dateTime',)
