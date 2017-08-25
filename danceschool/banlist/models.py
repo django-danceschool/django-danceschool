@@ -69,7 +69,7 @@ class BanFlaggedRecord(models.Model):
     data = JSONField(_('Session and form data'),default={})
 
     def __str__(self):
-        return str(_('%s: %s at %s' % (self.person.fullName, self.person.dateTime, self.ipAddress)))
+        return str(_('%s: %s at %s' % (self.person.fullName, self.dateTime, self.ipAddress)))
 
     class Meta:
         ordering = ('-dateTime',)
