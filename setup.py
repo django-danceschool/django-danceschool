@@ -54,6 +54,7 @@ setup(
         'Pillow>=3.4.2',
         'python-dateutil>=2.4.1',
         'pytz>=2017.2',
+        'redis>=2.10.6',
         'requests>=2.6.0',
         'six>=1.10.0',
         'stripe>=1.62.0',
