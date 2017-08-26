@@ -1,6 +1,12 @@
 Version History
 ===============
 
+0.2.4 - August 25, 2017
+-----------------------
+
+- **New:** Added a "ban list" app that allows schools to enter a list of names and emails that are not permitted to register, with the option to add photographs and notes.
+
+
 0.2.3 - August 23, 2017
 -----------------------
 
