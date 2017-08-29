@@ -1,7 +1,7 @@
 from django.conf.urls import url
 
-from .views import RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView, ClassRegistrationReferralView, EventRegistrationSummaryView, EventRegistrationSelectView, RefundProcessingView, RefundConfirmationView, ViewInvoiceView
-from .classreg import RegistrationSummaryView, StudentInfoView
+from .views import EventRegistrationSummaryView, EventRegistrationSelectView, RefundProcessingView, RefundConfirmationView, ViewInvoiceView
+from .classreg import RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView, ClassRegistrationReferralView,RegistrationSummaryView, StudentInfoView
 from .ajax import processCheckIn
 
 urlpatterns = [

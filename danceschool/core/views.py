@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, RedirectView, ListView
+from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, ListView
 from django.db.models import Min, Q, Count
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
@@ -16,7 +16,6 @@ from django.contrib.contenttypes.models import ContentType
 from calendar import month_name
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-import json
 from urllib.parse import unquote_plus, unquote
 from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin, StaffuserRequiredMixin
 from cms.constants import RIGHT
@@ -25,8 +24,8 @@ import re
 import logging
 
 from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
-from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, ClassChoiceForm, RepeatEventForm
-from .constants import getConstant, REG_VALIDATION_STR, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
+from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm
+from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from .signals import get_customer_data
 from .utils.requests import getIntFromGet
@@ -34,13 +33,6 @@ from .utils.requests import getIntFromGet
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
-
-
-class RegistrationOfflineView(TemplateView):
-    '''
-    If registration is offline, just say so.
-    '''
-    template_name = 'core/registration/registration_offline.html'
 
 
 class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
@@ -79,187 +71,6 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
         }
         context.update(kwargs)
         return super(EventRegistrationSummaryView,self).get_context_data(**context)
-
-
-class ClassRegistrationReferralView(RedirectView):
-
-    def get(self,request,*args,**kwargs):
-
-        # Always redirect to the classes page
-        self.url = reverse('registration')
-
-        # Voucher IDs are used for the referral program.
-        # Marketing IDs are used for tracking click-through registrations.
-        # They are put directly into session data immediately.
-        voucher_id = kwargs.pop('voucher_id',None)
-        marketing_id = kwargs.pop('marketing_id',None)
-
-        if marketing_id or voucher_id:
-            ''' Put these things into the session data. '''
-            regSession = self.request.session.get(REG_VALIDATION_STR, {})
-            regSession['voucher_id'] = voucher_id or regSession.get('voucher_id',None)
-            regSession['marketing_id'] = marketing_id or regSession.get('marketing_id',None)
-            self.request.session[REG_VALIDATION_STR] = regSession
-
-        return super(ClassRegistrationReferralView,self).get(request,*args,**kwargs)
-
-
-class ClassRegistrationView(FinancialContextMixin, FormView):
-    '''
-    This is the main view that is called from the class registration page, but
-    all of the subsequent views in the process are in classreg.py
-    '''
-    form_class = ClassChoiceForm
-    template_name = 'core/registration/event_registration.html'
-    voucher_id = None
-
-    def get(self, request, *args, **kwargs):
-        ''' Check that registration is online before proceeding '''
-        regonline = getConstant('registration__registrationEnabled')
-        if not regonline:
-            return HttpResponseRedirect(reverse('registrationOffline'))
-
-        return super(ClassRegistrationView,self).get(request,*args,**kwargs)
-
-    def get_context_data(self,**kwargs):
-        ''' Add the event and series listing data '''
-        context = self.get_listing()
-        context.update(kwargs)
-
-        return super(ClassRegistrationView,self).get_context_data(**context)
-
-    def get_form_kwargs(self, **kwargs):
-        ''' Tell the form which fields to render '''
-        kwargs = super(ClassRegistrationView, self).get_form_kwargs(**kwargs)
-        kwargs['user'] = self.request.user if hasattr(self.request,'user') else None
-
-        listing = self.get_listing()
-
-        kwargs.update({
-            'openEvents': listing['openEvents'],
-            'closedEvents': listing['closedEvents'],
-        })
-        return kwargs
-
-    def form_valid(self,form):
-        '''
-        If the form is valid, pass its contents on to the next view.  In order to permit the registration
-        form to be overridden flexibly, but without permitting storage of arbitrary data keys that could
-        lead to potential security issues, a form class for this view can optionally specify a list of
-        keys that are permitted.  If no such list is specified as instance.permitted_event_keys, then
-        the default list are used.
-        '''
-        regSession = self.request.session.get(REG_VALIDATION_STR, {})
-
-        # The session expires after 15 minutes of inactivity to limit the possible extent of over-registration
-        self.request.session.set_expiry(900)
-
-        regInfo = {
-            'events': {},
-        }
-
-        permitted_keys = getattr(form,'permitted_event_keys',['role',])
-
-        # Put the form data in a format that the next views will understand.
-        for key,value in form.cleaned_data.items():
-            if 'event' in key and value:
-                newkey = int(key.split("_")[-1])
-                regInfo['events'][newkey] = {'register': True}
-                regInfo['events'][newkey].update({k: v for d in value for k, v in json.loads(d).items() if k in permitted_keys})
-
-        regSession["regInfo"] = regInfo
-        regSession["payAtDoor"] = form.cleaned_data.get('payAtDoor', False)
-        self.request.session[REG_VALIDATION_STR] = regSession
-        return HttpResponseRedirect(self.get_success_url())
-
-    def get_success_url(self):
-        return reverse('getStudentInfo')
-
-    def get_allEvents(self):
-        '''
-        Splitting this method out to get the set of events to filter allows
-        one to subclass for different subsets of events without copying other
-        logic
-        '''
-
-        if not hasattr(self,'allEvents'):
-            timeFilters = {'endTime__gte': timezone.now()}
-            if getConstant('registration__displayLimitDays') or 0 > 0:
-                timeFilters['startTime__lte'] = timezone.now() + timedelta(days=getConstant('registration__displayLimitDays'))
-
-            # Get the Event listing here to avoid duplicate queries
-            self.allEvents = Event.objects.filter(
-                **timeFilters
-            ).filter(
-                Q(instance_of=PublicEvent) |
-                Q(instance_of=Series)
-            ).exclude(
-                Q(status=Event.RegStatus.hidden) |
-                Q(status=Event.RegStatus.regHidden) |
-                Q(status=Event.RegStatus.linkOnly)
-            ).order_by('year','month','startTime')
-
-        return self.allEvents
-
-    def get_listing(self):
-        '''
-        This function gets all of the information that we need to either render or
-        validate the form.  It is structured to avoid duplicate DB queries
-        '''
-        if not hasattr(self,'listing'):
-            allEvents = self.get_allEvents()
-
-            openEvents = allEvents.filter(registrationOpen=True)
-            closedEvents = allEvents.filter(registrationOpen=False)
-
-            publicEvents = allEvents.instance_of(PublicEvent)
-            allSeries = allEvents.instance_of(Series)
-
-            self.listing = {
-                'allEvents': allEvents,
-                'openEvents': openEvents,
-                'closedEvents': closedEvents,
-                'publicEvents': publicEvents,
-                'allSeries': allSeries,
-                'regOpenEvents': publicEvents.filter(registrationOpen=True).filter(
-                    Q(publicevent__category__isnull=True) | Q(publicevent__category__separateOnRegistrationPage=False)
-                ),
-                'regClosedEvents': publicEvents.filter(registrationOpen=False).filter(
-                    Q(publicevent__category__isnull=True) | Q(publicevent__category__separateOnRegistrationPage=False)
-                ),
-                'categorySeparateEvents': publicEvents.filter(
-                    publicevent__category__separateOnRegistrationPage=True
-                ).order_by('publicevent__category'),
-                'regOpenSeries': allSeries.filter(registrationOpen=True).filter(
-                    Q(series__category__isnull=True) | Q(series__category__separateOnRegistrationPage=False)
-                ),
-                'regClosedSeries': allSeries.filter(registrationOpen=False).filter(
-                    Q(series__category__isnull=True) | Q(series__category__separateOnRegistrationPage=False)
-                ),
-                'categorySeparateSeries': allSeries.filter(
-                    series__category__separateOnRegistrationPage=True
-                ).order_by('series__category'),
-            }
-        return self.listing
-
-
-class SingleClassRegistrationView(ClassRegistrationView):
-    '''
-    This view is called only via a link, and it allows a person to register for a single
-    class without seeing all other classes.
-    '''
-    template_name = 'core/registration/single_event_registration.html'
-
-    def get_allEvents(self):
-        try:
-            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid','')).exclude(status=Event.RegStatus.hidden)
-        except ValueError:
-            raise Http404()
-
-        if not self.allEvents:
-            raise Http404()
-
-        return self.allEvents
 
 
 #################################

@@ -2,7 +2,7 @@ from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
 
-from danceschool.core.signals import post_temporary_registration, post_registration, apply_price_adjustments, get_customer_data, check_student_info
+from danceschool.core.signals import post_student_info, post_registration, apply_price_adjustments, get_customer_data, check_student_info
 from danceschool.core.models import Customer, Series
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 
@@ -71,7 +71,7 @@ def checkVoucherCode(sender,**kwargs):
     session['gift'] = id
 
 
-@receiver(post_temporary_registration)
+@receiver(post_student_info)
 def applyVoucherCodeTemporarily(sender,**kwargs):
     '''
     When the core registration system creates a temporary registration with a voucher code,
@@ -80,10 +80,8 @@ def applyVoucherCodeTemporarily(sender,**kwargs):
     '''
     logger.debug('Signal fired to apply temporary vouchers.')
 
-    regSession = kwargs.pop('data',{})
     reg = kwargs.pop('registration')
-
-    voucherId = regSession.pop('gift','')
+    voucherId = reg.data.get('gift','')
 
     try:
         voucher = Voucher.objects.get(voucherId=voucherId)
@@ -96,7 +94,7 @@ def applyVoucherCodeTemporarily(sender,**kwargs):
     logger.debug('Temporary voucher use object created.')
 
 
-@receiver(post_temporary_registration)
+@receiver(post_student_info)
 def applyReferrerVouchersTemporarily(sender,**kwargs):
     '''
     Unlike voucher codes which have to be manually supplied, referrer discounts are
@@ -109,13 +107,11 @@ def applyReferrerVouchersTemporarily(sender,**kwargs):
 
     logger.debug('Signal fired to temporarily apply referrer vouchers.')
 
-    regSession = kwargs.pop('data',{})
     reg = kwargs.pop('registration')
-    email = regSession.get("email",'')
 
     # Email address is unique for users, so use that
     try:
-        c = Customer.objects.get(user__email=email)
+        c = Customer.objects.get(user__email=reg.email)
         vouchers = c.getReferralVouchers()
     except ObjectDoesNotExist:
         vouchers = None

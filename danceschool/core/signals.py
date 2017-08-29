@@ -5,14 +5,13 @@ from django.dispatch import Signal
 # request.
 check_student_info = Signal(providing_args=['instance','formData','request'])
 
-# Fires before a TemporaryRegistration is created (passes the session data from the initial form).
-# This hook can optionally be used to pass an additional set of items to be added to the
-# Temporary Registration by returning a dictionary with event ids as keys and a dict with {'register': True}
-# plus any additional information as the value for each key.
-pre_temporary_registration = Signal(providing_args=['data',])
-
-# Fires after a TemporaryRegistration is created (passes both the initial session data and the registration)
-post_temporary_registration = Signal(providing_args=['data','registration',])
+# Fires after the student info form has been validated and the TemporaryRegistration record
+# has been updated to reflect the submitted information from this form.  Since this signal is
+# fired before price adjustments from vouchers and discounts are incorporated into the registration,
+# this signal can be used to modify the TemporaryRegistration itself (be sure to save changes),
+# and it can be used to make related changes in other apps (such as creating TemporaryVoucherUse)
+# records in the VoucherUse app
+post_student_info = Signal(providing_args=['registration',])
 
 # Fires at the point when automatically-applied discounts may be applied to
 # a preliminary registration.  Any handler that attaches to this signal should

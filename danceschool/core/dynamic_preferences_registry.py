@@ -310,6 +310,15 @@ class AllowAjaxSignin(BooleanPreference):
     default = True
 
 
+@global_preferences_registry.register
+class RegistrationSessionExpiryMinutes(IntegerPreference):
+    section = registration
+    name = 'sessionExpiryMinutes'
+    verbose_name = _('Temporary registration data expires after __ minutes')
+    help_text = _('In each step of the registration process, customers have this many minutes to proceed before they are no longer guaranteed a spot and are required to begin again.')
+    default = 15
+
+
 ############################
 # Email Preferences
 #

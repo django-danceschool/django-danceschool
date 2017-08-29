@@ -703,13 +703,21 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     registrationEnabled.fget.short_description = _('Registration enabled')
 
     @property
-    def numDropIns(self):
-        return self.eventregistration_set.filter(cancelled=False,dropIn=True).count()
+    def numDropIns(self, includeTemporaryRegs=False):
+        count = self.eventregistration_set.filter(cancelled=False,dropIn=True).count()
+        if includeTemporaryRegs:
+            count += self.temporaryeventregistration_set.filter(dropIn=True).exclude(
+                registration__expirationDate__lte=timezone.now()).count()
+        return count
     numDropIns.fget.short_description = _('# Drop-ins')
 
     @property
-    def numRegistered(self):
-        return self.eventregistration_set.filter(cancelled=False,dropIn=False).count()
+    def numRegistered(self, includeTemporaryRegs=False):
+        count = self.eventregistration_set.filter(cancelled=False,dropIn=False).count()
+        if includeTemporaryRegs:
+            count += self.temporaryeventregistration_set.filter(dropIn=False).exclude(
+                registration__expirationDate__lte=timezone.now()).count()
+        return count
     numRegistered.fget.short_description = _('# Registered')
 
     @property
@@ -728,11 +736,14 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         return []
     availableRoles.fget.short_description = _('Applicable dance roles')
 
-    def numRegisteredForRole(self, role):
+    def numRegisteredForRole(self, role, includeTemporaryRegs=False):
         '''
         Accepts a DanceRole object and returns the number of registrations of that role.
         '''
-        return self.eventregistration_set.filter(cancelled=False,dropIn=False,role=role).count()
+        count = self.eventregistration_set.filter(cancelled=False,dropIn=False,role=role).count()
+        if includeTemporaryRegs:
+            count += self.temporaryeventregistration_set.filter(dropIn=False,role=role).exclude(
+                registration__expirationDate__lte=timezone.now()).count()
 
     @property
     def numRegisteredByRole(self):
@@ -776,12 +787,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         # No custom roles and no danceType to get roles from, so return the overall capacity
         return self.capacity
 
-    def soldOutForRole(self,role):
+    def soldOutForRole(self,role,includeTemporaryRegs=False):
         '''
         Accepts a DanceRole object and responds if the number of registrations for that
         role exceeds the capacity for that role at this event.
         '''
-        return self.numRegisteredForRole(role) >= self.capacityForRole(role) or 0
+        return self.numRegisteredForRole(
+            role,includeTemporaryRegs=includeTemporaryRegs) >= self.capacityForRole(role) or 0
 
     @property
     def soldOut(self):
@@ -1450,9 +1462,9 @@ class Customer(EmailRecipientMixin, models.Model):
 
 @python_2_unicode_compatible
 class TemporaryRegistration(EmailRecipientMixin, models.Model):
-    firstName = models.CharField(_('First name'),max_length=100)
-    lastName = models.CharField(_('Last name'),max_length=100)
-    email = models.CharField(_('Email address'),max_length=200)
+    firstName = models.CharField(_('First name'),max_length=100,null=True)
+    lastName = models.CharField(_('Last name'),max_length=100,null=True)
+    email = models.CharField(_('Email address'),max_length=200,null=True)
     phone = models.CharField(_('Telephone'),max_length=20,null=True,blank=True)
 
     howHeardAboutUs = models.TextField(_('How they heard about us'),default='',blank=True,null=True)
@@ -1473,6 +1485,15 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     # expect, so you will need to hook into the registration system to ensure that any extra information that
     # you want to use is not discarded.
     data = JSONField(_('Additional data'),null=True,blank=True)
+
+    expirationDate = models.DateTimeField(
+        _('Expiration date'),
+        help_text=_(
+            'When a customer attempts to begin the registration process, the system looks for ' +
+            'temporary registrations that are still in progress (with a future expiration date) ' +
+            'to determine if there is space for them to register.'
+        )
+    )
 
     @property
     def fullName(self):
@@ -1561,7 +1582,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         '''
         dateTime = kwargs.pop('dateTime', timezone.now())
 
-        # If sendEmail is passed as False, then
+        # If sendEmail is passed as False, then we won't send an email
         sendEmail = kwargs.pop('sendEmail', True)
 
         customer, created = Customer.objects.get_or_create(first_name=self.firstName,last_name=self.lastName,email=self.email,defaults={'phone': self.phone})
@@ -1587,6 +1608,11 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
                                        data=er.data
                                        )
             realer.save()
+
+        # Mark this temporary registration as expired, so that it won't
+        # be counted twice against the number of in-progress registrations
+        # in the future when another customer tries to register.
+        self.update(expirationDate=timezone.now())
 
         # This signal can, for example, be caught by the vouchers app to keep track of any vouchers
         # that were applied
