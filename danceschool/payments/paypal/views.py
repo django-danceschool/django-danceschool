@@ -4,11 +4,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils.functional import SimpleLazyObject
+from django.utils import timezone
 
 import six
 import logging
 from paypalrestsdk import Payment
 from paypalrestsdk.exceptions import ResourceNotFound
+from datetime import timedelta
 
 from danceschool.core.models import TemporaryRegistration, Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
@@ -68,6 +70,8 @@ def createPaypalPayment(request):
         # This is typical of payment at the time of registration
         elif tr_id:
             tr = TemporaryRegistration.objects.get(id=int(tr_id))
+            tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+            tr.save()
             this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
             this_description = _('Registration Payment: #%s' % tr_id)
             if not amount:

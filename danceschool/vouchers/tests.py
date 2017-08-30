@@ -5,11 +5,12 @@ from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.utils.tests import DefaultSchoolTestCase
+from danceschool.core.models import TemporaryRegistration
 
 from .models import Voucher
 
 
-class DiscountsTest(DefaultSchoolTestCase):
+class VouchersTest(DefaultSchoolTestCase):
 
     def create_voucher(self,**kwargs):
 
@@ -44,12 +45,13 @@ class DiscountsTest(DefaultSchoolTestCase):
 
         response = self.client.post(reverse('registration'),post_data,follow=True)
         self.assertEqual(response.redirect_chain,[(reverse('getStudentInfo'), 302)])
-        self.assertTrue(self.client.session[REG_VALIDATION_STR].get('regInfo').get('events').get(str(s.id)).get('register')),
+
+        tr = TemporaryRegistration.objects.get(id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId'))
+        self.assertTrue(tr.temporaryeventregistration_set.filter(event__id=s.id).exists())
+        self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        # with no discounts or vouchers applied
-        self.assertEqual(response.context_data.get('regInfo').get('events').get(str(s.id)).get('base_price'), s.getBasePrice())
-        self.assertEqual(len(response.context_data.get('regInfo').get('events')), 1)
+        self.assertEqual(tr.temporaryeventregistration_set.get(event__id=s.id).price, s.getBasePrice())
         self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
 
         # Continue to the summary page

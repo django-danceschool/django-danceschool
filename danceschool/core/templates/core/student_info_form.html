@@ -17,16 +17,10 @@
 
 			</thead>
 			<tbody>
-			{% for id,series in regInfo.series.items %}
+			{% for item in reg.temporaryeventregistration_set.all %}
 				<tr>
-					<td>{{ series.name }}{% if series.role_name %} - {{ series.role_name }}{% endif %}</td>
-					<td>{{ currencySymbol }}{{ series.base_price|floatformat:2 }}</td>
-				</tr>
-			{% endfor %}
-			{% for id,event in regInfo.events.items %}
-				<tr>
-					<td>{{ event.name }}</td>
-					<td>{{ currencySymbol }}{{ event.base_price|floatformat:2 }}</td>
+					<td>{% if item.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.event.name }}{% if item.role %} - {{ item.role.name }}{% endif %}</td>
+					<td>{{ currencySymbol }}{{ item.price|floatformat:2 }}</td>
 				</tr>
 			{% endfor %}
 			</tbody>

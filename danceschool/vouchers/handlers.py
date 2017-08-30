@@ -25,6 +25,7 @@ def checkVoucherCode(sender,**kwargs):
 
     formData = kwargs.get('formData',{})
     request = kwargs.get('request',{})
+    registration = kwargs.get('registration',None)
     session = getattr(request,'session',{}).get(REG_VALIDATION_STR,{})
 
     id = formData.get('gift','')
@@ -46,9 +47,8 @@ def checkVoucherCode(sender,**kwargs):
     if session.get('gift','') != '':
         raise ValidationError({'gift': _('Can\'t have more than one voucher')})
 
-    seriesinfo = session['regInfo'].get('events',{})
-    seriesids = [int(k) for k,v in seriesinfo.items() if v.get('register',False) and not [x for x in v.keys() if x.startswith('dropin_')]]
-    seriess = Series.objects.filter(id__in=seriesids)
+    eventids = [x.event.id for x in registration.temporaryeventregistration_set.exclude(dropIn=True)]
+    seriess = Series.objects.filter(id__in=eventids)
 
     obj = Voucher.objects.filter(voucherId=id).first()
     if not obj:
@@ -66,9 +66,9 @@ def checkVoucherCode(sender,**kwargs):
             # Ensures that the error is applied to the correct field
             raise ValidationError({'gift': e})
 
-    # If we got this far, then the voucher is determined to be valid, so
-    # we can enter it into the session data.
-    session['gift'] = id
+    # If we got this far, then the voucher is determined to be valid, so the registration
+    # can proceed with no errors.
+    return
 
 
 @receiver(post_student_info)

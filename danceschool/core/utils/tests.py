@@ -53,10 +53,8 @@ class DefaultSchoolTestCase(TestCase):
         # Create a default PricingTier and a default Location
         cls.defaultPricing = PricingTier.objects.create(
             name='Default Pricing',
-            onlineGeneralPrice=50,
-            doorGeneralPrice=60,
-            onlineStudentPrice=30,
-            doorStudentPrice=40,
+            onlinePrice=50,
+            doorPrice=60,
             dropinPrice=10,
         )
         cls.defaultLocation = Location.objects.create(

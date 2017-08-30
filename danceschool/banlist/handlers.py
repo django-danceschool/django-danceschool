@@ -47,6 +47,7 @@ def checkBanlist(sender,**kwargs):
 
     request = kwargs.get('request',{})
     session = getattr(request,'session',{}).get(REG_VALIDATION_STR,{})
+    registrationId = getattr(kwargs.get('registration',None),'id',None)
 
     records = BannedPerson.objects.exclude(
         disabled=True
@@ -71,7 +72,7 @@ def checkBanlist(sender,**kwargs):
             flagCode=flagCode,
             person=record,
             ipAddress=ip,
-            data={'session': session, 'formData': formData,}
+            data={'session': session, 'formData': formData, 'registrationId': registrationId}
         )
 
     notify = getConstant('registration__banListNotificationEmail')

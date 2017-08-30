@@ -319,11 +319,11 @@ class TemporaryEventRegistrationInline(admin.StackedInline):
 
 @admin.register(TemporaryRegistration)
 class TemporaryRegistrationAdmin(admin.ModelAdmin):
-    inlines = [TemporaryEventRegistrationInline]
+    inlines = [TemporaryEventRegistrationInline,]
 
-    list_display = ('__str__','student','dateTime')
+    list_display = ('__str__','student','dateTime','expirationDate')
     search_fields = ('=firstName','=lastName','email')
-    list_filter = ('dateTime',)
+    list_filter = ('dateTime','expirationDate',)
 
 
 ######################################

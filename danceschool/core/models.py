@@ -387,13 +387,11 @@ class Room(models.Model):
 class PricingTier(models.Model):
     name = models.CharField(max_length=50,unique=True,help_text=_('Give this pricing tier a name (e.g. \'Default 4-week series\')'))
 
-    # By default, prices may vary by online or door registration, and they may
-    # also be adjusted through a student discount.  More sophisticated discounts
+    # By default, prices may vary by online or door registration.
+    # More sophisticated discounts, including student discounts
     # may be achieved through the discounts and vouchers apps, if enabled.
-    onlineGeneralPrice = models.FloatField(_('Online price'),default=0,validators=[MinValueValidator(0)])
-    doorGeneralPrice = models.FloatField(_('At-the-door price'), default=0,validators=[MinValueValidator(0)])
-    onlineStudentPrice = models.FloatField(_('Online price for HS/college/university students'),default=0,validators=[MinValueValidator(0)])
-    doorStudentPrice = models.FloatField(_('At-the-door price for HS/college/university students'), default=0,validators=[MinValueValidator(0)])
+    onlinePrice = models.FloatField(_('Online price'),default=0,validators=[MinValueValidator(0)])
+    doorPrice = models.FloatField(_('At-the-door price'), default=0,validators=[MinValueValidator(0)])
 
     dropinPrice = models.FloatField(_('Single class drop-in price'),default=0,validators=[MinValueValidator(0)],help_text=_('If students are allowed to drop in, then this price will be applied per class.'))
 
@@ -405,22 +403,19 @@ class PricingTier(models.Model):
         discounting systems are needed, then this PricingTier model can be subclassed,
         or the discounts and vouchers apps can be used.
         '''
-        isStudent = kwargs.get('isStudent', False)
         payAtDoor = kwargs.get('payAtDoor', False)
         dropIns = kwargs.get('dropIns', 0)
 
         if dropIns:
             return dropIns * self.dropinPrice
-        if isStudent:
-            if payAtDoor:
-                return self.doorStudentPrice
-            return self.onlineStudentPrice
         if payAtDoor:
-            return self.doorGeneralPrice
-        return self.onlineGeneralPrice
+            return self.doorPrice
+        return self.onlinePrice
 
-    # basePrice is the non-student, online registration price
-    basePrice = property(fget=getBasePrice)
+    # basePrice is the online registration price
+    @property
+    def basePrice(self):
+        return self.onlinePrice
     basePrice.fget.short_description = _('Base price')
 
     def __str__(self):
@@ -744,6 +739,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         if includeTemporaryRegs:
             count += self.temporaryeventregistration_set.filter(dropIn=False,role=role).exclude(
                 registration__expirationDate__lte=timezone.now()).count()
+        return count
 
     @property
     def numRegisteredByRole(self):
@@ -761,8 +757,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         available roles in multiple places, and only returns the overall capacity of the event
         if roles are not found elsewhere.
         '''
+        if isinstance(role, DanceRole):
+            role_id = role.id
+        else:
+            role_id = role
+
         eventRoles = self.eventrole_set.filter(capacity__gt=0)
-        if eventRoles.count() > 0 and role not in [x.role for x in eventRoles]:
+        if eventRoles.count() > 0 and role_id not in [x.role.id for x in eventRoles]:
             ''' Custom role capacities exist but role this is not one of them. '''
             return 0
         elif eventRoles.count() > 0:
@@ -775,7 +776,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             try:
                 availableRoles = self.classDescription.danceTypeLevel.danceType.roles.all()
 
-                if availableRoles.count() > 0 and role not in availableRoles:
+                if availableRoles.count() > 0 and role_id not in [x.id for x in availableRoles]:
                     ''' DanceType roles specified and this is not one of them '''
                     return 0
                 elif availableRoles.count() > 0 and self.capacity:
@@ -793,11 +794,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         role exceeds the capacity for that role at this event.
         '''
         return self.numRegisteredForRole(
-            role,includeTemporaryRegs=includeTemporaryRegs) >= self.capacityForRole(role) or 0
+            role,includeTemporaryRegs=includeTemporaryRegs) >= (self.capacityForRole(role) or 0)
 
     @property
     def soldOut(self):
-        return self.numRegistered >= self.capacity or 0
+        return self.numRegistered >= (self.capacity or 0)
     soldOut.fget.short_description = _('Sold Out')
 
     @property
@@ -1497,7 +1498,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
 
     @property
     def fullName(self):
-        return ' '.join([self.firstName,self.lastName])
+        return ' '.join([self.firstName or '',self.lastName or '']).strip()
     fullName.fget.short_description = _('Name')
 
     @property
@@ -1612,7 +1613,8 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         # Mark this temporary registration as expired, so that it won't
         # be counted twice against the number of in-progress registrations
         # in the future when another customer tries to register.
-        self.update(expirationDate=timezone.now())
+        self.expirationDate = timezone.now()
+        self.save()
 
         # This signal can, for example, be caught by the vouchers app to keep track of any vouchers
         # that were applied
@@ -1642,10 +1644,10 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         return realreg
 
     def __str__(self):
-        if self.dateTime:
-            return '%s #%s: %s, %s' % (_('Temporary Registration'), self.id, self.fullName, self.dateTime.strftime('%b. %Y'))
-        else:
+        if self.fullName:
             return '%s #%s: %s' % (_('Temporary Registration'), self.id, self.fullName)
+        else:
+            return '%s #%s' % (_('Temporary Registration'), self.id)
 
     class Meta:
         ordering = ('-dateTime',)
@@ -1670,7 +1672,10 @@ class Registration(EmailRecipientMixin, models.Model):
     priceWithDiscount = models.FloatField(verbose_name=_('Price net of discounts'),validators=[MinValueValidator(0)])
     comments = models.TextField(_('Comments'),default='',blank=True,null=True)
 
-    temporaryRegistration = models.OneToOneField(TemporaryRegistration,null=True,verbose_name=_('Associated temporary registration'))
+    temporaryRegistration = models.OneToOneField(
+        TemporaryRegistration,null=True,
+        verbose_name=_('Associated temporary registration'),on_delete=models.SET_NULL
+    )
     dateTime = models.DateTimeField(blank=True,null=True,verbose_name=_('Registration date/time'))
 
     # PostgreSQL can store arbitrary additional information associated with this registration
@@ -1956,7 +1961,9 @@ class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
     role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'))
     dropIn = models.BooleanField(_('Drop-in registration'),default=False,help_text=_('If true, this is a drop-in registration.'))
 
-    registration = models.ForeignKey(TemporaryRegistration,verbose_name=_('Associated temporary registration'))
+    registration = models.ForeignKey(
+        TemporaryRegistration,verbose_name=_('Associated temporary registration'),on_delete=models.CASCADE
+    )
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
@@ -2058,7 +2065,10 @@ class Invoice(EmailRecipientMixin, models.Model):
     id = models.UUIDField(_('Invoice number'),primary_key=True, default=uuid.uuid4, editable=False)
     validationString = models.CharField(_('Validation string'),max_length=25,default=get_validationString,editable=False)
 
-    temporaryRegistration = models.OneToOneField(TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True)
+    temporaryRegistration = models.OneToOneField(
+        TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True,
+        on_delete=models.SET_NULL,
+    )
     finalRegistration = models.OneToOneField(Registration,verbose_name=_('Registration'),null=True,blank=True)
 
     creationDate = models.DateTimeField(_('Invoice created'),auto_now_add=True)
@@ -2445,7 +2455,10 @@ class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice,verbose_name=_('Invoice'))
     description = models.CharField(_('Description'), max_length=300,null=True,blank=True)
 
-    temporaryEventRegistration = models.OneToOneField(TemporaryEventRegistration,verbose_name=_('Temporary event registration'),null=True,blank=True)
+    temporaryEventRegistration = models.OneToOneField(
+        TemporaryEventRegistration,verbose_name=_('Temporary event registration'),
+        null=True,blank=True,on_delete=models.SET_NULL
+    )
     finalEventRegistration = models.OneToOneField(EventRegistration,verbose_name=_('Event registration'),null=True,blank=True)
 
     grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)

@@ -54,10 +54,12 @@
 		{% endif %}
 
 		<p>
-			{% if discount_code_amount > 0 or total_voucher_amount > 0 %}
-				{% if discount_code_name %}
-					<strong>{% trans "Discount Code Applied" %}:</strong> {{ discount_code_name }}<br /><br />
-				{% endif %}
+			{% if total_discount_amount > 0 %}
+				{% for code in discount_codes %}
+					<strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}, {{ currencySymbol }}{{ code.2|floatformat:"-2" }}<br />
+				{% endfor %}
+				{% if discount_codes %}<br />{% endif %}
+
 				{% if voucher_names %}
 					<strong>{% trans "Vouchers Applied" %}:</strong> {{ voucher_names|join:", " }}<br /><br />
 				{% endif %}

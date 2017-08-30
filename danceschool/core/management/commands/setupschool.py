@@ -302,17 +302,13 @@ interface after completing this setup.
 
         initial_online_price = self.float_input('Initial online price [50]',default=50)
         initial_door_price = self.float_input('Initial at-the-door price [60]',default=60)
-        initial_student_online_price = self.float_input('Initial online price for HS/college/university students [40]',default=40)
-        initial_student_door_price = self.float_input('Initial at-the-door price for HS/college/university students [50]',default=50)
         initial_dropin_price = self.float_input('Initial price for single-class drop-ins [15]',default=15)
 
         PricingTier.objects.get_or_create(
             name=initial_pricing_tier_name,
             defaults={
-                'onlineGeneralPrice': initial_online_price,
-                'doorGeneralPrice': initial_door_price,
-                'onlineStudentPrice': initial_student_online_price,
-                'doorStudentPrice': initial_student_door_price,
+                'onlinePrice': initial_online_price,
+                'doorPrice': initial_door_price,
                 'dropinPrice': initial_dropin_price,
             })
 

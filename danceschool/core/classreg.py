@@ -1,5 +1,5 @@
 from django.core.urlresolvers import reverse
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404
@@ -11,6 +11,8 @@ from braces.views import UserFormKwargsMixin
 import logging
 from allauth.account.forms import LoginForm, SignupForm
 from datetime import timedelta
+import json
+from collections import OrderedDict
 
 from .models import Event, Series, PublicEvent, TemporaryRegistration, TemporaryEventRegistration, Invoice, CashPaymentRecord
 from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm
@@ -101,15 +103,18 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session.set_expiry(expiry)
+        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
 
         permitted_keys = getattr(form,'permitted_event_keys',['role',])
 
         try:
-            event_listing = {int(key.split("_")[-1]): value for key,value in form.cleaned_data.items() if 'event' in key and value}
+            event_listing = {
+                int(key.split("_")[-1]): {k:v for k,v in json.loads(value[0]).items() if k in permitted_keys}
+                for key,value in form.cleaned_data.items() if 'event' in key and value
+            }
             non_event_listing = {key: value for key,value in form.cleaned_data.items() if 'event' not in key}
-        except (ValueError, TypeError):
-            form.add_error(None,_('Invalid event information passed.'))
+        except (ValueError, TypeError) as e:
+            form.add_error(None,ValidationError(_('Invalid event information passed.'),code='invalid'))
             return super(ClassRegistrationView,self).form_invalid(form)
 
         associated_events = Event.objects.filter(id__in=[k for k in event_listing.keys()])
@@ -139,7 +144,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
         for key,value in event_listing.items():
             this_event = associated_events.get(id=key)
 
-            # The slotAvailable() method checks both completed registrations
+            # Check if registration is still feasible based on both completed registrations
             # and registrations that are not yet complete
             this_role_id = value.get('role',None) if 'role' in permitted_keys else None
             soldOut = this_event.soldOutForRole(role=this_role_id,includeTemporaryRegs=True)
@@ -155,7 +160,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
                 else:
                     # For users without permissions, don't allow registration for sold out things
                     # at all.
-                    form.add_error('event_%s' % key, _('Registration for this event is sold out.'))
+                    form.add_error(None, ValidationError(_('Registration for "%s" is tentatively sold out while others complete their registration.  Please try again later.' % this_event.name),code='invalid'))
                     return super(ClassRegistrationView,self).form_invalid(form)
 
             dropInList = [int(k.split("_")[-1]) for k,v in value.items() if k.startswith('dropin_') and v is True]
@@ -171,7 +176,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
                 )
             else:
                 tr = TemporaryEventRegistration(
-                    event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role=this_role_id
+                    event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role_id=this_role_id
                 )
             # If it's possible to store additional data and such data exist, then store them.
             tr.data = {k: v for k,v in value.items() if k in permitted_keys and k != 'role'}
@@ -299,34 +304,39 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
 
         # If the discounts app is enabled, then the return value to this signal
-        # will contain any initial discounts that need to be applied (prior to)
-        # the application of any discounts
+        # will contain information on the discounts to be applied, as well as
+        # the total price of discount-ineligible items to be added to the
+        # price
         discount_responses = request_discounts.send(
             sender=RegistrationSummaryView,
             registration=reg,
         )
+        discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 
-        # Although there will typically only be one handler that responds to
-        # the apply_discounts signal firing, to be safe, we will always look
-        # for and apply the minimum price anyway, to avoid exception issues.
-        discount_code = None
+        # This signal handler is designed to handle a single non-null response,
+        # and that response must be in the form of an OrderedDict of namedtuples, each
+        # with a with a code value, a net_price value, and a discount_amount value
+        # (as with the DiscountInfo) named tuple in the DiscountCombo class.  If more
+        # than one response is received, then the one with the minumum net price is applied
+        discount_codes = OrderedDict()
         discounted_total = initial_price
-        discount_amount = 0
+        total_discount_amount = 0
 
         try:
-            discount_responses.sort(key=lambda k: k[1][1] if k[1] and len(k[1]) > 1 else initial_price)
-            if discount_responses[0][1]:
-                discount_code, discounted_total = discount_responses[0][1]
-                discounted_total = max(discounted_total,0)
-                discount_amount = min(max(initial_price - discounted_total, 0), initial_price)
+            if discount_responses:
+                discount_responses.sort(key=lambda k: min([x.net_price for x in k[0].values()] + [initial_price]) if k and isinstance(k[0], dict) else initial_price)
+                discount_codes = discount_responses[0][0]
+                if discount_codes:
+                    discounted_total = min([x.net_price for x in discount_codes.values()]) + discount_responses[0][1]
+                    total_discount_amount = initial_price - discounted_total
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
 
-        if discount_code:
+        for discount in discount_codes.values():
             apply_discount.send(
                 sender=RegistrationSummaryView,
-                discount=discount_code,
-                discount_amount=discount_amount,
+                discount=discount.code,
+                discount_amount=discount.discount_amount,
                 registration=reg,
             )
 
@@ -367,10 +377,9 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         # Update the session key to keep track of this registration
         regSession = request.session[REG_VALIDATION_STR]
         regSession["temp_reg_id"] = reg.id
-        if discount_code:
-            regSession['discount_code_id'] = discount_code.pk
-            regSession['discount_code_name'] = discount_code.name
-        regSession['discount_amount'] = discount_amount
+        if discount_codes:
+            regSession['discount_codes'] = [(x.code.name, x.code.pk, x.discount_amount) for x in discount_codes.values()]
+        regSession['total_discount_amount'] = total_discount_amount
         regSession['addons'] = addons
         regSession['voucher_names'] = adjustment_list
         regSession['total_voucher_amount'] = adjustment_amount
@@ -386,9 +395,8 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         reg_id = regSession["temp_reg_id"]
         reg = TemporaryRegistration.objects.get(id=reg_id)
 
-        discount_code_id = regSession.get('discount_code_id',None)
-        discount_code_name = regSession.get('discount_code_name',None)
-        discount_amount = regSession.get('discount_amount',0)
+        discount_codes = regSession.get('discount_codes',None)
+        discount_amount = regSession.get('total_discount_amount',0)
         voucher_names = regSession.get('voucher_names',[])
         total_voucher_amount = regSession.get('total_voucher_amount',0)
         addons = regSession.get('addons',[])
@@ -406,8 +414,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             "totalPrice": reg.totalPrice,
             "netPrice": reg.priceWithDiscount,
             "addonItems": addons,
-            "discount_code_id": discount_code_id,
-            "discount_code_name": discount_code_name,
+            "discount_codes": discount_codes,
             "discount_code_amount": discount_amount,
             "voucher_names": voucher_names,
             "total_voucher_amount": total_voucher_amount,
@@ -470,7 +477,14 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
                 forceFinalize=True,
             )
         elif form.cleaned_data.get('invoiceSent'):
+            # Do not finalize this registration, but set the expiration date
+            # on the TemporaryRegistration such that it will not be deleted
+            # until after the last series ends, in case this person does not make
+            # a payment right away.  This will also hold this individual's spot
+            # in anything for which they have registered indefinitely.
             payerEmail = form.cleaned_data['invoicePayerEmail']
+            tr.expirationDate = tr.lastEndTime
+            tr.save()
             new_invoice.sendNotification(payerEmail=payerEmail,newRegistration=True)
 
         return HttpResponseRedirect(reverse('registration'))
@@ -512,7 +526,7 @@ class StudentInfoView(FormView):
 
         context_data.update({
             'reg': reg,
-            'payAtDoor': reg.PayAtDoor,
+            'payAtDoor': reg.payAtDoor,
             'currencySymbol': getConstant('general__currencySymbol'),
             'subtotal': sum([x.price for x in reg.temporaryeventregistration_set.all()]),
         })
@@ -533,6 +547,7 @@ class StudentInfoView(FormView):
         ''' Pass along the request data to the form '''
         kwargs = super(StudentInfoView, self).get_form_kwargs(**kwargs)
         kwargs['request'] = self.request
+        kwargs['registration'] = self.temporaryRegistration
         return kwargs
 
     def get_success_url(self):
@@ -549,7 +564,7 @@ class StudentInfoView(FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session.set_expiry(expiry)
+        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
         self.request.session.modified = True
 
         # Update the expiration date for this registration, and pass in the data from

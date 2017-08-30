@@ -3,6 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
 from danceschool.core.models import Invoice, TemporaryRegistration
@@ -11,6 +12,7 @@ from .models import StripeCharge
 
 import stripe
 import logging
+from datetime import timedelta
 
 
 # Define logger for this file
@@ -70,6 +72,8 @@ def handle_stripe_checkout(request):
         # This is typical of payment at the time of registration
         elif tr_id:
             tr = TemporaryRegistration.objects.get(id=int(tr_id))
+            tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+            tr.save()
             this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
             this_description = _('Registration Payment: #%s' % tr_id)
             if not amount:

@@ -5,9 +5,9 @@ from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.utils.tests import DefaultSchoolTestCase
-from danceschool.core.models import Invoice
+from danceschool.core.models import Invoice, TemporaryRegistration
 
-from .models import PointGroup, PricingTierGroup, DiscountCombo, DiscountComboComponent
+from .models import PointGroup, PricingTierGroup, DiscountCategory, DiscountCombo, DiscountComboComponent
 
 
 class BaseDiscountsTest(DefaultSchoolTestCase):
@@ -28,11 +28,10 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         # Create a flat price combo that just knocks $5 off the regular price
         test_combo = DiscountCombo(
             name=kwargs.get('name','Test Discount'),
+            category=kwargs.get('category',DiscountCategory.objects.get(id=1)),
             discountType=kwargs.get('discountType',DiscountCombo.DiscountType.flatPrice),
-            onlineStudentPrice=kwargs.get('onlineStudentPrice',self.defaultPricing.onlineStudentPrice - 5),
-            onlineGeneralPrice=kwargs.get('onlineGeneralPrice',self.defaultPricing.onlineGeneralPrice - 5),
-            doorStudentPrice=kwargs.get('doorStudentPrice',self.defaultPricing.doorStudentPrice - 5),
-            doorGeneralPrice=kwargs.get('doorGeneralPrice',self.defaultPricing.doorGeneralPrice - 5),
+            onlinePrice=kwargs.get('onlinePrice',self.defaultPricing.onlinePrice - 5),
+            doorPrice=kwargs.get('doorPrice',self.defaultPricing.doorPrice - 5),
             dollarDiscount=kwargs.get('dollarDiscount',10),
             percentDiscount=kwargs.get('percentDiscount',50),
             percentUniversallyApplied=kwargs.get('percentUniversallyApplied',False),
@@ -70,12 +69,13 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
 
         response = self.client.post(reverse('registration'),post_data,follow=True)
         self.assertEqual(response.redirect_chain,[(reverse('getStudentInfo'), 302)])
-        self.assertTrue(self.client.session[REG_VALIDATION_STR].get('regInfo').get('events').get(str(s.id)).get('register')),
+
+        tr = TemporaryRegistration.objects.get(id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId'))
+        self.assertTrue(tr.temporaryeventregistration_set.filter(event__id=s.id).exists())
 
         # Check that the student info page lists the correct item amounts and subtotal
         # with no discounts applied
-        self.assertEqual(response.context_data.get('regInfo').get('events').get(str(s.id)).get('base_price'), s.getBasePrice())
-        self.assertEqual(len(response.context_data.get('regInfo').get('events')), 1)
+        self.assertEqual(tr.temporaryeventregistration_set.get(event__id=s.id).price, s.getBasePrice())
         self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
 
         # Continue to the summary page
@@ -106,7 +106,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertFalse(response.context_data.get('discount_code_name'))
+        self.assertFalse(response.context_data.get('discount_codes'))
 
     def test_expired_discount(self):
         '''
@@ -124,7 +124,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertFalse(response.context_data.get('discount_code_name'))
+        self.assertFalse(response.context_data.get('discount_codes'))
 
     def test_discounts_disabled(self):
         ''' Disable discounts and check that they don't work anymore '''
@@ -140,7 +140,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertFalse(response.context_data.get('discount_code_name'))
+        self.assertFalse(response.context_data.get('discount_codes'))
 
     def test_notenoughpoints(self):
         '''
@@ -159,7 +159,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertFalse(response.context_data.get('discount_code_name'))
+        self.assertFalse(response.context_data.get('discount_codes'))
 
     def test_noearlybird(self):
         '''
@@ -179,7 +179,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertFalse(response.context_data.get('discount_code_name'))
+        self.assertFalse(response.context_data.get('discount_codes'))
 
 
 class DiscountsTypesTest(BaseDiscountsTest):
@@ -200,7 +200,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),5)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name,])
 
     def test_earlybird(self):
         '''
@@ -220,7 +222,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),5)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name,])
 
     def test_allwithinpointgroup(self):
         '''
@@ -239,7 +243,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),5)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name,])
 
     def test_dollarDiscount(self):
         '''
@@ -257,7 +263,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),10)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name,])
 
     def test_percentDiscount(self):
         '''
@@ -279,7 +287,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0.5 * response.context_data.get('totalPrice'))
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name,])
 
     def test_addOnItem(self):
         '''
@@ -301,7 +311,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),0)
         self.assertTrue(response.context_data.get('addonItems'))
-        self.assertFalse(response.context_data.get('discount_code_name'))
+        self.assertFalse(response.context_data.get('discount_codes'))
 
     def test_discountmakesitfree(self):
         '''
@@ -321,7 +331,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),True)
         self.assertEqual(response.context_data.get('total_discount_amount'),s.getBasePrice())
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), test_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name,])
 
         # Since the above registration was free, check that the registration actually
         # processed, and that there exists a paid Invoice for $0
@@ -332,6 +344,9 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertTrue(finalReg.invoice.status == Invoice.PaymentStatus.paid)
         self.assertEqual(finalReg.invoice.outstandingBalance, 0)
         self.assertEqual(finalReg.invoice.total, 0)
+
+        # Check that the associated temporary registration is now expired
+        self.assertTrue(finalReg.temporaryRegistration.expirationDate <= timezone.now())
 
         # Show that multiple registrations by the same customer are not permitted
         response = self.register_to_check_discount(s)
@@ -362,4 +377,6 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('is_free'),False)
         self.assertEqual(response.context_data.get('total_discount_amount'),20)
         self.assertFalse(response.context_data.get('addonItems'))
-        self.assertEqual(response.context_data.get('discount_code_name'), bigger_combo.name)
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [bigger_combo.name,])

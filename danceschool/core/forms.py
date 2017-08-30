@@ -327,6 +327,7 @@ class RegistrationContactForm(forms.Form):
 
     def __init__(self,*args,**kwargs):
         self._request = kwargs.pop('request',None)
+        self._registration = kwargs.pop('registration',None)
         user = getattr(self._request,'user',None)
         session = getattr(self._request,'session',{}).get(REG_VALIDATION_STR,{})
 
@@ -388,10 +389,6 @@ class RegistrationContactForm(forms.Form):
         first = self.cleaned_data.get('firstName')
         last = self.cleaned_data.get('lastName')
         email = self.cleaned_data.get('email')
-        session = self._session
-
-        eventinfo = session['regInfo'].get('events',{})
-        eventids = [int(k) for k,v in eventinfo.items() if v.get('register',False)]
 
         # Check that this customer is not already registered for any of the Events in the list
         customer = Customer.objects.filter(
@@ -400,6 +397,7 @@ class RegistrationContactForm(forms.Form):
             email=email).first()
 
         if customer:
+            eventids = [x.event.id for x in self._registration.temporaryeventregistration_set.all()]
             already_registered_list = customer.getSeriesRegistered().filter(id__in=eventids)
         else:
             already_registered_list = []
@@ -411,7 +409,7 @@ class RegistrationContactForm(forms.Form):
         # Allow other handlers to add validation errors to the form.  Also, by passing the request, we allow
         # those handlers to add messages to the request, which (for this form) are treated like errors in that
         # they prevent the form from being considered valid.
-        check_student_info.send(sender=RegistrationContactForm,instance=self,formData=self.cleaned_data,request=self._request)
+        check_student_info.send(sender=RegistrationContactForm,instance=self,formData=self.cleaned_data,request=self._request,registration=self._registration)
 
         return self.cleaned_data
 

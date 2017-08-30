@@ -92,7 +92,7 @@
 	    {% if series.pricingTier.id != default_pricingtier_id %}
 	    <p class="pricinginfo">
 	    	<strong>{% trans "Pricing" %}:</strong>&nbsp;
-			<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />General: {{ currencySymbol }}{{ series.pricingTier.onlineGeneralPrice|floatformat:2 }}<br />{% trans 'Students' %}: {{ currencySymbol }}{{ series.pricingTier.onlineStudentPrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{% trans 'General' %}: {{ currencySymbol }}{{ series.pricingTier.doorGeneralPrice|floatformat:2 }}<br />{% trans 'Students' %}: {{ currencySymbol }}{{ series.pricingTier.doorStudentPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }} {% trans "pricing" %}</a>
+			<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong>" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.doorPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }}</a>
 		</p>
 		{% endif %}
 

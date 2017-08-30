@@ -2,8 +2,15 @@ from django.forms import ModelForm
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount
+from .models import DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount
 from danceschool.core.models import Registration, TemporaryRegistration, PricingTier
+
+
+class DiscountCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name','order','cannotCombine')
+    list_editable = ('order',)
+    list_filter = ('cannotCombine',)
+    search_fields = ('name',)
 
 
 class DiscountComboComponentInline(admin.StackedInline):
@@ -26,18 +33,18 @@ class DiscountComboAdmin(admin.ModelAdmin):
     inlines = [DiscountComboComponentInline,]
     form = DiscountComboAdminForm
 
-    list_display = ('name','discountType','active','expirationDate','restrictions')
-    list_filter = ('discountType','active','newCustomersOnly','expirationDate')
+    list_display = ('name','category','discountType','active','expirationDate','restrictions')
+    list_filter = ('category','discountType','active','newCustomersOnly','expirationDate')
     ordering = ('name',)
     actions = ['enableDiscount','disableDiscount']
 
     fieldsets = (
         (None, {
-            'fields': ('name',('active','expirationDate'),'newCustomersOnly','daysInAdvanceRequired','discountType',)
+            'fields': ('name','category',('active','expirationDate'),'newCustomersOnly','studentsOnly','daysInAdvanceRequired','discountType',)
         }),
         (_('Flat-Price Discount (in default currency)'), {
             'classes': ('type_flatPrice',),
-            'fields': ('onlineStudentPrice','doorStudentPrice','onlineGeneralPrice','doorGeneralPrice'),
+            'fields': ('onlinePrice','doorPrice'),
         }),
         (_('Dollar Discount (in default currency)'), {
             'classes': ('type_dollarDiscount',),
@@ -124,5 +131,6 @@ admin.site._registry[Registration].inlines.insert(0,RegistrationDiscountInline)
 admin.site._registry[TemporaryRegistration].inlines.insert(0,TemporaryRegistrationDiscountInline)
 admin.site._registry[PricingTier].inlines.insert(0,PricingTierGroupInline)
 
+admin.site.register(DiscountCategory, DiscountCategoryAdmin)
 admin.site.register(DiscountCombo,DiscountComboAdmin)
 admin.site.register(PointGroup,PointGroupAdmin)
