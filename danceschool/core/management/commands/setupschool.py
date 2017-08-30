@@ -1,3 +1,4 @@
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.apps import apps
 from django.conf import settings
@@ -261,7 +262,7 @@ if you do not ask students to register for a particular role, then answer 'No' b
             """
         )
 
-        define_roles = self.boolean_input('Define \'Leader\' and \'Follower\' roles [Y/n]: ', True)
+        define_roles = self.boolean_input('Define \'Leader\' and \'Follower\' roles [Y/n]', True)
         if define_roles:
             DanceRole.objects.get_or_create(name='Leader',defaults={'pluralName': 'Leaders', 'order':1.0})
             DanceRole.objects.get_or_create(name='Follower',defaults={'pluralName': 'Followers', 'order': 2.0})
@@ -351,7 +352,7 @@ a daily/weekly/monthly ongoing basis as well.
                 prefs.get('financial__assistantClassInstructionExpenseCat',None)
                 prefs.get('financial__otherStaffExpenseCat',None)
 
-            generate_venue = self.boolean_input('Auto-generate hourly venue rental expense items for completed events [Y/n]', True)
+            generate_venue = self.boolean_input('Auto-generate venue rental expense items for completed events [Y/n]', True)
             prefs['financial__autoGenerateExpensesVenueRental'] = generate_venue
 
             generate_registration = self.boolean_input('Auto-generate registration revenue items for registrations [Y/n]', True)
@@ -367,6 +368,14 @@ with plugins to display complex functionality.  However, it is often helpful not
 to start with a completely blank site.  The next few questions will allow you to automatically
 set up some of the features that most dance schools use.
 
+There are two basic methods in which pages can be configured:
+    1. A traditional setup with a "Home" page and the "Registration" page located on a
+       sub-page, typically "/register/"
+    2. A "registration-only" setup in which the registration page is located at your
+       site's base URL instead of a home page.  This option is recommended for individuals
+       who wish to use the registration system while maintaining other content on an
+       external website.
+
 Remember, all page settings and content can be changed later via the admin interface.
 
             """
@@ -377,21 +386,28 @@ Remember, all page settings and content can be changed later via the admin inter
         except IndexError:
             initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
 
-        add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
-        if add_home_page:
-            home_page = create_page('Home', 'cms/home.html', initial_language, menu_title='Home', in_navigation=True, published=True)
-            content_placeholder = home_page.placeholders.get(slot='content')
-            add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
-            publish_page(home_page, this_user, initial_language)
-            self.stdout.write('Home page added.\n')
-
-        add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
-        if add_registration_link:
-            registration_link_page = create_page(
-                'Registration', 'cms/home.html', initial_language,
-                menu_title='Register', slug='register', overwrite_url=reverse('registration'), in_navigation=True, published=True
+        registration_first = self.boolean_input('Perform a "registration-only" setup with registration on the home page? [y/N]', False)
+        if registration_first:
+            home_page = create_page(
+                'Registration', 'cms/home.html', initial_language, menu_title='Registration',
+                apphook='RegistrationApphook', in_navigation=True, published=True
             )
-            self.stdout.write('Registration link added.\n')
+            self.stdout.write('Registration page added.\n')
+        else:
+            add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
+            if add_home_page:
+                home_page = create_page('Home', 'cms/home.html', initial_language, menu_title='Home', in_navigation=True, published=True)
+                content_placeholder = home_page.placeholders.get(slot='content')
+                add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
+                publish_page(home_page, this_user, initial_language)
+                self.stdout.write('Home page added.\n')
+            add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
+            if add_registration_link:
+                registration_link_page = create_page(
+                    'Registration', 'cms/home.html', initial_language,
+                    menu_title='Register', slug='register', overwrite_url=reverse('registration'), in_navigation=True, published=True
+                )
+                self.stdout.write('Registration link added.\n')
 
         add_instructor_page = self.boolean_input('Add a page to list all instructors with their photos and bios [Y/n]', True)
         if add_instructor_page:
@@ -492,36 +508,10 @@ Remember, all page settings and content can be changed later via the admin inter
             self.stdout.write('Logout link added.\n')
 
         if apps.is_installed('danceschool.payments.paypal'):
-            add_paypal_paynow = self.boolean_input('Add Paypal Pay Now link to the registration summary view to allow students to pay [Y/n]', True)
-            if add_paypal_paynow:
-                paynow_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
-                paynow_p_draft = paynow_sp[0].draft
-                paynow_p_public = paynow_sp[0].public
-                add_plugin(
-                    paynow_p_draft, 'CartPaymentFormPlugin', initial_language,
-                    successPage=home_page,
-                )
-                add_plugin(
-                    paynow_p_public, 'CartPaymentFormPlugin', initial_language,
-                    successPage=home_page,
-                )
-            self.stdout.write('Paypal Pay Now link added.  You will still need to add Paypal credentials to settings before use.')
+            call_command('setup_paypal')
 
         if apps.is_installed('danceschool.payments.stripe'):
-            add_stripe_checkout = self.boolean_input('Add Stripe Checkout link to the registration summary view to allow students to pay [Y/n]', True)
-            if add_stripe_checkout:
-                stripe_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
-                stripe_p_draft = stripe_sp[0].draft
-                stripe_p_public = stripe_sp[0].public
-                add_plugin(
-                    stripe_p_draft, 'StripePaymentFormPlugin', initial_language,
-                    successPage=home_page,
-                )
-                add_plugin(
-                    stripe_p_public, 'StripePaymentFormPlugin', initial_language,
-                    successPage=home_page,
-                )
-            self.stdout.write('Stripe checkout link added.  You will still need to add Stripe credentials to settings before use.')
+            call_command('setup_stripe')
 
         self.stdout.write(
             """
