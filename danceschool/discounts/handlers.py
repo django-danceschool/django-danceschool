@@ -9,7 +9,7 @@ from danceschool.core.constants import getConstant
 from danceschool.core.models import Customer
 
 from .helpers import getApplicableDiscountCombos
-from .models import TemporaryRegistrationDiscount, RegistrationDiscount
+from .models import DiscountCombo, TemporaryRegistrationDiscount, RegistrationDiscount
 
 
 # Define logger for this file
@@ -134,9 +134,9 @@ def getBestDiscount(sender,**kwargs):
     if not best_discounts:
         logger.debug('No applicable discounts found.')
 
-    # Return the OrderedDict of discounts to be applied, along with the additional
+    # Return the list of discounts to be applied (in DiscountInfo tuples), along with the additional
     # price of ineligible items to be added.
-    return (best_discounts, ineligible_total)
+    return DiscountCombo.DiscountApplication([x for x in best_discounts.values()], ineligible_total)
 
 
 @receiver(apply_discount)

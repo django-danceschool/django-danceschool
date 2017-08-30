@@ -306,7 +306,9 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         # If the discounts app is enabled, then the return value to this signal
         # will contain information on the discounts to be applied, as well as
         # the total price of discount-ineligible items to be added to the
-        # price
+        # price.  These should be in the form of a named tuple such as the
+        # DiscountApplication namedtuple defined in the discounts app, with
+        # 'items' and 'ineligible_total' keys.
         discount_responses = request_discounts.send(
             sender=RegistrationSummaryView,
             registration=reg,
@@ -314,25 +316,25 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 
         # This signal handler is designed to handle a single non-null response,
-        # and that response must be in the form of an OrderedDict of namedtuples, each
+        # and that response must be in the form of a list of namedtuples, each
         # with a with a code value, a net_price value, and a discount_amount value
-        # (as with the DiscountInfo) named tuple in the DiscountCombo class.  If more
+        # (as with the DiscountInfo namedtuple provided by the DiscountCombo class). If more
         # than one response is received, then the one with the minumum net price is applied
-        discount_codes = OrderedDict()
+        discount_codes = []
         discounted_total = initial_price
         total_discount_amount = 0
 
         try:
             if discount_responses:
-                discount_responses.sort(key=lambda k: min([x.net_price for x in k[0].values()] + [initial_price]) if k and isinstance(k[0], dict) else initial_price)
-                discount_codes = discount_responses[0][0]
+                discount_responses.sort(key=lambda k: min([getattr(x,'net_price',initial_price) for x in k.items] + [initial_price]) if k and hasattr(k,'items') else initial_price)
+                discount_codes = getattr(discount_responses[0],'items',[])
                 if discount_codes:
-                    discounted_total = min([x.net_price for x in discount_codes.values()]) + discount_responses[0][1]
+                    discounted_total = min([getattr(x,'net_price',initial_price) for x in discount_codes]) + getattr(discount_responses[0],'ineligible_total',0)
                     total_discount_amount = initial_price - discounted_total
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
 
-        for discount in discount_codes.values():
+        for discount in discount_codes:
             apply_discount.send(
                 sender=RegistrationSummaryView,
                 discount=discount.code,
@@ -378,7 +380,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         regSession = request.session[REG_VALIDATION_STR]
         regSession["temp_reg_id"] = reg.id
         if discount_codes:
-            regSession['discount_codes'] = [(x.code.name, x.code.pk, x.discount_amount) for x in discount_codes.values()]
+            regSession['discount_codes'] = [(x.code.name, x.code.pk, x.discount_amount) for x in discount_codes]
         regSession['total_discount_amount'] = total_discount_amount
         regSession['addons'] = addons
         regSession['voucher_names'] = adjustment_list

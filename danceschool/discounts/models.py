@@ -88,7 +88,15 @@ class DiscountCombo(models.Model):
     # on a portion of the item as long as the percentage discounts for more point are always larger
     # than the discounts for fewer points (e.g. additional hours of class are cheaper).
     ApplicableDiscountCode = namedtuple('ApplicableDiscountCode',['code','items','itemTuples'])
+
+    # Net allocated prices are optional, everything else is required.
     DiscountInfo = namedtuple('DiscountInfo',['code','net_price','discount_amount','net_allocated_prices'])
+    DiscountInfo.__new__.__defaults__ = ([],)
+
+    # A DiscountApplication contains a list of DiscountInfo tuples to be applied, along with an optional
+    # total for ineligible items to be added to the discounted net price at the end.
+    DiscountApplication = namedtuple('DiscountApplication',['items','ineligible_total'])
+    DiscountApplication.__new__.__defaults__ = ([],0)
 
     name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Give this discount combination a name (e.g. \'Two 4-week series\')'))
     active = models.BooleanField(_('Active'),default=True,help_text=_('Uncheck this to \'turn off\' this discount'))
