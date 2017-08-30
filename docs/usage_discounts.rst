@@ -16,10 +16,11 @@ If you have installed the ``danceschool.discounts`` app, then you are able to of
 - x% discount for all first-time customers
 - $y discount for registering for two or more regular classes at once
 - An 'all-in pass' price where the user can register for as many classes as they would like for a flat fee
-- An 'early bird discount' discount that expires several days before the 
+- An 'early bird discount' discount that expires several days before a class series begins
+- A student discount that applies only for HS/college/university students.
 - A temporary "sale price" discount that automatically expires at the end of a period of time.
 
-Discounts are applied automatically, and the lowest-price available discount is automatically applied.  However, only one discount at a time can be applied to a registration (if you're trying to combine discounts, see :ref:`combining_discounts` below).
+Discounts are applied automatically, and the lowest-price available discount in each discount category is automatically applied.  As of version 0.3.0, combining multiple discounts on the same registration by putting them in different discount categories is feasible as well. If you're trying to combine discounts, see :ref:`combining_discounts` below.
 
 Creating A Simple Discount
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -30,8 +31,8 @@ For example, suppose that in your school, you would like to offer a simple disco
 
 1.	In the CMS toolbar, go to **Events > Related Items > Pricing Tier** and select the pricing tier that applies to your regular weekly class series to edit it.
 2.	Under "Pricing tier discount groups," select "Add another pricing tier discount group" to define the point group and the number of points that each regular weekly class receives.  For a simple discount such as this, we can simply add a new point group, such as "Individual weekly class series points," and make each item under the regular pricing tier worth one point.
-3.	Return to the CMS toolbar and go to **Finances > Related Items > Discounts** to access the list of existing discounts, and on the listing page, select he "Add Discount" button to create a new discount.
-4.  Fill out the information for the new discount.  Give the discount a name, ensure that the "Active" box is checked, and under "Discount Type," select "Dollar Discount from Regular Price."  Then, under "Amount of Dollar Discount," enter 10 for a $10 flat discount.  Under "Required components of discount," select the point group that you created (i.e. "Individual weekly class series points") and enter 2 for quantity.
+3.	Return to the CMS toolbar and go to **Finances > Related Items > Discounts** to access the list of existing discounts, and on the listing page, select the "Add Discount" button to create a new discount.
+4.  Fill out the information for the new discount.  Give the discount a name and category, ensure that the "Active" box is checked, and under "Discount Type," select "Dollar Discount from Regular Price."  Then, under "Amount of Dollar Discount," enter 10 for a $10 flat discount.  Under "Required components of discount," select the point group that you created (i.e. "Individual weekly class series points") and enter 2 for quantity.
 5.  Click save and you're done!  Now, all students who sign up for two or more regular weekly class series at the same time will automatically receive $10 off the regular price.
 
 More Advanced Discounts (Examples)
@@ -56,17 +57,22 @@ Notice also that by default, early registration discounts always close at midnig
 
 Notice also that in order to receive an early registration discount, it is not necessary that *all* elements of a registration be the specified number of days in advance.  It is only necessary that the components needed for the combination to apply are satisfied by elements of a registration that are at least that many days in advance.  So, for example, a student who signs up for your Friday evening class on Tuesday afternoon, but who also signs up at the same time for a Wednesday evening class, may be considered eligible for the early registration discount, as long as the points associated with the Friday afternoon class are enough to satisfy the components of the discount.
 
+Student Discounts
+"""""""""""""""""
+
+As of version 0.3.0, the core app no longer provides separate configurable pricing for high school/college/university students.  To set up a student discount, you must now use the discounts app.  Fortunately, creating a student discount in the discounts app is simple.  In the Discount admin interface, just be sure to select the checkbox labeled "Discount for HS/college/university students only", and also to select the minimum requirements for the discount to apply.  Finally, if you wish this student discount to be applied simultaneously with other discounts, be sure that it is defined within its own discount category.
+
 .. _combining_discounts:
 
 Notes on Combining Multiple Discounts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The discounts app automatically gives each customer the single discount that will provide them with the lowest overall price for their registration.  This functionality is important, because the conditions required for discounts to apply are often progressive in nature.  For example, if you have a discount that applies to students who register for two or more classes, as well as a discount that applies to students who register for three or more classes, then of course, technically, a student who registers for three classes will be eligible for both of these discounts.
-Similarly, a student who registers for four classes will also be eligible for both of these discounts.  However, in both cases, it is unlikely to be desirable to give that student *both* the two-class discount and the three-class discount at the same time.
+The discounts app is based on both *points* (the requirements needed for a discount to apply) and on *categories* (different types of discount).  By default, the app finds the best discount (providing the lowest price) in each category, and it applies that discount.  The order in which discounts are applied is determined by the value of "order" for each discount category, with categories having lower values of "order" applied first.
 
-However, this also means that certain types of discounts that one may wish to combine cannot be directly combined by the discounts app.  If, for example, you wish to offer both a $10 discount for signing up for two classes, and a $5 early registration discount, that is not currently possible.
+The conditions needed for a discount to apply are always "x or more" points conditions.  This is important, because the conditions required for discounts to apply are often progressive in nature.  For example, if you have a discount that applies to students who register for two or more classes, as well as a discount that applies to students who register for three or more classes, then of course, technically, a student who registers for three classes will be eligible for both of these discounts.
+Similarly, a student who registers for four classes will also be eligible for both of these discounts.  However, in both cases, it is unlikely to be desirable to give that student *both* the two-class discount and the three-class discount at the same time.  Placing these multi-class discounts in the same category ensures that a customer will not simultaneously receive two or more of the multi-class discounts--only the best discount will be applied.  On the other hand, placing these multi-class discounts in different categories ensures by default that a customer *will* be able to receive two or more of these discounts simultaneously.  Therefore, it is important to specify and order discount categories carefully.
 
-The solution to this is to create a third discount which combines the requirements of *both* the two-class discount and the early registration discount, and to make that discount larger than the individual discounts that it combines.  For example, a discount entitled "Two classes plus early registration" for $15 off will effectively serve as the combination of those two discounts, and it will automatically be applied over the smaller discounts for the customers that are eligible to receive it.
+There is one exception to the above logic.  If you have discounts that you do *not* wish to be applied along with other discounts, then you may select the option "Cannot be combined" in the Discount Category admin.  Discounts in categories with this box checked cannot be combined with *any* other discount.  They will only be applied if they provide a lower price than any other single discount or combination of discounts.
 
 Vouchers
 --------

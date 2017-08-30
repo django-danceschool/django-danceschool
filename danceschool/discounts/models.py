@@ -100,7 +100,7 @@ class DiscountCombo(models.Model):
     # If null, then there is no expiration date
     expirationDate = models.DateTimeField(_('Expiration Date'), null=True,blank=True,help_text=_('Leave blank for no expiration.'))
 
-    studentsOnly = models.BooleanField(verbose_name=_('Discount for HS/college/university students only'),default=False)
+    studentsOnly = models.BooleanField(verbose_name=_('Discount for HS/college/university students only'),default=False,help_text=_('Check this box to create student discounts.'))
     newCustomersOnly = models.BooleanField(verbose_name=_('Discount for New Customers only'),default=False)
     daysInAdvanceRequired = models.PositiveIntegerField(
         _('Must register __ days in advance'),

@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='discountcombo',
             name='studentsOnly',
-            field=models.BooleanField(default=False, verbose_name='Discount for HS/college/university students only'),
+            field=models.BooleanField(default=False, help_text='Check this box to create student discounts.', verbose_name='Discount for HS/college/university students only'),
         ),
         migrations.RunPython(create_initial_category, delete_initial_category),
         migrations.AddField(

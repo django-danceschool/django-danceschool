@@ -1,6 +1,23 @@
 Version History
 ===============
 
+0.3.0 - September 1, 2017
+-----------------------
+
+- **New:** Added discount categories, with the lowest-priced discount *per category* automatically applied as a method of permitting multiple simultaneous discounts.  Categories are orderable so that discounts are always applied in the same order.
+- Moved discounted student pricing from the core app to the discounts app.  Core app PricingTiers now contain only onlinePrice, doorPrice, and dropInPrice values.
+- Temporary Registration objects now expire and are deleted (along with expired session data) by a Huey cron task (if enabled).  By default, Temporary Registrations expire 15 minutes after the registration process begins, with time extended as they proceed through the process.
+- When beginning the registration process, the system looks at both completed registrations and in-process registrations (unexpired TemporaryRegistration instances) to determine if registration is allowed.  This prevents accidental overregistration.
+- Fixed issue with the ```settings.py`` provided in the ``default_setup.zip`` file that prevented adding or modidying CMS plugin instances.
+
+Upgrade notes:
+^^^^^^^^^^^^^^
+
+Because student pricing in the core app has been deleted, individuals upgrading to version 0.3.0 who wish to maintain separate pricing for students will need to create discounts in the discounts app to do so.  All student pricing information will be deleted
+when the upgrade takes place.  No existing registrations will be affected by this change.
+
+Upon upgrade, all existing TemporaryRegistration objects will be marked as expired.  If any customers are in the process of registering at the time of upgrade, they will be asked to begin the registration process again.
+
 0.2.4 - August 25, 2017
 -----------------------
 
