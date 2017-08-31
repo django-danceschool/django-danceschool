@@ -9,6 +9,7 @@ Version History
 - Temporary Registration objects now expire and are deleted (along with expired session data) by a Huey cron task (if enabled).  By default, Temporary Registrations expire 15 minutes after the registration process begins, with time extended as they proceed through the process.
 - When beginning the registration process, the system looks at both completed registrations and in-process registrations (unexpired TemporaryRegistration instances) to determine if registration is allowed.  This prevents accidental overregistration.
 - Fixed issue with the ```settings.py`` provided in the ``default_setup.zip`` file that prevented adding or modidying CMS plugin instances.
+- Added separate ``setup_paypal``, ``setup_stripe``, and ``setup_permissions`` commands that can be used separately to handle setup of Paypal, Stripe, and group permissions without running the entire ``setupschool`` management command script.
 
 Upgrade notes:
 ^^^^^^^^^^^^^^

@@ -11,7 +11,7 @@ except ImportError:
 
 
 class Command(BaseCommand):
-    help = 'Check Paypal settings and created necessary placeholders for Paypal Express Checkout integration.'
+    help = 'Check Stripe settings and created necessary placeholders for Stripe Checkout integration.'
 
     def boolean_input(self, question, default=None):
         '''
