@@ -319,6 +319,15 @@ class RegistrationSessionExpiryMinutes(IntegerPreference):
     default = 15
 
 
+@global_preferences_registry.register
+class DeleteExpiredTemporaryRegistrations(BooleanPreference):
+    section = registration
+    name = 'deleteExpiredTemporaryRegistrations'
+    verbose_name = _('Automatically delete expired temporary registration and session data')
+    help_text = _('If this box is checked, then an hourly script will automatically expired temporary registration and session data.  Disabling this feature is only recommended for testing.')
+    default = True
+
+
 ############################
 # Email Preferences
 #
