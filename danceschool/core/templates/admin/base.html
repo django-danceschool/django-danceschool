@@ -4,6 +4,12 @@
 <head>
 <title>{% block title %}{% endblock %}</title>
 <link rel="stylesheet" type="text/css" href="{% block stylesheet %}{% static "admin/css/base.css" %}{% endblock %}" />
+{# Fix for incorrect font issue #}
+<style>
+    .cms-icon-arrow:before {
+        font: normal normal normal 10px/1 django-cms-iconfont;
+    }
+</style>
 {% block extrastyle %}{% endblock %}
 {% render_block "css" %}
 {% if LANGUAGE_BIDI %}<link rel="stylesheet" type="text/css" href="{% block stylesheet_rtl %}{% static "admin/css/rtl.css" %}{% endblock %}" />{% endif %}
