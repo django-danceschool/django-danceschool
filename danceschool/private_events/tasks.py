@@ -1,10 +1,10 @@
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from huey import crontab
 from huey.contrib.djhuey import db_periodic_task
-from datetime import datetime
 import logging
 
 from danceschool.core.constants import getConstant
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 @db_periodic_task(crontab(minute='*'))
 def sendReminderEmails():
     reminders_needed = EventReminder.objects.filter(**{
-        'time__lte': datetime.now(),
+        'time__lte': timezone.now(),
         'completed':False,
         'notifyList__isnull': False})
     if reminders_needed:
@@ -47,6 +47,7 @@ def sendReminderEmailToUser(user,reminder):
         'name': ' '.join([user.first_name, user.last_name]),
         'event': reminder.eventOccurrence.event,
         'occurrence': reminder.eventOccurrence,
+        'businessName': getConstant('contact__businessName'),
     })
 
     try:
@@ -66,7 +67,8 @@ def sendReminderEmailToUser(user,reminder):
                     user.email,
                 ],
                 fail_silently=False)
-    except:
+    except Exception as e:
+        logger.error('Error in sending reminder emails: %s' % e)
         return False
     if sent:
         return True

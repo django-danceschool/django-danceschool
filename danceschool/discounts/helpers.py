@@ -1,44 +1,22 @@
-from django.utils.encoding import python_2_unicode_compatible
-from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
+
+from datetime import timedelta
 
 from .models import DiscountCombo
 
 
-def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
-
-    @python_2_unicode_compatible
-    class ApplicableDiscountCode(object):
-        '''
-        An applied discount may not apply to all items in a customer's
-        cart, so an instance of this class keeps track of the code
-        as well as the items applicable.
-        '''
-
-        def __init__(self,code,items,itemTuples=[]):
-            self.code = code
-            self.items = items
-
-            # For point-based discounts, the second position in the tuple represents what fraction of the
-            # points were used from this item to match the discount (1 if the item was counted in its
-            # entirety toward the discount). In cases where a discount does not count against an item entirely
-            # (e.g. the 9 hours of class discount applied to three four-week classes), the full price for that
-            # item will be calculated by multiplying the remaining fraction of points for that item (e.g. 75%
-            # in the above example) against the regular (non-student, online registration) price for that item.
-            # In practice, this means that a discount on the whole item will never be superceded by a discount
-            # on a portion of the item as long as the percentage discounts for more point are always larger
-            # than the discounts for fewer points (e.g. additional hours of class are cheaper).
-            if itemTuples:
-                self.itemTuples = itemTuples
-            else:
-                self.itemTuples = [(x,1) for x in items]
-
-        def __str__(self):
-            return _('ApplicableDiscountCode Object: Applies \'%s\'' % self.code.name)
+def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,addOn=False,cannotCombine=False):
 
     # Existing customers can't get discounts marked for new customers only.  Add-ons are handled separately.
-    availableDiscountCodes = DiscountCombo.objects.filter(active=True).exclude(discountType=DiscountCombo.DiscountType.addOn)
+    if addOn:
+        availableDiscountCodes = DiscountCombo.objects.filter(active=True,discountType=DiscountCombo.DiscountType.addOn).exclude(expirationDate__lte=timezone.now())
+    else:
+        availableDiscountCodes = DiscountCombo.objects.filter(active=True,category__cannotCombine=cannotCombine).exclude(discountType=DiscountCombo.DiscountType.addOn).exclude(expirationDate__lte=timezone.now())
+
     if not newCustomer:
         availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)
+    if not student:
+        availableDiscountCodes = availableDiscountCodes.exclude(studentsOnly=True)
 
     # Because discounts are point-based, simplify the process of finding these discounts by creating a list
     # of cart items with one entry per point, not just one entry per cart item
@@ -49,12 +27,20 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
                 pointbased_cart_object_list += [cart_item]
     pointbased_cart_object_list.sort(key=lambda x: x.event.pricingTier.pricingtiergroup.points, reverse=True)
 
+    # Discounts that require registration a number of days in advance are evaluated against
+    # midnight local time of the day of registration (so that discounts always close at
+    # midnight local time).  Because installations may have timezone support enabled or disabled,
+    # calculate the threshold time in advance.
+    today_midnight = (
+        timezone.localtime(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()
+    ).replace(hour=0,minute=0,second=0,microsecond=0)
+
     # Look for exact match. If multiple are found, return them all.
     # If one is not found, then make a list of all subsets of cart_object_list
     # and recursively look for matches.  The loop method allows us to look for codes
     # with a level and weekday requirement as well as codes without a level requirement
 
-    # Start out with a blank list of codes and fill the list
+    # Start out with a blank list of codes and fill the list with namedtuples
     useableCodes = []
 
     for x in availableDiscountCodes:
@@ -81,9 +67,19 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
                     # Check for matches in weekdays and levels:
                     if z.weekday and y.event.weekday != z.weekday:
                         match_flag = False
-                    if z.level and hasattr(y.event,'series') and y.event.series.classDescription.danceTypeLevel != z.level:
+                    elif z.level and hasattr(y.event,'series') and y.event.series.classDescription.danceTypeLevel != z.level:
+                        match_flag = False
+                    # Check that if the discount combo requires that all elements be a
+                    # certain number of days in the future, that this event begins at least
+                    # that many days in the future from the beginning of today.
+                    elif (
+                        x.daysInAdvanceRequired is not None and
+                        y.event.startTime - today_midnight < timedelta(days=x.daysInAdvanceRequired)
+                    ):
                         match_flag = False
 
+                    # If we found no reason that it's not a match, then it's a match,
+                    # and we can move on to the next object in the cart.
                     if match_flag:
                         matched_discount_items.append(necessary_discount_items.pop(j))
                         matched_cart_items.append(y)
@@ -111,6 +107,6 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True):
                 for item in matchedList
             ]
 
-            useableCodes += [ApplicableDiscountCode(x,matchedList,matchedTuples)]
+            useableCodes += [x.ApplicableDiscountCode(x,matchedList,matchedTuples)]
 
     return useableCodes

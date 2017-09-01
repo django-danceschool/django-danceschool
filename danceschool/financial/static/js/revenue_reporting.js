@@ -1,7 +1,7 @@
 $(document).ready(function(){
 	$('#div_id_event').hide();
-	$('#div_id_eventregistration').hide();
-	$('#id_eventregistration').attr('disabled',true);
+	$('#div_id_invoiceItem').hide();
+	$('#id_invoiceItem').attr('disabled',true);
 
 	// Use Jquery to get the cookie value of the CSRF token
 	function getCookie(name) {
@@ -39,12 +39,12 @@ $(document).ready(function(){
 		var this_associateWith = $('#div_id_associateWith input:checked').val();
 
 		if (this_associateWith == "2") {
-			$('#div_id_eventregistration').show();
+			$('#div_id_invoiceItem').show();
 			$('#div_id_event').show();
 		}
 		if (this_associateWith == "3") {
 			$('#div_id_event').hide();
-			$('#div_id_eventregistration').hide();
+			$('#div_id_invoiceItem').hide();
 		}
 	});
 
@@ -59,22 +59,23 @@ $(document).ready(function(){
 			type: "POST",
 			data: formData,
 			success: function(data, textStatus, jqXHR) {
-				$('#id_eventregistration').empty();
 
-				$('#id_eventregistration').append($('<option></option>').val('').html('-----'));
+				$('#id_invoiceItem').empty();
 
-				$.each(data['id_eventregistration'], function(index,text) {
-					$('#id_eventregistration').append(
+				$('#id_invoiceItem').append($('<option></option>').val('').html('-----'));
+
+				$.each(data['id_invoiceItem'], function(index,text) {
+					$('#id_invoiceItem').append(
 						$('<option></option>').val(index).html(text)
 					);
 					emptyFlag = false;
 				});
 				if (emptyFlag == false) {
-					$('#div_id_eventregistration').show();
-					$('#id_eventregistration').attr('disabled',false);
+					$('#div_id_invoiceItem').show();
+					$('#id_invoiceItem').attr('disabled',false);
 				}
 				else {
-					$('#id_eventregistration').attr('disabled',true);
+					$('#id_invoiceItem').attr('disabled',true);
 				}
 			},
 			failure: function() {

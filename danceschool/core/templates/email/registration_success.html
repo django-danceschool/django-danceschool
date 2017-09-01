@@ -1,0 +1,20 @@
+Hi {{ first_name }},
+
+Thank you for registering with {{ businessName }}!  We have received and processed your registration for the following:
+
+{% for event in eventList %}{{ event.title}}, begins {{ event.start|date:"l, F jS, g:i A" }}
+{% endfor %}
+
+{% if invoice %}Net amount paid: {{ currencySymbol }}{{ invoice.amountPaid|floatformat:2 }}
+{% if invoice.outstandingBalance %}Outstanding balance: {{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:2 }}
+View Invoice/Make Payments: {{ invoice.url }}{% endif %}{% endif %}{% if registrationComments %}Your comments:
+{{ registrationComments }}
+
+{% endif %}{% if registrationHowHeardAboutUs %}
+How you heard about us:
+{{ registrationHowHeardAboutUs }}
+
+{% endif %}Thanks again, and we look forward to seeing you soon!
+
+Sincerely,
+{{ businessName }}

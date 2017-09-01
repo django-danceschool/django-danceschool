@@ -16,12 +16,14 @@ urlpatterns = [
     url(r'^settings/global/$',
         user_passes_test(lambda u: u.is_superuser)(PreferenceFormView.as_view(
             registry=global_preferences_registry,
-            form_class=GlobalPreferenceForm)),
+            form_class=GlobalPreferenceForm,
+            template_name='dynamic_preferences/form_danceschool.html',)),
         name="dynamic_preferences.global"),
     url(r'^settings/global/(?P<section>[\w\ ]+)$',
         user_passes_test(lambda u: u.is_superuser)(PreferenceFormView.as_view(
             registry=global_preferences_registry,
-            form_class=GlobalPreferenceForm)),
+            form_class=GlobalPreferenceForm,
+            template_name='dynamic_preferences/form_danceschool.html',)),
         name="dynamic_preferences.global.section"),
     # For Django-filer
     url(r'^filer/', include('filer.urls')),
@@ -39,11 +41,14 @@ urlpatterns = [
 ]
 
 # If additional danceschool apps are installed, automatically add those URLs as well.
-if apps.is_installed('danceschool.paypal'):
-    urlpatterns.append(url(r'^paypal/', include('danceschool.paypal.urls')),)
+if apps.is_installed('danceschool.banlist'):
+    urlpatterns.append(url(r'^banlist/', include('danceschool.banlist.urls')),)
 
 if apps.is_installed('danceschool.financial'):
     urlpatterns.append(url(r'^financial/', include('danceschool.financial.urls')),)
+
+if apps.is_installed('danceschool.prerequisites'):
+    urlpatterns.append(url(r'^prerequisites/', include('danceschool.prerequisites.urls')),)
 
 if apps.is_installed('danceschool.private_events'):
     urlpatterns.append(url(r'^private_events/', include('danceschool.private_events.urls')),)
@@ -51,5 +56,11 @@ if apps.is_installed('danceschool.private_events'):
 if apps.is_installed('danceschool.private_lessons'):
     urlpatterns.append(url(r'^private_lessons/', include('danceschool.private_lessons.urls')),)
 
-# CMS URLs always go last because they will match any pattern that has not already been matched.
-urlpatterns.append(url(r'^', include('cms.urls')),)
+if apps.is_installed('danceschool.vouchers'):
+    urlpatterns.append(url(r'^vouchers/', include('danceschool.vouchers.urls')),)
+
+if apps.is_installed('danceschool.payments.paypal'):
+    urlpatterns.append(url(r'^paypal/', include('danceschool.payments.paypal.urls')),)
+
+if apps.is_installed('danceschool.payments.stripe'):
+    urlpatterns.append(url(r'^stripe/', include('danceschool.payments.stripe.urls')),)

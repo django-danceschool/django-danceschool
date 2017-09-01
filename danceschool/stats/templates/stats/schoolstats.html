@@ -1,35 +1,35 @@
 {% extends "cms/admin_home.html" %}
-{% load cms_tags %}
+{% load cms_tags i18n %}
 
 {% block content %}
 
-<h2>School Performance Statistics</h2>
+<h2>{% trans "School Performance Statistics" %}</h2>
 
 <table class="classregsummary table">
 <tr>
-    <td>Total # Students:</td><td> {{ totalStudents }}</td>
+    <td>{% trans "Total # Students" %}:</td><td> {{ totalStudents }}</td>
 </tr>
 <tr>
-  <td>Total # Series taught:</td><td> {{ numSeries }} </td>
+  <td>{% trans "Total # Series Taught" %}:</td><td> {{ numSeries }} </td>
 </tr>
 <tr>
-  <td>Total # Series Registrations: </td><td> {{ totalSeriesRegs }} </td>
+  <td>{% trans "Total # Series Registrations" %}: </td><td> {{ totalSeriesRegs }} </td>
 </tr>
 <tr>
-    <td>Total Time Studio in Existence:</td> <td>{{ totalTime }}</td>
+    <td>{% trans "Total Time Studio in Existence" %}:</td> <td>{{ totalTime }}</td>
 </tr>
 </table>
 
 {% static_placeholder 'stats_graphs' %}
 
-<h2>Top Students and Teachers</h2>
+<h2>{% trans "Top Students and Teachers" %}</h2>
 
 <div class="row">
 <div class="col-sm-4">
   <table class="table">
-    <caption>All Time Top Customers</caption>
+    <caption>{% trans "All Time Top Customers" %}</caption>
   <thead>
-    <tr><td>Name</td><td># Classes Taken</td></tr>
+    <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taken" %}</td></tr>
   </thead>
   <tbody>
     {% for customer in bestCustomersAllTime %}
@@ -44,9 +44,9 @@
 
 <div class="col-sm-4">
   <table class="table">
-    <caption>Top Customers of the Last 12 Months</caption>
+    <caption>{% trans "Top Customers of the Last 12 Months" %}</caption>
   <thead>
-    <tr><td>Name</td><td># Classes Taken</td></tr>
+    <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taken" %}</td></tr>
   </thead>
   <tbody>
     {% for customer in bestCustomersLastTwelveMonths %}
@@ -61,9 +61,9 @@
 
 <div class="col-sm-4">
   <table class="table">
-    <caption>Most Active Teachers of This Calendar Year</caption>
+    <caption>{% trans "Most Active Teachers of This Calendar Year" %}</caption>
   <thead>
-    <tr><td>Name</td><td># Classes Taught</td></tr>
+    <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taught" %}</td></tr>
   </thead>
   <tbody>
     {% for teacher in mostActiveTeachersThisYear %}

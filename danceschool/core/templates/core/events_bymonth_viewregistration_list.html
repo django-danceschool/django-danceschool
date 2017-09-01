@@ -1,9 +1,9 @@
 {% extends "cms/admin_home.html" %}
-{% load danceschool_tags %}
+{% load danceschool_tags i18n %}
 
 {% block content %}
 <div class="selectclass">
-    <h2>Select an Event to View Registrations</h2>
+    <h2>{% trans "Select an Event to View Registrations" %}</h2>
         {% for event in event_list %}
             {% ifchanged event.month %}
                 {% if not forloop.first %}</ul>{% endif %}
@@ -13,7 +13,7 @@
             <li><a href="{% url 'viewregistrations' event.id %}">{{ event.name }}</a>:&nbsp;&nbsp;{{ event.startTime|date:'l, h:i A' }}</li>
         {% if forloop.last %}</ul>{% endif %}
         {% empty %}
-        <li>No classes or events yet. Check back soon!</li>
+        <li>{% trans "No classes or events yet. Check back soon!" %}</li>
         {% endfor %}
     </ul>
 </div>

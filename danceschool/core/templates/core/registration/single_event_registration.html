@@ -1,0 +1,63 @@
+{% extends "core/registration/base_event_registration.html" %}
+{% load cms_tags thumbnail i18n %}
+
+
+{% block top %}
+	{% with allEvents.first as event %}
+
+	<h1>{{ event.name }}</h1>
+
+	{% if event.teachers %}
+		<h3 class="instructor-names">{% trans "With" %} 
+		{% for teacher in event.teachers %}
+				{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} {% trans "and" %} {% endif %}
+		{% endfor %}
+		</h3>
+		<div class="visible-xs col-xs-12">
+		{% for teacher in event.teachers %}
+			{% if not teacher.assistant %}
+				<img src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" style="margin: 5px auto;" />
+			{% endif %}
+		{% endfor %}
+		</div>
+	{% endif %}
+
+	{% if 'core.change_series' in perms and event.series %}
+	<p><a class="btn btn-default" href="{% url 'admin:core_series_change' event.id %}">{% trans "Edit Class Details" %}</a></p>
+	{% endif %}
+	{% if 'core.view_registration_summary' in perms %}
+	<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
+	{% endif %}
+
+	<p class='schedule'>
+	<strong>{% trans "Class Schedule" %}:</strong><br />
+	{% for class in event.eventoccurrence_set.all %}
+		{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
+	{% endfor %}
+	</p>
+
+	<p class='address'>
+	<strong>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</strong><br />
+	{{ event.location.address }}<br />
+	{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
+	{% page_url 'directions' as directions_url %}
+	{% if directions_url %}<a href="{{ directions_url }}#{{ event.location.name|slugify }}">{% trans "More Info" %}</a>{% endif %}
+	</p>
+
+	<hr />
+
+	<div class="description">
+		<p>{{ event.description }}</p>
+	</div>
+
+	{% endwith %}
+{% endblock %}
+
+{# No need to report coming soon like on the regular registration page #}
+{% block coming_soon %}{% endblock %}
+
+{% block registration_form %}
+	<div class="well">
+	{{ block.super }}
+	</div>
+{% endblock %}

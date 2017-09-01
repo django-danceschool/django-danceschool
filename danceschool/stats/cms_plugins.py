@@ -1,8 +1,8 @@
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
-from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 from danceschool.core.models import Series
@@ -15,6 +15,8 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
     model = StatsGraphPluginModel
     name = _('School Performance Graph')
     render_template = 'stats/schoolstats_timeseriesbymonth.html'
+    admin_preview = True
+
     template_choices = [
         ('stats/schoolstats_timeseriesbymonth.html',_('Students By Month of the Year')),
         ('stats/schoolstats_averagebyclasstype.html',_('Performance By Class Type')),
@@ -24,6 +26,7 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
         ('stats/schoolstats_registrationtypes.html',_('Student Discounts and At-The-Door Registrations')),
         ('stats/schoolstats_referralcounts.html',_('Tracked Advertising Referrals')),
     ]
+
     cache = True
     module = _('Stats')
 
@@ -36,16 +39,16 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
         # to show stats over different time ranges.
         limitMonthDates = {}
         for m in range(0,25):
-            limitMonthDates[m] = (datetime.now() - relativedelta(months=m)).strftime('%Y-%m-%d')
+            limitMonthDates[m] = (timezone.now() - relativedelta(months=m)).strftime('%Y-%m-%d')
 
         # The same for graphs that allow one to choose different years.
-        recentYears = [datetime.now().year + x for x in range(-5,1)]
+        recentYears = [timezone.now().year + x for x in range(-5,1)]
 
         series_by_year = Series.objects.order_by('year')
 
         if series_by_year.count() > 0:
             first_year = series_by_year.first().year
-            allYears = [x for x in range(first_year,datetime.now().year + 1)]
+            allYears = [x for x in range(first_year,timezone.now().year + 1)]
         else:
             allYears = []
 

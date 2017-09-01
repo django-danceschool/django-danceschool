@@ -12,6 +12,7 @@ from crispy_forms.layout import Layout, Div, Submit
 from crispy_forms.bootstrap import Accordion, AccordionGroup
 
 from danceschool.core.models import EventOccurrence
+from danceschool.core.utils.timezone import ensure_timezone
 from .models import PrivateEvent, EventReminder
 
 EVENT_REPEAT_CHOICES = [
@@ -102,8 +103,8 @@ class AddPrivateEventForm(forms.ModelForm):
         exclude = []
 
     class Media:
-        js = ('js/jquery.timepicker.min.js','js/jquery-ui.min.js','js/moment.min.js','js/addEvent_rollups.js',)
-        css = {'all':('css/jquery.timepicker.css','css/jquery-ui.min.css',)}
+        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','moment/moment.min.js','js/addEvent_rollups.js',)
+        css = {'all':('timepicker/jquery.timepicker.css','jquery-ui/jquery-ui.min.css',)}
 
 
 class AddEventOccurrenceForm(forms.ModelForm):
@@ -114,8 +115,8 @@ class AddEventOccurrenceForm(forms.ModelForm):
         endTime = self.cleaned_data['endTime']
         allDay = self.cleaned_data.pop('allDay', None) or False
         if allDay:
-            self.cleaned_data['startTime'] = datetime(startTime.year,startTime.month,startTime.day)
-            self.cleaned_data['endTime'] = datetime(endTime.year,endTime.month,endTime.day) + timedelta(days=1)
+            self.cleaned_data['startTime'] = ensure_timezone(datetime(startTime.year,startTime.month,startTime.day))
+            self.cleaned_data['endTime'] = ensure_timezone(datetime(endTime.year,endTime.month,endTime.day)) + timedelta(days=1)
         if self.cleaned_data['endTime'] < self.cleaned_data['startTime']:
             raise ValidationError(_('End time cannot be before start time.'),code='invalid')
 

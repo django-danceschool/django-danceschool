@@ -4,6 +4,9 @@ $(document).ready(function(){
 	$('#div_id_hours').show();
 	$('#div_id_total').hide();
 
+	// Make payment date field a datepicker
+	$('#id_paymentDate').datepicker();
+
 	$('input[name=payTo]').change(function(){
 		var this_payTo = $('#div_id_payTo input:checked').val();
 

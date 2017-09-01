@@ -1,15 +1,15 @@
 {% extends "cms/admin_home.html" %}
-{% load danceschool_tags thumbnail %}
+{% load danceschool_tags thumbnail i18n %}
 
 {% block content %}
-<h2> Active Instructors</h2>
-<p><a class="btn btn-default" href="mailto:{% for teacher in staffmember_list %}{% if not teacher.guest %}{% if teacher.privateEmail %}{{ teacher.privateEmail }}{% elif teacher.publicEmail %}{{ teacher.publicEmail }}{% endif %}{% if teacher.privateEmail or teacher.publicEmail %};{% endif %}{% endif %}{% endfor %}">Email all active instructors</a></p>
+<h2>{% trans "Active Instructors" %}</h2>
+<p><a class="btn btn-default" href="mailto:{% for teacher in staffmember_list %}{% if not teacher.guest %}{% if teacher.privateEmail %}{{ teacher.privateEmail }}{% elif teacher.publicEmail %}{{ teacher.publicEmail }}{% endif %}{% if teacher.privateEmail or teacher.publicEmail %};{% endif %}{% endif %}{% endfor %}">{% trans "Email all active instructors" %}</a></p>
 <table class="table">
 <thead>
 	<tr>
-		<td>Photo</td><td>Name</td><td>Private Email</td><td>Public Email</td><td>Phone</td><td>Available for Privates</td>
+		<td>{% trans "Photo" %}</td><td>{% trans "Name" %}</td><td>{% trans "Private Email" %}</td><td>{% trans "Public Email" %}</td><td>{% trans "Phone" %}</td><td>{% trans "Available for Privates" %}</td>
 		{% if perms.core.view_other_instructor_stats %}
-			<td>Instructor Stats/Payments</td>
+			<td>{% trans "Instructor Stats/Payments" %}</td>
 		{% endif %}
 	</tr>
 </thead>
@@ -21,17 +21,12 @@
 		<td><a href="mailto:{{teacher.privateEmail}}">{{teacher.privateEmail}}</a></td>
 		<td><a href="mailto:{{teacher.publicEmail}}">{{teacher.publicEmail}}</a></td>
 		<td><a href="tel:{{teacher.phone}}">{{ teacher.phone }}</a></td>
-		<td>{% if teacher.availableForPrivates %}
-				Yes
-			{% else %}
-				No
-			{% endif %}
-		</td>
+		<td>{{ teacher.availableForPrivates|yesno }}</td>
 		{% if perms.core.view_other_instructor_stats %}{% if teacher.firstName != 'TBD' %}
 			<td>
 			<div class="btn-group" role="group" aria-label="...">
-				<a class="btn btn-default" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">Stats</a>
-				<a class="btn btn-default" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">Payment History</a>
+				<a class="btn btn-default" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-default" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Payment History" %}</a>
 			</div>
 			</td>
 		{% endif %}{% endif %}
@@ -40,13 +35,13 @@
 {% endfor %}
 </table>
 
-<h2>Assistant Instructors and Instructors In Training)</h2>
+<h2>{% trans "Assistant Instructors and Instructors In Training" %}</h2>
 <table class="table">
 <thead>
 	<tr>
-		<td>Photo</td><td>Name</td><td>Private Email</td><td>Public Email</td><td>Phone</td><td>Available for Privates</td>
+		<td>{% trans "Photo" %}</td><td>{% trans "Name" %}</td><td>{% trans "Private Email" %}</td><td>{% trans "Public Email" %}</td><td>{% trans "Phone" %}</td><td>{% trans "Available for Privates" %}</td>
 		{% if perms.core.view_other_instructor_stats %}
-			<td>Instructor Stats</td>
+			<td>{% trans "Instructor Stats" %}</td>
 		{% endif %}
 	</tr>
 </thead>
@@ -58,17 +53,12 @@
 		<td><a href="mailto:{{teacher.privateEmail}}">{{teacher.privateEmail}}</a></td>
 		<td><a href="mailto:{{teacher.publicEmail}}">{{teacher.publicEmail}}</a></td>
 		<td><a href="tel:{{teacher.phone}}">{{ teacher.phone }}</a></td>
-		<td>{% if teacher.availableForPrivates %}
-				Yes
-			{% else %}
-				No
-			{% endif %}
-		</td>
+		<td>{{ teacher.availableForPrivates|yesno }}</td>
 		{% if perms.core.view_other_instructor_stats %}{% if teacher.firstName != 'TBD' %}
 			<td>
 			<div class="btn-group" role="group" aria-label="...">
-				<a class="btn btn-default" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">Stats</a>
-				<a class="btn btn-default" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">Payment History</a>
+				<a class="btn btn-default" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-default" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Payment History" %}</a>
 			</div>
 			</td>
 		{% endif %}{% endif %}
@@ -77,13 +67,13 @@
 {% endfor %}
 </table>
 
-<h2>Guest Instructors</h2>
+<h2>{% trans "Guest Instructors" %}</h2>
 <table class="table">
 <thead>
 	<tr>
-		<td>Photo</td><td>Name</td><td>Private Email</td><td>Public Email</td><td>Phone</td><td>Available for Privates</td>
+		<td>{% trans "Photo" %}</td><td>{% trans "Name" %}</td><td>{% trans "Private Email" %}</td><td>{% trans "Public Email" %}</td><td>{% trans "Phone" %}</td><td>{% trans "Available for Privates" %}</td>
 		{% if perms.core.view_other_instructor_stats %}
-			<td>Instructor Stats</td>
+			<td>{% trans "Instructor Stats" %}</td>
 		{% endif %}
 	</tr>
 </thead>
@@ -95,17 +85,12 @@
 		<td><a href="mailto:{{teacher.privateEmail}}">{{teacher.privateEmail}}</a></td>
 		<td><a href="mailto:{{teacher.publicEmail}}">{{teacher.publicEmail}}</a></td>
 		<td><a href="tel:{{teacher.phone}}">{{ teacher.phone }}</a></td>
-		<td>{% if teacher.availableForPrivates %}
-				Yes
-			{% else %}
-				No
-			{% endif %}
-		</td>
+		<td>{{ teacher.availableForPrivates|yesno }}</td>
 		{% if perms.core.view_other_instructor_stats %}{% if teacher.firstName != 'TBD' %}
 			<td>
 			<div class="btn-group" role="group" aria-label="...">
-				<a class="btn btn-default" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">Stats</a>
-				<a class="btn btn-default" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">Payment History</a>
+				<a class="btn btn-default" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-default" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Payment History" %}</a>
 			</div>
 			</td>
 		{% endif %}{% endif %}

@@ -1,24 +1,26 @@
 from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.validators import ValidationError
+from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.forms.widgets import Select
 from django.utils.encoding import force_text
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div, Submit, HTML
 from collections import OrderedDict
 from dal import autocomplete
-from datetime import datetime
 import logging
 
-from danceschool.core.models import EventRegistration, Registration
+from danceschool.core.models import InvoiceItem
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem
-from .signals import refund_requested
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo
+from .autocomplete_light_registry import get_method_list
 
 
 # Define logger for this file
@@ -40,8 +42,10 @@ REVENUE_ASSOCIATION_CHOICES = (
 
 
 class ExpenseCategoryWidget(Select):
-    # Override render_option to permit extra data of default wage to be used by JQuery
-    # This could be optimized to reduce database calls by overriding the render function.
+    '''
+    Override render_option to permit extra data of default wage to be used by JQuery
+    This could be optimized to reduce database calls by overriding the render function.
+    '''
 
     def render_option(self, selected_choices, option_value, option_label):
         if option_value is None:
@@ -72,6 +76,12 @@ class ExpenseCategoryWidget(Select):
 class ExpenseReportingForm(forms.ModelForm):
     payTo = forms.ChoiceField(widget=forms.RadioSelect, choices=RECIPIENT_CHOICES,label=_('This expense to be paid to:'),initial=1)
     payBy = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYBY_CHOICES, label=_('Report this expense as:'), initial=1)
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete'),
+        label=_('Payment method'),
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
@@ -95,7 +105,9 @@ class ExpenseReportingForm(forms.ModelForm):
                         'paymentMethod',
                         css_class='form-inline'
                     ),
-                    Field('accrualDate', type="hidden",value=datetime.now()),
+                    # The hidden input of accrual date must be passed as a naive datetime.
+                    # Django will take care of converting it to local time
+                    Field('accrualDate', type="hidden",value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()),
                     HTML('<p style="margin-top: 30px;"><strong>%s</strong> %s</p>' % (_('Note:'),_('For accounting purposes, please do not mark expenses as paid unless they have already been paid to the recipient.'))),
                     css_class='panel-body collapse',
                     id='collapsepayment',
@@ -104,6 +116,21 @@ class ExpenseReportingForm(forms.ModelForm):
         else:
             payment_section = None
 
+        # Add category button should only appear for users who are allowed to add categories
+        if user.has_perm('financial.add_expensecategory'):
+            related_url = reverse('admin:financial_expensecategory_add') + '?_to_field=id&_popup=1'
+            added_html = [
+                '<a href="%s" class="btn btn-default related-widget-wrapper-link add-related" id="add_id_category"> ' % related_url,
+                '<img src="%sadmin/img/icon-addlink.svg" width="10" height="10" alt="%s"/></a>' % (getattr(settings,'STATIC_URL','/static/'), _('Add Another'))
+            ]
+            category_field = Div(
+                Div('category',css_class='col-sm-11'),
+                Div(HTML('\n'.join(added_html)),css_class='col-sm-1',style='margin-top: 25px;'),
+                css_class='related-widget-wrapper row'
+            )
+        else:
+            category_field = Div('category')
+
         self.helper.layout = Layout(
             Field('submissionUser', type="hidden", value=user_id),
             Field('payToUser', type="hidden", value=user_id),
@@ -111,7 +138,7 @@ class ExpenseReportingForm(forms.ModelForm):
             'payBy',
             'payToLocation',
             'payToName',
-            'category',
+            category_field,
             'description',
             'hours',
             'total',
@@ -139,7 +166,7 @@ class ExpenseReportingForm(forms.ModelForm):
 
         # Automatically marks expenses that are paid
         # upon submission as accruing at the date of payment.
-        if paid:
+        if paid and paymentDate:
             self.cleaned_data['accrualDate'] = paymentDate
         else:
             self.cleaned_data.pop('paymentDate',None)
@@ -160,27 +187,29 @@ class ExpenseReportingForm(forms.ModelForm):
     class Meta:
         model = ExpenseItem
         fields = ['submissionUser','payToUser','payToLocation','payToName','category','description','hours','total','reimbursement','attachment','approved','paid','paymentDate','paymentMethod','accrualDate']
-        widgets = {'category': ExpenseCategoryWidget,}
+        widgets = {
+            'category': ExpenseCategoryWidget,
+        }
 
     class Media:
-        js = ('js/expense_reporting.js','js/jquery-ui.min.js',)
+        js = ('admin/js/admin/RelatedObjectLookups.js','jquery-ui/jquery-ui.min.js','js/expense_reporting.js')
         css = {
-            'all': ('css/jquery-ui.min.css',),
+            'all': ('jquery-ui/jquery-ui.min.css',),
         }
 
 
-class EventRegistrationChoiceField(forms.ModelChoiceField):
+class InvoiceItemChoiceField(forms.ModelChoiceField):
     '''
-    This exists so that the validators for EventRegistrations are not
+    This exists so that the validators for InvoiceItems (EventRegistrations) are not
     thrown off by the fact that the initial query is blank.
     '''
 
     def to_python(self,value):
         try:
             value = super(self.__class__,self).to_python(value)
-        except:
+        except (ValueError, ValidationError):
             key = self.to_field_name or 'pk'
-            value = EventRegistration.objects.filter(**{key: value})
+            value = InvoiceItem.objects.filter(**{key: value})
             if not value.exists():
                 raise ValidationError(self.error_messages['invalid_choice'], code='invalid_choice')
             else:
@@ -207,6 +236,12 @@ class RevenueReportingForm(forms.ModelForm):
             }
         )
     )
+    paymentMethod = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_method_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete'),
+        label=_('Payment method'),
+    )
 
     def __init__(self, *args, **kwargs):
         self.helper = FormHelper()
@@ -220,7 +255,7 @@ class RevenueReportingForm(forms.ModelForm):
         super(RevenueReportingForm,self).__init__(*args,**kwargs)
         self.fields['submissionUser'].widget = forms.HiddenInput()
         self.fields['invoiceNumber'].widget = forms.HiddenInput()
-        self.fields["eventregistration"] = EventRegistrationChoiceField(queryset=EventRegistration.objects.none(),required=False)
+        self.fields["invoiceItem"] = InvoiceItemChoiceField(queryset=InvoiceItem.objects.none(),required=False)
 
         # re-order fields to put the associateWith RadioSelect first.
         newFields = OrderedDict()
@@ -236,7 +271,7 @@ class RevenueReportingForm(forms.ModelForm):
 
     def clean_invoiceNumber(self):
         ''' Create a unique invoice number '''
-        return 'SUBMITTED_%s_%s' % (self.cleaned_data['submissionUser'].id,datetime.now().strftime('%Y%m%d%H%M%S'))
+        return 'SUBMITTED_%s_%s' % (getattr(self.cleaned_data['submissionUser'],'id','None'),timezone.now().strftime('%Y%m%d%H%M%S'))
 
     def clean(self):
         # Custom cleaning ensures that revenues are not attributed
@@ -248,113 +283,25 @@ class RevenueReportingForm(forms.ModelForm):
 
         if associateWith in ['1','3'] and event:
             self.cleaned_data.pop('event', None)
-            self.cleaned_data.pop('eventregistration', None)
+            self.cleaned_data.pop('invoiceItem', None)
 
         return self.cleaned_data
 
     class Meta:
         model = RevenueItem
-        fields = ['submissionUser','invoiceNumber','category','description','event','eventregistration','receivedFromName','paymentMethod','currentlyHeldBy','total','attachment']
+        fields = ['submissionUser','invoiceNumber','category','description','event','invoiceItem','receivedFromName','paymentMethod','currentlyHeldBy','total','attachment']
 
     class Media:
         js = ('js/revenue_reporting.js',)
 
 
-class RegistrationRefundForm(forms.ModelForm):
-    '''
-    This is the form that is used to allocate refunds across series and events.  If the Paypal app is installed, then it
-    will also be used to submit refund requests to Paypal.  Note that most cleaning validation happens in Javascript.
-    '''
+class CompensationRuleUpdateForm(forms.ModelForm):
+    ''' Used for bulk update of Instructor compensation rules. '''
+
+    def save(self, commit=True):
+        ''' Handle the update logic for this in the view, not the form '''
+        pass
+
     class Meta:
-        model = Registration
-        fields = []
-
-    def __init__(self, *args, **kwargs):
-        super(RegistrationRefundForm, self).__init__(*args, **kwargs)
-
-        reg = kwargs.pop('instance',None)
-
-        for er in reg.eventregistration_set.all():
-            self.fields["er_cancelled_%d" % er.id] = forms.BooleanField(
-                label=_('Cancelled'),required=False,initial=er.cancelled)
-            self.fields["er_refundamount_%d" % er.id] = forms.FloatField(
-                label=_('Refund Amount'),required=False,initial=er.revenueRefundsReported,min_value=0,max_value=er.netPrice)
-
-        self.fields['comments'] = forms.CharField(
-            label=_('Explanation/Comments (optional)'),required=False,
-            help_text=_('This information will be added to the comments on the revenue items associated with this refund.'),
-            widget=forms.Textarea(attrs={'placeholder': _('Enter explanation/comments...'), 'class': 'form-control'}))
-
-        self.fields['id'] = forms.ModelChoiceField(
-            required=True,queryset=Registration.objects.filter(pk=reg.pk),widget=forms.HiddenInput())
-
-        self.fields['initial_refund_amount'] = forms.FloatField(
-            required=True,initial=reg.revenueRefundsReported,min_value=0,max_value=reg.revenueReceivedGross,widget=forms.HiddenInput())
-
-        self.fields['total_refund_amount'] = forms.FloatField(
-            required=True,initial=0,min_value=0,max_value=reg.revenueReceivedGross,widget=forms.HiddenInput())
-
-    def clean_total_refund_amount(self):
-        '''
-        The Javascript should ensure that the hidden input is updated, but double check it here.
-        '''
-        initial = self.cleaned_data.get('initial_refund_amount', 0)
-        total = self.cleaned_data['total_refund_amount']
-        summed_refunds = sum([v for k,v in self.cleaned_data.items() if '_refundamount_' in k])
-
-        if summed_refunds != total:
-            raise ValidationError(_('Passed value does not match sum of allocated refunds.'))
-        elif summed_refunds > self.cleaned_data['id'].revenueReceivedGross:
-            raise ValidationError(_('Total refunds allocated exceed revenue received.'))
-        elif total < initial:
-            raise ValidationError(_('Cannot reduce the total amount of the refund.'))
-        return total
-
-    def save(self):
-        '''
-        Since this form doesn't actually change the Registration object itself, but instead
-        the related RevenueItem and other objects, this method is overridden to handle everything correctly,
-        rather than performing processing in the view itself.
-        '''
-        reg = self.instance
-        data = self.cleaned_data
-
-        refund_list = [(k.split('_')[0],int(k.split('_')[2]),v) for k,v in data.items() if '_refundamount_' in k]
-        comments = data.get('comments','')
-
-        for item in refund_list:
-            if item[0] == 'er':
-                er = reg.eventregistration_set.get(id=item[1])
-                revitem = er.revenueitem_set.first()
-                revChanged = False
-                cancelled = data.get('er_cancelled_' + str(item[1]))
-                if cancelled != er.cancelled:
-                    logger.debug(_('Updating cancellation status of EventRegistration %s' % item[1]))
-                    er.cancelled = cancelled
-                    er.save()
-                if revitem.adjustments != -1 * item[2]:
-                    logger.debug(_('Updating adjustment to RevenueItem %s, setting adjustments to %s' % (revitem.id,-1 * item[2])))
-                    revitem.adjustments = -1 * item[2]
-                    revChanged = True
-                if comments:
-                    revitem.comments = '%s%s\n%s' % (('%s\n\n' % revitem.comments) or '', _('Comment from registration refund form -- %s:' % datetime.now().strftime('%Y-%m-%d %H:%M:%S')),comments)
-                    revChanged = True
-                if revChanged:
-                    revitem.save()
-
-        # Fire the signal indicating that a refund has been processed.  The Paypal app hooks into this.
-        additional_refund_amount = data['total_refund_amount'] - data['initial_refund_amount']
-        if data['total_refund_amount'] == reg.netPrice:
-            refundType = 'Full'
-        else:
-            refundType = 'Partial'
-
-        if additional_refund_amount > 0:
-            logger.debug('Firing signal to handle request.')
-            refund_requested.send(
-                self,
-                registration=reg,
-                refundType=refundType,
-                refundAmount=additional_refund_amount)
-
-        return reg
+        model = StaffMemberWageInfo
+        fields = ['category', 'rentalRate','applyRateRule','dayStarts','weekStarts','monthStarts']

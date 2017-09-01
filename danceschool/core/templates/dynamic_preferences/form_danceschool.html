@@ -1,0 +1,92 @@
+{% extends "cms/admin_home.html" %}
+{% load i18n sekizai_tags crispy_forms_tags admin_static %}
+
+{% block extra_js %}
+  {% addtoblock "js" %}
+    <script src="{% static 'jquery-ui/jquery-ui.min.js' %}"></script>
+  {% endaddtoblock %}
+
+  {# Needed to get the admin success page autocomplete to function #}
+  {% if section.name == "general" or section.name == "registration" %}
+    {% addtoblock "js" %}
+      <script type="text/javascript">
+                  var CMS = window.CMS || {};
+
+                  CMS.Widgets = CMS.Widgets || {};
+                  CMS.Widgets._pageSelectWidgets = CMS.Widgets._pageSelectWidgets || [];
+                  {% if section.name == "general" %}
+                    CMS.Widgets._pageSelectWidgets.push({
+                        name: 'general__defaultAdminSuccessPage'
+                    });
+                  {% elif section.name == "registration" %}
+                    CMS.Widgets._pageSelectWidgets.push({
+                        name: 'registration__doorRegistrationSuccessPage'
+                    });
+                  {% endif %}
+              </script>
+    {% endaddtoblock %}
+  {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+  {% addtoblock "css" %}
+    <link rel="stylesheet" href="{% static 'jquery-ui/jquery-ui.min.css' %}">
+  {% endaddtoblock %}
+{% endblock %}
+
+{% block content %}
+
+	<h1>{% trans "Site Settings" %}{% if section %}: {{ section.verbose_name }}{% endif %}</h1>
+
+    <div class="row">
+    <div class="col-md-12">
+
+    {% include "dynamic_preferences/sections_bootstrap.html" with sections=registry.sections %}
+
+    </div>
+    </div>
+
+    <hr />
+    {% if section %}
+    <div class="row">
+    <div class="col-md-12">
+	    <form action="" enctype="multipart/form-data" method="post">
+	        {% csrf_token %}
+	        {{ form|crispy }}
+	        <input type="submit" value="{% trans 'Submit' %}" />
+	    </form>
+    </div>
+    </div>
+
+    {% addtoblock "js" %}
+      {{ form.media }}
+    {% endaddtoblock %}
+
+    {% endif %}
+
+{# Autocomplete for currency codes and symbols #}
+{% if section.name == 'general' %}
+{% addtoblock "js" %}
+  <script>
+          $( function() {
+            var availableCurrencyCodes = [
+                "AUD","BRL","CAD","CHF","CZK","DKK","EUR","GBP","HKD","HUF","ILS","JPY",
+                "MXN","MYR","NOK","NZD","PHP","PLN","RUB","SEK","SGD","THB","TWD","USD",
+            ];
+            var availableCurrencySymbols = [
+                "$","&euro;",'&pound;','&yen;','&#8355;','&#8369;','&#8362;',
+            ]
+
+            $( "#id_general__currencyCode" ).autocomplete({
+              source: availableCurrencyCodes
+            });
+            $( "#id_general__currencySymbol" ).autocomplete({
+              source: availableCurrencySymbols
+            });
+
+          } );
+  </script>
+{% endaddtoblock %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,25 @@
+{% if first_name %}Hi {{ first_name }},{% else %}Hello,{% endif %}
+
+{% if newRegistration %}This is an invoice for your registration to {{ businessName }}.
+{% elif invoicePaid %}Thank you for your payment to {{ businessName }}.
+{% else %}This is a reminder regarding your invoice to {{ businessName }}.{% endif %}
+
+Please see details below:
+{% if thisPaymentAmount %}
+This Payment Amount: {{ currencySymbol }}{{ thisPaymentAmount|floatformat:2 }}
+{% endif %}
+Invoice ID: #{{ id }}
+Creation Date: {{ creationDate|date:"F jS, g:i A" }}
+Status: {{ status }}
+Total, Net of Discounts: {{ currencySymbol }}{{ total|floatformat:2 }}{% if adjustments %}
+Adjustments/Refunds: {{ currencySymbol }}{{ adjustments|floatformat:2 }}{% endif %}
+
+Amount Paid {{ currencySymbol }}{{ amountPaid|floatformat:2 }}
+Outstanding Balance: {{ currencySymbol }}{{ outstandingBalance|floatformat:2 }}
+
+View Full Invoice/Make Payments: {{ url }}
+
+{% if outstandingBalance %}We appreciate your prompt payment of your remaining balance.{% else %}Thanks again!{% endif %}
+
+Sincerely,
+{{ businessName }}

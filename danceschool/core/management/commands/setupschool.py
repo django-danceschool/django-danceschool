@@ -1,16 +1,22 @@
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.apps import apps
 from django.conf import settings
 from django.core.urlresolvers import reverse
-from django.contrib.auth.models import User, Group, Permission
+from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 
 from danceschool.core.models import DanceType, DanceTypeLevel, DanceRole, PricingTier, InstructorListPluginModel
 
 from dynamic_preferences.registries import global_preferences_registry
 import re
-import readline
 from six.moves import input
 from importlib import import_module
+
+try:
+    import readline
+except ImportError:
+    pass
 
 
 class Command(BaseCommand):
@@ -77,7 +83,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         from cms.api import create_page, add_plugin, publish_page
-        from cms.constants import VISIBILITY_ANONYMOUS
+        from cms.constants import VISIBILITY_ANONYMOUS, VISIBILITY_USERS
         from cms.models import Page, StaticPlaceholder
 
         prefs = global_preferences_registry.manager()
@@ -122,6 +128,18 @@ BASIC SETUP:
 ------------
             """
         )
+
+        # Current Domain
+        current_domain = self.pattern_input(
+            'Enter the domain name of this installation, with no protocol or trailing slashes (e.g. \'bostonlindyhop.com\') [localhost:8000]',
+            message='Invalid domain name (no whitespace or slashes allowed)',
+            default='localhost:8000',
+            pattern='^[^/\\ ]+$'
+        )
+        this_site = Site.objects.get_current()
+        this_site.name = current_domain
+        this_site.domain = current_domain
+        this_site.save()
 
         # School name
         school_name = self.pattern_input(
@@ -237,18 +255,18 @@ Remember, you can always rename these initial values or add/delete dance levels 
 ROLES
 -----
 
-Most partnered dance schools define 'Lead' and 'Follow' roles that are used in
+Most partnered dance schools define 'Leader' and 'Follower' roles that are used in
 the registration process.  If your dance school does not use these roles, or
 if you do not ask students to register for a particular role, then answer 'No' below.
 
             """
         )
 
-        define_roles = self.boolean_input('Define \'Lead\' and \'Follow\' roles [Y/n]: ', True)
+        define_roles = self.boolean_input('Define \'Leader\' and \'Follower\' roles [Y/n]', True)
         if define_roles:
-            DanceRole.objects.get_or_create(name='Lead',defaults={'pluralName': 'Leads', 'order':1.0})
-            DanceRole.objects.get_or_create(name='Follow',defaults={'pluralName': 'Follows', 'order': 2.0})
-            initial_dancetype_object[0].roles = DanceRole.objects.filter(name__in=['Lead','Follow'])
+            DanceRole.objects.get_or_create(name='Leader',defaults={'pluralName': 'Leaders', 'order':1.0})
+            DanceRole.objects.get_or_create(name='Follower',defaults={'pluralName': 'Followers', 'order': 2.0})
+            initial_dancetype_object[0].roles = DanceRole.objects.filter(name__in=['Leader','Follower'])
             initial_dancetype_object[0].save()
 
         self.stdout.write(
@@ -285,16 +303,14 @@ interface after completing this setup.
 
         initial_online_price = self.float_input('Initial online price [50]',default=50)
         initial_door_price = self.float_input('Initial at-the-door price [60]',default=60)
-        initial_student_online_price = self.float_input('Initial online price for HS/college/university students [40]',default=40)
-        initial_student_door_price = self.float_input('Initial at-the-door price for HS/college/university students [50]',default=50)
+        initial_dropin_price = self.float_input('Initial price for single-class drop-ins [15]',default=15)
 
         PricingTier.objects.get_or_create(
             name=initial_pricing_tier_name,
             defaults={
-                'onlineGeneralPrice': initial_online_price,
-                'doorGeneralPrice': initial_door_price,
-                'onlineStudentPrice': initial_student_online_price,
-                'doorStudentPrice': initial_student_door_price,
+                'onlinePrice': initial_online_price,
+                'doorPrice': initial_door_price,
+                'dropinPrice': initial_dropin_price,
             })
 
         if apps.is_installed('danceschool.vouchers'):
@@ -315,43 +331,28 @@ FINANCIAL MANAGEMENT
 
 This project contains a financial app which allows you to manage revenues and expenses
 in an automated way. In particular, it is possible for expense items related to instruction
-and venue rental to be automatically generated when a series ends, and it is possible for
+and venue rental to be automatically generated, and it is possible for
 revenue items related to registrations to be automatically generated as well.  However,
 if you do not want these features, then you may disable them below.
 
-If you enable auto-generation of staff expenses, you will also be asked about default
-rates of compensation for instructors and other staff.  You may always change these
-values by editing the rate in the appropriate Expense Category in the admin interface.
+In order to automatic generation of expenses to be functional, you will also need
+to set compensation rates for your Locations and Instructors as you create them.
+Expenses may be generated on an hourly basis (for hourly rental/compensation), or on
+a daily/weekly/monthly ongoing basis as well.
 
                 """
             )
 
             generate_staff = self.boolean_input('Auto-generate staff expense items for completed events [Y/n]', True)
-            prefs['financial__autoGenerateExpensesCompletedEvents'] = generate_staff
+            prefs['financial__autoGenerateExpensesEventStaff'] = generate_staff
 
             if generate_staff:
-                instruction_cat_id = prefs.get('financial__classInstructionExpenseCatID',None)
-                assistant_cat_id = prefs.get('financial__assistantClassInstructionExpenseCatID',None)
-                other_cat_id = prefs.get('financial__otherStaffExpenseCatID',None)
+                # This just ensures that the standard staff categories are created before launch
+                prefs.get('financial__classInstructionExpenseCat',None)
+                prefs.get('financial__assistantClassInstructionExpenseCat',None)
+                prefs.get('financial__otherStaffExpenseCat',None)
 
-                financial_models = import_module('danceschool.financial.models')
-
-                if instruction_cat_id:
-                    instruction_cat = financial_models.ExpenseCategory.objects.get(pk=instruction_cat_id)
-                    instruction_cat.defaultRate = self.float_input('Default compensation rate for class instruction [0]',default=0)
-                    instruction_cat.save()
-
-                if assistant_cat_id:
-                    assistant_cat = financial_models.ExpenseCategory.objects.get(pk=assistant_cat_id)
-                    assistant_cat.defaultRate = self.float_input('Default compensation rate for assistant instructors [0]',default=0)
-                    assistant_cat.save()
-
-                if other_cat_id:
-                    other_cat = financial_models.ExpenseCategory.objects.get(pk=other_cat_id)
-                    other_cat.defaultRate = self.float_input('Default compensation rate for other event-related staff expenses [0]',default=0)
-                    other_cat.save()
-
-            generate_venue = self.boolean_input('Auto-generate hourly venue rental expense items for completed events [Y/n]', True)
+            generate_venue = self.boolean_input('Auto-generate venue rental expense items for completed events [Y/n]', True)
             prefs['financial__autoGenerateExpensesVenueRental'] = generate_venue
 
             generate_registration = self.boolean_input('Auto-generate registration revenue items for registrations [Y/n]', True)
@@ -367,6 +368,14 @@ with plugins to display complex functionality.  However, it is often helpful not
 to start with a completely blank site.  The next few questions will allow you to automatically
 set up some of the features that most dance schools use.
 
+There are two basic methods in which pages can be configured:
+    1. A traditional setup with a "Home" page and the "Registration" page located on a
+       sub-page, typically "/register/"
+    2. A "registration-only" setup in which the registration page is located at your
+       site's base URL instead of a home page.  This option is recommended for individuals
+       who wish to use the registration system while maintaining other content on an
+       external website.
+
 Remember, all page settings and content can be changed later via the admin interface.
 
             """
@@ -374,24 +383,31 @@ Remember, all page settings and content can be changed later via the admin inter
 
         try:
             initial_language = settings.LANGUAGES[0][0]
-        except:
+        except IndexError:
             initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
 
-        add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
-        if add_home_page:
-            home_page = create_page('Home', 'cms/home.html', initial_language, menu_title='Home', in_navigation=True, published=True)
-            content_placeholder = home_page.placeholders.get(slot='content')
-            add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
-            publish_page(home_page, this_user, initial_language)
-            self.stdout.write('Home page added.\n')
-
-        add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
-        if add_registration_link:
-            registration_link_page = create_page(
-                'Registration', 'cms/home.html', initial_language,
-                menu_title='Register', slug='register', overwrite_url=reverse('registration'), in_navigation=True, published=True
+        registration_first = self.boolean_input('Perform a "registration-only" setup with registration on the home page? [y/N]', False)
+        if registration_first:
+            home_page = create_page(
+                'Registration', 'cms/home.html', initial_language, menu_title='Registration',
+                apphook='RegistrationApphook', in_navigation=True, published=True
             )
-            self.stdout.write('Registration link added.\n')
+            self.stdout.write('Registration page added.\n')
+        else:
+            add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
+            if add_home_page:
+                home_page = create_page('Home', 'cms/home.html', initial_language, menu_title='Home', in_navigation=True, published=True)
+                content_placeholder = home_page.placeholders.get(slot='content')
+                add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
+                publish_page(home_page, this_user, initial_language)
+                self.stdout.write('Home page added.\n')
+            add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
+            if add_registration_link:
+                registration_link_page = create_page(
+                    'Registration', 'cms/home.html', initial_language,
+                    menu_title='Register', slug='register', overwrite_url=reverse('registration'), in_navigation=True, published=True
+                )
+                self.stdout.write('Registration link added.\n')
 
         add_instructor_page = self.boolean_input('Add a page to list all instructors with their photos and bios [Y/n]', True)
         if add_instructor_page:
@@ -470,7 +486,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 publish_page(stats_page, this_user, initial_language)
                 self.stdout.write('School performance stats page added.\n')
 
-        add_login_link = self.boolean_input('Add login link to the main navigation bar [Y/n]', True)
+        add_login_link = self.boolean_input('Add login/logout and account links to the main navigation bar [Y/n]', True)
         if add_login_link:
             create_page(
                 'Login', 'cms/home.html', initial_language,
@@ -478,171 +494,26 @@ Remember, all page settings and content can be changed later via the admin inter
                 in_navigation=True, limit_visibility_in_menu=VISIBILITY_ANONYMOUS, published=True
             )
             self.stdout.write('Login link added.\n')
+            create_page(
+                'My Account', 'cms/home.html', initial_language,
+                menu_title='My Account', slug='profile', overwrite_url=reverse('accountProfile'),
+                in_navigation=True, limit_visibility_in_menu=VISIBILITY_USERS, published=True
+            )
+            self.stdout.write('\'My Account\' link added.\n')
+            create_page(
+                'Logout', 'cms/home.html', initial_language,
+                menu_title='Logout', slug='logout', overwrite_url=reverse('account_logout'),
+                in_navigation=True, limit_visibility_in_menu=VISIBILITY_USERS, published=True
+            )
+            self.stdout.write('Logout link added.\n')
 
-        if apps.is_installed('danceschool.paypal'):
-            add_paypal_paynow = self.boolean_input('Add Paypal Pay Now link to the registration summary view to allow students to pay [Y/n]', True)
-            if add_paypal_paynow:
-                paynow_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
-                paynow_p_draft = paynow_sp[0].draft
-                paynow_p_public = paynow_sp[0].public
-                add_plugin(
-                    paynow_p_draft, 'CartPaymentFormPlugin', initial_language,
-                    successPage=home_page,
-                    cancellationPage=registration_link_page,
-                )
-                add_plugin(
-                    paynow_p_public, 'CartPaymentFormPlugin', initial_language,
-                    successPage=home_page,
-                    cancellationPage=registration_link_page,
-                )
-            self.stdout.write('Paypal Pay Now link added.  You will still need to add Paypal credentials to settings before use.')
+        if apps.is_installed('danceschool.payments.paypal'):
+            call_command('setup_paypal')
 
-        self.stdout.write(
-            """
-USER GROUPS AND PERMISSIONS
----------------------------
+        if apps.is_installed('danceschool.payments.stripe'):
+            call_command('setup_stripe')
 
-This project allows you to provide finely-grained permissions to individual users and
-user groups, such as instructors and administrators.  This allows you to let different
-types of users manage different types of content while still maintaining appropriate
-security.
-
-To get you started with the permissions system, we can create three initial user
-groups, and give them different levels of permissions over content:
-
- - The "Board" group: Users in this group will receive permissions to edit
-all public-facing content as well as all financial records.  They will not
-automaticcaly receive permissions to edit certain other sitewide settings for
-security reasons.
- - The "Instructor" group: Users in this group will receive permissions to use
-school administrative functions such as emailing students, submitting expenses
-and revenues, and viewing their own statistics and payment history.  However, by
-default, these users cannot edit public-facing content such as page content or
-FAQs.
- - The "Registration Desk" group: Users in this group receive only the ability
- to log into the site in order to view class registrations and check in students.
- By default, they cannot access any other administrative function.
-
-We strongly encourage you to create these initial groups as a starting point for
-managing staff permissions on the site.  The superuser that you created previously
-will always retain permissions to edit all content and settings.  Additionally, you
-can always go on to create additional groups, or to edit permissions on either a
-group basis or an individual user basis.
-
-Note: This process may take a minute or two to complete.
-
-            """
-        )
-
-        create_board_group = self.boolean_input('Create \'Board\' group with default initial permissions [Y/n]', True)
-        if create_board_group:
-            board_group = Group.objects.get_or_create(name='Board')[0]
-
-            # The Board group get all permissions on the CMS app and on all danceschool apps, plus
-            # the permissions explicitly listed here by their natural_key.  Unfortunately this is
-            # slow because we have to check permissions one-by-one
-            give_explicit = [
-                ('add_emailaddress', 'account', 'emailaddress'),
-                ('change_emailaddress', 'account', 'emailaddress'),
-                ('delete_emailaddress', 'account', 'emailaddress'),
-                ('add_user', 'auth', 'user'),
-                ('change_user', 'auth', 'user'),
-            ]
-
-            app_add_list = ['cms','core','djangocms_forms','djangocms_text_ckeditor','easy_thumbnails','filer']
-            for this_app in [
-                'danceschool.financial',
-                'danceschool.discounts',
-                'danceschool.faq',
-                'danceschool.news',
-                'danceschool.paypal',
-                'danceschool.prerequisites',
-                'danceschool.private_events',
-                'danceschool.stats',
-                'danceschool.vouchers'
-            ]:
-                if apps.is_installed(this_app):
-                    app_add_list.append(this_app.split('.')[1])
-
-            for perm in Permission.objects.all():
-                if perm.natural_key() in give_explicit or perm.natural_key()[1] in app_add_list:
-                    board_group.permissions.add(perm)
-            self.stdout.write('Finished creating \'Board\' group and setting initial permissions.\n')
-
-        create_instructor_group = self.boolean_input('Create \'Instructor\' group with default initial permissions [Y/n]', True)
-        if create_instructor_group:
-            instructor_group = Group.objects.get_or_create(name='Instructor')[0]
-
-            give_explicit = [
-                ('view_page', 'cms', 'page'),
-                ('add_classdescription', 'core', 'classdescription'),
-                ('change_classdescription', 'core', 'classdescription'),
-                ('can_autocomplete_users', 'core', 'customer'),
-                ('send_email', 'core', 'emailtemplate'),
-                ('report_substitute_teaching', 'core', 'eventstaffmember'),
-                ('update_instructor_bio', 'core', 'instructor'),
-                ('view_own_instructor_finances', 'core', 'instructor'),
-                ('view_own_instructor_stats', 'core', 'instructor'),
-                ('accept_door_payments', 'core', 'registration'),
-                ('checkin_customers', 'core', 'registration'),
-                ('override_register_closed', 'core', 'registration'),
-                ('override_register_dropins', 'core', 'registration'),
-                ('override_register_soldout', 'core', 'registration'),
-                ('register_dropins', 'core', 'registration'),
-                ('send_invoices', 'core', 'registration'),
-                ('view_registration_summary', 'core', 'registration'),
-                ('view_school_stats', 'core', 'staffmember'),
-                ('view_staff_directory', 'core', 'staffmember'),
-                ('add_file', 'filer', 'file'),
-                ('change_file', 'filer', 'file'),
-                ('can_use_directory_listing', 'filer', 'folder'),
-                ('add_image', 'filer', 'image'),
-                ('change_image', 'filer', 'image'),
-                ('add_expenseitem', 'financial', 'expenseitem'),
-                ('mark_expenses_paid', 'financial', 'expenseitem'),
-                ('add_revenueitem', 'financial', 'revenueitem'),
-                ('process_registration_refunds', 'financial', 'revenueitem'),
-                ('view_finances_bymonth', 'financial', 'revenueitem'),
-                ('add_newsitem', 'news', 'newsitem'),
-                ('change_newsitem', 'news', 'newsitem'),
-                ('ignore_requirements', 'prerequisites', 'requirement'),
-                ('add_eventreminder', 'private_events', 'eventreminder'),
-                ('change_eventreminder', 'private_events', 'eventreminder'),
-                ('delete_eventreminder', 'private_events', 'eventreminder'),
-                ('add_privateevent', 'private_events', 'privateevent'),
-                ('change_privateevent', 'private_events', 'privateevent'),
-                ('delete_privateevent', 'private_events', 'privateevent'),
-            ]
-
-            for perm in Permission.objects.all():
-                if perm.natural_key() in give_explicit:
-                    instructor_group.permissions.add(perm)
-            self.stdout.write('Finished creating \'Instructor\' group and setting initial permissions.\n')
-
-        create_regdesk_group = self.boolean_input('Create \'Registration Desk\' group with default initial permissions [Y/n]', True)
-        if create_regdesk_group:
-            regdesk_group = Group.objects.get_or_create(name='Registration Desk')[0]
-
-            give_explicit = [
-                ('view_page', 'cms', 'page'),
-                ('can_autocomplete_users', 'core', 'customer'),
-                ('accept_door_payments', 'core', 'registration'),
-                ('checkin_customers', 'core', 'registration'),
-                ('override_register_closed', 'core', 'registration'),
-                ('override_register_dropins', 'core', 'registration'),
-                ('override_register_soldout', 'core', 'registration'),
-                ('register_dropins', 'core', 'registration'),
-                ('send_invoices', 'core', 'registration'),
-                ('view_registration_summary', 'core', 'registration'),
-                ('view_staff_directory', 'core', 'staffmember'),
-                ('process_registration_refunds', 'financial', 'revenueitem'),
-                ('ignore_requirements', 'prerequisites', 'requirement'),
-            ]
-
-            for perm in Permission.objects.all():
-                if perm.natural_key() in give_explicit:
-                    regdesk_group.permissions.add(perm)
-            self.stdout.write('Finished creating \'Registration\' group and setting initial permissions.\n')
+        call_command('setup_permissions')
 
         # Finished with setup process
         self.stdout.write(self.style.SUCCESS('Successfully setup dance school!  Now enter \'python manage.py runserver\' command to test installation.'))

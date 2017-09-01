@@ -1,59 +1,30 @@
-from django.views.generic import DetailView, TemplateView, CreateView, View, UpdateView
+from django.views.generic import DetailView, TemplateView, CreateView, View, FormView
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseBadRequest
 from django.db.models import Q, Sum, F, Min
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
 
 from datetime import datetime
 import unicodecsv as csv
 from calendar import month_name
-from urllib.parse import unquote_plus, unquote
+from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 
-from danceschool.core.models import Registration, Instructor, Location, Event
+from danceschool.core.models import Instructor, Location, Event, StaffMember
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
+from danceschool.core.utils.timezone import ensure_timezone
+from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
-from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory
+from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
-from .forms import ExpenseReportingForm, RevenueReportingForm, RegistrationRefundForm
+from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm
 from .constants import EXPENSE_BASES
-
-
-def getDateTimeFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it in datetime format, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    if request.GET.get(key,''):
-        try:
-            return datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d')
-        except:
-            pass
-    return None
-
-
-def getIntFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it as an integer, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    try:
-        return int(request.GET.get(key))
-    except:
-        return None
-
-
-class RefundProcessingView(FinancialContextMixin, AdminSuccessURLMixin, PermissionRequiredMixin, StaffuserRequiredMixin, SuccessMessageMixin, UpdateView):
-    template_name = 'financial/process_refund.html'
-    form_class = RegistrationRefundForm
-    permission_required = 'financial.process_registration_refunds'
-    model = Registration
-    success_message = _('Refund successfully submitted.')
 
 
 class ExpenseReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFormKwargsMixin, SuccessMessageMixin, CreateView):
@@ -114,7 +85,7 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
                 if int_year not in eligible_years:
                     raise Http404(_("Invalid year."))
                 query_filter = query_filter & (Q(accrualDate__year=int_year) | Q(paymentDate__year=int_year) | Q(submissionDate__year=int_year))
-            except:
+            except (ValueError, TypeError):
                 raise Http404(_("Invalid year."))
 
         # No point in continuing if we can't actually match this instructor to their payments.
@@ -128,11 +99,11 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
         reimbursement_items = all_payments.filter(**{'paid':True,'reimbursement':True}).order_by('-paymentDate')
 
         if int_year:
-            time_lb = datetime(int_year,1,1,0,0)
-            time_ub = datetime(int_year + 1,1,1,0,0)
+            time_lb = ensure_timezone(datetime(int_year,1,1,0,0))
+            time_ub = ensure_timezone(datetime(int_year + 1,1,1,0,0))
         else:
-            time_lb = datetime(datetime.now().year,1,1,0,0)
-            time_ub = datetime(datetime.now().year + 1,1,1,0,0)
+            time_lb = ensure_timezone(datetime(timezone.now().year,1,1,0,0))
+            time_ub = ensure_timezone(datetime(timezone.now().year + 1,1,1,0,0))
 
         paid_this_year = paid_items.filter(paymentDate__gte=time_lb,paymentDate__lt=time_ub).order_by('-paymentDate')
         accrued_paid_this_year = paid_items.filter(accrualDate__gte=time_lb,accrualDate__lt=time_ub).order_by('-paymentDate')
@@ -220,7 +191,7 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
                 # Check for year in kwargs and ensure that it is eligible
                 if int_year not in eligible_years:
                     raise Http404(_("Invalid year."))
-            except:
+            except (ValueError, TypeError):
                 raise Http404(_("Invalid year."))
 
         context['current_year'] = year
@@ -236,6 +207,14 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
             'is_paginated': is_paginated,
         })
         context['statement']['statementByEvent'] = statementByEvent
+
+        # Get a list of all roles with positive registrations in the statement:
+        role_set = set()
+        for x in statementByEvent:
+            role_set.update(list(x.get('registrations').keys()))
+        role_list = list(role_set)
+        sorted(role_list, key=lambda x: (x is None, x))
+        context['roles'] = role_list
 
         return super(self.__class__,self).get_context_data(**context)
 
@@ -312,7 +291,7 @@ class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
         '''
         try:
             year = int(self.kwargs.get('year'))
-        except:
+        except (ValueError, TypeError):
             year = getIntFromGet(request,'year')
 
         kwargs.update({
@@ -414,17 +393,17 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         '''
         try:
             year = int(self.kwargs.get('year'))
-        except:
+        except (ValueError, TypeError):
             year = getIntFromGet(request,'year')
 
         if self.kwargs.get('month'):
             try:
                 month = int(self.kwargs.get('month'))
-            except:
+            except (ValueError, TypeError):
                 try:
                     month = list(month_name).index(self.kwargs.get('month').title())
-                except:
-                    pass
+                except (ValueError, TypeError):
+                    month = None
         else:
             month = getIntFromGet(request,'month')
 
@@ -476,22 +455,22 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 if end_month == 1:
                     end_year = year + 1
 
-                timeFilters['%s__gte' % basis] = datetime(year,month,1)
-                timeFilters['%s__lt' % basis] = datetime(end_year,end_month,1)
+                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(year,month,1))
+                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(end_year,end_month,1))
 
                 context['rangeType'] = 'Month'
                 context['rangeTitle'] = '%s %s' % (month_name[month], year)
 
             elif year:
-                timeFilters['%s__gte' % basis] = datetime(year,1,1)
-                timeFilters['%s__lt' % basis] = datetime(year + 1,1,1)
+                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(year,1,1))
+                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(year + 1,1,1))
 
                 context['rangeType'] = 'Year'
                 context['rangeTitle'] = '%s' % year
             else:
                 # Assume year to date if nothing otherwise specified
-                timeFilters['%s__gte' % basis] = datetime(datetime.now().year,1,1)
-                timeFilters['%s__lt' % basis] = datetime(datetime.now().year + 1,1,1)
+                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(timezone.now().year,1,1))
+                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(timezone.now().year + 1,1,1))
 
                 context['rangeType'] = 'YTD'
                 context['rangeTitle'] = _('Calendar Year To Date')
@@ -520,9 +499,9 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         # are broken out separately.
 
         context.update({
-            'instructionExpenseItems': expenseItems.filter(category__id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID')]).order_by('payToUser__last_name','payToUser__first_name'),
-            'venueExpenseItems': expenseItems.filter(category__id=getConstant('financial__venueRentalExpenseCatID')).order_by('payToLocation'),
-            'otherExpenseItems': expenseItems.exclude(category__id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID'),getConstant('financial__venueRentalExpenseCatID')]).order_by('category'),
+            'instructionExpenseItems': expenseItems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).order_by('payToUser__last_name','payToUser__first_name'),
+            'venueExpenseItems': expenseItems.filter(category=getConstant('financial__venueRentalExpenseCat')).order_by('payToLocation'),
+            'otherExpenseItems': expenseItems.exclude(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat'),getConstant('financial__venueRentalExpenseCat')]).order_by('category'),
             'expenseCategoryTotals': ExpenseCategory.objects.filter(expenseitem__in=expenseItems).annotate(category_total=Sum('expenseitem__total'),category_adjustments=Sum('expenseitem__adjustments'),category_fees=Sum('expenseitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') + F('category_fees')),
         })
         context.update({
@@ -532,24 +511,24 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'venueExpenseVenueTotals': Location.objects.filter(expenseitem__in=context['venueExpenseItems']).annotate(location_total=Sum('expenseitem__total'),location_adjustments=Sum('expenseitem__adjustments'),location_fees=Sum('expenseitem__fees')).annotate(location_net=F('location_total') + F('location_adjustments') + F('location_fees')),
             'venueExpenseOtherTotal': context['venueExpenseItems'].filter(payToLocation__isnull=True).annotate(location_net=F('total') + F('adjustments') + F('fees')).aggregate(location_total=Sum('total'),location_adjustments=Sum('adjustments'),location_fees=Sum('fees'),location_net=Sum('net')),
 
-            'totalInstructionExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID')])]),
-            'totalVenueExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id=getConstant('financial__venueRentalExpenseCatID'))]),
-            'totalOtherExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].exclude(id__in=[getConstant('financial__classInstructionExpenseCatID'),getConstant('financial__assistantClassInstructionExpenseCatID'),getConstant('financial__venueRentalExpenseCatID')])]),
+            'totalInstructionExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id__in=[getConstant('financial__classInstructionExpenseCat').id,getConstant('financial__assistantClassInstructionExpenseCat').id])]),
+            'totalVenueExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id=getConstant('financial__venueRentalExpenseCat').id)]),
+            'totalOtherExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].exclude(id__in=[getConstant('financial__classInstructionExpenseCat').id,getConstant('financial__assistantClassInstructionExpenseCat').id,getConstant('financial__venueRentalExpenseCat').id])]),
 
             'totalExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals']]),
         })
 
         context.update({
-            'registrationRevenueItems': revenueItems.filter(category__id=getConstant('financial__registrationsRevenueCatID')).order_by('-event__startTime'),
-            'otherRevenueItems': revenueItems.exclude(category__id=getConstant('financial__registrationsRevenueCatID')).order_by('category'),
+            'registrationRevenueItems': revenueItems.filter(category=getConstant('financial__registrationsRevenueCat')).order_by('-event__startTime'),
+            'otherRevenueItems': revenueItems.exclude(category=getConstant('financial__registrationsRevenueCat')).order_by('category'),
             'revenueCategoryTotals': RevenueCategory.objects.filter(revenueitem__in=revenueItems).annotate(category_total=Sum('revenueitem__total'),category_adjustments=Sum('revenueitem__adjustments'),category_fees=Sum('revenueitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') - F('category_fees')),
         })
         context.update({
-            'registrationRevenueEventTotals': Event.objects.filter(eventregistration__revenueitem__in=context['registrationRevenueItems']).annotate(event_total=Sum('eventregistration__revenueitem__total'),event_adjustments=Sum('eventregistration__revenueitem__adjustments'),event_fees=Sum('eventregistration__revenueitem__fees')).annotate(event_net=F('event_total') + F('event_adjustments') - F('event_fees')),
-            'registrationRevenueOtherTotal': context['registrationRevenueItems'].filter(eventregistration__isnull=True).annotate(event_net=F('total') + F('adjustments') - F('fees')).aggregate(event_total=Sum('total'),event_adjustments=Sum('adjustments'),event_fees=Sum('fees'),event_net=Sum('net')),
+            'registrationRevenueEventTotals': Event.objects.filter(eventregistration__invoiceitem__revenueitem__in=context['registrationRevenueItems']).annotate(event_total=Sum('eventregistration__invoiceitem__revenueitem__total'),event_adjustments=Sum('eventregistration__invoiceitem__revenueitem__adjustments'),event_fees=Sum('eventregistration__invoiceitem__revenueitem__fees')).annotate(event_net=F('event_total') + F('event_adjustments') - F('event_fees')),
+            'registrationRevenueOtherTotal': context['registrationRevenueItems'].filter(invoiceItem__finalEventRegistration__isnull=True).annotate(event_net=F('total') + F('adjustments') - F('fees')).aggregate(event_total=Sum('total'),event_adjustments=Sum('adjustments'),event_fees=Sum('fees'),event_net=Sum('net')),
 
-            'totalRegistrationRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].filter(id=getConstant('financial__registrationsRevenueCatID'))]),
-            'totalOtherRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].exclude(id=getConstant('financial__registrationsRevenueCatID'))]),
+            'totalRegistrationRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].filter(id=getConstant('financial__registrationsRevenueCat').id)]),
+            'totalOtherRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].exclude(id=getConstant('financial__registrationsRevenueCat').id)]),
             'totalRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals']]),
         })
 
@@ -558,6 +537,57 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         })
 
         return super(self.__class__,self).get_context_data(**context)
+
+
+class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FinancialContextMixin, FormView):
+    '''
+    This view is for an admin action to repeat events.
+    '''
+    template_name = 'financial/update_staff_compensation_rules.html'
+    form_class = CompensationRuleUpdateForm
+    permission_required = 'core.change_staffmember'
+    success_message = _('Staff member compensation rules updated successfully.')
+
+    def dispatch(self, request, *args, **kwargs):
+        ids = request.GET.get('ids')
+        ct = getIntFromGet(request,'ct')
+
+        try:
+            contentType = ContentType.objects.get(id=ct)
+            self.objectClass = contentType.model_class()
+        except (ValueError, ObjectDoesNotExist):
+            return HttpResponseBadRequest(_('Invalid content type passed.'))
+
+        # This view only deals with subclasses of StaffMember (Instructor, etc.)
+        if not isinstance(self.objectClass(),StaffMember):
+            return HttpResponseBadRequest(_('Invalid content type passed.'))
+
+        try:
+            self.queryset = self.objectClass.objects.filter(id__in=[int(x) for x in ids.split(',')])
+        except ValueError:
+            return HttpResponseBadRequest(_('Invalid ids passed'))
+
+        return super(CompensationRuleUpdateView,self).dispatch(request,*args,**kwargs)
+
+    def get_context_data(self,**kwargs):
+        context = super(CompensationRuleUpdateView,self).get_context_data(**kwargs)
+        context.update({
+            'staffmembers': self.queryset,
+            'rateRuleValues': RepeatedExpenseRule.RateRuleChoices.values,
+        })
+
+        return context
+
+    def form_valid(self, form):
+        category = form.cleaned_data.pop('category',None)
+
+        for staffmember in self.queryset:
+            staffmember.expenserules.update_or_create(
+                category=category,
+                defaults=form.cleaned_data,
+            )
+
+        return super(CompensationRuleUpdateView,self).form_valid(form)
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):

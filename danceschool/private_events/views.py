@@ -8,6 +8,7 @@ from datetime import datetime
 import six
 
 from .forms import AddPrivateEventForm, EventOccurrenceFormSet, OccurrenceFormSetHelper
+from danceschool.core.utils.timezone import ensure_timezone
 
 if six.PY3:
     # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
@@ -24,7 +25,7 @@ class PrivateCalendarView(DetailView):
     def get_object(self,queryset=None):
         if hasattr(self.request.user,'staffmember') and self.request.user.staffmember.feedKey:
             return self.request.user.staffmember
-        return Http404(_('Not a valid staff member.'))
+        raise Http404(_('Not a valid staff member.'))
 
     def get_context_data(self,**kwargs):
         ''' Specify the list of feeds in the view so that the template can be agnostic about this '''
@@ -68,16 +69,16 @@ def addPrivateEvent(request):
 
         for key in request.GET:
             try:
-                form.fields[key].initial = request.GET[key]
-            except:
+                form.fields[key].initial = request.GET.get(key)
+            except KeyError:
                 pass
             try:
                 # Only the startTime should be passable to the formset
                 if key == 'startTime':
-                    formset[0].fields['startTime'].initial = datetime.strptime(request.GET[key],'%Y-%m-%d')
-                    formset[0].fields['endTime'].initial = datetime.strptime(request.GET[key],'%Y-%m-%d')
+                    formset[0].fields['startTime'].initial = ensure_timezone(datetime.strptime(request.GET.get(key) or '','%Y-%m-%d'))
+                    formset[0].fields['endTime'].initial = ensure_timezone(datetime.strptime(request.GET.get(key) or '','%Y-%m-%d'))
                     formset[0].fields['allDay'].initial = True
-            except:
+            except ValueError:
                 pass
 
     return render(request,'private_events/add_private_event_form.html',{

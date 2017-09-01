@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from djchoices import DjangoChoices, ChoiceItem
@@ -43,6 +44,7 @@ class Requirement(models.Model):
     @property
     def enabled(self):
         return self.enforcementMethod != self.EnforcementChoice.none
+    enabled.fget.short_description = _('Enabled')
 
     def customerMeetsRequirement(self, customer, danceRole=None, registration=None):
         '''
@@ -73,21 +75,42 @@ class Requirement(models.Model):
             if self.roleEnforced:
                 filter_dict['role'] = danceRole
 
-            priors_matches = cust_priors.filter(**filter_dict).count()
             current_matches = 0
-            if registration and item.concurrentRule != item.ConcurrencyRule.prohibited:
+            overlap_matches = 0
+            nonconcurrent_filter = {'event__endTime__lte': timezone.now()}
+
+            if registration:
+
                 if isinstance(registration,Registration):
                     current_matches = registration.eventregistration_set.filter(**filter_dict).count()
                 elif isinstance(registration,TemporaryRegistration):
                     current_matches = registration.temporaryeventregistration_set.filter(**filter_dict).count()
 
+                nonconcurrent_filter = {'event__endTime__lte': registration.firstSeriesStartTime}
+                overlap_matches = cust_priors.filter(**filter_dict).exclude(**nonconcurrent_filter).filter(
+                    event__startTime__lte=registration.lastSeriesEndTime,
+                ).count()
+
+            priors_matches = cust_priors.filter(**filter_dict).filter(**nonconcurrent_filter).count()
+
             # The number of matches depends on the concurrency rule for this item
             if item.concurrentRule == item.ConcurrencyRule.prohibited:
                 matches = priors_matches
+            elif item.concurrentRule == item.ConcurrencyRule.allowOneOverlapClass:
+                matches = priors_matches + \
+                    cust_priors.filter(**filter_dict).exclude(**nonconcurrent_filter).filter(
+                        event__startTime__lte=registration.getTimeOfClassesRemaining(1)
+                    ).count()
+            elif item.concurrentRule == item.ConcurrencyRule.allowTwoOverlapClasses:
+                matches = priors_matches + \
+                    cust_priors.filter(**filter_dict).exclude(**nonconcurrent_filter).filter(
+                        event__startTime__lte=registration.getTimeOfClassesRemaining(2)
+                    ).count()
             elif item.concurrentRule == item.ConcurrencyRule.allowed:
-                matches = priors_matches + current_matches
+                matches = priors_matches + overlap_matches + \
+                    (current_matches if isinstance(registration,TemporaryRegistration) else 0)
             elif item.concurrentRule == item.ConcurrencyRule.required:
-                matches = current_matches
+                matches = overlap_matches + current_matches
 
             if matches >= item.quantity:
                 # If this is an 'or' or a 'not' requirement, then we are done
@@ -115,6 +138,8 @@ class Requirement(models.Model):
         return self.name
 
     class Meta:
+        verbose_name = _('Class requirement')
+        verbose_name = _('Class requirements')
         permissions = (
             ('ignore_requirements',_('Can register users for series regardless of any prerequisites or requirements')),
         )
@@ -123,16 +148,18 @@ class Requirement(models.Model):
 class RequirementItem(models.Model):
     ''' Each component of a requirement is one of these '''
 
-    requirement = models.ForeignKey(Requirement,null=True)
+    requirement = models.ForeignKey(Requirement,verbose_name=_('Requirement'),null=True)
 
     class ConcurrencyRule(DjangoChoices):
         prohibited = ChoiceItem('P',_('Must have previously taken'))
+        allowOneOverlapClass = ChoiceItem('1',_('May register/begin with one class remaining'))
+        allowTwoOverlapClasses = ChoiceItem('1',_('May register/begin with two classes remaining'))
         allowed = ChoiceItem('A',_('Concurrent registration allowed'))
         required = ChoiceItem('R',_('Concurrent registration required'))
 
     quantity = models.PositiveSmallIntegerField(_('Quantity'),default=1)
-    requiredLevel = models.ForeignKey(DanceTypeLevel,null=True,blank=True)
-    requiredClass = models.ForeignKey(ClassDescription,null=True,blank=True)
+    requiredLevel = models.ForeignKey(DanceTypeLevel,null=True,blank=True,verbose_name=_('Required Dance type/level'))
+    requiredClass = models.ForeignKey(ClassDescription,null=True,blank=True,verbose_name=_('Required class'))
 
     concurrentRule = models.CharField(_('Concurrency Rule'),max_length=1,choices=ConcurrencyRule.choices,default=ConcurrencyRule.prohibited)
 
@@ -142,20 +169,24 @@ class RequirementItem(models.Model):
         if not self.requiredLevel and not self.requiredClass:
             raise ValidationError(_('Either a level or a class must be required.'))
 
+    class Meta:
+        verbose_name = _('Requirement item')
+        verbose_name_plural = _('Requirement items')
+
 
 class CustomerRequirement(models.Model):
     '''
     This class allows for override of requirements on a per-customer basis.
     '''
-    customer = models.ForeignKey(Customer)
-    requirement = models.ForeignKey(Requirement)
-    role = models.ForeignKey(DanceRole,null=True,blank=True,help_text=_('Role must be specified only for requirements for which roles are enforced.'))
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
+    requirement = models.ForeignKey(Requirement,verbose_name=_('Requirement'))
+    role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'),help_text=_('Role must be specified only for requirements for which roles are enforced.'))
 
     met = models.BooleanField(_('Meets Requirement'),default=True,help_text=_('If unchecked, then the customer explicitly does not meet the requirement, regardless of whether they meet its parameters.'))
     comments = models.TextField(_('Comments/Notes'),null=True,blank=True)
 
-    submissionDate = models.DateTimeField(auto_now_add=True)
-    modifiedDate = models.DateTimeField(auto_now=True)
+    submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last modified date'),auto_now=True)
 
     def clean(self):
         if self.requirement.roleEnforced and not self.role:
@@ -163,3 +194,5 @@ class CustomerRequirement(models.Model):
 
     class Meta:
         unique_together = ('customer','requirement','role')
+        verbose_name = _('Customer-level requirement record')
+        verbose_name_plural = _('Customer-level requirement records')

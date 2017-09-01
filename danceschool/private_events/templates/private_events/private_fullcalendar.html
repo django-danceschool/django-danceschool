@@ -1,52 +1,53 @@
 {% extends "cms/admin_home.html" %}
-{% load sekizai_tags static %}
+{% load sekizai_tags static i18n tz %}
+{% get_current_timezone as TIME_ZONE %}
 
 {% block content %}
 
-<h1>Calendar For {{ staffMember.fullName }}</h1>
+<h1>{% blocktrans with name=staffMember.fullName %}Calendar For {{ name }}{% endblocktrans %}</h1>
 
 <dl>
-<dt>Link To Your Calendar Feeds:</dt>
+<dt>{% trans "Link To Your Calendar Feeds" %}:</dt>
 <dd>
-    <a class="btn btn-default btn-sm" href="{{ privateFeeds.publicEvents }}">Your Classes &amp; Events</a>
-    <a class="btn btn-default btn-sm" href="{{ privateFeeds.privateEvents }}">Private Events &amp; Reminders</a>
-<a class="btn btn-default btn-sm" href="{{ publicFeed }}">Public Calendar Feed</a>
-(copy and paste these URLs to add them to Google Calendar, etc.)</dd>
+    <a class="btn btn-default btn-sm" href="{{ privateFeeds.publicEvents }}">{% trans "Your Classes &amp; Events" %}</a>
+    <a class="btn btn-default btn-sm" href="{{ privateFeeds.privateEvents }}">{% trans "Private Events &amp; Reminders" %}</a>
+<a class="btn btn-default btn-sm" href="{{ publicFeed }}">{% trans "Public Calendar Feed" %}</a>
+({% trans "copy and paste these URLs to add them to Google Calendar, etc." %})</dd>
 </dl>
 
 <div id="calendarbox">&nbsp;</div>
 
 
 <!-- Modal for existing events -->
-<div aria-labelledby="eventDetails" class="modal fade" id="eventContent" role="dialog" tabindex="-1" title="Event Details">
+<div aria-labelledby="eventDetails" class="modal fade" id="eventContent" role="dialog" tabindex="-1" title="{% trans "Event Details" %}">
 <div class="modal-dialog" role="document">
 <div class="modal-content">
-<div class="modal-header"><button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
+<div class="modal-header"><button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
 
 <h3 class="modal-title" id="eventTitle">&nbsp;</h3>
 </div>
 
 <div class="modal-body">
 <dl>
-	<dt>Start:</dt>
+	<dt>{% trans "Start" %}:</dt>
 	<dd id="startTime">&nbsp;</dd>
-	<dt>End:</dt>
+	<dt>{% trans "End" %}:</dt>
 	<dd id="endTime">&nbsp;</dd>
 </dl>
 
 <div id="eventInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer">{% if 'core.change_series' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="eventEditLink" type="button">Edit Details</a>{% endif %}<a class="btn btn-default" href="" id="eventLink" type="button">Read More</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">Close</button></div>
+<div class="modal-footer">{% if 'core.change_series' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a>{% endif %}<a class="btn btn-default" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
 
 <!-- Modal to create new events -->
-<div aria-labelledby="eventNew" class="modal fade" id="eventNew" role="dialog" tabindex="-1" title="Add Event">
+<div aria-labelledby="eventNew" class="modal fade" id="eventNew" role="dialog" tabindex="-1" title="{% trans 'Add Event' %}">
 <div class="modal-dialog" role="document">
 <div class="modal-content">
-<div class="modal-header"><button aria-label="Close" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
+<div class="modal-header"><button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
 
 <h3 class="modal-title" id="eventNewTitle">&nbsp;</h3>
 </div>
@@ -55,13 +56,13 @@
 <div id="eventNewInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">Add A Class</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">Add A Public Event</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">Add A Private Event/Reminder</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">Close</button></div>
+<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
 
 {% addtoblock "css" %}
-    <link rel='stylesheet' type="text/css" href='{% static 'css/fullcalendar.min.css' %}' />
+    <link rel='stylesheet' type="text/css" href='{% static 'fullcalendar/fullcalendar.min.css' %}' />
 {% endaddtoblock %}
 {% addtoblock "css" %}
     <style media="screen" type="text/css">
@@ -71,13 +72,13 @@
     </style>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src='{% static 'js/jquery-ui.min.js' %}'></script>
+    <script src='{% static 'jquery-ui/jquery-ui.min.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src='{% static 'js/moment.min.js' %}'></script>
+    <script src='{% static 'moment/moment.min.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src='{% static 'js/fullcalendar.min.js' %}'></script>
+    <script src='{% static 'fullcalendar/fullcalendar.min.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
@@ -93,6 +94,7 @@ $(document).ready(function() {
             {% endfor %}
         ],
         eventTextColor: '#ffffff',
+        timezone: "{{ TIME_ZONE }}",
         height: "auto",
         aspectRatio: 1,
         header: {right: 'month,agendaWeek,listMonth prev,next today'},

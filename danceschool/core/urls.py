@@ -2,7 +2,7 @@ from django.conf.urls import url
 from django.contrib import admin
 
 from .feeds import EventFeed, json_event_feed
-from .views import SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, EmailConfirmationView, SendEmailView, SubstituteReportingView, InstructorBioChangeView, AccountProfileView, OtherAccountProfileView
+from .views import SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, EmailConfirmationView, SendEmailView, SubstituteReportingView, InstructorBioChangeView, AccountProfileView, OtherAccountProfileView, RepeatEventsView
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
 from .autocomplete_light_registry import CustomerAutoComplete, UserAutoComplete
 
@@ -36,6 +36,9 @@ urlpatterns = [
     url(r'^events/feed/json/$', json_event_feed, name='jsonCalendarFeed'),
     url(r'^events/feed/(?P<instructorFeedKey>[\w\-_]+)$', EventFeed(), name='calendarFeed'),
     url(r'^events/feed/json/(?P<instructorFeedKey>[\w\-_]+)$', json_event_feed, name='jsonCalendarFeed'),
+
+    # This allows creation of duplicate offset events from admin
+    url(r'^events/repeat/$',RepeatEventsView.as_view(),name='repeatEvents'),
 
     # These are for individual class views and event views
     url(r'^classes/(?P<year>[0-9]+)/(?P<month>[\w]+)/(?P<slug>[\w\-_]+)/$', IndividualClassView.as_view(), name='classView'),

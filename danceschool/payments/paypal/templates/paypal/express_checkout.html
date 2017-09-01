@@ -1,0 +1,57 @@
+{% load cms_tags sekizai_tags i18n %}
+
+{% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
+
+<div id="error_payment"></div>
+<div id="paypal-button"></div>
+
+{% addtoblock "js" %}
+    <script src="https://www.paypalobjects.com/api/checkout.js"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script type="text/javascript">
+
+        paypal.Button.render({
+
+            env: '{{ paypal_mode }}',
+
+            commit: true, // Show a 'Pay Now' button
+
+            payment: function() {
+                return paypal.request.post('{% url "createPaypalPayment" %}', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    {% if user.is_authenticated %}
+                    user_id: {{ user.id }},
+                    {% endif %}
+                    {% if registration %}
+                    reg_id: {{ registration.id }},
+                    {% elif invoice %}
+                    invoice_id: '{{ invoice.id }}',
+                    {% endif %}
+                }).then(function(data) {
+                    return data.id;
+                });
+            },
+
+            onAuthorize: function(data) {
+                return paypal.request.post('{% url "executePaypalPayment" %}', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    paymentID: data.paymentID,
+                    payerID: data.payerID,
+                }).then(function() {
+                    {% if instance.successPage %}
+                    window.location.replace('{% page_url instance.successPage.id %}');
+                    {% else %}
+                    window.location.replace('/');
+                    {% endif %}
+                });
+            },
+
+            onError: function(err) {
+                $('#error_payment').addClass('alert alert-danger');
+                $('#error_payment').text('{{ unknown_error }}');
+            }
+
+        }, '#paypal-button');
+    </script>
+{% endaddtoblock %}

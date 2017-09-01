@@ -1,0 +1,54 @@
+{% load cms_tags sekizai_tags i18n %}
+
+<form id="stripeCertificateForm" action="{% url 'stripeHandler' %}" method="POST">
+{% csrf_token %}
+<p><input id="id_amount" name="stripeAmount" type="text" value="{{ instance.defaultAmount }}" /></p>
+
+<input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
+<input type="hidden" name="transaction_type" value="Gift certificate">
+<input type="hidden" name="addSessionInfo" value="True">
+<input type="hidden" name="customizeUrl" value="{% url 'customizeGiftCertificate' %}">
+<input type="hidden" name="stripeToken" value="">
+<input type="hidden" name="stripeEmail" value="">
+
+{% if user.is_authenticated %}
+  <input type="hidden" name="submissionUser" value="{{ user.id }}">
+{% endif %}
+
+<input id="stripeSubmitButton" type="submit" value="Pay with Card" class="btn btn-primary" />
+
+</form>
+
+{% addtoblock "js" %}
+  <script src="https://checkout.stripe.com/checkout.js"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script>
+    var handler = StripeCheckout.configure({
+      key: '{{ stripe_key }}',
+      image: 'https://stripe.com/img/documentation/checkout/marketplace.png',
+      locale: 'auto',
+      token: function(token) {
+          $('input[name=stripeToken]').val(token.id);
+          $('input[name=stripeEmail]').val(token.email);
+          $('#stripeCertificateForm').submit();
+      }
+    });
+
+    $('#stripeSubmitButton').click(function(e) {
+      // Open Checkout with further options:
+      handler.open({
+        name: '{{ businessName }}',
+        description: '{% trans "Gift Certificate Purchase" %}',
+        amount: $('input[name=stripeAmount]').val() * 100,
+        currency: '{{ currencyCode }}'
+      });
+      e.preventDefault();
+    });
+
+  // Close Checkout on page navigation:
+  window.addEventListener('popstate', function() {
+    handler.close();
+  });
+  </script>
+{% endaddtoblock %}

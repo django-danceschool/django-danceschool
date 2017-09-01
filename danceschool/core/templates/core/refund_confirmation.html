@@ -1,0 +1,57 @@
+{% extends "cms/admin_home.html" %}
+{% load sekizai_tags i18n %}
+
+{% block content %}
+
+	<h2>{% trans "Process Refund: Confirmation" %}</h2>
+
+	<p>{% trans "Please confirm the following before sending" %}:</p>
+
+	<hr />
+
+	<table class="table">
+		<tr>
+			<th>{% trans "Refund This Amount" %}:</th>
+			<th>{{ currencySymbol }}{{ amount_to_refund|floatformat:"2" }}</th>
+		</tr>
+		{% if initial_refund_amount %}
+			<tr>
+				<td>{% trans "Prior Refunds to Invoice" %}:</td>
+				<td>{{ currencySymbol }}{{ initial_refund_amount|floatformat:"2" }}</td>
+			</tr>
+			<tr>
+				<td>{% trans "Total Refunds to Invoice" %}:</td>
+				<td>{{ currencySymbol }}{{ total_refund_amount|floatformat:"2" }}</td>
+			</tr>
+		{% endif %}
+	</table>
+
+	{% if payments %}
+		<div class="panel panel-default">
+			<div class="panel-heading"><h4 class="panel-title">{% trans "Payment Details" %}</h4></div>
+			<div class="panel-body">
+				{% for payment in payments %}
+					{{ payment.methodName }}: {{ payment.recordId }}<br />
+					{% if not payment.refundable %}
+						<strong>{% trans "Note" context "alert" %}:</strong> {% trans "This payment does not appear to be automatically refundable.  Please manually refund the money to this student after filling out this form." %}<br />
+					{% endif %}
+				{% endfor %}
+			</div>
+		</div>
+	{% endif %}
+
+	<a class="btn btn-success" href="?confirmed=True">{% trans "Process Refund" %}</a>
+	<a class="btn btn-default" href="{% url 'refundProcessing' form_data.id %}">{% trans "Return To Form" %}</a>
+
+{% addtoblock "css" %}
+	<style type="text/css">
+		pre.unstyled {
+			border: 0;
+			padding: 0;
+			background-color: transparent;
+		    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+		    font-size: 14px;
+		}
+	</style>
+{% endaddtoblock %}
+{% endblock %}

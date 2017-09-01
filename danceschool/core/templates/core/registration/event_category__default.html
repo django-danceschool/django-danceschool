@@ -1,0 +1,93 @@
+{% load danceschool_tags i18n %}
+
+{% if category_list %}
+	<div class="category_heading">
+		<input class="btn" type="submit" value="{% trans 'Register now' %} &raquo;" />
+		<h2>{{ category_list.grouper.name }}</h2>
+	</div>
+	<hr />
+	<div class="classmonth">
+		<div class="table serieslist">
+
+		{% for event in category_list.list %}
+			<div class="weekdaygroup">
+				<div class="weekday">
+					<div><h3>{% if event.numOccurrences > 1 %}{% trans "Begins" %} {% endif %}{{ event.firstOccurrenceTime|date:"N j" }}</h3></div>
+				</div>
+				<div class="weekdaycontents">
+					<a name="{{ event.slug }}"></a>
+                    <table class="series" id="eventtable_{{ event.id}}">
+                        <tr>
+                            <th class="time">
+								<h4>{{ event.startTime|date:"g:i A" }} - <br />
+								{{ event.endTime|date:"g:i A" }} </h4>
+							</th>
+                            <td class="info">
+                                <h3 class="title">{{ event.name }}</h3>
+                                <h4>
+								{% if event.teachers %}
+									{% trans "with" %} {{ event.teachers|join:" &amp; "}}
+								{% endif %}
+
+								at
+									{% if directions_url %}
+									<a href = "{{ directions_url }}#{{ event.location.name|slugify }}">
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+									</a>
+									{% else %}
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+									{% endif %}
+
+                                    {% if event.url %}<small><a href="{{ event.url }}">{% trans "more info" %}</a></small>{% endif %}
+                                </h4>
+                                <div class="pricinginfo">
+                                	{% if event.pricingTier and event.registrationOpen %}
+										<a class="pricingPopover seriestype" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ event.pricingTier.name }}</strong>" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ event.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ event.pricingTier.doorPrice|floatformat:2 }}<br />">{{ event.pricingTier.name }}:</a>
+                                	{% endif %}
+								</div>
+                                <div class="dates">
+								{% for occurrence in event.eventoccurrence_set.all %}
+									{% if occurrence.startTime.date == occurrence.endTime.date and event.numOccurrences == 1 %}
+										{{ occurrence.startTime|date:"g:i A" }}
+									{% else %}
+										{{ occurrence.startTime|date:"D. N j, g:i A" }}
+									{% endif %}
+									-
+									{% if occurrence.startTime.date == occurrence.endTime.date %}
+										{{ occurrence.endTime|date:"g:i A" }}
+									{% else %}
+										{{ occurrence.endTime|date:"D. N j, g:i A" }}
+									{% endif %}<br />
+								{% endfor %}
+								</div>
+                                <div class="leadfollow">
+                                    <div class="leadfollow-options">
+									{% if event.registrationOpen or perms.core.override_register_closed %}
+    									{% get_field_for_object 'event' event.id form as field %}
+                                    	{{ field }}
+	                                    {% if validationStr %}
+										<div colspan="2" class="checkboxvalidation">
+											{{ field.errors }}
+										</div>
+	                                    {% endif %}
+									{% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+
+					{% if event.soldOut %}
+						<div class="SoldOut">
+							{% trans "Sold Out!" %}
+						</div>
+						<div class="SoldOutSub">
+						{% trans "Please join us at our next event!" %}
+						</div>
+					{% endif %}
+				</div>
+			</div>
+		{% endfor %}
+		</div>
+	</div>
+{% endif %}

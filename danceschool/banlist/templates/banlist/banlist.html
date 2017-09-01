@@ -1,0 +1,26 @@
+{% extends "cms/admin_home.html" %}
+{% load thumbnail i18n %}
+
+{% block content %}
+
+<h2>{% trans "List of Individuals Banned From Registration" %}</h2>
+<h3>{% trans "This version:" %} {% now "F jS, Y" %}</h3>
+
+<table class="table">
+	<thead>
+		<tr><th>Photo</th><th>Name</th><th>Email Addresses</th><th>Notes</th><th>Expiration</th></tr>
+	</thead>
+	<tbody>
+    {% for person in object_list %}
+    	<tr>
+    		<td>{% if person.photo %}<img class="pull-left" src="{% thumbnail person.photo thumbnail_dimensions|default:'133x133' crop %}" width="{{ thumbnail.width|default:'133' }}" />{% endif %}</td>
+    		<td>{{ person.fullName }}</td>
+    		<td>{{ person.relatedEmails|join:",<br />" }}</td>
+    		<td>{{ person.notes }}</td>
+            <td>{{ person.expirationDate|date:"F js, Y"|default:"None" }}</td>
+    	</tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

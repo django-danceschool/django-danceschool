@@ -1,0 +1,86 @@
+{% load danceschool_tags i18n %}
+
+{% if regOpenSeries %}
+	<h2>{% trans "Register Now: Upcoming Class Series" %}</h2>
+	<hr />
+{% regroup regOpenSeries|dictsort:"month" by month as open_list %}
+	{% for month in open_list %}
+	<div class="classmonth">
+		<input class="btn" type="submit" value="{% trans 'Register now' %} &raquo;" />
+        <h3>{{ month.grouper|readable_month }} {% trans "Class Series" %}</h3>
+		<div class="table serieslist">
+		{% regroup month.list|dictsort:"weekday" by weekday as weekday_list %}
+			{% for weekday in weekday_list %}
+				<div class="weekdaygroup">
+				<div class="weekday">
+					<div><h3>{% readable_weekday weekday.grouper %}s</h3></div>
+				</div>
+				<div class="weekdaycontents">
+					{% for event in weekday.list %}
+					<a name="{{ event.slug }}"></a>
+                    <table class="series" id="eventtable_{{ event.id}}">
+                        <tr>
+                            <th class="time">
+								<h4>{{ event.startTime|date:"g:i A" }} - <br />
+								{{ event.endTime|date:"g:i A" }} </h4>
+							</th>
+                            <td class="info">
+                                <h3 class="title">{{ event.name }}</h3>
+                                <h4>
+								{% if event.teachers %}
+									{% trans "with" %} {{ event.teachers|join:" &amp; "}}
+								{% endif %}
+
+								at
+									{% if directions_url %}
+									<a href = "{{ directions_url }}#{{ event.location.name|slugify }}">
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+									</a>
+									{% else %}
+										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+									{% endif %}
+
+                                    {% if event.url %}<small><a href="{{ event.url }}">{% trans "more info" %}</a></small>{% endif %}
+                                </h4>
+                                <div class="pricinginfo">
+                                	{% if event.pricingTier and event.registrationOpen %}
+										<a class="pricingPopover seriestype" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ event.pricingTier.name }}</strong>" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ event.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ event.pricingTier.doorPrice|floatformat:2 }}<br />">{{ event.pricingTier.name }}:</a>
+                                	{% endif %}
+								</div>
+                                <div class="dates">
+								{% for occurrence in event.eventoccurrence_set.all %}
+									{{ occurrence.startTime|date:"N j"}}{% if not forloop.last %}, {% endif %}
+								{% endfor %}
+								</div>
+								{% get_field_for_object 'event' event.id form as field %}
+                                <div class="leadfollow">
+                                    <div class="leadfollow-options">
+                                    	{{ field }}
+                                    </div>
+                                </div>
+                                {% if validationStr %}
+									<div colspan="2" class="checkboxvalidation">
+										{{ field.errors }}
+									</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+
+					{% if event.soldOut %}
+						<div class="SoldOut">
+							{% trans "Sold Out!" %}
+						</div>
+						<div class="SoldOutSub">
+							{% trans "Please join us for another class, another month, or schedule a private lesson!" %}
+						</div>
+					{% endif %}
+
+					{% endfor %}
+				</div>
+				</div>
+			{% endfor %}
+		</div>
+	</div>
+	{% endfor %}
+{% endif %}

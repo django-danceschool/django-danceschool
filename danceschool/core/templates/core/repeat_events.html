@@ -1,0 +1,56 @@
+{% extends "cms/admin_home.html" %}
+{% load staticfiles crispy_forms_tags sekizai_tags i18n %}
+
+{% block content %}
+
+<h1>{% trans "Duplicate Selected Events" %}</h1>
+
+<p>{% blocktrans %}You have selected the following events to repeat:{% endblocktrans %}</p>
+
+<div class="panel panel-default">
+	<div class="panel-body">
+		<ul>
+			{% for event in events %}
+			<li>
+				{% if event.url %}<a href="{{ event.url }}" target="_blank">{% endif %}{{ event.name }}{% if event.url %}</a>{% endif %}: 
+				{% with event.numOccurrences as count %}
+				{% blocktrans with pluralize=count|pluralize first_time=event.firstOccurrenceTime last_time=event.lastOccurrenceTime %}
+				{{ count }} occurrence{{ pluralize }} from {{ first_time }} to {{ last_time }}
+				{% endblocktrans %}
+				{% endwith %}
+			</li>
+			{% endfor %}
+		</ul>
+	</div>
+</div>
+
+<p>
+{% blocktrans %}
+Please select the start date, interval, and end date/number of repeat events that you would like to create.  All event data, including occurrences and event-specific roles, will be preserved.  However, event staff (such as instructors and substitute teachers) will not be assigned to any newly-created events.
+{% endblocktrans %}
+</p>
+
+<form action="" id="" method="post" {% if 'attachment' in form.fields %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+{{ form|crispy }}
+<input type="submit" value="{% trans "Submit" %}" class="btn btn-primary">
+</form>
+
+{% addtoblock "css" %}
+	<link rel="stylesheet" href="{% static 'jquery-ui/jquery-ui.min.css' %}">
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script src='{% static 'jquery-ui/jquery-ui.min.js'%}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	<script type="text/javascript">
+	$(document).ready(function() {
+		$('#id_startDate').datepicker();
+		$('#id_endDate').datepicker();
+	});
+	</script>
+{% endaddtoblock %}
+
+{% addtoblock "js" %}
+	{{ form.media }}
+{% endaddtoblock %}
+{% endblock %}

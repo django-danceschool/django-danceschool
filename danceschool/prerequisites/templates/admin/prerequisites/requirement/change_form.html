@@ -1,0 +1,167 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls sekizai_tags %}
+
+{% block content %}
+    {{ block.super }}
+
+    {% trans "You must save this requirement before checking if customers satisfy the requirement." as save_first_message %}
+    {% trans "An unknown error has occurred.  Please try searching for the customer in the Customer admin view." as unknown_error_message %}
+
+    {% addtoblock "js" %}
+    <script type="text/javascript">
+    $(document).ready(function(){
+
+        // Use Jquery to get the cookie value of the CSRF token
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = jQuery.trim(cookies[i]);
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        var csrftoken = getCookie('csrftoken');
+
+        function csrfSafeMethod(method) {
+            // these HTTP methods do not require CSRF protection
+            return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+        }
+
+        // Ensure that CSRF token is passed
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+
+        // On load, hide the buttons to give/deny requirements.
+        $('#customerrequirement_buttons_div').hide();
+        $('#customerrequirement_ajax_div').html('{% trans "Please enter a customer to see whether they meet the conditions of this requirement." %}');       
+
+        // Limitation for newly created requirements.
+        var requirementId = $('#customerrequirement_ajax_div').data('requirementid');
+        if (!requirementId) {
+            $('#id_customerCheck').parent('div').hide();
+            $('#customerrequirement_ajax_div').html('{{ save_first_message }}');
+        }
+
+        $('#id_customerCheck').change(function() {
+            var customerId = $('#id_customerCheck').val();
+            var requirementId = $('#customerrequirement_ajax_div').data('requirementid');
+            var applicableRole = $('#id_applicableRole').val();
+            var roleEnforced = $('#id_roleEnforced').prop('checked');
+
+            // Clear the existing div contents.
+            $('#customerrequirement_ajax_div').html('');
+
+            if (!customerId) {
+                $('#customerrequirement_ajax_div').addClass('alert alert-warning');
+                $('#customerrequirement_buttons_div').hide();
+                $('#customerrequirement_ajax_div').append('{% trans "No customer specified. " %}')
+            }
+            if (!requirementId) {
+                $('#customerrequirement_ajax_div').addClass('alert alert-warning');
+                $('#customerrequirement_ajax_div').append('{{ save_first_message }}');
+            }
+
+            if (customerId && requirementId) {
+                $.ajax({
+                    url: "{% url 'customerRequirementAjax' %}",
+                    method: "POST",
+                    data: {
+                        customerId: customerId,
+                        requirementId: requirementId,
+                        roleId: applicableRole,
+                        roleEnforced: roleEnforced,
+                    },
+                    success: function(result){
+                        if (result.customerStatus == true) {
+                            $('#customerrequirement_ajax_div').html('{% trans "This customer meets the requirements." %}');
+                        }
+                        else if (result.customerStatus == false) {
+                            $('#customerrequirement_ajax_div').html('{% trans "This customer does not meet the requirements." %}');
+                        }
+                        else {
+                            $('#customerrequirement_ajax_div').html('{% trans "Here is the information on the roles for which the customer meets the requirements:" %}\n<ul>');
+                            $.each(result.customerStatus, function(k, v) {
+                                $('#customerrequirement_ajax_div').append('<li>' + k + ': ' + v + '</li>')
+                            });
+                            $('#customerrequirement_ajax_div').append('</ul>');
+                            $('<div id="customerrequirement_roleselect_div"><p><label for="id_customerrequirement_roleselect">{% trans "Select a Role to Change Requirement Status" %}</label></p></div').insertBefore('#customerrequirement_buttons_div');
+                            $('#id_applicableRole').clone().attr('id','id_customerrequirement_roleselect').appendTo('#customerrequirement_roleselect_div p');
+                        }
+
+                        $('#customerrequirement_buttons_div').slideDown();
+                    },
+                    error: function() {
+                        $('#customerrequirement_ajax_div').html('{{ unknown_error_message }}');                        
+                    },
+                });
+            }
+        });
+
+        $('.customerrequirement_change').click(function(event) {
+            event.preventDefault();
+
+            var met = $(this).data()['met'];
+            var customerId = $('#id_customerCheck').val();
+            var requirementId = $('#customerrequirement_ajax_div').data('requirementid');
+
+
+            // If the role selector exists, then use that value instead
+            if ($('#id_customerrequirement_roleselect').length) {
+                var applicableRole = $('#id_customerrequirement_roleselect').val();
+            }
+            else {
+                var applicableRole = $('#id_applicableRole').val();                
+            }
+
+            if (!customerId || !requirementId || met == null) {
+                $('#customerrequirement_ajax_div').html('{{ unknown_error_message }}');
+            }
+            else {
+                $.ajax({
+                    url: "{% url 'customerRequirementAjax' %}",
+                    method: "POST",
+                    data: {
+                        customerId: customerId,
+                        requirementId: requirementId,
+                        setMet: met,
+                        roleId: applicableRole,
+                    },
+                    success: function(result){
+                        if (result.setMet && result.customerRequirementId) {
+                            $('#customerrequirement_buttons_div').slideUp();
+                            $('#customerrequirement_roleselect_div').remove();
+                            $('#customerrequirement_ajax_div').html('{% trans "The record for this customer has been updated to indicate that they meet this requirement." %}');
+                        }
+                        else if (!result.setMet && result.customerRequirementId) {
+                            $('#customerrequirement_buttons_div').slideUp();
+                            $('#customerrequirement_roleselect_div').remove();
+                            $('#customerrequirement_ajax_div').html('{% trans "The record for this customer has been updated to indicate that they do not meet this requirement." %}');
+                        }
+                        else {
+                            $('#customerrequirement_ajax_div').html('{{ unknown_error_message }}');
+                        }
+                    },
+                    error: function() {
+                        $('#customerrequirement_ajax_div').html('{{ unknown_error_message }}');               
+                    },
+                });                
+            }
+        })
+
+
+    });
+    </script>
+    {% endaddtoblock %}
+{% endblock %}

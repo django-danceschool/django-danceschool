@@ -1,33 +1,17 @@
 from django.db.models import Count, Avg, Sum, IntegerField, Case, When, Q, Min, FloatField, F
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, JsonResponse
-from django.db import connection
+from django.utils.translation import ugettext as _
+from django.utils import timezone
 
-from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
-from urllib.parse import unquote
-from collections import Counter
+from collections import Counter, OrderedDict
 from bisect import bisect
 from calendar import month_name
-import json
 
-from danceschool.core.models import Customer, Series, EventOccurrence, Registration, EventRegistration, DanceTypeLevel, Location
-from danceschool.core.constants import getConstant
-
-
-def getDateTimeFromGet(request,key):
-    '''
-    This function just parses the request GET data for the requested key,
-    and returns it in datetime format, returning none if the key is not
-    available or is in incorrect format.
-    '''
-    if request.GET.get(key,''):
-        try:
-            return datetime.strptime(unquote(request.GET.get(key,'')),'%Y-%m-%d')
-        except:
-            pass
-    return None
+from danceschool.core.models import Customer, Series, EventOccurrence, Registration, EventRegistration, DanceTypeLevel, Location, DanceRole
+from danceschool.core.utils.requests import getDateTimeFromGet
 
 
 def getAveragesByClassType(startDate=None,endDate=None):
@@ -37,26 +21,32 @@ def getAveragesByClassType(startDate=None,endDate=None):
         'classdescription__series__eventregistration__cancelled': False,
         'classdescription__series__eventregistration__dropIn': False
     }
-    when_lead = {'classdescription__series__eventregistration__role__id': getConstant('general__roleLeadID')}
-    when_follow = {'classdescription__series__eventregistration__role__id': getConstant('general__roleFollowID')}
 
     timeFilters = {}
     classFilters = {}
+    roleFilters = Q()
+
     if startDate:
         timeFilters['classdescription__series__startTime__gte'] = startDate
         classFilters['startTime__gte'] = startDate
+        roleFilters = roleFilters & (Q(eventrole__event__startTime__gte=startDate) | Q(eventregistration__event__startTime__gte=startDate))
     if endDate:
         timeFilters['classdescription__series__startTime__lte'] = endDate
         classFilters['startTime__lte'] = endDate
+        roleFilters = roleFilters & (Q(eventrole__event__startTime__lte=endDate) | Q(eventregistration__event__startTime__lte=endDate))
 
     when_all.update(timeFilters)
-    when_lead.update(when_all)
-    when_follow.update(when_all)
 
-    registration_counts = list(DanceTypeLevel.objects.annotate(
-        registrations=Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField())),
-        leads=Sum(Case(When(Q(**when_lead),then=1),output_field=IntegerField())),
-        follows=Sum(Case(When(Q(**when_follow),then=1),output_field=IntegerField()))).values_list('name','danceType__name','registrations','leads','follows'))
+    role_list = DanceRole.objects.filter(roleFilters).distinct()
+
+    annotations = {'registrations': Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField()))}
+    values_list = ['name', 'danceType__name','registrations']
+
+    for this_role in role_list:
+        annotations[this_role.pluralName] = Sum(Case(When(Q(Q(**when_all) & Q(classdescription__series__eventregistration__role=this_role)),then=1),output_field=IntegerField()))
+        values_list.append(this_role.pluralName)
+
+    registration_counts = list(DanceTypeLevel.objects.annotate(**annotations).values_list(*values_list))
     class_counter = Counter([(x.classDescription.danceTypeLevel.name, x.classDescription.danceTypeLevel.danceType.name) for x in Series.objects.filter(**classFilters).distinct()])
 
     results = {}
@@ -64,22 +54,25 @@ def getAveragesByClassType(startDate=None,endDate=None):
         type_name = ' '.join((str(list_item[0]),str(list_item[1])))
 
         results[type_name] = {
-            'registrations': list_item[2],
-            'leads': list_item[3],
-            'follows': list_item[4]
+            str(_('Registrations')): list_item[2],
         }
+        m = 3
+        for this_role in role_list:
+            results[type_name][str(_('Total %s' % this_role.pluralName))] = list_item[m]
+            m += 1
+
     for k,count in class_counter.items():
         type_name = ' '.join((str(k[0]),str(k[1])))
         results[type_name].update({
-            'series': count
+            str(_('Series')): count
         })
     for k,v in results.items():
-        if results[k].get('series'):
+        if results[k].get(str(_('Series'))):
             results[k].update({
-                'avgRegistrations': (results[k]['registrations'] or 0) / float(results[k]['series']),
-                'avgLeads': (results[k]['leads'] or 0) / float(results[k]['series']),
-                'avgFollows': (results[k]['follows'] or 0) / float(results[k]['series']),
+                str(_('Average Registrations')): (results[k][str(_('Registrations'))] or 0) / float(results[k][str(_('Series'))]),
             })
+            for this_role in role_list:
+                results[k][str(_('Average %s' % this_role.pluralName))] = (results[k][str(_('Total %s' % this_role.pluralName))] or 0) / float(results[k][str(_('Series'))])
 
     return results
 
@@ -95,8 +88,8 @@ def AveragesByClassTypeJSON(request):
     # Needs to return a list, not a dict
     # Also, filter out types with no series or registrations
     # and sort descending
-    results_list = [dict({'type': k},**dict(v)) for k,v in results.items() if v.get('series') or v.get('registrations')]
-    sorted_list = sorted(results_list, key=lambda k: k['series'],reverse=True)
+    results_list = [dict({'type': k},**dict(v)) for k,v in results.items() if v.get(str(_('Series'))) or v.get(str(_('Registrations')))]
+    sorted_list = sorted(results_list, key=lambda k: k[str(_('Series'))],reverse=True)
     return JsonResponse(sorted_list,safe=False)
 
 
@@ -113,21 +106,28 @@ def AveragesByClassTypeCSV(request):
 
     results = getAveragesByClassType(startDate,endDate)
 
+    role_names = [x.replace(str(_('Average ')),'') for x in results.keys() if x.startswith(str(_('Average ')))]
+
+    header_list = [str(_('Class Type')),str(_('Total Classes')),str(_('Total Students')),str(_('Avg. Students/Class'))]
+    for this_role in role_names:
+        header_list += [str(_('Total %s' % this_role)), str(_('Avg. %s/Class' % this_role))]
+
     # Note: These are not translated because the chart Javascript looks for these keys
-    writer.writerow(['Class Type','Total Classes','Total Students','Total Leads','Total Follows','Avg. Students/Class','Avg. Leads/Class','Avg. Follows/Class'])
+    writer.writerow(header_list)
 
     for key,value in results.items():
-
-        writer.writerow([
+        this_row = [
             key,
-            value.get('series',0),
-            value.get('registrations',0),
-            value.get('leads',0),
-            value.get('follows',0),
-            value.get('avgRegistrations',None),
-            value.get('avgLeads',None),
-            value.get('avgFollows',None),
-        ])
+            value.get(str(_('Series')),0),
+            value.get(str(_('Registrations')),0),
+            value.get(str(_('Average Registrations')),None),
+        ]
+        for this_role in role_names:
+            this_row += [
+                value.get(str(_('Total %s' % this_role)), 0),
+                value.get(str(_('Average %s' % this_role)), 0)
+            ]
+        writer.writerow(this_row)
 
     return response
 
@@ -140,10 +140,12 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
 
     # If no year specified, report current year to date.
     if not year:
-        year = datetime.now().year
+        year = timezone.now().year
+
+    role_list = DanceRole.objects.distinct()
 
     # Report data on all students registered unless otherwise specified
-    if series not in ['registrations','leads','follows','studenthours']:
+    if series not in ['registrations','studenthours'] and series not in [x.pluralName for x in role_list]:
         series = 'registrations'
 
     when_all = {
@@ -151,17 +153,12 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
         'eventregistration__cancelled': False,
     }
 
-    when_lead = {'eventregistration__role__id': getConstant('general__roleLeadID')}
-    when_follow = {'eventregistration__role__id': getConstant('general__roleFollowID')}
+    annotations = {'registrations': Sum(Case(When(Q(**when_all),then=1),output_field=FloatField()))}
 
-    when_lead.update(when_all)
-    when_follow.update(when_all)
+    for this_role in role_list:
+        annotations[this_role.pluralName] = Sum(Case(When(Q(Q(**when_all) & Q(eventregistration__role=this_role)),then=1),output_field=FloatField()))
 
-    series_counts = Series.objects.filter(year=year).annotate(
-        registrations=Sum(Case(When(Q(**when_all),then=1),output_field=FloatField())),
-        leads=Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField())),
-        follows=Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField())),
-    ).annotate(studenthours=F('duration') * F('registrations')).select_related('classDescription__danceTypeLevel__danceType','classDescription__danceTypeLevel')
+    series_counts = Series.objects.filter(year=year).annotate(**annotations).annotate(studenthours=F('duration') * F('registrations')).select_related('classDescription__danceTypeLevel__danceType','classDescription__danceTypeLevel')
 
     # If no limit specified on number of types, then do not aggregate dance types.
     # Otherwise, report the typeLimit most common types individually, and report all
@@ -214,12 +211,12 @@ def getClassTypeMonthlyData(year=None, series=None, typeLimit=None):
 def ClassTypeMonthlyJSON(request):
     try:
         year = int(request.GET.get('year'))
-    except:
+    except (ValueError, TypeError):
         year = None
 
     try:
         typeLimit = int(request.GET.get('typeLimit'))
-    except:
+    except (ValueError, TypeError):
         typeLimit = None
 
     series = request.GET.get('series')
@@ -249,40 +246,46 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
         'eventregistration__dropIn': False,
         'eventregistration__cancelled':False,
     }
-    when_lead = {'eventregistration__role__id': getConstant('general__roleLeadID')}
-    when_follow = {'eventregistration__role__id': getConstant('general__roleFollowID')}
 
     cohortFilters = {}
+    roleFilters = {}
 
     if cohortStart:
         cohortFilters['eventregistration__event__startTime__min__gte'] = cohortStart
+        roleFilters['eventregistration__event__startTime__gte'] = cohortStart
 
     if cohortEnd:
         cohortFilters['eventregistration__event__startTime__min__lte'] = cohortEnd
+        roleFilters['eventregistration__event__startTime__lte'] = cohortEnd
 
-    customers = Customer.objects.annotate(
-        Min('eventregistration__event__startTime'),
-        registrations=Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField())),
-        leads=Sum(Case(When(Q(**when_lead),then=1),output_field=IntegerField())),
-        follows=Sum(Case(When(Q(**when_follow),then=1),output_field=IntegerField()))).filter(**cohortFilters).distinct()
+    role_list = DanceRole.objects.filter(**roleFilters).distinct()
+
+    annotations = {
+        'eventregistration__event__startTime__min': Min('eventregistration__event__startTime'),
+        'registrations': Sum(Case(When(Q(**when_all),then=1),output_field=IntegerField())),
+    }
+    for this_role in role_list:
+        annotations[this_role.pluralName] = Sum(Case(When(Q(Q(**when_all) & Q(eventregistration__role=this_role)),then=1),output_field=IntegerField()))
+
+    customers = Customer.objects.annotate(**annotations).filter(**cohortFilters).distinct()
 
     totalCustomers = customers.filter(registrations__gt=0).count()
-    totalLeaders = customers.filter(leads__gt=0).count()
-    totalFollowers = customers.filter(follows__gt=0).count()
-
-    # Get the list of customers, leaders, and followers, as well as
-    # the total classes they have taken
     totalClasses = [x.registrations for x in customers if x.registrations]
     totalClasses.sort()
-    totalClassesLeaders = [x.leads for x in customers if x.leads]
-    totalClassesLeaders.sort()
-    totalClassesFollowers = [x.follows for x in customers if x.follows]
-    totalClassesFollowers.sort()
+
+    totalsByRole = {}
+
+    for this_role in role_list:
+        totalsByRole[this_role.pluralName] = {
+            'customers': customers.filter(**{this_role.pluralName + '__gt': 0}).count(),
+            'classes': [getattr(x,this_role.pluralName,None) for x in customers if getattr(x,this_role.pluralName,None)],
+        }
+        totalsByRole[this_role.pluralName]['classes'].sort()
 
     results = {}
     lastAll = 0
-    lastLeaders = 0
-    lastFollowers = 0
+    lastByRole = {this_role.pluralName:0 for this_role in role_list}
+    iByRole = {}
 
     for this_bin in bins:
         range_max = this_bin[1]
@@ -290,30 +293,36 @@ def getClassCountHistogramData(cohortStart=None,cohortEnd=None):
         if this_bin[0] == this_bin[1]:
             this_label = '%s' % this_bin[0]
         elif this_bin[1] == 99999:
-            this_label = '%s or more' % this_bin[0]
+            this_label = str(_('%s or more' % this_bin[0]))
         else:
             this_label = '%s-%s' % this_bin
 
         i_all = bisect(totalClasses,range_max,lastAll)
-        i_leaders = bisect(totalClassesLeaders,range_max,lastLeaders)
-        i_followers = bisect(totalClassesFollowers,range_max,lastFollowers)
+        iByRole = {
+            this_role.pluralName:bisect(totalsByRole[this_role.pluralName]['classes'],range_max,lastByRole[this_role.pluralName])
+            for this_role in role_list
+        }
 
         # Note: These are not translated because the chart Javascript looks for these keys
         results.update({
             this_label:
             {
-                '# Students': (i_all - lastAll),
-                '# Leaders': (i_leaders - lastLeaders),
-                '# Followers': (i_followers - lastFollowers),
-                'Pct. Students': 100 * (i_all - lastAll) / float(totalCustomers),
-                'Pct. Leaders': 100 * (i_leaders - lastLeaders) / float(totalLeaders),
-                'Pct. Followers': 100 * (i_followers - lastFollowers) / float(totalFollowers),
+                str(_('# Students')): (i_all - lastAll),
+                str(_('Percentage')): 100 * (i_all - lastAll) / (float(totalCustomers) or 1),
                 'bin': this_bin,
             },
         })
+        for this_role in role_list:
+            results[this_label].update({
+                '# ' + this_role.pluralName: (iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]),
+                'Percentage ' + this_role.pluralName: 100 * (
+                    iByRole[this_role.pluralName] - lastByRole[this_role.pluralName]
+                ) /
+                (float(totalsByRole[this_role.pluralName]['customers']) or 1),
+            })
+
         lastAll = i_all
-        lastLeaders = i_leaders
-        lastFollowers = i_followers
+        lastByRole = {this_role.pluralName:iByRole[this_role.pluralName] for this_role in role_list}
 
     return results
 
@@ -344,18 +353,19 @@ def ClassCountHistogramCSV(request):
     writer = csv.writer(response)
 
     # Note: These are not translated because the chart Javascript looks for these keys
-    writer.writerow(['# of Classes','Pct. Students','Pct. Leaders','Pct. Followers','# Students','# Leaders','# Followers'])
+    header_row = ['# of Classes']
+
+    keys = OrderedDict()
+    for v in results.values():
+        keys.update(v)
+
+    header_row += [x for x in keys.keys()]
+    writer.writerow(header_row)
 
     for k,v in results.items():
-        writer.writerow([
-            k,
-            v.get('Pct. Students',None),
-            v.get('Pct. Leaders',None),
-            v.get('Pct. Followers',None),
-            v.get('# Students',None),
-            v.get('# Leaders',None),
-            v.get('# Followers',None),
-        ])
+        this_row = [k]
+        this_row += [v.get(x,None) for x in keys.keys()]
+        writer.writerow(this_row)
 
     return response
 
@@ -513,8 +523,7 @@ def MonthlyPerformanceCSV(request):
 
 def getLocationPerformance(startDate=None,endDate=None):
 
-    # This time filter ensures that only non-special Series are included.
-    timeFilters = {'event__series__special': False}
+    timeFilters = {}
 
     if startDate:
         timeFilters['event__startTime__gte'] = startDate
@@ -587,7 +596,7 @@ def getRegistrationTypesAveragesByYear():
     for year in eligible_years:
         this_year_results = srs.filter(event__year=year).annotate(
             student=Case(When(registration__student=True,then=100),default=0,output_field=IntegerField()),
-            door=Case(When(registration__paidOnline=False,then=100),default=0,output_field=IntegerField()),
+            door=Case(When(registration__payAtDoor=False,then=100),default=0,output_field=IntegerField()),
             droppedIn=Case(When(dropIn=True,then=100),default=0,output_field=IntegerField()),
             cancellation=Case(When(cancelled=True,then=100),default=0,output_field=IntegerField()),
         ).aggregate(Student=Avg('student'),Door=Avg('door'),DropIn=Avg('droppedIn'),Cancelled=Avg('cancellation'),year=Min('event__year'))
@@ -619,18 +628,10 @@ def getRegistrationReferralCounts(startDate,endDate):
     if endDate:
         timeFilters['dateTime__lt'] = endDate
 
-    reg_count = Registration.objects.filter(**timeFilters).count()
+    regs = Registration.objects.filter(**timeFilters)
+    counter = Counter([x.data.get('marketing_id',None) for x in regs if isinstance(x.data,dict)] + [None for x in regs if not isinstance(x.data,dict)])
 
-    regs = Registration.objects.filter(**timeFilters).filter(data__marketing_id__isnull=False)
-    counter = Counter([x.data['marketing_id'] for x in regs])
-
-    results = [{'code': k, 'count': v} for k,v in counter.items()]
-
-    results.append({
-        'code': 'None',
-        'count':reg_count - sum([x['count'] for x in results])
-    })
-
+    results = [{'code': k or _('None'), 'count': v} for k,v in counter.items()]
     return results
 
 
@@ -654,9 +655,9 @@ def getGeneralStats(request):
     if firstClass:
         firstStartTime = firstClass['startTime']
     else:
-        firstStartTime = datetime.now()
+        firstStartTime = timezone.now()
 
-    timeDiff = relativedelta(datetime.now(),firstStartTime)
+    timeDiff = relativedelta(timezone.now(),firstStartTime)
     totalTime = '%s years, %s months, %s days' % (timeDiff.years, timeDiff.months,timeDiff.days)
 
     return (totalStudents,numSeries,totalSeriesRegs,totalTime)

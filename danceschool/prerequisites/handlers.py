@@ -6,8 +6,8 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from danceschool.core.signals import check_student_info
-from danceschool.core.models import Series, Customer
-from danceschool.core.constants import getConstant, REG_VALIDATION_STR
+from danceschool.core.models import Customer
+from danceschool.core.constants import getConstant
 
 from .models import Requirement
 
@@ -35,11 +35,7 @@ def checkRequirements(sender,**kwargs):
     email = formData.get('email')
 
     request = kwargs.get('request',{})
-    session = getattr(request,'session',{}).get(REG_VALIDATION_STR,{})
-
-    seriesinfo = session['regInfo'].get('events',{})
-    seriesids = [int(k) for k,v in seriesinfo.items() if v.get('register',False)]
-    seriess = Series.objects.filter(id__in=seriesids)
+    registration = kwargs.get('registration',None)
 
     customer = Customer.objects.filter(
         first_name=first,
@@ -49,16 +45,16 @@ def checkRequirements(sender,**kwargs):
     requirement_warnings = []
     requirement_errors = []
 
-    for s in seriess:
-        for req in s.getRequirements():
+    for ter in registration.temporaryeventregistration_set.all():
+        for req in ter.event.getRequirements():
             if not req.customerMeetsRequirement(
                 customer=customer,
-                danceRole=seriesinfo.get(s.id,{}).get('role',None)
+                danceRole=ter.role
             ):
                 if req.enforcementMethod == Requirement.EnforcementChoice.error:
-                    requirement_errors.append((s.name, req.name))
+                    requirement_errors.append((ter.event.name, req.name))
                 if req.enforcementMethod == Requirement.EnforcementChoice.warning:
-                    requirement_warnings.append((s.name,req.name))
+                    requirement_warnings.append((ter.event.name,req.name))
 
     if requirement_errors:
         raise ValidationError(format_html(

@@ -1,0 +1,29 @@
+<div class="content_block">
+
+{% if recipientName %}<p>Dear {{ recipientName }},</p>{% endif %}
+
+<p>
+{% if fromName %}
+	{{ fromName }} has given you a gift certificate from {{ businessName }}!
+{% else %}
+	You've been given a gift certificate from {{ businessName }}!
+{% endif %}
+We are happy to be sharing the gift of dance with you.</p>
+
+<p style="text-align:center; font-size: 26px;">
+Certificate Amount: {{ currencySymbol }}{{ certificateAmount|floatformat:2 }}<br />
+Certificate Code: {{ certificateCode }}
+</p>
+
+{% if message %}
+	<p><strong>Message:</strong><br />
+	{{ message }}
+	</p>
+{% endif %}
+
+<p>See you out on the dance floor soon!</p>
+
+<p>Sincerely,<br />
+{{ businessName }}</p>
+
+</div>

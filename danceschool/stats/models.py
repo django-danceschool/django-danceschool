@@ -11,3 +11,13 @@ class StatsGraphPluginModel(CMSPlugin):
     so this model allows for only a template to be specified.
     '''
     template = models.CharField(verbose_name=_('Template'),max_length=250,null=True,blank=True)
+
+    def get_short_description(self):
+        desc = self.id
+        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choice_name = [x[1] for x in choices if x[0] == self.template]
+        if choice_name:
+            desc = choice_name[0]
+        elif self.template:
+            desc = self.template
+        return desc

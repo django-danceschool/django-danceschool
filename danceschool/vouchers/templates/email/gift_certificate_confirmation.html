@@ -1,0 +1,33 @@
+{% if emailTo == 'R' %}{% if recipientName %}Dear {{ recipientName }},{% else %}Hello!{% endif %}
+
+{% if fromName %}{{ fromName }} has given you a gift certificate from {{ businessName }}!{% else %}You've been given a gift certificate from {{ businessName }}!{% endif %} We are happy to be sharing the gift of dance with you.
+
+The gift certificate is in the amount of {{ currencySymbol }}{{ certificateAmount|floatformat:2 }}.  In order to redeem your gift certificate when registering for classes, please enter the following voucher code:
+
+{{ certificateCode }}
+{% if message %}
+{% if fromName %}Message from {{ fromName }}:{% else %}Included message:{% endif %}
+{{ message }}
+{% endif %}
+
+If the amount of the voucher is greater than the amount of your registration, then you can continue to use this code until the full value of the voucher has been applied.
+
+We have also attached a PDF printable certificate.  We encourage you to print this certificate to bring with you when you arrive for class.
+
+{% else %}{% if fromName %}Dear {{ fromName }}{% else %}Hello!{% endif %}
+
+Thank you for purchasing a gift certificate from {{ businessName }}. Whether you will be using this certificate for yourself or for a friend or loved one, we are happy to be sharing the gift of dance with you.
+
+We have received and processed your gift certificate in the amount of {{ currencySymbol }}{{ certificateAmount|floatformat:2 }}.  In order to redeem your gift certificate when registering for classes, please enter the following voucher code:
+
+{{ certificateCode }}
+
+If the amount of the voucher is greater than the amount of your registration, then you can continue to use this code until the full value of the voucher has been applied.
+
+If you are giving this voucher as a gift, we have attached a PDF printable certificate which you can give to your recipient.  It includes all of the information that they will need to sign up for classes.
+{% endif %}
+
+Thanks again, and we look forward to seeing you out on the dance floor soon!
+
+Sincerely,
+{{ businessName }}

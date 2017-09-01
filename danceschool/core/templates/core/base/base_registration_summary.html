@@ -1,31 +1,37 @@
 {% extends "cms/home.html" %}
-{% load danceschool_tags crispy_forms_tags cms_tags %}
+{% load danceschool_tags crispy_forms_tags cms_tags i18n %}
 
-{% block title %}Complete Your Registration{% endblock %}
+{% block title %}{% trans "Complete Your Registration" %}{% endblock %}
 
 {% block content %}
 <div class="regsummary">
 	{% block summary %}
 
-	    <h2>Hi {{ registration.firstName }}! </h2>
+	    <h2>
+	    	{% blocktrans with name=registration.firstName %}
+	    	Hi {{ name }}!
+	    	{% endblocktrans %}
+	    </h2>
 	    
-	    <p>You are about to register for the following:</p>
+	    <p>{% trans "You are about to register for the following" %}:</p>
 
 	    <table class="table classregsummary">
 		    <tr>
-		        <th>Class/Event Name</th>
-		        <th>Date(s)</th>
-		        <th>Time</th>
-		        <th>Role</th>
-		        <th>Price</th>
+		        <th>{% trans "Class/Event Name" %}</th>
+		        <th>{% trans "Date(s)" %}</th>
+		        <th>{% trans "Time" %}</th>
+		        <th>{% trans "Role" %}</th>
+		        <th>{% trans "Price" %}</th>
 		    </tr>
 
 		    {% for item in registration.temporaryeventregistration_set.all %}
 		    <tr>
-		        <td>{% if item.dropIn %}DROP IN: {% endif %}{{ item.event.name }}</td>
+		        <td>{% if item.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.event.name }}</td>
 		        <td>
 		        {% if item.event.eventoccurrence_set.count == 4 and not item.event.series.special %}
-		        	{{ item.event.startTime|date:"l" }}s in {{ item.event.month|readable_month }}, starting {{ item.event.startTime|date:"F jS" }}
+		        	{% blocktrans with weekday=item.event.startTime|date:"l" month=item.event.month|readable_month startTime=item.event.startTime|date:"F jS" %}
+		        	{{ weekday }}s in {{ month }}, starting {{ startTime }}
+		        	{% endblocktrans %}
 		        {% else %}
 		        	{% for occ in item.event.eventoccurrence_set.all reversed %}
 		        		{{ occ.startTime|date:"D. F jS" }}{% if not forloop.last %}, {% endif %}
@@ -42,24 +48,26 @@
 		{% if addonItems %}
 		<p>
 			{% for addon in addonItems %}
-				<strong>Free Add-On:</strong>&nbsp;{{ addon.name }}
+				<strong>{% trans "Free Add-On" %}:</strong>&nbsp;{{ addon.name }}
 			{% endfor %}
 		</p>
 		{% endif %}
 
 		<p>
-			{% if discount_code_amount > 0 or total_voucher_amount > 0 %}
-				{% if discount_code_name %}
-					<strong>Discount Code Applied:</strong> {{ discount_code_name }}<br /><br />
-				{% endif %}
+			{% if total_discount_amount > 0 %}
+				{% for code in discount_codes %}
+					<strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}, {{ currencySymbol }}{{ code.2|floatformat:"-2" }}<br />
+				{% endfor %}
+				{% if discount_codes %}<br />{% endif %}
+
 				{% if voucher_names %}
-					<strong>Vouchers Applied:</strong> {{ voucher_names|join:", " }}<br /><br />
+					<strong>{% trans "Vouchers Applied" %}:</strong> {{ voucher_names|join:", " }}<br /><br />
 				{% endif %}
 
-				<strong>Total Discounts Applied:</strong> {{ currencySymbol }}{{ total_discount_amount|floatformat:"-2" }} <br /><br />
+				<strong>{% trans "Total Discounts Applied" %}:</strong> {{ currencySymbol }}{{ total_discount_amount|floatformat:"-2" }} <br /><br />
 			{% endif %}
 
-	        <div style="font-size: 1.2em;"><strong><em>Total:</em></strong> {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</div>
+	        <div style="font-size: 1.2em;"><strong><em>{% trans "Total" %}:</em></strong> {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</div>
 	    </p>
 
 	{% endblock %}
@@ -68,9 +76,9 @@
 
 	    <p>
 	     {% if is_free %}
-	        Thanks! You're all set.
+	        {% trans "Thanks! You're all set." %}
 	     {% else %}
-		     In order to complete your registration you must click on the Buy Now button to make a payment.</p>
+		     {% trans "In order to complete your registration you must click on the button below to make a payment." %}</p>
 
 		     {% if payAtDoor %}
 		        <form action="" method="post">
@@ -81,7 +89,7 @@
 		 	{% if payAtDoor %}
 		 		<div class="panel panel-default">
 		 			<div class="panel-heading">
-		 				<h4 class="panel-title">Pay Directly (Requires User Login)</h4>
+		 				<h4 class="panel-title">{% trans "Pay Directly (Requires User Login)" %}</h4>
 		 			</div>
 		 			<div class="panel-body">
 		 	{% endif %}

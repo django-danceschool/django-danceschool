@@ -1,0 +1,15 @@
+{% extends "cms/home.html" %}
+{% load crispy_forms_tags sekizai_tags i18n %}
+
+{% block content %}
+{% if form_title %}<h1>{{ form_title }}</h1>{% endif %}
+{% if form_description %}<p>{{ form_description }}</p>{% endif %}
+
+<form action="" id="" method="post" {% if 'attachment' in form.fields %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+{{ form|crispy }}
+<input type="submit" value="{% trans "Submit" %}" class="btn btn-primary">
+</form>
+{% addtoblock "js" %}
+	{{ form.media }}
+{% endaddtoblock %}
+{% endblock %}

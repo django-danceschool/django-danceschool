@@ -2,12 +2,15 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
+from django.utils import timezone
 
 from django_ical.views import ICalFeed
 from datetime import datetime, timedelta
+import pytz
 
 from .models import EventOccurrence, StaffMember, Event
 from .constants import getConstant
+from .utils.timezone import ensure_timezone
 
 
 # Because our calendar will have both series classes and non-recurring events
@@ -16,13 +19,23 @@ from .constants import getConstant
 class EventFeedItem(object):
 
     def __init__(self,object,**kwargs):
+
+        timeZone = pytz.timezone(getattr(settings,'TIME_ZONE','UTC'))
+        if kwargs.get('timeZone',None):
+            try:
+                timeZone = pytz.timezone(kwargs.get('timeZone',None))
+            except pytz.exceptions.UnknownTimeZoneError:
+                pass
+
         self.id = 'event_' + str(object.event.id) + '_' + str(object.id)
         self.type = 'event'
         self.id_number = object.event.id
         self.title = object.event.name
         self.description = object.event.description
-        self.start = object.startTime
-        self.end = object.endTime
+        self.start = timezone.localtime(object.startTime,timeZone) \
+            if timezone.is_aware(object.startTime) else object.startTime
+        self.end = timezone.localtime(object.endTime,timeZone) \
+            if timezone.is_aware(object.endTime) else object.endTime
         self.color = object.event.displayColor
         self.url = object.event.get_absolute_url()
         if hasattr(object,'event.location'):
@@ -35,7 +48,7 @@ class EventFeed(ICalFeed):
     """
     A simple event calender
     """
-    timezone = settings.TIME_ZONE
+    timezone = getattr(settings,'TIME_ZONE','UTC')
 
     def get_object(self,request,instructorFeedKey=''):
         if instructorFeedKey:
@@ -99,23 +112,26 @@ def json_event_feed(request,instructorFeedKey=''):
 
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
+    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
-    time_filter_dict_series = {}
-    time_filter_dict_events = {}
+    time_filter_dict_series = {'event__month__isnull': False, 'event__year__isnull': False}
+    time_filter_dict_events = {'event__month__isnull': False, 'event__year__isnull': False}
     if startDate:
-        time_filter_dict_series['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
-        time_filter_dict_events['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
+        limit_time = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
+        time_filter_dict_series['startTime__gte'] = limit_time
+        time_filter_dict_events['startTime__gte'] = limit_time
     if endDate:
-        time_filter_dict_series['endTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
-        time_filter_dict_events['endTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
+        limit_time = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d'))
+        time_filter_dict_series['endTime__lte'] = limit_time + timedelta(days=1)
+        time_filter_dict_events['endTime__lte'] = limit_time + timedelta(days=1)
 
     item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(**time_filter_dict_events).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
 
     if not instructorFeedKey:
         # Public calendar does not show hidden Events _or_ link-only registration Events
-        eventlist = [EventFeedItem(x).__dict__ for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
+        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
     else:
         # Private calendars do show link-only registration Events
-        eventlist = [EventFeedItem(x).__dict__ for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)]
+        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)]
 
     return JsonResponse(eventlist,safe=False)

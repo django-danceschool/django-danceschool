@@ -3,12 +3,15 @@ from django.http import JsonResponse
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 from django.conf import settings
+import pytz
 
 from datetime import datetime, timedelta
 
 from danceschool.core.models import StaffMember
 from danceschool.core.constants import getConstant
+from danceschool.core.utils.timezone import ensure_timezone
 
 from .models import EventOccurrence
 
@@ -19,6 +22,13 @@ from .models import EventOccurrence
 class EventFeedItem(object):
 
     def __init__(self,object,**kwargs):
+        timeZone = pytz.timezone(getattr(settings,'TIME_ZONE','UTC'))
+        if kwargs.get('timeZone',None):
+            try:
+                timeZone = pytz.timezone(kwargs.get('timeZone',None))
+            except pytz.exceptions.UnknownTimeZoneError:
+                pass
+
         self.id = 'privateEvent_' + str(object.event.id)
         self.type = 'privateEvent'
         self.id_number = object.event.id
@@ -31,8 +41,8 @@ class EventFeedItem(object):
         else:
             self.category = None
             self.color = getConstant('calendar__defaultEventColor')
-        self.start = object.startTime
-        self.end = object.endTime
+        self.start = timezone.localtime(object.startTime,timeZone)
+        self.end = timezone.localtime(object.endTime,timeZone)
         self.allDay = object.allDayForDate(object.startTime)
         if hasattr(object,'event.location'):
             self.location = object.event.location.name + '\n' + object.event.location.address + '\n' + object.event.location.city + ', ' + object.event.location.state + ' ' + object.event.location.zip
@@ -45,7 +55,7 @@ class EventFeed(ICalFeed):
     """
     A simple event calender
     """
-    timezone = settings.TIME_ZONE
+    timezone = getattr(settings,'TIME_ZONE','UTC')
     description = _('Calendar for %s' % getConstant('contact__businessName'))
 
     def get_member(self,obj):
@@ -110,12 +120,13 @@ def json_event_feed(request,instructorFeedKey):
 
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
+    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
     time_filter_dict_events = {}
     if startDate:
-        time_filter_dict_events['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
+        time_filter_dict_events['startTime__gte'] = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
     if endDate:
-        time_filter_dict_events['endTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
+        time_filter_dict_events['endTime__lte'] = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1)
 
     this_user = StaffMember.objects.get(feedKey=instructorFeedKey).userAccount
     instructor_groups = list(this_user.groups.all().values_list('id',flat=True))
@@ -125,6 +136,6 @@ def json_event_feed(request,instructorFeedKey):
         Q(event__privateevent__displayToUsers=this_user) |
         (Q(event__privateevent__displayToGroup__isnull=True) & Q(event__privateevent__displayToUsers__isnull=True))).order_by('-startTime')
 
-    eventlist = [EventFeedItem(x).__dict__ for x in occurrences]
+    eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in occurrences]
 
     return JsonResponse(eventlist,safe=False)

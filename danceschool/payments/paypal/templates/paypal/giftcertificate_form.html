@@ -1,0 +1,60 @@
+{% load cms_tags sekizai_tags i18n %}
+
+{% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
+
+<form action="" method="post">
+        <div id="error_payment"></div>
+
+        <p><label>{% trans "Amount" %}:</label> 
+        <input id="id_amount" name="amount" type="text" value="{{ instance.defaultAmount }}" /></p>
+</form>
+
+<div id="paypal-button"></div>
+
+{% addtoblock "js" %}
+    <script src="https://www.paypalobjects.com/api/checkout.js"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script type="text/javascript">
+
+        paypal.Button.render({
+
+            env: '{{ paypal_mode }}',
+
+            commit: true, // Show a 'Pay Now' button
+
+            payment: function() {
+
+                return paypal.request.post('{% url "createPaypalPayment" %}', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    
+                    transaction_type: 'Gift Certificate',
+                    amount: $('input[name=amount]').val(),
+                    {% if user.is_authenticated %}
+                    user_id: {{ user.id }},
+                    {% endif %}
+                }).then(function(data) {
+                    return data.id;
+                });
+            },
+
+            onAuthorize: function(data) {
+                return paypal.request.post('{% url "executePaypalPayment" %}', {
+                    csrfmiddlewaretoken: '{{ csrf_token }}',
+                    paymentID: data.paymentID,
+                    payerID: data.payerID,
+                    addSessionInfo: true,
+                    successUrl: '{% page_url instance.successPage.id %}',
+                }).then(function() {
+                    window.location.replace('{% url "customizeGiftCertificate" %}');
+                });
+            },
+
+            onError: function(err) {
+                $('#error_payment').addClass('alert alert-danger');
+                $('#error_payment').text('{{ unknown_error }}');
+            }
+
+        }, '#paypal-button');
+    </script>
+{% endaddtoblock %}

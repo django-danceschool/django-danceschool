@@ -3,12 +3,127 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
-from django.template.loader import get_template
+from django.template.loader import get_template, render_to_string
+from django.template import Template, Context
+from django.template.exceptions import TemplateDoesNotExist
 
 from braces.views import GroupRequiredMixin
 from urllib.parse import quote
+from six import string_types
+import re
 
 from .constants import getConstant
+from .tasks import sendEmail
+
+
+class EmailRecipientMixin(object):
+
+    def email_recipient(self, subject, content, **kwargs):
+        '''
+        This method allows for direct emailing of an object's recipient(s)
+        (default or manually specified), with both object-specific context
+        provided using the get_email_context() method.  This is used, for example,
+        to email an individual registrant or the recipient of an individual invoice.
+        '''
+
+        email_kwargs = {}
+
+        for list_arg in [
+            'to','cc','bcc',
+        ]:
+            email_kwargs[list_arg] = kwargs.pop(list_arg,[]) or []
+            if isinstance(email_kwargs[list_arg],string_types):
+                email_kwargs[list_arg] = [email_kwargs[list_arg],]
+
+        for none_arg in ['attachment_name','attachment']:
+            email_kwargs[none_arg] = kwargs.pop(none_arg,None) or None
+
+        # Ignore any passed HTML content unless explicitly told to send as HTML
+        if kwargs.pop('send_html',False) and kwargs.get('html_message'):
+            email_kwargs['html_content'] = render_to_string(
+                'email/html_email_base.html',
+                context={'html_content': kwargs.get('html_message'),'subject': subject}
+            )
+
+        email_kwargs['from_name'] = kwargs.pop('from_name',getConstant('email__defaultEmailName')) or \
+            getConstant('email__defaultEmailName')
+        email_kwargs['from_address'] = kwargs.pop('from_name',getConstant('email__defaultEmailFrom')) or \
+            getConstant('email__defaultEmailFrom')
+
+        # Add the object's default recipients if they are provided
+        default_recipients = self.get_default_recipients() or []
+        if isinstance(default_recipients,string_types):
+            default_recipients = [default_recipients,]
+
+        email_kwargs['bcc'] += default_recipients
+
+        if not (email_kwargs['bcc'] or email_kwargs['cc'] or email_kwargs['to']):
+            raise ValueError(_('Email must have a recipient.'))
+
+        # In situations where there are no context
+        # variables to be rendered, send a mass email
+        has_tags = re.search('\{\{.+\}\}',content)
+        if not has_tags:
+            t = Template(content)
+            rendered_content = t.render(Context(kwargs))
+            sendEmail(subject,rendered_content,**email_kwargs)
+            return
+
+        # Otherwise, get the object-specific email context and email
+        # each recipient
+        template_context = self.get_email_context() or {}
+        template_context.update(kwargs)
+
+        # For security reasons, the following tags are removed from the template before parsing:
+        # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}
+        content = re.sub(
+            '\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
+            '',
+            content
+        )
+        t = Template(content)
+        rendered_content = t.render(Context(template_context))
+
+        if email_kwargs.get('html_content'):
+            html_content = re.sub(
+                '\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
+                '',
+                email_kwargs.get('html_content')
+            )
+            t = Template(html_content)
+            email_kwargs['html_content'] = t.render(Context(template_context))
+
+        sendEmail(subject,rendered_content,**email_kwargs)
+
+    def get_email_context(self,**kwargs):
+        '''
+        This method can be overridden in classes that inherit from this mixin
+        so that additional object-specific context is provided to the email
+        template.  This should return a dictionary.  By default, only general
+        financial context variables are added to the dictionary, and kwargs are
+        just passed directly.
+
+        Note also that it is in general not a good idea for security reasons
+        to pass model instances in the context here, since these methods can be
+        accessed by logged in users who use the SendEmailView.  So, In the default
+        models of this app, the values of fields and properties are passed
+        directly instead.
+        '''
+        context = kwargs
+        context.update({
+            'currencyCode': getConstant('general__currencyCode'),
+            'currencySymbol': getConstant('general__currencySymbol'),
+            'businessName': getConstant('contact__businessName'),
+        })
+        return context
+
+    def get_default_recipients(self):
+        '''
+        This method should be overridden in each class that inherits from this
+        mixin, so that the email addresses to whom the email should be sent are
+        included on the BCC line.  This should return a list.
+        '''
+        return []
 
 
 ######################################
@@ -23,6 +138,7 @@ class FinancialContextMixin(object):
         context = {
             'currencyCode': getConstant('general__currencyCode'),
             'currencySymbol': getConstant('general__currencySymbol'),
+            'businessName': getConstant('contact__businessName'),
         }
         context.update(kwargs)
         return super(FinancialContextMixin,self).get_context_data(**context)
@@ -122,7 +238,7 @@ class TemplateChoiceField(ChoiceField):
 
         try:
             get_template(value)
-        except:
+        except TemplateDoesNotExist:
             raise ValidationError(_('%s is not a valid template.' % value))
 
 
@@ -160,8 +276,8 @@ class PluginTemplateMixin(object):
                 ''' Add Select2 custom behavior only if user has permissions to need it. '''
                 if self.request and self.request.user.has_perm('core.choose_custom_plugin_template'):
                     return Media(
-                        css={'all':('css/select2.min.css',)},
-                        js=('js/select2.min.js','js/select2_newtemplate.js')
+                        css={'all':('select2/select2.min.css',)},
+                        js=('select2/select2.min.js','js/select2_newtemplate.js')
                     )
                 return Media()
             media = property(_media)

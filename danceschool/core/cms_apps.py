@@ -10,12 +10,4 @@ class RegistrationApphook(CMSApp):
         return ["danceschool.core.urls_registration"]
 
 
-class AccountsApphook(CMSApp):
-    name = _("Accounts Apphook")
-
-    def get_urls(self, page=None, language=None, **kwargs):
-        return ["danceschool.core.urls_accounts"]
-
-
 apphook_pool.register(RegistrationApphook)
-apphook_pool.register(AccountsApphook)
