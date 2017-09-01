@@ -34,7 +34,7 @@ collections:
 
 social:
   - title: Github
-    url: https://github.com/leetucker/django-danceschool
+    url: https://github.com/django-danceschool/django-danceschool
     fa_icon_class: github
   - title: Read the Docs
     url: http://django-danceschool.readthedocs.io/en/latest/
