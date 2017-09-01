@@ -9,6 +9,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from danceschool.core.utils.tests import DefaultSchoolTestCase
+from danceschool.core.utils.timezone import ensure_localtime
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
 
@@ -44,7 +45,7 @@ class RevenueTest(DefaultSchoolTestCase):
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
             'submissionUser': self.superuser.id,
-            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
@@ -68,7 +69,7 @@ class RevenueTest(DefaultSchoolTestCase):
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
             'submissionUser': self.superuser.id,
-            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
 
         self.assertEqual(response.status_code, 200)
@@ -126,7 +127,7 @@ class ExpensesTest(DefaultSchoolTestCase):
             'paid': True,
             'approved': True,
             'submissionUser': self.superuser.id,
-            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
@@ -152,7 +153,7 @@ class ExpensesTest(DefaultSchoolTestCase):
             'paid': False,
             'approved': False,
             'submissionUser': self.superuser.id,
-            'accrualDate': timezone.now().strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
@@ -216,10 +217,10 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
     def test_annual_detailview(self):
         ei, ri = self.create_initial_items()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year})
         self.assertEqual(response.status_code, 302)
         self.client.login(username=self.superuser.username,password='pass')
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year})
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -231,14 +232,14 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ri.accrualDate = timezone.now() + timedelta(days=-366)
         ri.save()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data.get('otherExpenseItems'))
         self.assertFalse(response.context_data.get('otherRevenueItems'))
 
         # Change the basis to payment/received basis and ensure
         # that the items still show up
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'basis': 'paymentDate'})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'basis': 'paymentDate'})
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -246,10 +247,10 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
     def test_monthly_detailview(self):
         ei, ri = self.create_initial_items()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'month': timezone.now().month})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month})
         self.assertEqual(response.status_code, 302)
         self.client.login(username=self.superuser.username,password='pass')
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'month': timezone.now().month})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month})
         self.assertEqual(response.status_code, 200)
 
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
@@ -262,14 +263,14 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ri.accrualDate = timezone.now() + timedelta(days=-32)
         ri.save()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'month': timezone.now().month})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data.get('otherExpenseItems'))
         self.assertFalse(response.context_data.get('otherRevenueItems'))
 
         # Change the basis to payment/received basis and ensure
         # that the items still show up
-        response = self.client.get(reverse('financialDetailView'),{'year': timezone.now().year, 'month': timezone.now().month, 'basis': 'paymentDate'})
+        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month, 'basis': 'paymentDate'})
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
