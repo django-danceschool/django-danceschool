@@ -46,15 +46,16 @@ def checkRequirements(sender,**kwargs):
     requirement_errors = []
 
     for ter in registration.temporaryeventregistration_set.all():
-        for req in ter.event.getRequirements():
-            if not req.customerMeetsRequirement(
-                customer=customer,
-                danceRole=ter.role
-            ):
-                if req.enforcementMethod == Requirement.EnforcementChoice.error:
-                    requirement_errors.append((ter.event.name, req.name))
-                if req.enforcementMethod == Requirement.EnforcementChoice.warning:
-                    requirement_warnings.append((ter.event.name,req.name))
+        if hasattr(ter.event,'getRequirements'):
+            for req in ter.event.getRequirements():
+                if not req.customerMeetsRequirement(
+                    customer=customer,
+                    danceRole=ter.role
+                ):
+                    if req.enforcementMethod == Requirement.EnforcementChoice.error:
+                        requirement_errors.append((ter.event.name, req.name))
+                    if req.enforcementMethod == Requirement.EnforcementChoice.warning:
+                        requirement_warnings.append((ter.event.name,req.name))
 
     if requirement_errors:
         raise ValidationError(format_html(

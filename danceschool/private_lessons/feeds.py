@@ -1,8 +1,12 @@
 from django.http import JsonResponse
+from django.utils import timezone
+from django.conf import settings
 
 from datetime import datetime, timedelta
+import pytz
 
 from danceschool.core.models import Instructor
+from danceschool.core.utils.timezone import ensure_timezone
 
 from .models import InstructorAvailabilitySlot
 
@@ -10,13 +14,23 @@ from .models import InstructorAvailabilitySlot
 class EventFeedItem(object):
 
     def __init__(self,object,**kwargs):
+
+        timeZone = pytz.timezone(getattr(settings,'TIME_ZONE','UTC'))
+        if kwargs.get('timeZone',None):
+            try:
+                timeZone = pytz.timezone(kwargs.get('timeZone',None))
+            except pytz.exceptions.UnknownTimeZoneError:
+                pass
+
         self.id = 'instructorAvailability_' + str(object.id)
         self.type = 'instructorAvailability'
         self.id_number = object.id
         self.title = object.name
-        self.start = object.startTime
-        self.end = object.startTime + timedelta(minutes=object.duration)
+        self.start = timezone.localtime(object.startTime,timeZone) \
+            if timezone.is_aware(object.startTime) else object.startTime
+        self.end = self.start + timedelta(minutes=object.duration)
         self.availableDurations = object.availableDurations
+        self.availableRoles = object.availableRoles
         self.status = object.status
         self.className = ['availabilitySlot','availabilitySlot-%s' % object.status]
 
@@ -36,12 +50,13 @@ def json_availability_feed(request,instructor_id=None):
 
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
+    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
     time_filter_dict_events = {}
     if startDate:
-        time_filter_dict_events['startTime__gte'] = datetime.strptime(startDate,'%Y-%m-%d')
+        time_filter_dict_events['startTime__gte'] = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
     if endDate:
-        time_filter_dict_events['startTime__lte'] = datetime.strptime(endDate,'%Y-%m-%d') + timedelta(days=1)
+        time_filter_dict_events['startTime__lte'] = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1)
 
     this_instructor = Instructor.objects.get(id=instructor_id)
 
@@ -50,8 +65,8 @@ def json_availability_feed(request,instructor_id=None):
     ).filter(**time_filter_dict_events)
 
     if hasattr(request.user,'staffmember') and request.user.staffmember == this_instructor:
-        eventlist = [EventFeedItem(x).__dict__ for x in availability]
+        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in availability]
     else:
-        eventlist = [EventFeedItem(x).__dict__ for x in availability if x.isAvailable]
+        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in availability if x.isAvailable]
 
     return JsonResponse(eventlist,safe=False)

@@ -12,7 +12,6 @@ import logging
 from allauth.account.forms import LoginForm, SignupForm
 from datetime import timedelta
 import json
-from collections import OrderedDict
 
 from .models import Event, Series, PublicEvent, TemporaryRegistration, TemporaryEventRegistration, Invoice, CashPaymentRecord
 from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm

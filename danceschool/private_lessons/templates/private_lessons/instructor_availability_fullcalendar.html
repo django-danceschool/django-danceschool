@@ -54,10 +54,10 @@
 <div id="calendarbox">&nbsp;</div>
 
 {% addtoblock "css" %}
-    <link rel='stylesheet' type="text/css" href="{% static 'css/fullcalendar.min.css' %}" />
+    <link rel='stylesheet' type="text/css" href="{% static 'fullcalendar/fullcalendar.min.css' %}" />
 {% endaddtoblock %}
 {% addtoblock "css" %}
-    <link rel='stylesheet' type="text/css" href="{% static 'css/jquery.timepicker.css' %}" />
+    <link rel='stylesheet' type="text/css" href="{% static 'timepicker/jquery.timepicker.css' %}" />
 {% endaddtoblock %}
 {% addtoblock "css" %}
     <style media="screen" type="text/css">
@@ -87,16 +87,16 @@
     </style>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src="{% static 'js/jquery-ui.min.js' %}"></script>
+    <script src="{% static 'jquery-ui/jquery-ui.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src="{% static 'js/jquery.timepicker.min.js' %}"></script>
+    <script src="{% static 'timepicker/jquery.timepicker.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src="{% static 'js/moment.min.js' %}"></script>
+    <script src="{% static 'moment/moment.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src="{% static 'js/fullcalendar.min.js' %}"></script>
+    <script src="{% static 'fullcalendar/fullcalendar.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
@@ -188,8 +188,21 @@ $(document).ready(function() {
             $('#calendarbox').fullCalendar('refetchEvents');
           },
           error: function(data) {
-              $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert"><strong>ERROR:</strong> Unable to submit new availability slots.</div>');
-              console.log(data);
+              // List form errors in the alert box.  If no errors, display a generic message.
+              var innerHTML = '<strong>ERROR:</strong> Unable to submit new availability slots.';
+
+              if (!jQuery.isEmptyObject(data.responseJSON)) {
+                innerHTML += '<ul>\n';
+
+                for (var key in data.responseJSON) {
+                  if (data.responseJSON.hasOwnProperty(key)) {
+                    innerHTML += '<li>' + data.responseJSON[key] + '</li>\n';
+                  }
+                }
+                innerHTML += '</ul>\n';
+              }
+
+              $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert">' + innerHTML + '</div>');
           }
         });
     });

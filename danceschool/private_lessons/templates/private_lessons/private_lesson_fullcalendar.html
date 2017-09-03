@@ -5,6 +5,12 @@
 
 <h1>Private Lesson Scheduling</h1>
 
+{% if form.errors %}
+<div class="alert alert-danger"><strong>ERROR:</strong> Booking was unsuccessful.
+{{ form.errors }}
+</div>
+{% endif %}
+
 <div class="panel panel-default">
     <div class="panel-heading">
         Choose an Instructor
@@ -31,17 +37,20 @@
 <div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
+      <form method="post" id="bookingForm">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="eventModalTitle"></h4>
       </div>
       <div class="modal-body" id="eventModalBody">
+          {% csrf_token %}
           {{ form|crispy }}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary">Schedule This Lesson</button>
+        <button type="submit" form="bookingForm" value="Submit" class="btn btn-primary">Schedule This Lesson</button>
       </div>
+      </form>
     </div>
   </div>
 </div>
@@ -49,7 +58,7 @@
 <div id="calendarbox">&nbsp;</div>
 
 {% addtoblock "css" %}
-    <link rel='stylesheet' type="text/css" href='{% static 'css/fullcalendar.min.css' %}' />
+    <link rel='stylesheet' type="text/css" href='{% static 'fullcalendar/fullcalendar.min.css' %}' />
 {% endaddtoblock %}
 {% addtoblock "css" %}
     <style media="screen" type="text/css">
@@ -59,13 +68,13 @@
     </style>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src='{% static 'js/jquery-ui.min.js' %}'></script>
+    <script src='{% static 'jquery-ui/jquery-ui.min.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src='{% static 'js/moment.min.js' %}'></script>
+    <script src='{% static 'moment/moment.min.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script src='{% static 'js/fullcalendar.min.js' %}'></script>
+    <script src='{% static 'fullcalendar/fullcalendar.min.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
@@ -82,12 +91,17 @@ $(document).ready(function() {
         header: {right: 'listWeek,agendaWeek, prev,next today'},
 
          eventClick: function(calEvent, jsEvent) {
+            $('#id_slotId').val(calEvent.id_number);
             $('#eventModalTitle').html(calEvent.title);
             $('#eventModalLocation').html(calEvent.location);
             $('#id_duration').empty();
             calEvent.availableDurations.forEach(function(minutes){
                 $('#id_duration').append('<option value="' + minutes + '">' + minutes + '</option>');
             });
+            $('#id_role').empty();
+            calEvent.availableRoles.forEach(function(role){
+                $('#id_role').append('<option value="' + role[0] + '">' + role[1] + '</option>');
+            })
             $('#eventModal').modal();
         },
     });

@@ -1,18 +1,22 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from calendar import day_name
 from multiselectfield import MultiSelectField
 from datetime import datetime, timedelta
 from djchoices import DjangoChoices, ChoiceItem
 
-from danceschool.core.models import Instructor, Location, DanceRole, Event
+from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration
 from danceschool.core.constants import getConstant
+from danceschool.core.utils.timezone import ensure_localtime
 
 
 class InstructorPrivateLessonDetails(models.Model):
     instructor = models.OneToOneField(Instructor)
-    defaultRate = models.FloatField(null=True,blank=True)
+    defaultPricingTier = models.ForeignKey(
+        PricingTier,verbose_name=_('Default Pricing Tier'),null=True,blank=True
+    )
     roles = models.ManyToManyField(DanceRole,blank=True)
 
     couples = models.BooleanField(_('Private lessons for couples'),default=True)
@@ -26,12 +30,29 @@ class PrivateLessonEvent(Event):
     associated with other types of events (location, etc.)
     '''
 
+    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing Tier'))
+    participants = models.PositiveSmallIntegerField(_('Expected # of Participants'),null=True,blank=True,default=1)
+    comments = models.TextField(
+        _('Comments/Notes'),null=True,blank=True,help_text=_('For internal use and recordkeeping.')
+    )
+
+    def getBasePrice(self,**kwargs):
+        '''
+        This method overrides the method of the base Event class by
+        checking the pricingTier associated with this PrivateLessonEvent and getting
+        the appropriate price for it.
+        '''
+        if not self.pricingTier:
+            return None
+        return self.pricingTier.getBasePrice(**kwargs)
+
+    @property
     def name(self):
         ''' TODO: Add instructor and time information to this '''
-        return 'Private Lesson Event'
+        return _('Private Lesson Event: %s' % self.startTime)
 
-    class Meta:
-        proxy = True
+    def __str__(self):
+        return str(self.name)
 
 
 class InstructorAvailabilityRule(models.Model):
@@ -57,12 +78,12 @@ class InstructorAvailabilityRule(models.Model):
     def createSlots(self,startDate=None,endDate=None,interval_minutes=None):
         if not startDate:
             startDate = max(
-                (datetime.now() + timedelta(days=getConstant('privatelessons__CloseBookingDays'))).date(),
+                (timezone.now() + timedelta(days=getConstant('privatelessons__CloseBookingDays'))).date(),
                 self.startDate
             )
         if not endDate:
             endDate = min(
-                (datetime.now() + timedelta(days=getConstant('privatelessons__OpenBookingDays'))).date(),
+                (timezone.now() + timedelta(days=getConstant('privatelessons__OpenBookingDays'))).date(),
                 self.endDate
             )
         if not interval_minutes:
@@ -79,11 +100,11 @@ class InstructorAvailabilityRule(models.Model):
                 while this_time < self.endTime:
                     InstructorAvailabilitySlot.objects.create(
                         instructor=self.instructor,
-                        startTime=datetime.combine(this_date, this_time),
+                        startTime=ensure_localtime(datetime.combine(this_date, this_time)),
                         duration=interval_minutes,
                         location=self.location
                     )
-                    this_time = (datetime.combine(this_date, this_time) + timedelta(minutes=interval_minutes)).time()
+                    this_time = (ensure_localtime(datetime.combine(this_date, this_time)) + timedelta(minutes=interval_minutes)).time()
 
             this_date += timedelta(days=1)
 
@@ -96,21 +117,36 @@ class InstructorAvailabilitySlot(models.Model):
         tentative = ChoiceItem('T',_('Tentative Booking'))
         unavailable = ChoiceItem('U',_('Unavailable'))
 
-    instructor = models.ForeignKey(Instructor,verbose_name=_('Instructor'))
+    instructor = models.ForeignKey(Instructor,verbose_name=_('Instructor'),on_delete=models.CASCADE)
+    pricingTier = models.ForeignKey(
+        PricingTier,verbose_name=_('Pricing Tier'),null=True,blank=True,on_delete=models.SET_NULL
+    )
     startTime = models.DateTimeField(_('Start time'))
     duration = models.PositiveSmallIntegerField(_('Slot duration (minutes)'),default=30)
-    location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True)
+    location = models.ForeignKey(
+        Location,verbose_name=_('Location'),null=True,blank=True,on_delete=models.SET_NULL,
+    )
 
     status = models.CharField(max_length=1,choices=SlotStatus.choices,default=SlotStatus.available)
 
-    lessonEvent = models.ForeignKey(PrivateLessonEvent,verbose_name=_('Scheduled lesson'),null=True,blank=True)
+    # We need both a link to the registrations and a link to the event because
+    # in the event that an expired TemporaryRegistration is deleted, we still want to
+    # be able to identify the Event that was created for this private lesson.
+    lessonEvent = models.ForeignKey(
+        PrivateLessonEvent,verbose_name=_('Scheduled lesson'),null=True,blank=True,
+        on_delete=models.SET_NULL,
+    )
+    temporaryEventRegistration = models.ForeignKey(
+        TemporaryEventRegistration,verbose_name=_('Temporary event registration'),
+        null=True,blank=True,on_delete=models.SET_NULL,related_name='privateLessonSlots'
+    )
+    eventRegistration = models.ForeignKey(
+        EventRegistration,verbose_name=_('Final event registration'),
+        null=True,blank=True,on_delete=models.SET_NULL,related_name='privateLessonSlots'
+    )
 
     creationDate = models.DateTimeField(auto_now_add=True)
     modifiedDate = models.DateTimeField(auto_now=True)
-
-    # When setting a slot to be tentatively unavailable, expiration date must be updated
-    # or the slot will not be held.
-    tentativeExpirationDate = models.DateTimeField(auto_now_add=True)
 
     @property
     def availableDurations(self):
@@ -122,6 +158,7 @@ class InstructorAvailabilitySlot(models.Model):
         potential_slots = InstructorAvailabilitySlot.objects.filter(
             instructor=self.instructor,
             location=self.location,
+            pricingTier=self.pricingTier,
             startTime__gte=self.startTime,
             startTime__lte=self.startTime + timedelta(minutes=getConstant('privateLessons__maximumLessonLength')),
         ).exclude(id=self.id).order_by('startTime')
@@ -145,19 +182,35 @@ class InstructorAvailabilitySlot(models.Model):
 
         return duration_list
 
-    def checkIfAvailable(self, dateTime=datetime.now()):
+    @property
+    def availableRoles(self):
+        '''
+        Some instructors only offer private lessons for certain roles, so we should only allow booking
+        for the roles that have been selected for the instructor.
+        '''
+        if not hasattr(self.instructor,'instructorprivatelessondetails'):
+            return []
+        return [
+            [x.id,x.name] for x in
+            self.instructor.instructorprivatelessondetails.roles.all()
+        ]
+
+    def checkIfAvailable(self, dateTime=timezone.now()):
         '''
         Available slots are available, but also tentative slots that have been held as tentative
         past their expiration date
         '''
         return (
-            self.startTime >= dateTime and (
-                self.status == self.SlotStatus.available or
-                self.status == self.SlotStatus.tentative and self.tentativeExpirationDate <= dateTime
+            self.startTime >= dateTime and not self.registration and (
+                self.status == self.SlotStatus.available or (
+                    self.status == self.SlotStatus.tentative and
+                    getattr(getattr(self.temporaryEventRegistration,'registration',None),'expirationDate',timezone.now()) <= timezone.now()
+                )
             )
         )
-    # isAvailable indicates if a slot is _currently_ available
+    # isAvailable indicates if a slot is currently available
     isAvailable = property(fget=checkIfAvailable)
+    isAvailable.fget.short_description = _('Available')
 
     @property
     def name(self):
