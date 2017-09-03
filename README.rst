@@ -182,7 +182,7 @@ Basic Installation Process
 
    ::
 
-      django-admin startproject --template https://raw.githubusercontent.com/leetucker/django-danceschool/master/setup/default_setup.zip <your_project_name>
+      django-admin startproject --template https://raw.githubusercontent.com/django-danceschool/django-danceschool/master/setup/default_setup.zip <your_project_name>
 
 5. Perform initial database migrations
 
