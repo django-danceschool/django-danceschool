@@ -1,8 +1,10 @@
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, Http404
 from django.core.urlresolvers import reverse
+from django.urls.exceptions import NoReverseMatch
 from django.views.generic import DetailView
 from django.utils.translation import ugettext_lazy as _
+
 
 from datetime import datetime
 import six
@@ -46,6 +48,12 @@ class PrivateCalendarView(DetailView):
                 'privateEvents': reverse('jsonPrivateCalendarFeed', args=(feedKey,)),
             },
         })
+
+        # Add the private lesson feed if it exists, otherwise pass
+        try:
+            context['jsonPrivateFeeds']['privateLessons'] = reverse('jsonPrivateLessonScheduledFeed', args=(feedKey,))
+        except NoReverseMatch:
+            pass
 
         return context
 

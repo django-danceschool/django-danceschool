@@ -1,5 +1,5 @@
 from django.views.generic import FormView, TemplateView
-from django.http import JsonResponse, HttpResponseRedirect
+from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.contrib import messages
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -9,7 +9,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from datetime import datetime, timedelta
 
-from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, EventOccurrence
+from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, EventOccurrence, EventStaffMember
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -20,11 +20,26 @@ from .models import InstructorAvailabilitySlot, PrivateLessonEvent
 class InstructorAvailabilityView(TemplateView):
     template_name = 'private_lessons/instructor_availability_fullcalendar.html'
 
+    def get(self,request,*args,**kwargs):
+        # Only instructors or individuals with permission to change
+        # other instructors' availability have permission to see this view.
+        thisUser = getattr(request,'user',None)
+        thisStaffMember = getattr(thisUser,'staffmember',None)
+        if (
+            (thisStaffMember and thisUser and thisUser.has_perm('private_lessons.edit_own_availability')) or
+            (thisUser and thisUser.has_perm('private_lessons.edit_others_availability'))
+        ):
+            return super(InstructorAvailabilityView,self).get(request,*args,**kwargs)
+        return Http404()
+
     def get_context_data(self,**kwargs):
         context = super(InstructorAvailabilityView,self).get_context_data(**kwargs)
 
         context.update({
             'instructor': getattr(self.request,'user').staffmember,
+            'instructor_list': Instructor.objects.filter(
+                availableForPrivates=True,instructorprivatelessondetails__isnull=False
+            ),
             'creation_form': SlotCreationForm(),
             'update_form': SlotUpdateForm(),
         })
@@ -208,11 +223,18 @@ class BookPrivateLessonView(FormView):
             comments=form.cleaned_data.pop('comments'),
         )
 
+        lesson_instructor = EventStaffMember.objects.create(
+            event=lesson,
+            category=getConstant('privateLessons__eventStaffCategoryPrivateLesson'),
+            submissionUser=submissionUser,
+        )
+
         lesson_occurrence = EventOccurrence.objects.create(
             event=lesson,
             startTime=thisSlot.startTime,
             endTime=thisSlot.startTime + timedelta(minutes=duration),
         )
+        lesson_instructor.occurrences.add(lesson_occurrence)
 
         # Ensure that lesson start and end time are saved appropriately for
         # the event.

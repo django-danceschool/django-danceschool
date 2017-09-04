@@ -5,8 +5,10 @@ but can be changed dynamically.
 
 from django.utils.translation import ugettext_lazy as _
 
-from dynamic_preferences.types import BooleanPreference, IntegerPreference, Section
+from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
+
+from danceschool.core.models import EventStaffCategory
 
 # we create some section objects to link related preferences together
 
@@ -22,7 +24,7 @@ class AllowPublicBooking(BooleanPreference):
     name = 'allowPublicBooking'
     verbose_name = _('Allow non-staff to book private lessons for themselves.')
     help_text = _('The private lesson booking functions will only be available to individuals with permissions unless this box is checked.')
-    default = False
+    default = True
 
 
 @global_preferences_registry.register
@@ -31,7 +33,16 @@ class AllowRegistration(BooleanPreference):
     name = 'allowRegistration'
     verbose_name = _('Allow payment for private lessons through the registration system.')
     help_text = _('If the studio handles payment for private lessons, then checking this box allows users to process payment through the regular online registration system.  If the studio only handles booking for private lessons, but not payment, then this box should not be checked.')
-    default = False
+    default = True
+
+
+@global_preferences_registry.register
+class NotifyPrivateLessonInstructor(BooleanPreference):
+    section = privateLessons
+    name = 'notifyInstructor'
+    verbose_name = _('Notify instructor when a private lesson is booked')
+    help_text = _('If checked, then instructors will receive a notification email whenever a private lesson is scheduled with them.')
+    default = True
 
 
 @global_preferences_registry.register
@@ -84,3 +95,15 @@ class MaximumLessonLength(IntegerPreference):
     verbose_name = _('Maximum lesson booking length (minutes)')
     help_text = _('Enter 0 for no limit')
     default = 90
+
+
+@global_preferences_registry.register
+class StaffCategoryPrivateLessosn(ModelChoicePreference):
+    section = privateLessons
+    name = 'eventStaffCategoryPrivateLesson'
+    verbose_name = _('Private Lesson Event Staff Category')
+    model = EventStaffCategory
+    queryset = EventStaffCategory.objects.all()
+
+    def get_default(self):
+        return EventStaffCategory.objects.get_or_create(name=_('Private Lesson Instruction'))[0]

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import InstructorPrivateLessonDetails, InstructorAvailabilitySlot, InstructorAvailabilityRule
+from .models import InstructorPrivateLessonDetails, InstructorAvailabilitySlot
 
 from danceschool.core.models import Instructor
 
@@ -16,11 +16,6 @@ class InstructorPrivateLessonDetailsInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
-
-
-@admin.register(InstructorAvailabilityRule)
-class InstructorAvailabilityRuleAdmin(admin.ModelAdmin):
-    exclude = []
 
 
 @admin.register(InstructorAvailabilitySlot)

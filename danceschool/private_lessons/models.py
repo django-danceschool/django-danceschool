@@ -2,9 +2,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
-from calendar import day_name
-from multiselectfield import MultiSelectField
-from datetime import datetime, timedelta
+from datetime import timedelta
 from djchoices import DjangoChoices, ChoiceItem
 
 from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration
@@ -21,6 +19,14 @@ class InstructorPrivateLessonDetails(models.Model):
 
     couples = models.BooleanField(_('Private lessons for couples'),default=True)
     smallGroups = models.BooleanField(_('Private lessons for small groups'), default=True)
+
+    def __str__(self):
+        return _('Instructor Private lesson details for %s' % self.instructor.fullName)
+
+    class Meta:
+        ordering = ('instructor__lastName','instructor__firstName')
+        verbose_name = _('Instructor private lesson details')
+        verbose_name_plural = _('Instructors\' private lesson details')
 
 
 class PrivateLessonEvent(Event):
@@ -54,59 +60,9 @@ class PrivateLessonEvent(Event):
     def __str__(self):
         return str(self.name)
 
-
-class InstructorAvailabilityRule(models.Model):
-    '''
-    Availability rules are used to simplify the creation
-    of availability slots.
-    '''
-    instructor = models.ForeignKey(Instructor)
-
-    startDate = models.DateField(_('Start date'))
-    endDate = models.DateField(_('End date'))
-    weekdays = MultiSelectField(
-        verbose_name=_('Limit to days of the week'),
-        choices=[(x,day_name[x]) for x in range(0,7)]
-    )
-
-    startTime = models.TimeField(_('Start time'))
-    endTime = models.TimeField(_('End time'))
-    location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True)
-
-    creationDate = models.DateTimeField(auto_now_add=True)
-
-    def createSlots(self,startDate=None,endDate=None,interval_minutes=None):
-        if not startDate:
-            startDate = max(
-                (timezone.now() + timedelta(days=getConstant('privatelessons__CloseBookingDays'))).date(),
-                self.startDate
-            )
-        if not endDate:
-            endDate = min(
-                (timezone.now() + timedelta(days=getConstant('privatelessons__OpenBookingDays'))).date(),
-                self.endDate
-            )
-        if not interval_minutes:
-            interval_minutes = getConstant('privateLessons__lessonLengthInterval')
-
-        this_date = startDate
-        while this_date <= endDate:
-            if (
-                this_date.weekday() in self.weekdays and
-                this_date >= self.startDate and
-                this_date <= self.endDate
-            ):
-                this_time = self.startTime
-                while this_time < self.endTime:
-                    InstructorAvailabilitySlot.objects.create(
-                        instructor=self.instructor,
-                        startTime=ensure_localtime(datetime.combine(this_date, this_time)),
-                        duration=interval_minutes,
-                        location=self.location
-                    )
-                    this_time = (ensure_localtime(datetime.combine(this_date, this_time)) + timedelta(minutes=interval_minutes)).time()
-
-            this_date += timedelta(days=1)
+    class Meta:
+        verbose_name = _('Private lesson')
+        verbose_name_plural = _('Private lessons')
 
 
 class InstructorAvailabilitySlot(models.Model):
@@ -201,7 +157,7 @@ class InstructorAvailabilitySlot(models.Model):
         past their expiration date
         '''
         return (
-            self.startTime >= dateTime and not self.registration and (
+            self.startTime >= dateTime and not self.eventRegistration and (
                 self.status == self.SlotStatus.available or (
                     self.status == self.SlotStatus.tentative and
                     getattr(getattr(self.temporaryEventRegistration,'registration',None),'expirationDate',timezone.now()) <= timezone.now()
@@ -214,4 +170,17 @@ class InstructorAvailabilitySlot(models.Model):
 
     @property
     def name(self):
-        return '%s: %s at %s' % (self.instructor.fullName, self.startTime, self.location)
+        return _('%s: %s at %s') % (self.instructor.fullName, ensure_localtime(self.startTime).strftime('%b %-d, %Y %-I:%M %p'), self.location)
+
+    def __str__(self):
+        return str(self.name)
+
+    class Meta:
+        ordering = ('-startTime','instructor__lastName','instructor__firstName')
+        verbose_name = _('Private lesson availability slot')
+        verbose_name_plural = _('Private lesson availability slots')
+
+        permissions = (
+            ('edit_own_availability',_('Can edit one\'s own private lesson availability.')),
+            ('edit_others_availability',_('Can edit other instructors\' private lesson availability.')),
+        )

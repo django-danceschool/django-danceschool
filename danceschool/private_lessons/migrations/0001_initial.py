@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 import django.db.models.deletion
-import multiselectfield.db.fields
 
 
 class Migration(migrations.Migration):
@@ -17,20 +16,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='InstructorAvailabilityRule',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('startDate', models.DateField(verbose_name='Start date')),
-                ('endDate', models.DateField(verbose_name='End date')),
-                ('weekdays', multiselectfield.db.fields.MultiSelectField(choices=[(0, 'Monday'), (1, 'Tuesday'), (2, 'Wednesday'), (3, 'Thursday'), (4, 'Friday'), (5, 'Saturday'), (6, 'Sunday')], max_length=13, verbose_name='Limit to days of the week')),
-                ('startTime', models.TimeField(verbose_name='Start time')),
-                ('endTime', models.TimeField(verbose_name='End time')),
-                ('creationDate', models.DateTimeField(auto_now_add=True)),
-                ('instructor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Instructor')),
-                ('location', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.Location', verbose_name='Location')),
-            ],
-        ),
-        migrations.CreateModel(
             name='InstructorAvailabilitySlot',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
@@ -42,6 +27,7 @@ class Migration(migrations.Migration):
                 ('eventRegistration', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.EventRegistration', verbose_name='Final event registration')),
                 ('instructor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Instructor', verbose_name='Instructor')),
             ],
+            options={'ordering': ('-startTime', 'instructor__lastName', 'instructor__firstName'), 'permissions': (('edit_own_availability', "Can edit one's own private lesson availability."), ('edit_others_availability', "Can edit other instructors' private lesson availability.")), 'verbose_name': 'Private lesson availability slot', 'verbose_name_plural': 'Private lesson availability slots'},
         ),
         migrations.CreateModel(
             name='InstructorPrivateLessonDetails',
@@ -53,6 +39,7 @@ class Migration(migrations.Migration):
                 ('instructor', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='core.Instructor')),
                 ('roles', models.ManyToManyField(blank=True, to='core.DanceRole')),
             ],
+            options={'ordering': ('instructor__lastName', 'instructor__firstName'), 'verbose_name': 'Instructor private lesson details', 'verbose_name_plural': "Instructors' private lesson details"},
         ),
         migrations.CreateModel(
             name='PrivateLessonEvent',
@@ -62,9 +49,7 @@ class Migration(migrations.Migration):
                 ('comments', models.TextField(blank=True, help_text='For internal use and recordkeeping.', null=True, verbose_name='Comments/Notes')),
                 ('pricingTier', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.PricingTier', verbose_name='Pricing Tier')),
             ],
-            options={
-                'abstract': False,
-            },
+            options={'abstract': False, 'verbose_name': 'Private lesson', 'verbose_name_plural': 'Private lessons'},
             bases=('core.event',),
         ),
         migrations.AddField(

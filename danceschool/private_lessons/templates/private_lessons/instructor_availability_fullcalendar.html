@@ -1,9 +1,31 @@
 {% extends "cms/home.html" %}
-{% load sekizai_tags static crispy_forms_tags %}
+{% load sekizai_tags static crispy_forms_tags i18n %}
 
 {% block content %}
 
-<h1>Private Lesson Scheduling</h1>
+<h1>{% trans "Manage Private Lesson Availability" %}</h1>
+
+{% if 'private_lessons.edit_others_availability' in perms %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        {% trans "Choose an Instructor" %}
+    </div>
+    <div class="panel-body">
+        <form name='instructorSelect' id='instructorSelect'>
+
+            <p>
+            <select name="instructor">
+                <option>{% trans "Select instructor" %}</option>
+                {% for i in instructor_list %}
+                    <option data-id="{{ i.id }}" {% if instructor.id == i.id %}selected="selected"{% endif %}>{{ instructor.fullName }}</option>
+                {% endfor %}
+            </select>
+            </p>
+
+        </form>
+    </div>
+</div>
+{% endif %}
 
 <div id="alertBox"></div>
 
@@ -21,8 +43,8 @@
           </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" id="eventModalSubmit">Update Availability</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="eventModalSubmit">{% trans "Update Availability" %}</button>
       </div>
     </div>
   </div>
@@ -34,7 +56,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h4 class="modal-title" id="availabilityModalTitle">Add Private Lesson Availability Slots</h4>
+        <h4 class="modal-title" id="availabilityModalTitle">{% trans "Add Private Lesson Availability Slots" %}</h4>
       </div>
       <div class="modal-body" id="eventModalBody">
           <form action="" id="" method="post">{% csrf_token %}
@@ -42,8 +64,8 @@
           </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" id="availabilityModalSubmit">Update Availability</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="availabilityModalSubmit">{% trans "Update Availability" %}</button>
       </div>
     </div>
   </div>
@@ -52,6 +74,8 @@
 
 
 <div id="calendarbox">&nbsp;</div>
+
+<p>{% blocktrans %}<strong>Note:</strong> Click and drag to add multiple slots at one time.  <em>Ctrl+click</em> to select and update/delete multiple slots at one time.{% endblocktrans %}</p>
 
 {% addtoblock "css" %}
     <link rel='stylesheet' type="text/css" href="{% static 'fullcalendar/fullcalendar.min.css' %}" />
@@ -152,8 +176,12 @@ $(document).ready(function() {
             var startTime = start.format('h:mm a')
             var endTime = end.format('h:mm a');
 
-            $('#id_instructorId').val({{ instructor.id }});
-            
+            {% if 'private_lessons.edit_others_availability' in perms %}
+              $('#id_instructorId').val($('#instructorSelect option:selected').data('id'));
+            {% else %}
+              $('#id_instructorId').val({{ instructor.id }});
+            {% endif %}
+
             $('#id_startDate').val(startDate);
             $('#id_endDate').val(endDate);
 
@@ -230,6 +258,33 @@ $(document).ready(function() {
               $('input[name=slotIds]').remove();
           }
         });
+    });
+
+    $('#instructorSelect').change(function(event) {
+        // Get the ID of the instructor, submit to AJAX view,
+        // and finally load the availability of that instructor
+        event.preventDefault();
+
+        var new_id = $('#instructorSelect option:selected').data('id');
+
+        $.ajax({
+            type: "GET",
+            url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/",
+            success: function(events) {
+              $('#alertBox').empty();
+              $('#calendarbox').fullCalendar('removeEvents');
+              $('#calendarbox').fullCalendar('addEventSource', events);
+              $('#calendarbox').fullCalendar('rerenderEvents');
+            },
+            error: function() {
+
+              if (new_id) {
+                  $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert">{% blocktrans %}<strong>ERROR:</strong> Instructor availability did not load.</div>{% endblocktrans %}');
+              }
+              $('#calendarbox').fullCalendar('removeEvents');
+            },
+        });
+
     });
 
 });

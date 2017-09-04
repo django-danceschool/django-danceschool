@@ -358,6 +358,31 @@ a daily/weekly/monthly ongoing basis as well.
             generate_registration = self.boolean_input('Auto-generate registration revenue items for registrations [Y/n]', True)
             prefs['financial__autoGenerateRevenueRegistrations'] = generate_registration
 
+        if apps.is_installed('danceschool.private_lessons'):
+            self.stdout.write(
+                """
+PRIVATE LESSONS
+---------------
+
+In addition to providing the ability to register for class series and public events,
+this project also optionally allows for the scheduling of and registration for
+private lessons with instructors.
+
+Depending on the way in which your school is structured, you may choose to permit
+or disable the general public from registering for private lessons.  Disabling
+this feature may be desirable if you, for example, only allow staff to book lessons.
+You may also choose to enable the full registration process online, or to disable
+it if you would prefer that students pay instructors directly at the time of their lesson.
+                """
+            )
+
+            allow_public_privatelesson_booking = self.boolean_input('Allow public booking of private lessons [Y/n]', True)
+            prefs['privateLessons__allowPublicBooking'] = allow_public_privatelesson_booking
+            allow_privatelesson_payment = self.boolean_input('Allow payment for private lessons through the registration system [Y/n]', True)
+            prefs['privateLessons__allowRegistration'] = allow_privatelesson_payment
+            notify_privatelesson_instructor = self.boolean_input('Notify private lesson instructors on lesson booking [Y/n]', True)
+            prefs['privateLessons__notifyInstructor'] = notify_privatelesson_instructor
+
         self.stdout.write(
             """
 INITIAL PAGES
@@ -436,6 +461,15 @@ Remember, all page settings and content can be changed later via the admin inter
             add_plugin(content_placeholder, 'PublicCalendarPlugin', initial_language)
             publish_page(calendar_page, this_user, initial_language)
             self.stdout.write('Calendar page added.\n')
+
+        if apps.is_installed('danceschool.private_lessons') and allow_public_privatelesson_booking:
+            add_privatelesson_link = self.boolean_input('Add a link to book private lessons to the main navigation menu [Y/n]', True)
+            if add_privatelesson_link:
+                privatelesson_link_page = create_page(
+                    'Schedule Private Lessons', 'cms/home.html', initial_language,
+                    menu_title='Private Lessons', slug='private_lessons', overwrite_url=reverse('bookPrivateLesson'), in_navigation=True, published=True
+                )
+                self.stdout.write('Private lesson scheduling link added.\n')
 
         if apps.is_installed('danceschool.faq'):
             add_faq_page = self.boolean_input('Add an FAQ page and General FAQs Category [Y/n]', True)
