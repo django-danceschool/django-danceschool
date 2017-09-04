@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
 
-from danceschool.core.models import EventStaffCategory
+from danceschool.core.models import EventStaffCategory, EmailTemplate
 
 # we create some section objects to link related preferences together
 
@@ -98,7 +98,7 @@ class MaximumLessonLength(IntegerPreference):
 
 
 @global_preferences_registry.register
-class StaffCategoryPrivateLessosn(ModelChoicePreference):
+class StaffCategoryPrivateLesson(ModelChoicePreference):
     section = privateLessons
     name = 'eventStaffCategoryPrivateLesson'
     verbose_name = _('Private Lesson Event Staff Category')
@@ -107,3 +107,33 @@ class StaffCategoryPrivateLessosn(ModelChoicePreference):
 
     def get_default(self):
         return EventStaffCategory.objects.get_or_create(name=_('Private Lesson Instruction'))[0]
+
+
+@global_preferences_registry.register
+class LessonBookedEmailTemplate(ModelChoicePreference):
+    section = privateLessons
+    name = 'lessonBookedEmailTemplate'
+    verbose_name = _('Email template used to notify customers that their lesson is scheduled')
+    help_text = _('This email template will only be used for lesson bookings that do not go through the full online registration and payment system.')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
+
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('email/private_lesson_registration_success.html')
+        with open(initial_template.origin.name,'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Private Lesson Booking Confirmation Email'),
+            defaults={
+                'subject': _('Private Lesson Confirmation'),
+                'content': content or '',
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]

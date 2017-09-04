@@ -52,6 +52,23 @@ class PrivateLessonEvent(Event):
             return None
         return self.pricingTier.getBasePrice(**kwargs)
 
+    def finalizeBooking(self,**kwargs):
+        notifyStudent = kwargs.get('notifyStudent',True)
+        notifyTeachers = kwargs.get('notifyTeachers',getConstant('privateLessons__notifyInstructor'))
+        eventRegistration = kwargs.get('eventRegistration',None)
+
+        affectedSlots = self.instructoravailabilityslot_set.all()
+        affectedSlots.update(
+            status=InstructorAvailabilitySlot.SlotStatus.booked,
+            eventRegistration=eventRegistration,
+        )
+
+        if notifyStudent:
+            pass
+
+        if notifyTeachers:
+            pass
+
     @property
     def name(self):
         ''' TODO: Add instructor and time information to this '''

@@ -4,6 +4,8 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 
 from datetime import datetime, timedelta
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Div, Submit
 
 from danceschool.core.constants import getConstant
 from danceschool.core.models import DanceRole, Location, Instructor, PricingTier
@@ -99,3 +101,41 @@ class SlotUpdateForm(forms.Form):
         help_text=_('A pricing tier is required for online registration and payment. If your school handles scheduling, but not payment for lessons, then leave this blank.')
     )
     deleteSlot = forms.BooleanField(label=_('Delete slot'),initial=False,help_text=_('Note that only slots with no current bookings may be deleted at this time.'),required=False)
+
+
+class PrivateLessonStudentInfoForm(forms.Form):
+    '''
+    This is the form customers use to fill out their contact info
+    for private lessons that don't involve online payment only.
+    '''
+
+    firstName = forms.CharField(label=_('First Name'))
+    lastName = forms.CharField(label=_('Last Name'))
+    email = forms.EmailField()
+    phone = forms.CharField(required=False,label=_('Telephone (optional)'),help_text=_('We may use this to notify you in event of a cancellation.'))
+    agreeToPolicies = forms.BooleanField(required=True,label=_('<strong>I agree to all policies (required)</strong>'),help_text=_('By checking, you agree to abide by all policies.'))
+
+    def __init__(self,*args,**kwargs):
+        self._request = kwargs.pop('request',None)
+        user = getattr(self._request,'user',None)
+        payAtDoor = kwargs.pop('payAtDoor',False)
+
+        super(PrivateLessonStudentInfoForm,self).__init__(*args,**kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_tag = False  # Our template must explicitly include the <form tag>
+
+        if user and hasattr(user,'customer') and user.customer and not payAtDoor:
+            # Input existing info for users who are logged in and have signed up before
+            self.fields['firstName'].initial = user.customer.first_name or user.first_name
+            self.fields['lastName'].initial = user.customer.last_name or user.last_name
+            self.fields['email'].initial = user.customer.email or user.email
+            self.fields['phone'].initial = user.customer.phone
+
+        self.helper.layout = Layout(
+            Div('firstName','lastName','email',css_class='form-inline'),
+            Div('phone',css_class='form-inline'),
+            Div('agreeToPolicies',css_class='well'),
+            Submit('submit',_('Complete Registration'))
+        )

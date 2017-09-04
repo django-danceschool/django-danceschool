@@ -1,5 +1,5 @@
 from django.views.generic import FormView, TemplateView
-from django.http import JsonResponse, HttpResponseRedirect, Http404
+from django.http import JsonResponse, HttpResponseRedirect, Http404, HttpResponseBadRequest
 from django.contrib import messages
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -13,8 +13,9 @@ from danceschool.core.models import Instructor, TemporaryRegistration, Temporary
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 
-from .forms import SlotCreationForm, SlotUpdateForm, SlotBookingForm
+from .forms import SlotCreationForm, SlotUpdateForm, SlotBookingForm, PrivateLessonStudentInfoForm
 from .models import InstructorAvailabilitySlot, PrivateLessonEvent
+from .constants import PRIVATELESSON_VALIDATION_STR
 
 
 class InstructorAvailabilityView(TemplateView):
@@ -201,22 +202,7 @@ class BookPrivateLessonView(FormView):
         else:
             existingEvents.delete()
 
-        # Slots without pricing tiers can't go through the actual registration process.
-        # Instead, they are simply booked and the user gets a success message.
-        # TODO: Email confirmation for these individuals.
-        if not thisSlot.pricingTier:
-            affectedSlots.update(
-                status=InstructorAvailabilitySlot.SlotStatus.booked,
-            )
-            messages.success(self.request,_('Your private lesson has been scheduled successfully.'))
-            return HttpResponseRedirect(reverse('submissionRedirect'))
-
-        regSession = self.request.session.get(REG_VALIDATION_STR, {})
-
-        # The session expires after a period of inactivity that is specified in preferences.
-        expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
-
+        # Create the lesson record and set related info
         lesson = PrivateLessonEvent.objects.create(
             pricingTier=thisSlot.pricingTier,
             participants=form.cleaned_data.pop('participants'),
@@ -240,37 +226,98 @@ class BookPrivateLessonView(FormView):
         # the event.
         lesson.save()
 
-        # Create a Temporary Registration associated with this lesson.
-        reg = TemporaryRegistration(
-            submissionUser=submissionUser,dateTime=timezone.now(),
-            payAtDoor=payAtDoor,
-            expirationDate=expiry,
-        )
+        # The session expires after a period of inactivity that is specified in preferences.
+        expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
 
-        tr = TemporaryEventRegistration(
-            event=lesson, role=role, price=lesson.getBasePrice(payAtDoor=payAtDoor)
-        )
+        # Slots without pricing tiers can't go through the actual registration process.
+        # Instead, they are sent to another view to get contact information.
+        if not thisSlot.pricingTier:
+            affectedSlots.update(
+                lessonEvent=lesson,
+                status=InstructorAvailabilitySlot.SlotStatus.tentative,
+            )
+            self.request.session[PRIVATELESSON_VALIDATION_STR] = {
+                'lesson': lesson.id,
+                'payAtDoor': payAtDoor,
+            }
+            return HttpResponseRedirect(reverse('privateLessonStudentInfo'))
 
-        # Any remaining form data goes into the JSONfield.
-        reg.data = form.cleaned_data or {}
+        # Slots with pricing tiers require an TemporaryRegistration to be created,
+        # and then they are redirected through the registration system.
+        else:
 
-        # Now we are ready to save and proceed.
-        reg.priceWithDiscount = tr.price
-        reg.save()
-        tr.registration = reg
-        tr.save()
+            regSession = self.request.session.get(REG_VALIDATION_STR, {})
 
-        affectedSlots.update(
-            status=InstructorAvailabilitySlot.SlotStatus.tentative,
-            temporaryEventRegistration=tr,
-        )
+            # Create a Temporary Registration associated with this lesson.
+            reg = TemporaryRegistration(
+                submissionUser=submissionUser,dateTime=timezone.now(),
+                payAtDoor=payAtDoor,
+                expirationDate=expiry,
+            )
 
-        # Load the temporary registration into session data like a regular registration
-        # and redirect to Step 2 as usual.
+            tr = TemporaryEventRegistration(
+                event=lesson, role=role, price=lesson.getBasePrice(payAtDoor=payAtDoor)
+            )
 
-        regSession["temporaryRegistrationId"] = reg.id
-        self.request.session[REG_VALIDATION_STR] = regSession
-        return HttpResponseRedirect(self.get_success_url())
+            # Any remaining form data goes into the JSONfield.
+            reg.data = form.cleaned_data or {}
 
-    def get_success_url(self):
-        return reverse('getStudentInfo')
+            # Now we are ready to save and proceed.
+            reg.priceWithDiscount = tr.price
+            reg.save()
+            tr.registration = reg
+            tr.save()
+
+            affectedSlots.update(
+                lessonEvent=lesson,
+                status=InstructorAvailabilitySlot.SlotStatus.tentative,
+                temporaryEventRegistration=tr,
+            )
+
+            # Load the temporary registration into session data like a regular registration
+            # and redirect to Step 2 as usual.
+            regSession["temporaryRegistrationId"] = reg.id
+            self.request.session[REG_VALIDATION_STR] = regSession
+            return HttpResponseRedirect(reverse('getStudentInfo'))
+
+
+class PrivateLessonStudentInfoView(FormView):
+    '''
+    For private lessons booked and paid for using the traditional
+    online registration system, that system collects all information
+    needed for booking.  However, for lessons booked without the option
+    of online payment, we still need to collect the customer's name and
+    email adress before finalizing booking.  This view handles the
+    collection of that information.
+    '''
+    template_name = 'private_lessons/get_student_info.html'
+    form_class = PrivateLessonStudentInfoForm
+
+    def dispatch(self,request,*args,**kwargs):
+        '''
+        Handle the session data passed by the prior view.
+        '''
+
+        lessonSession = request.session.get(PRIVATELESSON_VALIDATION_STR,{})
+
+        try:
+            self.lesson = PrivateLessonEvent.objects.get(id=lessonSession.get('lesson'))
+        except (ValueError, ObjectDoesNotExist):
+            return HttpResponseBadRequest()
+
+        self.payAtDoor = lessonSession.get('payAtDoor',False)
+        return super(PrivateLessonStudentInfoView,self).dispatch(request,*args,**kwargs)
+
+    def get_form_kwargs(self, **kwargs):
+        ''' Pass along the request data to the form '''
+        kwargs = super(PrivateLessonStudentInfoView, self).get_form_kwargs(**kwargs)
+        kwargs['request'] = self.request
+        kwargs['payAtDoor'] = self.payAtDoor
+        return kwargs
+
+    def form_valid(self,form):
+        self.lesson.finalizeBooking()
+        messages.success(self.request,_('Your private lesson has been scheduled successfully.'))
+        self.request.session.pop(PRIVATELESSON_VALIDATION_STR,{})
+        return HttpResponseRedirect(reverse('submissionRedirect'))
