@@ -1586,7 +1586,10 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         # If sendEmail is passed as False, then we won't send an email
         sendEmail = kwargs.pop('sendEmail', True)
 
-        customer, created = Customer.objects.get_or_create(first_name=self.firstName,last_name=self.lastName,email=self.email,defaults={'phone': self.phone})
+        customer, created = Customer.objects.update_or_create(
+            first_name=self.firstName,last_name=self.lastName,
+            email=self.email,defaults={'phone': self.phone}
+        )
 
         regArgs = {'customer': customer, 'dateTime': dateTime, 'temporaryRegistration': self}
         for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount','payAtDoor']:
