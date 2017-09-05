@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.models import User
@@ -158,3 +158,21 @@ def processSquarePayment(request):
         request.session[INVOICE_VALIDATION_STR] = paymentSession
 
     return HttpResponseRedirect(successUrl)
+
+
+def processPointOfSalePayment(request):
+    '''
+    This view handles the callbacks from point-of-sale transactions.
+    Please note that this will only work if you have set up your callback
+    URL in Square to point to this view.
+    '''
+    print('POST is: %s' % request.POST)
+    errorCode = request.POST.get('com.squareup.pos.ERROR_CODE')
+    errorDescription = request.POST.get('com.squareup.pos.ERROR_DESCRIPTION')
+    clientTransId = request.POST.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
+    serverTransId = request.POST.get('com.squareup.pos.SERVER_TRANSACTION_ID')
+    metadata = request.POST.get('com.squareup.pos.RESULT_REQUEST_METADATA')
+
+    if errorCode:
+        logger.warning()
+        return JsonResponse({'errorCode': errorCode,'errorDescription': errorDescription})
