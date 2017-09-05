@@ -9,12 +9,12 @@ from django.utils.translation import ugettext_lazy as _
 
 from datetime import datetime, timedelta
 
-from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, EventOccurrence, EventStaffMember
+from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, EventOccurrence, EventStaffMember, Customer
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 
 from .forms import SlotCreationForm, SlotUpdateForm, SlotBookingForm, PrivateLessonStudentInfoForm
-from .models import InstructorAvailabilitySlot, PrivateLessonEvent
+from .models import InstructorAvailabilitySlot, PrivateLessonEvent, PrivateLessonCustomer
 from .constants import PRIVATELESSON_VALIDATION_STR
 
 
@@ -317,6 +317,19 @@ class PrivateLessonStudentInfoView(FormView):
         return kwargs
 
     def form_valid(self,form):
+        first_name = form.cleaned_data.get('firstName')
+        last_name = form.cleaned_data.get('lastName')
+        email = form.cleaned_data.get('email')
+        phone = form.cleaned_data.get('phone')
+
+        customer, created = Customer.objects.update_or_create(
+            first_name=first_name,last_name=last_name,email=email,defaults={'phone': phone}
+        )
+        PrivateLessonCustomer.objects.create(
+            customer=customer,
+            lesson=self.lesson,
+        )
+
         self.lesson.finalizeBooking()
         messages.success(self.request,_('Your private lesson has been scheduled successfully.'))
         self.request.session.pop(PRIVATELESSON_VALIDATION_STR,{})

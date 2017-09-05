@@ -1,28 +1,19 @@
-Hi {{ first_name }},
+Hi {{ fullName }},
 
-Thank you for registering for a private lesson with {{ instructorName }} at {{ businessName }}!  You have been scheduled for the following:
+Thank you for registering for a private lesson with {{ instructors|join:" and " }} at {{ businessName }}!  You have been scheduled for the following:
 
-Scheduled By: {{ customer.fullName }}
-Email: {{ customer.email }}{% if customer.phone %}
-Telephone: {{ customer.phone }}{% endif %}
+Scheduled By: {{ fullName }}
+Email: {{ email }}{% if phone %}
+Telephone: {{ phone }}{% endif %}
 
-Start Time: {{ startTime|date:"Y-m-d, P" }}
-Duration: {{ duration }} minutes
-Location: {{ location.name }}
-Expected # Participants: {{ participants }}
+Start Time: {{ lesson.startTime|date:"Y-m-d, P" }}
+Duration: {{ lesson.duration }} minutes
+Location: {{ lesson.location.name }}
+Expected # Participants: {{ lesson.participants }}
 Comments/Notes:
-{{ comments }}
+{{ lesson.comments }}
 
-{% if invoice %}Net amount paid: {{ currencySymbol }}{{ invoice.amountPaid|floatformat:2 }}
-{% if invoice.outstandingBalance %}Outstanding balance: {{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:2 }}
-View Invoice/Make Payments: {{ invoice.url }}{% endif %}{% endif %}{% if registrationComments %}Your comments:
-{{ registrationComments }}
-
-{% endif %}{% if registrationHowHeardAboutUs %}
-How you heard about us:
-{{ registrationHowHeardAboutUs }}
-
-{% endif %}Thanks again, and we look forward to seeing you soon!
+Thanks again, and we look forward to seeing you soon!
 
 Sincerely,
 {{ businessName }}

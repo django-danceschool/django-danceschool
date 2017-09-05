@@ -52,6 +52,18 @@ class Migration(migrations.Migration):
             options={'abstract': False, 'verbose_name': 'Private lesson', 'verbose_name_plural': 'Private lessons'},
             bases=('core.event',),
         ),
+        migrations.CreateModel(
+            name='PrivateLessonCustomer',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Customer', verbose_name='Customer')),
+                ('lesson', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='private_lessons.PrivateLessonEvent', verbose_name='Lesson')),
+            ],
+            options={
+                'verbose_name': 'Private lesson customer',
+                'verbose_name_plural': 'Private lesson customers',
+            },
+        ),
         migrations.AddField(
             model_name='instructoravailabilityslot',
             name='lessonEvent',

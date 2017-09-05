@@ -1,12 +1,15 @@
 from django.db import models
+from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
+from django.core.urlresolvers import reverse
 
 from datetime import timedelta
 from djchoices import DjangoChoices, ChoiceItem
 
-from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration
+from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration, EmailTemplate, Customer
 from danceschool.core.constants import getConstant
+from danceschool.core.mixins import EmailRecipientMixin
 from danceschool.core.utils.timezone import ensure_localtime
 
 
@@ -64,15 +67,67 @@ class PrivateLessonEvent(Event):
         )
 
         if notifyStudent:
-            pass
+            # This is the email template used to notify students that their private lesson has been
+            # successfully scheduled
+
+            template = EmailTemplate.objects.get(id=getConstant('privateLessons__lessonBookedEmailTemplate'))
+
+            if template.defaultFromAddress and template.content:
+                for customer in self.customers:
+                    customer.email_recipient(
+                        template.subject,
+                        template.content,
+                        send_html=False,
+                        from_address=template.defaultFromAddress,
+                        from_name=template.defaultFromName,
+                        cc=template.defaultCC,
+                        to=customer.email,
+                        lesson=self,
+                    )
 
         if notifyTeachers:
-            pass
+            # This is the email template used to notify individuals who run registration
+            # that they have been compensated
+            template = EmailTemplate.objects.get(id=getConstant('privateLessons__lessonBookedInstructorEmailTemplate'))
+
+            if template.defaultFromAddress and template.content:
+                emailMixin = EmailRecipientMixin()
+
+                instructors = [x.staffMember for x in self.eventstaffmember_set.all()]
+
+                for instructor in instructors:
+                    emailMixin.email_recipient(
+                        template.subject,
+                        template.content,
+                        send_html=False,
+                        from_address=template.defaultFromAddress,
+                        from_name=template.defaultFromName,
+                        cc=template.defaultCC,
+                        to=instructor.privateEmail,
+                        lesson=self,
+                        customers=self.customers,
+                        calendarUrl=reverse('privateCalendar'),
+                    )
+
+    @property
+    def customers(self):
+        '''
+        List both any individuals signed up via the registration and payment system,
+        and any individuals signed up without payment.
+        '''
+        Customer.objects.filter(
+            Q(privatelessoncustomer__lesson=self) |
+            Q(registration__eventregistration__event=self)
+        ).distinct()
+    customers.fget.short_description = _('Customers')
 
     @property
     def name(self):
-        ''' TODO: Add instructor and time information to this '''
-        return _('Private Lesson Event: %s' % self.startTime)
+        return _('Private Lesson Event: %s for %s, %s' % (
+            ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()]),
+            ' and '.join([x.fullName for x in self.customers]),
+            self.startTime
+        ))
 
     def __str__(self):
         return str(self.name)
@@ -80,6 +135,21 @@ class PrivateLessonEvent(Event):
     class Meta:
         verbose_name = _('Private lesson')
         verbose_name_plural = _('Private lessons')
+
+
+class PrivateLessonCustomer(models.Model):
+    '''
+    For private lessons that go through registration and payment, the customers
+    are the individuals who are registered.  For private lessons that are booked
+    without payment, this just provides a record that they signed up for
+    the lesson.
+    '''
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
+    lesson = models.ForeignKey(PrivateLessonEvent,verbose_name=_('Lesson'))
+
+    class Meta:
+        verbose_name = _('Private lesson customer')
+        verbose_name_plural = _('Private lesson customers')
 
 
 class InstructorAvailabilitySlot(models.Model):

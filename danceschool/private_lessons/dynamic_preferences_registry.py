@@ -4,11 +4,12 @@ but can be changed dynamically.
 '''
 
 from django.utils.translation import ugettext_lazy as _
+from django.template.loader import get_template
 
 from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
 
-from danceschool.core.models import EventStaffCategory, EmailTemplate
+from danceschool.core.models import EventStaffCategory, EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
 
 # we create some section objects to link related preferences together
 
@@ -119,7 +120,6 @@ class LessonBookedEmailTemplate(ModelChoicePreference):
     queryset = EmailTemplate.objects.all()
 
     def get_default(self):
-        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
 
         initial_template = get_template('email/private_lesson_registration_success.html')
         with open(initial_template.origin.name,'r') as infile:
@@ -129,7 +129,35 @@ class LessonBookedEmailTemplate(ModelChoicePreference):
         return EmailTemplate.objects.get_or_create(
             name=_('Private Lesson Booking Confirmation Email'),
             defaults={
-                'subject': _('Private Lesson Confirmation'),
+                'subject': _('Confirmation of Scheduled Private Lesson'),
+                'content': content or '',
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
+
+
+@global_preferences_registry.register
+class LessonBookedInstructorEmailTemplate(ModelChoicePreference):
+    section = privateLessons
+    name = 'lessonBookedInstructorEmailTemplate'
+    verbose_name = _('Email template used to notify instructors that a lesson has been scheduled')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
+
+    def get_default(self):
+
+        initial_template = get_template('email/private_lesson_booking_alert.html')
+        with open(initial_template.origin.name,'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Private Lesson Booking Instructor Notification'),
+            defaults={
+                'subject': _('Notification of Private Lesson Scheduling'),
                 'content': content or '',
                 'defaultFromAddress': get_defaultEmailFrom(),
                 'defaultFromName': get_defaultEmailName(),
