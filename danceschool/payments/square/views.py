@@ -1,9 +1,11 @@
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
+from django.apps import apps
 
 import uuid
 from squareconnect.rest import ApiException
@@ -166,13 +168,26 @@ def processPointOfSalePayment(request):
     Please note that this will only work if you have set up your callback
     URL in Square to point to this view.
     '''
-    print('POST is: %s' % request.POST)
-    errorCode = request.POST.get('com.squareup.pos.ERROR_CODE')
-    errorDescription = request.POST.get('com.squareup.pos.ERROR_DESCRIPTION')
-    clientTransId = request.POST.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
-    serverTransId = request.POST.get('com.squareup.pos.SERVER_TRANSACTION_ID')
-    metadata = request.POST.get('com.squareup.pos.RESULT_REQUEST_METADATA')
+    errorCode = request.GET.get('com.squareup.pos.ERROR_CODE')
+    errorDescription = request.GET.get('com.squareup.pos.ERROR_DESCRIPTION')
+    clientTransId = request.GET.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
+    serverTransId = request.GET.get('com.squareup.pos.SERVER_TRANSACTION_ID')
+    metadata = request.GET.get('com.squareup.pos.RESULT_REQUEST_METADATA')
 
     if errorCode:
-        logger.warning()
+        logger.warning('Error with square ')
         return JsonResponse({'errorCode': errorCode,'errorDescription': errorDescription})
+
+    if 'registration__' in metadata:
+        TemporaryRegistration.objects.get(id=)
+    elif 'invoice__' in metadata:
+        pass
+    elif apps.is_installed('danceschool.financial'):
+        RevenueItem = apps.get_model('financial','RevenueItem')
+        RevenueItem.objects.create(
+            # Enter here
+        )
+    else:
+        logger.warning('Unkown Square payment record received.  Because this transaction is not')
+
+    return HttpResponseRedirect('/')

@@ -4,8 +4,7 @@
 
 <div id="error_payment"></div>
 
-{# These div elements are the placeholder elements that are replaced by the
-  SqPaymentForm's iframes. #}
+{# These div elements are the placeholder elements that are replaced by the SqPaymentForm's iframes. #}
 <div class="panel panel-default">
   <div class="panel-heading">
   {% trans "Pay with Square" %}
@@ -20,8 +19,7 @@
     <label>{% trans "Postal Code" %}</label>
     <div id="sq-postal-code"></div>
 
-    {# After the SqPaymentForm generates a card nonce, *this* form POSTs the generated
-      card nonce to your application's server. #}
+    {# After the SqPaymentForm generates a card nonce, *this* form POSTs the generated card nonce to your application's server. #}
     <form id="nonce-form" novalidate action="{% url 'processSquarePayment' %}" method="post">
       {% csrf_token %}
       {# Whenever a nonce is generated, it's assigned as the value of this hidden input field. #}
