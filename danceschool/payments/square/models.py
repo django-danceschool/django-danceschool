@@ -102,13 +102,17 @@ class SquarePaymentRecord(PaymentRecord):
             body = {
                 'idempotency_key': idempotency_key,
                 'tender_id': this_tender.id,
-                'amount_money': {'amount': to_refund * 100, 'currency': this_tender.amount_money.currency}
+                'amount_money': {'amount': int(to_refund * 100), 'currency': this_tender.amount_money.currency}
             }
 
-            response = api_instance.create_refund(
-                location_id=self.locationId,transaction_id=self.transactionId,body=body
-            )
-            if response.errors:
+            try:
+                response = api_instance.create_refund(
+                    location_id=self.locationId,transaction_id=self.transactionId,body=body
+                )
+                if response.errors:
+                    logger.error('Error in providing Square refund: %s' % response.errors)
+                    continue
+            except ApiException:
                 logger.error('Error in providing Square refund.')
                 continue
 

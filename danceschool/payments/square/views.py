@@ -168,6 +168,8 @@ def processPointOfSalePayment(request):
     Please note that this will only work if you have set up your callback
     URL in Square to point to this view.
     '''
+    print('Request data is: %s' % request.GET)
+
     errorCode = request.GET.get('com.squareup.pos.ERROR_CODE')
     errorDescription = request.GET.get('com.squareup.pos.ERROR_DESCRIPTION')
     clientTransId = request.GET.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
@@ -179,7 +181,8 @@ def processPointOfSalePayment(request):
         return JsonResponse({'errorCode': errorCode,'errorDescription': errorDescription})
 
     if 'registration__' in metadata:
-        TemporaryRegistration.objects.get(id=)
+        pass
+        # TemporaryRegistration.objects.get(id=)
     elif 'invoice__' in metadata:
         pass
     elif apps.is_installed('danceschool.financial'):
