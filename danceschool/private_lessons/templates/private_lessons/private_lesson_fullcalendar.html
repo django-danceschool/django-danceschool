@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load sekizai_tags static crispy_forms_tags i18n %}
+{% load sekizai_tags static crispy_forms_tags i18n thumbnail %}
 
 {% block content %}
 
@@ -22,7 +22,7 @@
             <select name="instructor">
                 <option>{% trans "Select instructor" %}</option>
                 {% for instructor in instructor_list %}
-                    <option data-id="{{ instructor.id }}">{{ instructor.fullName }}</option>
+                    <option data-id="{{ instructor.id }}" data-fullname="{{ instructor.fullName }}" data-roles="{{ instructor.instructorprivatelessondetails.roles.all|join:', ' }}" data-couples="{{ instructor.instructorprivatelessondetails.couples }}" data-smallgroups="{{ instructor.instructorprivatelessondetails.smallGroups }}" {% if instructor.image %}data-imageurl="{% thumbnail instructor.image thumbnail_dimensions|default:'118x118' crop %}"{% endif %}>{{ instructor.fullName }}</option>
                 {% endfor %}
             </select>
             </p>
@@ -30,6 +30,18 @@
         </form>
     </div>
 </div>
+
+<div class="hidden" id="instructorDetails">
+  <img id="instructorDetailsImage" class="pull-left hidden" src="" />
+  <h4 id="instructorDetailsName"></h4>
+
+  <ul class="list-group">
+    <li class="list-group-item"><strong>{% trans "For students in roles" %}:</strong>&nbsp;<span id="instructorDetailsRoles"></span></li>
+    <li class="list-group-item"><strong>{% trans "Lessons for couples" %}:</strong>&nbsp;<span id="instructorDetailsCouples"></span></li>
+    <li class="list-group-item"><strong>{% trans "Lessons for small groups" %}:</strong>&nbsp;<span id="instructorDetailsSmallGroups"></span></li>
+  </ul>
+</div>
+
 
 <div id="alertBox"></div>
 
@@ -122,25 +134,64 @@ $(document).ready(function() {
         // and finally load the availability of that instructor
         event.preventDefault();
 
-        var new_id = $('#instructorSelect option:selected').data('id');
+        var selected = $('#instructorSelect option:selected')
+        var new_id = selected.data('id');
 
-        $.ajax({
-            type: "GET",
-            url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/",
-            success: function(events) {
-              $('#alertBox').empty();
-              $('#calendarbox').fullCalendar('removeEvents');
-              $('#calendarbox').fullCalendar('addEventSource', events);
-              $('#calendarbox').fullCalendar('rerenderEvents');
-            },
-            error: function() {
+        if (new_id) {
+          var imageUrl = selected.data('imageurl');
+          var couples = selected.data('couples');
+          if (couples == "True") { 
+            var couplesClass = "fa-check";
+            var couplesColor = "green";
+          }
+          else {
+            var couplesClass = "fa-times";
+            var couplesColor = "red";
+          }
+          var smallGroups = selected.data('smallgroups');
+          if (smallGroups == "True") { 
+            var groupsClass = "fa-check";
+            var groupsColor  = "green";
+          }
+          else {
+            var groupsClass = "fa-times";
+            var groupsColor = "red";
+          }
 
-              if (new_id) {
+          if (imageUrl) {
+            $('#instructorDetailsImage').attr('src', imageUrl);
+            $('#instructorDetailsImage').removeClass('hidden');
+          }
+          else {
+            $('#instructorDetailsImage').attr('src','');
+            $('#instructorDetailsImage').addClass('hidden');
+          }
+
+          // Set the instructor info from dropdown data
+          $('#instructorDetailsName').html(selected.data('fullname'));
+          $('#instructorDetailsRoles').html(selected.data('roles'));
+          $('#instructorDetailsCouples').html('<i class="fa ' + couplesClass + '" style="color: ' + couplesColor + ';"></i>');
+          $('#instructorDetailsSmallGroups').html('<i class="fa ' + groupsClass + '" style="color: ' + groupsColor + ';"></i>');
+          $('#instructorDetails').removeClass('hidden');
+
+          $.ajax({
+              type: "GET",
+              url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/",
+              success: function(events) {
+                $('#alertBox').empty();
+                $('#calendarbox').fullCalendar('removeEvents');
+                $('#calendarbox').fullCalendar('addEventSource', events);
+                $('#calendarbox').fullCalendar('rerenderEvents');
+              },
+              error: function() {
                   $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert">{% blocktrans %}<strong>ERROR:</strong> Instructor availability did not load.</div>{% endblocktrans %}');
-              }
-              $('#calendarbox').fullCalendar('removeEvents');
-            },
-        });
+                $('#calendarbox').fullCalendar('removeEvents');
+              },
+          });
+        }
+        else {
+          $('#instructorDetails').addClass('hidden'); 
+        }
 
     });
 });

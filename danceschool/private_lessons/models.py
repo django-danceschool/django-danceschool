@@ -24,7 +24,7 @@ class InstructorPrivateLessonDetails(models.Model):
     smallGroups = models.BooleanField(_('Private lessons for small groups'), default=True)
 
     def __str__(self):
-        return _('Instructor Private lesson details for %s' % self.instructor.fullName)
+        return str(_('Instructor Private lesson details for %s' % self.instructor.fullName))
 
     class Meta:
         ordering = ('instructor__lastName','instructor__firstName')
@@ -39,7 +39,7 @@ class PrivateLessonEvent(Event):
     associated with other types of events (location, etc.)
     '''
 
-    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing Tier'))
+    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing Tier'),null=True,blank=True)
     participants = models.PositiveSmallIntegerField(_('Expected # of Participants'),null=True,blank=True,default=1)
     comments = models.TextField(
         _('Comments/Notes'),null=True,blank=True,help_text=_('For internal use and recordkeeping.')
@@ -121,13 +121,28 @@ class PrivateLessonEvent(Event):
         ).distinct()
     customers.fget.short_description = _('Customers')
 
+    def nameAndDate(self,withDate=True):
+        teacherNames = ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()])
+        if self.customers:
+            customerNames = ' ' + ' and '.join([x.fullName for x in self.customers])
+        elif self.temporaryeventregistration_set.all():
+            customerNames = ' ' + ' and '.join([x.registration.fullName for x in self.temporaryeventregistration_set.all()])
+        else:
+            customerNames = ''
+
+        if not teacherNames and not customerNames and not withDate:
+            return _('Private Lesson')
+
+        return _('Private Lesson: %s%s%s%s' % (
+            teacherNames,
+            _(' for ') if teacherNames and customerNames else '',
+            customerNames,
+            (', ' if (teacherNames or customerNames) else '' + self.startTime.strftime('%Y-%m-%d')) if withDate else ''
+        ))
+
     @property
     def name(self):
-        return _('Private Lesson Event: %s for %s, %s' % (
-            ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()]),
-            ' and '.join([x.fullName for x in self.customers]),
-            self.startTime
-        ))
+        return self.nameAndDate(withDate=True)
 
     def __str__(self):
         return str(self.name)
@@ -146,6 +161,9 @@ class PrivateLessonCustomer(models.Model):
     '''
     customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
     lesson = models.ForeignKey(PrivateLessonEvent,verbose_name=_('Lesson'))
+
+    def __str__(self):
+        return str(_('Private lesson customer: %s for lesson #%s' % (self.customer.fullName, self.lesson.id)))
 
     class Meta:
         verbose_name = _('Private lesson customer')
@@ -244,7 +262,9 @@ class InstructorAvailabilitySlot(models.Model):
         past their expiration date
         '''
         return (
-            self.startTime >= dateTime and not self.eventRegistration and (
+            self.startTime >= dateTime + timedelta(days=getConstant('privateLessons__closeBookingDays')) and
+            self.startTime <= dateTime + timedelta(days=getConstant('privateLessons__openBookingDays')) and not
+            self.eventRegistration and (
                 self.status == self.SlotStatus.available or (
                     self.status == self.SlotStatus.tentative and
                     getattr(getattr(self.temporaryEventRegistration,'registration',None),'expirationDate',timezone.now()) <= timezone.now()

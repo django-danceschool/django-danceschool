@@ -205,6 +205,7 @@ class BookPrivateLessonView(FormView):
         # Create the lesson record and set related info
         lesson = PrivateLessonEvent.objects.create(
             pricingTier=thisSlot.pricingTier,
+            location=thisSlot.location,
             participants=form.cleaned_data.pop('participants'),
             comments=form.cleaned_data.pop('comments'),
         )
@@ -213,6 +214,7 @@ class BookPrivateLessonView(FormView):
             event=lesson,
             category=getConstant('privateLessons__eventStaffCategoryPrivateLesson'),
             submissionUser=submissionUser,
+            staffMember=thisSlot.instructor,
         )
 
         lesson_occurrence = EventOccurrence.objects.create(

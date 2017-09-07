@@ -17,7 +17,7 @@
             <select name="instructor">
                 <option>{% trans "Select instructor" %}</option>
                 {% for i in instructor_list %}
-                    <option data-id="{{ i.id }}" {% if instructor.id == i.id %}selected="selected"{% endif %}>{{ instructor.fullName }}</option>
+                    <option data-id="{{ i.id }}" data-defaultpricingtier="{{ i.instructorprivatelessondetails.defaultPricingTier.id }}" {% if instructor.id == i.id %}selected="selected"{% endif %}>{{ i.fullName }}</option>
                 {% endfor %}
             </select>
             </p>
@@ -164,6 +164,7 @@ $(document).ready(function() {
 
             $('#id_updateStatus').val(calEvent.status);
             $('#id_updateLocation').val(calEvent.location_id);
+            $('#id_updatePricing').val(calEvent.pricingTier_id);
             $('#id_deleteSlot').prop('checked', false);
             $('#eventModal').modal();
         },
@@ -178,8 +179,10 @@ $(document).ready(function() {
 
             {% if 'private_lessons.edit_others_availability' in perms %}
               $('#id_instructorId').val($('#instructorSelect option:selected').data('id'));
+              $('#id_pricingTier').val($('#instructorSelect option:selected').data('defaultpricingtier'));
             {% else %}
               $('#id_instructorId').val({{ instructor.id }});
+              $('#id_pricingTier').val({{ instructor.instructorprivatelessondetails.defaultPricingTier.id }});
             {% endif %}
 
             $('#id_startDate').val(startDate);

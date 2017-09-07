@@ -33,9 +33,10 @@ class AvailabilityFeedItem(object):
         self.end = self.start + timedelta(minutes=object.duration)
         self.availableDurations = object.availableDurations
         self.availableRoles = object.availableRoles
-        self.pricingTier = object.pricingTier.name
-        self.onlinePrice = object.pricingTier.onlinePrice
-        self.doorPrice = object.pricingTier.doorPrice
+        self.pricingTier = getattr(object.pricingTier,'name',None)
+        self.pricingTier_id = getattr(object.pricingTier,'id',None)
+        self.onlinePrice = getattr(object.pricingTier,'onlinePrice',None)
+        self.doorPrice = getattr(object.pricingTier,'doorPrice',None)
         self.status = object.status
         self.className = ['availabilitySlot','availabilitySlot-%s' % object.status]
 
@@ -58,16 +59,16 @@ class PrivateLessonFeedItem(object):
             except pytz.exceptions.UnknownTimeZoneError:
                 pass
 
-        self.id = 'privatelesson_' + str(object.event.id) + '_' + str(object.id)
+        self.id = 'privatelesson_' + str(object.id)
         self.type = 'privatelesson'
-        self.id_number = object.event.id
-        self.title = object.event.name
+        self.id_number = object.id
+        self.title = object.nameAndDate(withDate=False)
         self.start = timezone.localtime(object.startTime,timeZone) \
             if timezone.is_aware(object.startTime) else object.startTime
         self.end = timezone.localtime(object.endTime,timeZone) \
             if timezone.is_aware(object.endTime) else object.endTime
-        if hasattr(object,'event.location'):
-            self.location = object.event.location.name + '\n' + object.event.location.address + '\n' + object.event.location.city + ', ' + object.event.location.state + ' ' + object.event.location.zip
+        if getattr(object,'location',None):
+            self.location = object.location.name + '\n' + object.location.address + '\n' + object.location.city + ', ' + object.location.state + ' ' + object.location.zip
         else:
             self.location = None
 
@@ -94,7 +95,13 @@ def json_availability_feed(request,instructor_id=None):
         instructor=this_instructor,
     ).filter(**time_filter_dict_events)
 
-    if hasattr(request.user,'staffmember') and request.user.staffmember == this_instructor:
+    if (
+        (
+            hasattr(request.user,'staffmember') and request.user.staffmember == this_instructor and
+            request.user.has_perm('private_lessons.edit_own_availability')
+        ) or
+        request.user.has_perm('private_lessons.edit_others_availability')
+    ):
         eventlist = [AvailabilityFeedItem(x,timeZone=timeZone).__dict__ for x in availability]
     else:
         eventlist = [AvailabilityFeedItem(x,timeZone=timeZone).__dict__ for x in availability if x.isAvailable]

@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                 ('event_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='core.Event')),
                 ('participants', models.PositiveSmallIntegerField(blank=True, default=1, null=True, verbose_name='Expected # of Participants')),
                 ('comments', models.TextField(blank=True, help_text='For internal use and recordkeeping.', null=True, verbose_name='Comments/Notes')),
-                ('pricingTier', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.PricingTier', verbose_name='Pricing Tier')),
+                ('pricingTier', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.PricingTier', verbose_name='Pricing Tier')),
             ],
             options={'abstract': False, 'verbose_name': 'Private lesson', 'verbose_name_plural': 'Private lessons'},
             bases=('core.event',),
