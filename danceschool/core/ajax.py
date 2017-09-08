@@ -3,6 +3,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.generic import View
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from .models import EventOccurrence, SeriesTeacher, EventRegistration, EmailTemplate
 
@@ -10,6 +12,7 @@ from .models import EventOccurrence, SeriesTeacher, EventRegistration, EmailTemp
 class UserAccountInfo(View):
     ''' This view just returns the name and email address information for the currently logged in user '''
 
+    @method_decorator(ensure_csrf_cookie)
     def dispatch(self, request, *args, **kwargs):
         context = {}
 

@@ -77,6 +77,23 @@ $(document).ready(function() {
     $('#signin_form').slideDown();
   });
 
+  // Get the CSRF 
+  function getCookie(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+              var cookie = jQuery.trim(cookies[i]);
+              // Does this cookie string begin with the name we want?
+              if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                  cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                  break;
+              }
+          }
+      }
+      return cookieValue;
+  }
+
   function getUserData() {
      var info_url = "{% url 'getUserAccountInfo' %}";
 
@@ -85,15 +102,17 @@ $(document).ready(function() {
          type: "GET",
          url: info_url,
          success: function(data) {
-            console.log(data);
             $('#id_firstName').val(data['first_name']);
             $('#id_lastName').val(data['last_name']);
             $('input[name=email]').val(data['email']);
             $('#id_phone').val(data['phone']);
 
+            // Update the CSRF token
+            $('input[name=csrfmiddlewaretoken]').val(getCookie('csrftoken'));
+
+
             for (var x in data['messages']) {
                 var this_msg = data['messages'][x];
-                console.log(this_msg);
                 var this_alert_html = '<div class="alert ';
                 if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.ERROR }}) {
                   this_alert_html += 'alert-danger';
