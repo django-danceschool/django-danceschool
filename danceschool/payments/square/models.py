@@ -84,6 +84,9 @@ class SquarePaymentRecord(PaymentRecord):
             amount = sum([x.amount_money.amount / 100 for x in transaction.tenders or []]) - \
                 sum([x.amount_money.amount / 100 for x in transaction.refunds or []])
 
+        refundData = []
+        print('Beginning refund process.')
+
         remains_to_refund = amount
         tender_index = 0
         while remains_to_refund > 0:
@@ -111,10 +114,23 @@ class SquarePaymentRecord(PaymentRecord):
                 )
                 if response.errors:
                     logger.error('Error in providing Square refund: %s' % response.errors)
-                    continue
+                    refundData.append({'status': 'error', 'status': response.errors})
+                    break
             except ApiException:
                 logger.error('Error in providing Square refund.')
-                continue
+                refundData.append({'status': 'error', 'errors': response.errors})
+                break
+
+            print('Refund was successful?  Data is: %s' % response)
+
+            # Note that fees are often 0 or missing here, but we enqueue the task
+            # retrieve and update them afterward.
+            refundData.append({
+                'status': 'success',
+                'refund_id': response.refund.id,
+                'refundAmount': float(response.refund.amount_money.amount) / 100,
+                'fees': float(getattr(getattr(response.refund,'processing_fee_money',None),'amount',0)) / 100,
+            })
 
             remains_to_refund -= to_refund
             tender_index += 1
@@ -123,6 +139,9 @@ class SquarePaymentRecord(PaymentRecord):
             # so schedule a task to get them and update records one minute
             # in the future.
             updateSquareFees.schedule(args=(self,), delay=60)
+
+        print('Ready to return: %s' % refundData)
+        return refundData
 
     class Meta:
         permissions = (

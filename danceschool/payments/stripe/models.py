@@ -78,7 +78,7 @@ class StripeCharge(PaymentRecord):
             })
         else:
             logger.error('Error processing refund.')
-            refundData.append({'status': 'error', 'status': refund.status})
+            refundData.append({'status': 'error', 'errors': refund.status})
 
         return refundData
 

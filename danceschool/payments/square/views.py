@@ -181,16 +181,26 @@ def processPointOfSalePayment(request):
         return JsonResponse({'errorCode': errorCode,'errorDescription': errorDescription})
 
     if 'registration__' in metadata:
-        pass
-        # TemporaryRegistration.objects.get(id=)
+        try:
+            tr = TemporaryRegistration.objects.get(id=int(metadata.replace('registration__','')))
+        except (ValueError, TypeError, ObjectDoesNotExist):
+            pass
     elif 'invoice__' in metadata:
-        pass
+        try:
+            inv = Invoice.objects.get(id=int(metadata.replace('invoice__','')))
+        except (ValueError, TypeError, ObjectDoesNotExist):
+            pass
     elif apps.is_installed('danceschool.financial'):
         RevenueItem = apps.get_model('financial','RevenueItem')
-        RevenueItem.objects.create(
-            # Enter here
+        # The Revenue Item is created using the save() method so that
+        # other apps can potentially listen for the RevenueItem pre_save
+        # and post_save signals to handle this case.
+        ri = RevenueItem(
+            category=getConstant(),
+            description=metadata,
         )
+        ri.save()
     else:
-        logger.warning('Unkown Square payment record received.  Because this transaction is not')
+        logger.warning('Unkown Square payment record received; it will be ignored.')
 
     return HttpResponseRedirect('/')
