@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
+from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -6,12 +6,16 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
 from django.apps import apps
+from django.contrib import messages
+from django.utils.html import format_html
 
 import uuid
 from squareconnect.rest import ApiException
 from squareconnect.apis.transactions_api import TransactionsApi
 import logging
 from datetime import timedelta
+import json
+from json.decoder import JSONDecodeError
 
 from danceschool.core.models import TemporaryRegistration, Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
@@ -42,7 +46,7 @@ def processSquarePayment(request):
     transactionType = request.POST.get('transaction_type')
     taxable = request.POST.get('taxable', False)
     addSessionInfo = request.POST.get('addSessionInfo',False)
-    successUrl = request.POST.get('successUrl')
+    successUrl = request.POST.get('successUrl',reverse('registration'))
     customerEmail = request.POST.get('customerEmail')
 
     # If a specific amount to pay has been passed, then allow payment
@@ -172,35 +176,163 @@ def processPointOfSalePayment(request):
 
     errorCode = request.GET.get('com.squareup.pos.ERROR_CODE')
     errorDescription = request.GET.get('com.squareup.pos.ERROR_DESCRIPTION')
-    clientTransId = request.GET.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
+
+    # This is the normal transaction identifier, which will be stored in the
+    # database as a SquarePaymentRecord
     serverTransId = request.GET.get('com.squareup.pos.SERVER_TRANSACTION_ID')
-    metadata = request.GET.get('com.squareup.pos.RESULT_REQUEST_METADATA')
+
+    # This is the only identifier passed for non-card transactions.
+    clientTransId = request.GET.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
+
+    # Load the metadata, which includes the registration or invoice ids
+    try:
+        metadata = json.loads(request.GET.get('com.squareup.pos.REQUEST_METADATA','{}'))
+    except (TypeError, JSONDecodeError):
+        logger.error('Invalid JSON metadata passed from Square app.')
+        return HttpResponseBadRequest()
+
+    # Other things that can be passed in the metadata
+    sourceUrl = metadata.get('sourceUrl',reverse('showRegSummary'))
+    successUrl = metadata.get('successUrl',reverse('registration'))
+    submissionUserId = metadata.get('user_id', getattr(getattr(request,'user',None),'id',None))
+    transactionType = metadata.get('transaction_type')
+    taxable = metadata.get('taxable', False)
+    addSessionInfo = metadata.get('addSessionInfo',False)
+    customerEmail = metadata.get('customerEmail')
 
     if errorCode:
-        logger.warning('Error with square ')
-        return JsonResponse({'errorCode': errorCode,'errorDescription': errorDescription})
-
-    if 'registration__' in metadata:
-        try:
-            tr = TemporaryRegistration.objects.get(id=int(metadata.replace('registration__','')))
-        except (ValueError, TypeError, ObjectDoesNotExist):
-            pass
-    elif 'invoice__' in metadata:
-        try:
-            inv = Invoice.objects.get(id=int(metadata.replace('invoice__','')))
-        except (ValueError, TypeError, ObjectDoesNotExist):
-            pass
-    elif apps.is_installed('danceschool.financial'):
-        RevenueItem = apps.get_model('financial','RevenueItem')
-        # The Revenue Item is created using the save() method so that
-        # other apps can potentially listen for the RevenueItem pre_save
-        # and post_save signals to handle this case.
-        ri = RevenueItem(
-            category=getConstant(),
-            description=metadata,
+        # Return the user to their original page with the error message displayed.
+        logger.error('Error with Square point of sale transaction attempt.  CODE: %s; DESCRIPTION: %s' % (errorCode, errorDescription))
+        messages.error(
+            request,
+            format_html(
+                '<p>{}</p><ul><li><strong>CODE:</strong> {}</li><li><strong>DESCRIPTION:</strong> {}</li></ul>',
+                str(_('ERROR: Error with Square point of sale transaction attempt.')), errorCode, errorDescription
+            )
         )
-        ri.save()
-    else:
-        logger.warning('Unkown Square payment record received; it will be ignored.')
+        return HttpResponseRedirect(sourceUrl)
 
-    return HttpResponseRedirect('/')
+    api_instance = TransactionsApi()
+    location_id = getattr(settings,'SQUARE_LOCATION_ID','')
+
+    if serverTransId:
+        try:
+            api_response = api_instance.retrieve_transaction(transaction_id=serverTransId,location_id=location_id)
+        except ApiException:
+            logger.error('Unable to find Square transaction by server ID.')
+            messages.error(request,_('ERROR: Unable to find Square transaction by server ID.'))
+            return HttpResponseRedirect(sourceUrl)
+        if api_response.errors:
+            logger.error('Unable to find Square transaction by server ID: %s' % api_response.errors)
+            messages.error(request,str(_('ERROR: Unable to find Square transaction by server ID:')) + api_response.errors)
+            return HttpResponseRedirect(sourceUrl)
+        transaction = api_response.transaction
+    elif clientTransId:
+        # Try to find the transaction in the 50 most recent transactions
+        try:
+            api_response = api_instance.list_transactions(location_id=location_id)
+        except ApiException:
+            logger.error('Unable to find Square transaction by client ID.')
+            messages.error(request,_('ERROR: Unable to find Square transaction by client ID.'))
+            return HttpResponseRedirect(sourceUrl)
+        if api_response.errors:
+            logger.error('Unable to find Square transaction by client ID: %s' % api_response.errors)
+            messages.error(request,str(_('ERROR: Unable to find Square transaction by client ID:')) + api_response.errors)
+            return HttpResponseRedirect(sourceUrl)
+        transactions_list = [x for x in api_response.transactions if x.client_id == clientTransId]
+        if len(transactions_list) == 1:
+            transaction = transactions_list[0]
+        else:
+            logger.error('Returned client transaction ID not found.')
+            messages.error(request,_('ERROR: Returned client transaction ID not found.'))
+            return HttpResponseRedirect(sourceUrl)
+    else:
+        logger.error('An unknown error has occurred with Square point of sale transaction attempt.')
+        messages.error(request,_('ERROR: An unknown error has occurred with Square point of sale transaction attempt.'))
+        return HttpResponseRedirect(sourceUrl)
+
+    # Get total information from the transaction for handling invoice.
+    this_total = sum([x.amount_money.amount / 100 for x in transaction.tenders or []]) - \
+        sum([x.amount_money.amount / 100 for x in transaction.refunds or []])
+
+    # Parse if a specific submission user is indicated
+    submissionUser = None
+    if submissionUserId:
+        try:
+            submissionUser = User.objects.get(id=int(submissionUserId))
+        except (ValueError, ObjectDoesNotExist):
+            logger.warning('Invalid user passed, submissionUser will not be recorded.')
+
+    if 'registration' in metadata.keys():
+        try:
+            tr_id = int(metadata.get('registration'))
+            tr = TemporaryRegistration.objects.get(id=tr_id)
+        except (ValueError, TypeError, ObjectDoesNotExist):
+            logger.error('Invalid registration ID passed: %s' % metadata.get('registration'))
+            messages.error(
+                request,
+                str(_('ERROR: Invalid registration ID passed')) + ': %s' % metadata.get('registration')
+            )
+            return HttpResponseRedirect(sourceUrl)
+
+        tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+        tr.save()
+        this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
+        this_description = _('Registration Payment: #%s' % tr_id)
+
+        return HttpResponseRedirect(successUrl)
+    elif 'invoice' in metadata.keys():
+        try:
+            this_invoice = Invoice.objects.get(id=int(metadata.get('invoice')))
+            this_description = _('Invoice Payment: %s' % this_invoice.id)
+
+        except (ValueError, TypeError, ObjectDoesNotExist):
+            logger.error('Invalid invoice ID passed: %s' % metadata.get('invoice'))
+            messages.error(
+                request,
+                str(_('ERROR: Invalid invoice ID passed')) + ': %s' % metadata.get('invoice')
+            )
+            return HttpResponseRedirect(sourceUrl)
+    else:
+        # Gift certificates automatically get a nicer invoice description
+        if transactionType == 'Gift Certificate':
+            this_description = _('Gift Certificate Purchase')
+        else:
+            this_description = transactionType
+        this_invoice = Invoice.create_from_item(
+            this_total,
+            this_description,
+            submissionUser=submissionUser,
+            calculate_taxes=(taxable is not False),
+            transactionType=transactionType,
+        )
+
+    paymentRecord = SquarePaymentRecord.objects.create(
+        invoice=this_invoice,
+        transactionId=transaction.id,
+        locationId=transaction.location_id,
+    )
+
+    # We process the payment now, and enqueue the job to retrieve the
+    # transaction again once fees have been calculated by Square
+    this_invoice.processPayment(
+        amount=this_total,
+        fees=0,
+        paidOnline=True,
+        methodName='Square Point of Sale',
+        methodTxn=transaction.id,
+        notify=customerEmail,
+    )
+    updateSquareFees.schedule(args=(paymentRecord,), delay=60)
+
+    if addSessionInfo:
+        paymentSession = request.session.get(INVOICE_VALIDATION_STR, {})
+
+        paymentSession.update({
+            'invoiceID': str(this_invoice.id),
+            'amount': this_total,
+            'successUrl': successUrl,
+        })
+        request.session[INVOICE_VALIDATION_STR] = paymentSession
+
+    return HttpResponseRedirect(successUrl)
