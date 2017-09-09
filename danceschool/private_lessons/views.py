@@ -1,11 +1,12 @@
 from django.views.generic import FormView, TemplateView
-from django.http import JsonResponse, HttpResponseRedirect, Http404, HttpResponseBadRequest
+from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.contrib import messages
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+from django.utils.dateparse import parse_datetime
 
 from datetime import datetime, timedelta
 
@@ -230,9 +231,8 @@ class BookPrivateLessonView(FormView):
         # the event.
         lesson.save()
 
-        # The session expires after a period of inactivity that is specified in preferences.
+        # The temporary  expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
 
         # Slots without pricing tiers can't go through the actual registration process.
         # Instead, they are sent to another view to get contact information.
@@ -244,6 +244,7 @@ class BookPrivateLessonView(FormView):
             self.request.session[PRIVATELESSON_VALIDATION_STR] = {
                 'lesson': lesson.id,
                 'payAtDoor': payAtDoor,
+                'expiry': expiry.strftime('%Y-%m-%dT%H:%M:%S%z'),
             }
             return HttpResponseRedirect(reverse('privateLessonStudentInfo'))
 
@@ -282,6 +283,7 @@ class BookPrivateLessonView(FormView):
             # Load the temporary registration into session data like a regular registration
             # and redirect to Step 2 as usual.
             regSession["temporaryRegistrationId"] = reg.id
+            regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
             self.request.session[REG_VALIDATION_STR] = regSession
             return HttpResponseRedirect(reverse('getStudentInfo'))
 
@@ -308,7 +310,13 @@ class PrivateLessonStudentInfoView(FormView):
         try:
             self.lesson = PrivateLessonEvent.objects.get(id=lessonSession.get('lesson'))
         except (ValueError, ObjectDoesNotExist):
-            return HttpResponseBadRequest()
+            messages.error(request,_('Invalid lesson identifier passed to sign-up form.'))
+            return HttpResponseRedirect(reverse('bookPrivateLesson'))
+
+        expiry = parse_datetime(lessonSession.get('expiry',''),)
+        if not expiry or expiry < timezone.now():
+            messages.info(request,_('Your registration session has expired. Please try again.'))
+            return HttpResponseRedirect(reverse('bookPrivateLesson'))
 
         self.payAtDoor = lessonSession.get('payAtDoor',False)
         return super(PrivateLessonStudentInfoView,self).dispatch(request,*args,**kwargs)

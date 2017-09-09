@@ -6,6 +6,7 @@ from django.http import HttpResponseRedirect, Http404
 from django.views.generic import FormView, RedirectView, TemplateView
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 
 from braces.views import UserFormKwargsMixin
 import logging
@@ -102,8 +103,6 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
-
         permitted_keys = getattr(form,'permitted_event_keys',['role',])
 
         try:
@@ -190,6 +189,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
             er.save()
 
         regSession["temporaryRegistrationId"] = reg.id
+        regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
         return HttpResponseRedirect(self.get_success_url())
 
@@ -287,7 +287,8 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
     template_name = 'core/registration_summary.html'
     form_class = DoorAmountForm
 
-    def get(self,request,*args,**kwargs):
+    def dispatch(self,request,*args,**kwargs):
+        ''' Always check that the temporary registration has not expired '''
         regSession = self.request.session.get(REG_VALIDATION_STR,{})
 
         if not regSession:
@@ -298,7 +299,24 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
                 id=self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
             )
         except ObjectDoesNotExist:
+            messages.error(request,_('Invalid registration identifier passed to summary view.'))
             return HttpResponseRedirect(reverse('registration'))
+
+        expiry = parse_datetime(
+            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry',''),
+        )
+        if not expiry or expiry < timezone.now():
+            messages.info(request,_('Your registration session has expired. Please try again.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        # If OK, pass the registration and proceed
+        kwargs.update({
+            'reg': reg,
+        })
+        return super(RegistrationSummaryView,self).dispatch(request, *args, **kwargs)
+
+    def get(self,request,*args,**kwargs):
+        reg = kwargs.get('reg')
 
         initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
 
@@ -517,6 +535,14 @@ class StudentInfoView(FormView):
                 id=self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
             )
         except ObjectDoesNotExist:
+            messages.error(request,_('Invalid registration identifier passed to sign-up form.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        expiry = parse_datetime(
+            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry',''),
+        )
+        if not expiry or expiry < timezone.now():
+            messages.info(request,_('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
         return super(StudentInfoView,self).dispatch(request,*args,**kwargs)
@@ -565,7 +591,8 @@ class StudentInfoView(FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session.set_expiry(60 * getConstant('registration__sessionExpiryMinutes'))
+        self.request.session[REG_VALIDATION_STR]["temporaryRegistrationExpiry"] = \
+            expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
         # Update the expiration date for this registration, and pass in the data from
@@ -586,5 +613,4 @@ class StudentInfoView(FormView):
         # This signal (formerly the post_temporary_registration signal) allows
         # vouchers to be applied temporarily, and it can be used for other tasks
         post_student_info.send(sender=StudentInfoView,registration=reg)
-
         return HttpResponseRedirect(self.get_success_url())  # Redirect after POST
