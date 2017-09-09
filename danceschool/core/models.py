@@ -2269,8 +2269,17 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     @property
     def url(self):
+        '''
+        Because invoice URLs are generally emailed, this
+        includes the default site URL and the protocol specified in
+        settings.
+        '''
         if self.id:
-            return Site.objects.get_current().domain + reverse('viewInvoice', args=[self.id,])
+            return '%s://%s%s' % (
+                getConstant('email__linkProtocol'),
+                Site.objects.get_current().domain,
+                reverse('viewInvoice', args=[self.id,]),
+            )
     url.fget.short_description = _('Invoice URL')
 
     def get_absolute_url(self):
