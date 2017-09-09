@@ -18,7 +18,7 @@
 			</thead>
 			<tbody>
 				<tr>
-					<td>{% blocktrans with teachers=lesson.eventstaffmember_set.all|join:" and ", location=lesson.location.name|default:"unspecified location" %}Private lesson with {{ teachers }} at {{ location }}{% endblocktrans %}</td>
+					<td>{% blocktrans with lesson_teachers=teachers|join:" and " location=lesson.location.name|default:"unspecified location" %}Private lesson with {{ lesson_teachers }} at {{ location }}{% endblocktrans %}</td>
 					<td>{{ lesson.startTime|date:"D., N jS Y, P" }} - {{ lesson.endTime|date:"P" }}</td>
 				</tr>
 			</tbody>

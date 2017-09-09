@@ -7,7 +7,7 @@ Email: {{ customer.email }}{% if customer.phone %}
 Telephone: {{ customer.phone }}{% endif %}
 {% endfor %}
 Start Time: {{ lesson.startTime|date:"Y-m-d, P" }}
-Duration: {{ lesson.duration }} minutes
+Duration: {{ lesson.durationMinutes }} minutes
 Location: {{ lesson.location.name|default:"No location specified" }}
 Expected # Participants: {{ lesson.participants }}
 Comments/Notes:

@@ -176,7 +176,7 @@ class BookPrivateLessonView(FormView):
             location=thisSlot.location,
             pricingTier=thisSlot.pricingTier,
             startTime__gte=thisSlot.startTime,
-            startTime__lte=thisSlot.startTime + timedelta(minutes=duration),
+            startTime__lt=thisSlot.startTime + timedelta(minutes=duration),
         ).filter(
             Q(status=InstructorAvailabilitySlot.SlotStatus.available) |
             (
@@ -311,6 +311,14 @@ class PrivateLessonStudentInfoView(FormView):
         self.payAtDoor = lessonSession.get('payAtDoor',False)
         return super(PrivateLessonStudentInfoView,self).dispatch(request,*args,**kwargs)
 
+    def get_context_data(self,**kwargs):
+        context = super(PrivateLessonStudentInfoView,self).get_context_data(**kwargs)
+        context.update({
+            'lesson': self.lesson,
+            'teachers': [x.staffMember.fullName for x in self.lesson.eventstaffmember_set.all()],
+        })
+        return context
+
     def get_form_kwargs(self, **kwargs):
         ''' Pass along the request data to the form '''
         kwargs = super(PrivateLessonStudentInfoView, self).get_form_kwargs(**kwargs)
@@ -327,7 +335,8 @@ class PrivateLessonStudentInfoView(FormView):
         customer, created = Customer.objects.update_or_create(
             first_name=first_name,last_name=last_name,email=email,defaults={'phone': phone}
         )
-        PrivateLessonCustomer.objects.create(
+        # Ensure that this customer is affiliated with this lesson.
+        PrivateLessonCustomer.objects.get_or_create(
             customer=customer,
             lesson=self.lesson,
         )

@@ -7,7 +7,7 @@ from django.core.urlresolvers import reverse
 from datetime import timedelta
 from djchoices import DjangoChoices, ChoiceItem
 
-from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration, EmailTemplate, Customer
+from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration, Customer
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import EmailRecipientMixin
 from danceschool.core.utils.timezone import ensure_localtime
@@ -70,7 +70,7 @@ class PrivateLessonEvent(Event):
             # This is the email template used to notify students that their private lesson has been
             # successfully scheduled
 
-            template = EmailTemplate.objects.get(id=getConstant('privateLessons__lessonBookedEmailTemplate'))
+            template = getConstant('privateLessons__lessonBookedEmailTemplate')
 
             if template.defaultFromAddress and template.content:
                 for customer in self.customers:
@@ -88,14 +88,22 @@ class PrivateLessonEvent(Event):
         if notifyTeachers:
             # This is the email template used to notify individuals who run registration
             # that they have been compensated
-            template = EmailTemplate.objects.get(id=getConstant('privateLessons__lessonBookedInstructorEmailTemplate'))
+            template = getConstant('privateLessons__lessonBookedInstructorEmailTemplate')
 
             if template.defaultFromAddress and template.content:
                 emailMixin = EmailRecipientMixin()
 
-                instructors = [x.staffMember for x in self.eventstaffmember_set.all()]
+                instructors = [
+                    x.staffMember for x in
+                    self.eventstaffmember_set.exclude(
+                        Q(staffMember__privateEmail__isnull=True) & Q(staffMember__publicEmail__isnull=True)
+                    )
+                ]
 
                 for instructor in instructors:
+                    if not instructor.privateEmail and not instructor.publicEmail:
+                        # Without an email address, instructor cannot be notified
+                        continue
                     emailMixin.email_recipient(
                         template.subject,
                         template.content,
@@ -103,8 +111,9 @@ class PrivateLessonEvent(Event):
                         from_address=template.defaultFromAddress,
                         from_name=template.defaultFromName,
                         cc=template.defaultCC,
-                        to=instructor.privateEmail,
+                        to=instructor.privateEmail or instructor.publicEmail,
                         lesson=self,
+                        instructor=instructor,
                         customers=self.customers,
                         calendarUrl=reverse('privateCalendar'),
                     )
@@ -115,7 +124,7 @@ class PrivateLessonEvent(Event):
         List both any individuals signed up via the registration and payment system,
         and any individuals signed up without payment.
         '''
-        Customer.objects.filter(
+        return Customer.objects.filter(
             Q(privatelessoncustomer__lesson=self) |
             Q(registration__eventregistration__event=self)
         ).distinct()
@@ -126,7 +135,8 @@ class PrivateLessonEvent(Event):
         if self.customers:
             customerNames = ' ' + ' and '.join([x.fullName for x in self.customers])
         elif self.temporaryeventregistration_set.all():
-            customerNames = ' ' + ' and '.join([x.registration.fullName for x in self.temporaryeventregistration_set.all()])
+            names = ' and '.join([x.registration.fullName for x in self.temporaryeventregistration_set.all()])
+            customerNames = ' ' + names if names else ''
         else:
             customerNames = ''
 
@@ -137,7 +147,7 @@ class PrivateLessonEvent(Event):
             teacherNames,
             _(' for ') if teacherNames and customerNames else '',
             customerNames,
-            (', ' if (teacherNames or customerNames) else '' + self.startTime.strftime('%Y-%m-%d')) if withDate else ''
+            ((', ' if (teacherNames or customerNames) else '') + self.startTime.strftime('%Y-%m-%d')) if withDate else ''
         ))
 
     @property
@@ -148,6 +158,10 @@ class PrivateLessonEvent(Event):
         return str(self.name)
 
     class Meta:
+        permissions = (
+            ('view_others_lessons',_('Can view scheduled private lessons for all instructors')),
+        )
+
         verbose_name = _('Private lesson')
         verbose_name_plural = _('Private lessons')
 
@@ -166,6 +180,7 @@ class PrivateLessonCustomer(models.Model):
         return str(_('Private lesson customer: %s for lesson #%s' % (self.customer.fullName, self.lesson.id)))
 
     class Meta:
+        unique_together = ('customer','lesson')
         verbose_name = _('Private lesson customer')
         verbose_name_plural = _('Private lesson customers')
 

@@ -7,7 +7,7 @@ Email: {{ email }}{% if phone %}
 Telephone: {{ phone }}{% endif %}
 
 Start Time: {{ lesson.startTime|date:"Y-m-d, P" }}
-Duration: {{ lesson.duration }} minutes
+Duration: {{ lesson.durationMinutes }} minutes
 Location: {{ lesson.location.name }}
 Expected # Participants: {{ lesson.participants }}
 Comments/Notes:

@@ -114,16 +114,22 @@ $(document).ready(function() {
                 $("#eventTitle").html(titleBox);
                 $("#eventInfo").html(event.description);
                 if (event.type == "privateEvent") {
-                    $("#eventEditLink").attr('href', event.url);
+                    $('#eventEditLink').show();
+                    $("#eventEditLink").attr('href', '{% url "admin:private_events_privateevent_changelist" %}' + event.id_number + '/change/');
                 }
                 else if (event.type == "event") {
-                    $("#eventEditLink").attr('href', '{% url 'admin:core_event_changelist' %}' + event.id_number + '/change/');
+                    $('#eventEditLink').show();
+                    $("#eventEditLink").attr('href', '{% url "admin:core_event_changelist" %}' + event.id_number + '/change/');
                 }
                 else if (event.type == "series") {
-                    $("#eventEditLink").attr('href', '{% url 'admin:core_series_changelist' %}' + event.id_number + '/change/');          
+                    $('#eventEditLink').show();
+                    $("#eventEditLink").attr('href', '{% url "admin:core_series_changelist" %}' + event.id_number + '/change/');          
+                }
+                else {
+                    $('#eventEditLink').hide();
                 }
 
-                if (event.type == "privateEvent") {
+                if (!event.url) {
                     $("#eventLink").hide();
                 }
                 else {

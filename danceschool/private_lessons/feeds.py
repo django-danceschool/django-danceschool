@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
+from django.db.models import Q
 
 from datetime import datetime, timedelta
 import pytz
@@ -59,8 +60,8 @@ class PrivateLessonFeedItem(object):
             except pytz.exceptions.UnknownTimeZoneError:
                 pass
 
-        self.id = 'privatelesson_' + str(object.id)
-        self.type = 'privatelesson'
+        self.id = 'privateLesson_' + str(object.id)
+        self.type = 'privateLesson'
         self.id_number = object.id
         self.title = object.nameAndDate(withDate=False)
         self.start = timezone.localtime(object.startTime,timeZone) \
@@ -82,6 +83,7 @@ def json_availability_feed(request,instructor_id=None):
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
     timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
+    hideUnavailable = request.GET.get('hideUnavailable', False)
 
     time_filter_dict_events = {}
     if startDate:
@@ -96,11 +98,12 @@ def json_availability_feed(request,instructor_id=None):
     ).filter(**time_filter_dict_events)
 
     if (
-        (
+        ((
             hasattr(request.user,'staffmember') and request.user.staffmember == this_instructor and
             request.user.has_perm('private_lessons.edit_own_availability')
         ) or
-        request.user.has_perm('private_lessons.edit_others_availability')
+            request.user.has_perm('private_lessons.edit_others_availability')
+        ) and not hideUnavailable
     ):
         eventlist = [AvailabilityFeedItem(x,timeZone=timeZone).__dict__ for x in availability]
     else:
@@ -112,9 +115,6 @@ def json_availability_feed(request,instructor_id=None):
 # This function creates a JSON feed of all scheduled private lessons
 # so that instructors can see their own personal calendar of upcoming events.
 def json_scheduled_feed(request,instructorFeedKey=''):
-    if not instructorFeedKey:
-        return JsonResponse({})
-
     try:
         this_instructor = Instructor.objects.get(feedKey=instructorFeedKey)
     except ObjectDoesNotExist:
@@ -124,15 +124,45 @@ def json_scheduled_feed(request,instructorFeedKey=''):
     endDate = request.GET.get('end','')
     timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
-    time_filter_dict_events = {}
-    if startDate:
-        time_filter_dict_events['startTime__gte'] = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
-    if endDate:
-        time_filter_dict_events['startTime__lte'] = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1)
+    filters = (
+        Q(instructoravailabilityslot__status=InstructorAvailabilitySlot.SlotStatus.booked) &
+        Q(eventstaffmember__staffMember=this_instructor)
+    )
 
-    lessons = PrivateLessonEvent.objects.filter(
-        eventstaffmember__staffMember=this_instructor,
-    ).filter(**time_filter_dict_events)
+    if startDate:
+        filters = filters & Q(startTime__gte=ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d')))
+    if endDate:
+        filters = filters & Q(endTime__lte=ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1))
+
+    lessons = PrivateLessonEvent.objects.filter(filters).distinct()
+
+    eventlist = [PrivateLessonFeedItem(x,timeZone=timeZone).__dict__ for x in lessons]
+    return JsonResponse(eventlist,safe=False)
+
+
+def json_lesson_feed(request,location_id=None):
+    '''
+    This function displays a JSON feed of all lessons scheduled in a location.
+    It requires that the user has permission to see all other instructor's lessons,
+    (the )
+    '''
+    if not request.user or not request.user.has_perm('private_lessons.view_others_lessons'):
+        return Http404()
+
+    startDate = request.GET.get('start','')
+    endDate = request.GET.get('end','')
+    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
+
+    filters = Q(instructoravailabilityslot__status=InstructorAvailabilitySlot.SlotStatus.booked)
+    if startDate:
+        filters = filters & Q(startTime__gte=ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d')))
+    if endDate:
+        filters = filters & Q(endTime__lte=ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1))
+
+    if location_id:
+        filters = filters & Q(location__id=location_id)
+
+    lessons = PrivateLessonEvent.objects.filter(filters).distinct()
 
     eventlist = [PrivateLessonFeedItem(x,timeZone=timeZone).__dict__ for x in lessons]
     return JsonResponse(eventlist,safe=False)

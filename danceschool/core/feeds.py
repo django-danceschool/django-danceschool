@@ -72,7 +72,7 @@ class EventFeed(ICalFeed):
         if not getConstant('calendar__calendarFeedEnabled'):
             return []
 
-        item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
+        item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')[:100]
 
         if not obj:
             # Public calendar does not show hidden Events _or_ link-only registration Events
@@ -105,7 +105,7 @@ class EventFeed(ICalFeed):
 
 # The Jquery fullcalendar app requires a JSON news feed, so this function
 # creates the feed from upcoming SeriesClass and Event objects.
-def json_event_feed(request,instructorFeedKey=''):
+def json_event_feed(request,instructorFeedKey='',locationId=None):
 
     if not getConstant('calendar__calendarFeedEnabled'):
         return JsonResponse({})
@@ -114,24 +114,25 @@ def json_event_feed(request,instructorFeedKey=''):
     endDate = request.GET.get('end','')
     timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
-    time_filter_dict_series = {'event__month__isnull': False, 'event__year__isnull': False}
-    time_filter_dict_events = {'event__month__isnull': False, 'event__year__isnull': False}
+    filters = Q(event__month__isnull=False) & Q(event__year__isnull=False) & (Q(event__series__isnull=False) | Q(event__publicevent__isnull=False))
+    exclusions = Q(event__status=Event.RegStatus.hidden)
     if startDate:
         limit_time = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
-        time_filter_dict_series['startTime__gte'] = limit_time
-        time_filter_dict_events['startTime__gte'] = limit_time
+        filters = filters & Q(startTime__gte=limit_time)
     if endDate:
         limit_time = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d'))
-        time_filter_dict_series['endTime__lte'] = limit_time + timedelta(days=1)
-        time_filter_dict_events['endTime__lte'] = limit_time + timedelta(days=1)
+        filters = filters & Q(endTime__lte=limit_time + timedelta(days=1))
 
-    item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(**time_filter_dict_events).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
+    if locationId:
+        filters = filter & Q(event__location__id=locationId)
 
-    if not instructorFeedKey:
-        # Public calendar does not show hidden Events _or_ link-only registration Events
-        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
-    else:
+    if instructorFeedKey:
         # Private calendars do show link-only registration Events
-        eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)]
+        filters = filters & Q(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)
+    else:
+        # Public calendar does not show hidden Events _or_ link-only registration Events
+        exclusions = exclusions | Q(event__status=Event.RegStatus.linkOnly)
 
+    item_set = EventOccurrence.objects.exclude(exclusions).filter(filters).order_by('-startTime')
+    eventlist = [EventFeedItem(x,timeZone=timeZone).__dict__ for x in item_set]
     return JsonResponse(eventlist,safe=False)

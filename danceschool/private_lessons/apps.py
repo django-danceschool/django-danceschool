@@ -3,7 +3,7 @@ from django.utils.translation import ugettext_lazy as _
 
 
 class PrivateLessonsConfig(AppConfig):
-    name = 'private_lessons'
+    name = 'danceschool.private_lessons'
     verbose_name = _('Private Lessons Functions')
 
     from . import handlers

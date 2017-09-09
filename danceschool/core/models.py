@@ -581,6 +581,12 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             return self.category.displayColor
     displayColor.fget.short_description = _('Display color')
 
+    @property
+    def durationMinutes(self):
+        ''' Convenience for templates that want to report duration in minutes '''
+        return self.duration * 60
+    durationMinutes.fget.short_description = _('Duration in minutes')
+
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
         return [x.registration.customer.email for x in self.eventregistration_set.filter(cancelled=False)]

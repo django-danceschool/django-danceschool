@@ -176,7 +176,7 @@ $(document).ready(function() {
 
           $.ajax({
               type: "GET",
-              url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/",
+              url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/?hideUnavailable=True",
               success: function(events) {
                 $('#alertBox').empty();
                 $('#calendarbox').fullCalendar('removeEvents');
@@ -205,4 +205,5 @@ $(document).ready(function() {
         }
     </style>
 {% endaddtoblock %}
+
 {% endblock %}
