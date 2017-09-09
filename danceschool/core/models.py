@@ -2419,9 +2419,35 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         # If there were transaction fees, then these also need to be allocated among the InvoiceItems
         # All fees from payments are allocated proportionately.
-        if fees and self.grossTotal > 0:
-            for item in self.invoiceitem_set.all():
-                item.fees += fees * (item.grossTotal / self.grossTotal)
+        self.allocateFees()
+
+    def allocateFees(self):
+        '''
+        Fees are allocated across invoice items based on their discounted
+        total price net of adjustments as a proportion of the overall
+        invoice's total price
+        '''
+        items = list(self.invoiceitem_set.all())
+
+        # Check that totals and adjusments match.  If they do not, raise an error.
+        if self.total != sum([x.total for x in items]):
+            msg = _('Invoice item totals do not match invoice total.  Unable to allocate fees.')
+            logger.error(str(msg))
+            raise ValidationError(msg)
+        if self.adjustments != sum([x.adjustments for x in items]):
+            msg = _('Invoice item adjustments do not match invoice adjustments.  Unable to allocate fees.')
+            logger.error(str(msg))
+            raise ValidationError(msg)
+
+        if self.fees and (self.total - self.adjustments) > 0:
+            for item in items:
+                item.fees = self.fees * ((item.total - item.adjustments) / (self.total - self.adjustments))
+                item.save()
+        elif self.total - self.adjustments == 0:
+            # In the case of full refunds, allocate fees according to the
+            # initial total price of the item only.
+            for item in items:
+                item.fees = self.fees * (item.total / self.total)
                 item.save()
 
     def sendNotification(self, **kwargs):

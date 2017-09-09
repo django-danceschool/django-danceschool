@@ -183,7 +183,6 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         # Keep track of total refund fees as well as how much reamins to be
         # refunded as we iterate through payments to refund them.
         remains_to_refund = amount_to_refund
-        total_fees = 0
 
         for this_payment in self.payments:
             if remains_to_refund <= 0:
@@ -229,7 +228,6 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
                 self.invoice.amountPaid -= amount_refunded
                 self.invoice.fees += fees
                 remains_to_refund -= amount_refunded
-                total_fees += fees
 
             else:
                 this_refund_response_data.update({
@@ -251,6 +249,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
                 self.invoice.data['refunds'] = refund_data
                 self.invoice.save()
+                self.invoice.allocateFees()
                 self.request.session.pop(REFUND_VALIDATION_STR,None)
                 return HttpResponseRedirect(self.get_success_url())
 
@@ -273,13 +272,15 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         for item_request in item_refund_data:
             this_item = self.invoice.invoiceitem_set.get(id=item_request[0])
             this_item.adjustments = -1 * float(item_request[1])
-            this_item.fees += total_fees * (float(item_request[1]) / total_refund_amount)
             this_item.save()
 
             # If the refund is a complete refund, then cancel the EventRegistration entirely.
             if abs(this_item.total + this_item.adjustments) < 0.01 and this_item.finalEventRegistration:
                 this_item.finalEventRegistration.cancelled = True
                 this_item.finalEventRegistration.save()
+
+        # Ensure that all fees are allocated appropriately
+        self.invoice.allocateFees()
 
         self.request.session.pop(REFUND_VALIDATION_STR,None)
         return HttpResponseRedirect(self.get_success_url())
