@@ -67,7 +67,7 @@ def addPrivateEvent(request):
             obj = form.save()
             formset.instance = obj
             formset.save()
-            return HttpResponseRedirect('/admin')
+            return HttpResponseRedirect(reverse('privateCalendar'))
 
     # Otherwise, return the initial form for this instructor
     # GET parameters can be passed to the form, but the form will not be validated with them.

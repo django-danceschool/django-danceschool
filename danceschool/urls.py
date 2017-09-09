@@ -51,10 +51,10 @@ if apps.is_installed('danceschool.prerequisites'):
     urlpatterns.append(url(r'^prerequisites/', include('danceschool.prerequisites.urls')),)
 
 if apps.is_installed('danceschool.private_events'):
-    urlpatterns.append(url(r'^private_events/', include('danceschool.private_events.urls')),)
+    urlpatterns.append(url(r'^private-events/', include('danceschool.private_events.urls')),)
 
 if apps.is_installed('danceschool.private_lessons'):
-    urlpatterns.append(url(r'^private_lessons/', include('danceschool.private_lessons.urls')),)
+    urlpatterns.append(url(r'^private-lessons/', include('danceschool.private_lessons.urls')),)
 
 if apps.is_installed('danceschool.vouchers'):
     urlpatterns.append(url(r'^vouchers/', include('danceschool.vouchers.urls')),)

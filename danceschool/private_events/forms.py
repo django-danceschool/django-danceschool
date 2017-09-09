@@ -11,7 +11,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Submit
 from crispy_forms.bootstrap import Accordion, AccordionGroup
 
-from danceschool.core.models import EventOccurrence
+from danceschool.core.models import EventOccurrence, Event
 from danceschool.core.utils.timezone import ensure_timezone
 from .models import PrivateEvent, EventReminder
 
@@ -65,10 +65,13 @@ class AddPrivateEventForm(forms.ModelForm):
 
         super(AddPrivateEventForm,self).__init__(*args,**kwargs)
         self.fields['submissionUser'].widget = forms.HiddenInput()
+        self.fields['status'].widget = forms.HiddenInput()
+        self.fields['status'].initial = Event.RegStatus.hidden
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.form_tag = False  # Our template must explicitly include the <form tag>
         self.helper.layout = Layout(
+            'status',
             'submissionUser',
             'title',
             Div('category','visibleTo',css_class='form-inline', style=extramargins),

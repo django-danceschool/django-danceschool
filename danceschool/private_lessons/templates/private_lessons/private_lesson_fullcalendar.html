@@ -110,7 +110,13 @@ $(document).ready(function() {
             $('#eventModalLocation').html(calEvent.location);
             $('#id_duration').empty();
             calEvent.availableDurations.forEach(function(minutes){
-                $('#id_duration').append('<option value="' + minutes + '">' + minutes + '</option>');
+                var this_option = '<option value="' + minutes + '"';
+                if (minutes == {{ defaultLessonLength|default:"30" }}) {
+                  this_option += ' selected';
+                }
+                this_option += '>' + minutes + '</option>';
+
+                $('#id_duration').append(this_option);
             });
             $('#id_role').empty();
             calEvent.availableRoles.forEach(function(role){

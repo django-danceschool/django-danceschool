@@ -48,7 +48,7 @@ class EventFeedItem(object):
             self.location = object.event.location.name + '\n' + object.event.location.address + '\n' + object.event.location.city + ', ' + object.event.location.state + ' ' + object.event.location.zip
         else:
             self.location = None
-        self.url = object.link
+        self.url = object.event.link
 
 
 class EventFeed(ICalFeed):

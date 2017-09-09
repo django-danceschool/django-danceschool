@@ -4,7 +4,11 @@
 {% block content %}
     <div>
 
-        <h1>{% trans "Add an Event (non-Public)" %}</h1>
+        <h1>{% trans "Add an Event or Reminder (non-Public)" %}</h1>
+
+        {% if form.errors %}
+        <div class="alert alert-danger"><strong>{% trans "ERROR" %}:</strong><br />{{ form.errors }}</div>
+        {% endif %}
 
         <form action="" method="post">
             <div class="panel panel-default">

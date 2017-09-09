@@ -43,7 +43,9 @@ class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
     permission_required = 'core.view_registration_summary'
 
     queryset = Event.objects.filter(
-        startTime__gte=timezone.now() - timedelta(days=90)
+        Q(startTime__gte=timezone.now() - timedelta(days=90)) & (
+            Q(series__isnull=False) | Q(publicevent__isnull=False)
+        )
     ).annotate(count=Count('eventregistration')).exclude(
         Q(count=0) & Q(status__in=[Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled])
     )

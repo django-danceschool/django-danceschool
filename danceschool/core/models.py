@@ -131,7 +131,7 @@ class DanceTypeLevel(models.Model):
     '''
     name = models.CharField(_('Name'),max_length=50)
     order = models.FloatField(_('Order number'),help_text=_('This is used to order and look up dance types.'))
-    danceType = models.ForeignKey(DanceType,verbose_name=_('Dance Type'))
+    danceType = models.ForeignKey(DanceType,verbose_name=_('Dance Type'),on_delete=models.CASCADE)
 
     displayColor = RGBColorField(_('Display Color'),help_text=_('Choose a color for the calendar display.'),default=get_defaultClassColor)
 
@@ -158,7 +158,7 @@ class StaffMember(PolymorphicModel):
 
     # Although Staff members may be defined without user accounts, this precludes
     # them from having access to the school's features, and is not recommended.
-    userAccount = models.OneToOneField(User, verbose_name=_('User account'), null=True,blank=True)
+    userAccount = models.OneToOneField(User, verbose_name=_('User account'), null=True,blank=True,on_delete=models.SET_NULL)
 
     # By default, only the public email is listed on public-facing pages, and
     # telephone contact information are not listed on public-facing pages either.
@@ -273,7 +273,7 @@ class ClassDescription(models.Model):
     '''
     title = models.CharField(_('Title'),max_length=200)
     description = HTMLField(_('Description'),blank=True)
-    danceTypeLevel = models.ForeignKey(DanceTypeLevel,verbose_name=_('Dance Type & Level'),default=1)
+    danceTypeLevel = models.ForeignKey(DanceTypeLevel,verbose_name=_('Dance Type & Level'),default=1,on_delete=models.SET_DEFAULT)
 
     slug = models.SlugField(_('Slug'),max_length=100,unique=True,blank='True',help_text=_('This is used in the URL for the individual class pages.  You can override the default'))
 
@@ -367,7 +367,7 @@ class Room(models.Model):
     Locations may have multiple rooms, each of which may have its own capacity.
     '''
     name = models.CharField(_('Name'),max_length=80,help_text=_('Give this room a name.'))
-    location = models.ForeignKey(Location,verbose_name=_('Location'))
+    location = models.ForeignKey(Location,verbose_name=_('Location'),on_delete=models.CASCADE)
 
     defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this room.'))
 
@@ -506,10 +506,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     created = models.DateTimeField(_('Creation date'),auto_now_add=True)
     modified = models.DateTimeField(_('Last modified date'),auto_now=True)
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submitted by user'),null=True,blank=True,related_name='eventsubmissions')
+    submissionUser = models.ForeignKey(User,verbose_name=_('Submitted by user'),null=True,blank=True,related_name='eventsubmissions',on_delete=models.SET_NULL)
 
-    location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True)
-    room = models.ForeignKey(Room,verbose_name=_('Room'),null=True,blank=True)
+    location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True,on_delete=models.SET_NULL)
+    room = models.ForeignKey(Room,verbose_name=_('Room'),null=True,blank=True,on_delete=models.SET_NULL)
 
     capacity = models.PositiveIntegerField(_('Event capacity'),null=True,blank=True)
 
@@ -930,7 +930,7 @@ class EventOccurrence(models.Model):
     All events have one or more occurrences.  For example, class series have classes,
     public events may be one time (one occurrence) or they may occur repeatedly.
     '''
-    event = models.ForeignKey(Event,verbose_name=_('Series/Event'))
+    event = models.ForeignKey(Event,verbose_name=_('Series/Event'),on_delete=models.CASCADE)
 
     startTime = models.DateTimeField(_('Start Time'))
     endTime = models.DateTimeField(_('End Time'))
@@ -1001,8 +1001,8 @@ class EventOccurrence(models.Model):
 
 @python_2_unicode_compatible
 class EventRole(models.Model):
-    event = models.ForeignKey(Event)
-    role = models.ForeignKey(DanceRole)
+    event = models.ForeignKey(Event,on_delete=models.CASCADE)
+    role = models.ForeignKey(DanceRole,on_delete=models.CASCADE)
     capacity = models.PositiveIntegerField()
 
     class Meta:
@@ -1033,16 +1033,16 @@ class EventStaffMember(models.Model):
     models and managers.  However, other types may be created by
     overriding StaffType.
     '''
-    category = models.ForeignKey(EventStaffCategory,verbose_name=_('Category'))
+    category = models.ForeignKey(EventStaffCategory,verbose_name=_('Category'),null=True,on_delete=models.SET_NULL)
 
-    event = models.ForeignKey(Event,verbose_name=_('Event'))
+    event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
     occurrences = models.ManyToManyField(EventOccurrence,blank=True,verbose_name=_('Applicable event occurrences'))
 
-    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff Member'))
-    replacedStaffMember = models.ForeignKey('self',verbose_name=_('Replacement for'),related_name='replacementFor',null=True,blank=True)
+    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff Member'),on_delete=models.CASCADE)
+    replacedStaffMember = models.ForeignKey('self',verbose_name=_('Replacement for'),related_name='replacementFor',null=True,blank=True,on_delete=models.SET_NULL)
 
     # For keeping track of who submitted and when.
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submission User'),null=True)
+    submissionUser = models.ForeignKey(User,verbose_name=_('Submission User'),null=True,on_delete=models.SET_NULL)
     creationDate = models.DateTimeField(_('Creation date'),auto_now_add=True)
     modifyDate = models.DateTimeField(_('Last modified date'),auto_now=True)
 
@@ -1084,8 +1084,8 @@ class Series(Event):
     through which their DanceType and DanceTypeLevel are specified.
     '''
 
-    classDescription = models.ForeignKey(ClassDescription,verbose_name=_('Class description'))
-    category = models.ForeignKey(SeriesCategory,verbose_name=_('Series category (optional)'),null=True,blank=True,help_text=_('Custom series categories may be used to display special series (e.g. one-offs, visiting instructors) separately on your registration page.'))
+    classDescription = models.ForeignKey(ClassDescription,verbose_name=_('Class description'),null=True,on_delete=models.SET_NULL)
+    category = models.ForeignKey(SeriesCategory,verbose_name=_('Series category (optional)'),null=True,blank=True,help_text=_('Custom series categories may be used to display special series (e.g. one-offs, visiting instructors) separately on your registration page.'),on_delete=models.SET_NULL)
     allowDropins = models.BooleanField(_('Allow class drop-ins'), default=False, help_text=_('If checked, then all staff will be able to register students as drop-ins.'))
 
     def getTeachers(self,includeSubstitutes=False):
@@ -1103,7 +1103,7 @@ class Series(Event):
     teachers = property(fget=getTeachers)
     teachers.fget.short_description = _('Instructors')
 
-    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing tier'))
+    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing tier'),on_delete=models.PROTECT)
 
     @property
     def name(self):
@@ -1283,13 +1283,13 @@ class PublicEvent(Event):
     title = models.CharField(_('Title'),max_length=100,help_text=_('Give the event a title'))
     slug = models.SlugField(_('Slug'),max_length=100,help_text=_('This is for the event page URL, you can override the default.'))
 
-    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category (optional)'),help_text=_('Custom event categories may be used to display special types of events (e.g. practice sessions) separately on your registration page.  They may also be displayed in different colors on the public calendar.'))
+    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category (optional)'),help_text=_('Custom event categories may be used to display special types of events (e.g. practice sessions) separately on your registration page.  They may also be displayed in different colors on the public calendar.'),on_delete=models.SET_NULL)
     descriptionField = HTMLField(_('Description'),null=True,blank=True,help_text=_('Describe the event for the event page.'))
     link = models.URLField(_('External link to event (if applicable)'),blank=True,null=True,help_text=_('Optionally include the URL to a page for this Event.  If set, then the site\'s auto-generated Event page will instead redirect to this URL.'))
 
     # The pricing tier is optional, but registrations cannot be enabled unless a pricing tier is
     # specified (the pricing tier may specify the price as free for Free events).
-    pricingTier = models.ForeignKey(PricingTier,null=True,blank=True,verbose_name=_('Pricing Tier'))
+    pricingTier = models.ForeignKey(PricingTier,null=True,blank=True,verbose_name=_('Pricing Tier'),on_delete=models.SET_NULL)
 
     def getBasePrice(self,**kwargs):
         '''
@@ -1346,7 +1346,7 @@ class Customer(EmailRecipientMixin, models.Model):
     are unique for each combination of name and email address, even though Users are unique by email address only.  Customers
     also store name and email information separately from the User object.
     '''
-    user = models.OneToOneField(User,null=True,blank=True,verbose_name=_('User account'))
+    user = models.OneToOneField(User,null=True,blank=True,verbose_name=_('User account'),on_delete=models.SET_NULL)
 
     first_name = models.CharField(_('First name'), max_length=30)
     last_name = models.CharField(_('Last name'), max_length=30)
@@ -1478,7 +1478,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     student = models.BooleanField(_('Eligible for student discount'),default=False)
     payAtDoor = models.BooleanField(_('At-the-door registration'),default=False)
 
-    submissionUser = models.ForeignKey(User, verbose_name=_('registered by user'),related_name='submittedtemporaryregistrations',null=True,blank=True)
+    submissionUser = models.ForeignKey(User, verbose_name=_('registered by user'),related_name='submittedtemporaryregistrations',null=True,blank=True,on_delete=models.SET_NULL)
 
     comments = models.TextField(_('Comments'),default='')
     dateTime = models.DateTimeField(_('Registration date/time'),blank=True,null=True)
@@ -1672,7 +1672,7 @@ class Registration(EmailRecipientMixin, models.Model):
     '''
     firstName = models.CharField(_('First name'),max_length=100,default='TBD')
     lastName = models.CharField(_('Last name'),max_length=100,default='TBD')
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),on_delete=models.CASCADE)
 
     howHeardAboutUs = models.TextField(_('How they heard about us'),default='',blank=True,null=True)
     student = models.BooleanField(_('Eligible for student discount'),default=False)
@@ -1868,10 +1868,10 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     An EventRegistration is associated with a Registration and records
     a registration for a single event.
     '''
-    registration = models.ForeignKey(Registration,verbose_name=_('Registration'))
-    event = models.ForeignKey(Event,verbose_name=_('Event'))
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
-    role = models.ForeignKey(DanceRole, null=True,blank=True,verbose_name=_('Dance role'))
+    registration = models.ForeignKey(Registration,verbose_name=_('Registration'),on_delete=models.CASCADE)
+    event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),on_delete=models.CASCADE)
+    role = models.ForeignKey(DanceRole, null=True,blank=True,verbose_name=_('Dance role'),on_delete=models.SET_NULL)
     price = models.FloatField(_('Price before discounts'),default=0,validators=[MinValueValidator(0)])
 
     checkedIn = models.BooleanField(_('Checked In'),default=False,help_text=_('Check to mark the individual as checked in.'))
@@ -1966,8 +1966,8 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
 class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
     price = models.FloatField(_('Price before discounts'),validators=[MinValueValidator(0)])
-    event = models.ForeignKey(Event,verbose_name=_('Event'))
-    role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'))
+    event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
+    role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'),on_delete=models.SET_NULL)
     dropIn = models.BooleanField(_('Drop-in registration'),default=False,help_text=_('If true, this is a drop-in registration.'))
 
     registration = models.ForeignKey(
@@ -2023,7 +2023,7 @@ class EmailTemplate(models.Model):
     defaultFromAddress = models.EmailField(_('From address (default)'),max_length=100,null=True,blank=True,default=get_defaultEmailFrom)
     defaultCC = models.CharField(_('CC (default)'),max_length=100,null=True,blank=True)
 
-    groupRequired = models.ForeignKey(Group,verbose_name=_('Group permissions required to use.'),null=True,blank=True,help_text=_('Some templates should only be visible to some users.'))
+    groupRequired = models.ForeignKey(Group,verbose_name=_('Group permissions required to use.'),null=True,blank=True,help_text=_('Some templates should only be visible to some users.'),on_delete=models.SET_NULL)
     hideFromForm = models.BooleanField(_('Hide from \'Email Students\' form'),default=False,help_text=_('Check this box for templates that are used for automated emails.'))
 
     @property
@@ -2078,7 +2078,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True,
         on_delete=models.SET_NULL,
     )
-    finalRegistration = models.OneToOneField(Registration,verbose_name=_('Registration'),null=True,blank=True)
+    finalRegistration = models.OneToOneField(Registration,verbose_name=_('Registration'),null=True,blank=True,on_delete=models.SET_NULL)
 
     creationDate = models.DateTimeField(_('Invoice created'),auto_now_add=True)
     modifiedDate = models.DateTimeField(_('Last modified'),auto_now=True)
@@ -2086,8 +2086,8 @@ class Invoice(EmailRecipientMixin, models.Model):
     status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.unpaid)
 
     paidOnline = models.BooleanField(_('Paid Online'),default=False)
-    submissionUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Registered by user'),related_name='submittedinvoices')
-    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedinvoices')
+    submissionUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Registered by user'),related_name='submittedinvoices',on_delete=models.SET_NULL)
+    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedinvoices',on_delete=models.SET_NULL)
 
     grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)
     total = models.FloatField(_('Total billed amount'),validators=[MinValueValidator(0)], default=0)
@@ -2461,14 +2461,14 @@ class InvoiceItem(models.Model):
 
     # The UUID field is the unique internal identifier used for this InvoiceItem
     id = models.UUIDField(_('Invoice item number'),primary_key=True, default=uuid.uuid4, editable=False)
-    invoice = models.ForeignKey(Invoice,verbose_name=_('Invoice'))
+    invoice = models.ForeignKey(Invoice,verbose_name=_('Invoice'),on_delete=models.CASCADE)
     description = models.CharField(_('Description'), max_length=300,null=True,blank=True)
 
     temporaryEventRegistration = models.OneToOneField(
         TemporaryEventRegistration,verbose_name=_('Temporary event registration'),
         null=True,blank=True,on_delete=models.SET_NULL
     )
-    finalEventRegistration = models.OneToOneField(EventRegistration,verbose_name=_('Event registration'),null=True,blank=True)
+    finalEventRegistration = models.OneToOneField(EventRegistration,verbose_name=_('Event registration'),null=True,blank=True,on_delete=models.SET_NULL)
 
     grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)
     total = models.FloatField(_('Total billed amount'),validators=[MinValueValidator(0)], default=0)
@@ -2512,12 +2512,12 @@ class PaymentRecord(PolymorphicModel):
     only payment method that is enabled by default is the 'Cash' payment method.
     '''
 
-    invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), null=True,blank=True)
+    invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), null=True,blank=True,on_delete=models.SET_NULL)
 
     creationDate = models.DateTimeField(_('Created'),auto_now_add=True)
     modifiedDate = models.DateTimeField(_('Last updated'),auto_now=True)
 
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submission user'), null=True,blank=True,related_name='payments_submitted',)
+    submissionUser = models.ForeignKey(User,verbose_name=_('Submission user'), null=True,blank=True,related_name='payments_submitted',on_delete=models.SET_NULL)
 
     @property
     def refundable(self):
@@ -2576,7 +2576,7 @@ class CashPaymentRecord(PaymentRecord):
     payerEmail = models.EmailField(_('Payer email'),null=True,blank=True)
 
     status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.needsCollection)
-    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedcashpayments')
+    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedcashpayments',on_delete=models.SET_NULL)
 
     @property
     def methodName(self):
@@ -2596,7 +2596,7 @@ class CashPaymentRecord(PaymentRecord):
 
 class StaffMemberPluginModel(CMSPlugin):
     ''' Views on an individual staff member or instructor use this model for configuration. '''
-    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff member'))
+    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff member'),on_delete=models.CASCADE)
     template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
 
     def get_short_description(self):
@@ -2620,7 +2620,7 @@ class InstructorListPluginModel(CMSPlugin):
         default=[Instructor.InstructorStatus.roster,Instructor.InstructorStatus.assistant,Instructor.InstructorStatus.guest]
     )
     orderChoice = models.CharField(_('Order By'),max_length=10,choices=OrderChoices.choices)
-    imageThumbnail = models.ForeignKey(ThumbnailOption,verbose_name=_('Image thumbnail option'),null=True,blank=True)
+    imageThumbnail = models.ForeignKey(ThumbnailOption,verbose_name=_('Image thumbnail option'),null=True,blank=True,on_delete=models.SET_NULL)
 
     bioRequired = models.BooleanField(_('Exclude instructors with no bio'),default=False)
     photoRequired = models.BooleanField(_('Exclude instructors with no photo'),default=False)
@@ -2663,7 +2663,7 @@ class LocationListPluginModel(CMSPlugin):
 
 class LocationPluginModel(CMSPlugin):
     ''' Individual location directions, etc. use this view '''
-    location = models.ForeignKey(Location,verbose_name=_('Location'))
+    location = models.ForeignKey(Location,verbose_name=_('Location'),on_delete=models.CASCADE)
     template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
 
     def get_short_description(self):
@@ -2707,7 +2707,7 @@ class EventListPluginModel(CMSPlugin):
 
     limitToOpenRegistration = models.BooleanField(_('Limit to open for registration only'),default=False)
 
-    location = models.ForeignKey(Location,verbose_name=_('Limit to location'),null=True,blank=True)
+    location = models.ForeignKey(Location,verbose_name=_('Limit to location'),null=True,blank=True,on_delete=models.SET_NULL)
     weekday = models.PositiveSmallIntegerField(_('Limit to weekday'),null=True,blank=True,choices=[(x,day_name[x]) for x in range(0,7)])
 
     cssClasses = models.CharField(_('Custom CSS classes'),max_length=250,null=True,blank=True,help_text=_('Classes are applied to surrounding &lt;div&gt;'))

@@ -9,7 +9,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from datetime import datetime, timedelta
 
-from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, EventOccurrence, EventStaffMember, Customer
+from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Event, EventOccurrence, EventStaffMember, Customer
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -127,6 +127,7 @@ class BookPrivateLessonView(FormView):
             'instructor_list': Instructor.objects.filter(
                 availableForPrivates=True,instructorprivatelessondetails__isnull=False
             ),
+            'defaultLessonLength': getConstant('privateLessons__defaultLessonLength'),
         })
         return context
 
@@ -208,6 +209,7 @@ class BookPrivateLessonView(FormView):
             location=thisSlot.location,
             participants=form.cleaned_data.pop('participants'),
             comments=form.cleaned_data.pop('comments'),
+            status=Event.RegStatus.hidden,
         )
 
         lesson_instructor = EventStaffMember.objects.create(
@@ -234,7 +236,7 @@ class BookPrivateLessonView(FormView):
 
         # Slots without pricing tiers can't go through the actual registration process.
         # Instead, they are sent to another view to get contact information.
-        if not thisSlot.pricingTier:
+        if not thisSlot.pricingTier or not getConstant('privateLessons__allowRegistration'):
             affectedSlots.update(
                 lessonEvent=lesson,
                 status=InstructorAvailabilitySlot.SlotStatus.tentative,

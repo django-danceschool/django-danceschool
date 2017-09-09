@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
                 ('comments', models.TextField(blank=True, help_text='For internal use and recordkeeping.', null=True, verbose_name='Comments/Notes')),
                 ('pricingTier', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.PricingTier', verbose_name='Pricing Tier')),
             ],
-            options={'abstract': False, 'verbose_name': 'Private lesson', 'verbose_name_plural': 'Private lessons'},
+            options={'abstract': False, 'verbose_name': 'Private lesson', 'verbose_name_plural': 'Private lessons', 'permissions': (('view_others_lessons', 'Can view scheduled private lessons for all instructors'),),},
             bases=('core.event',),
         ),
         migrations.CreateModel(
@@ -83,5 +83,9 @@ class Migration(migrations.Migration):
             model_name='instructoravailabilityslot',
             name='temporaryEventRegistration',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.TemporaryEventRegistration', verbose_name='Temporary event registration'),
+        ),
+        migrations.AlterUniqueTogether(
+            name='privatelessoncustomer',
+            unique_together=set([('customer', 'lesson')]),
         ),
     ]

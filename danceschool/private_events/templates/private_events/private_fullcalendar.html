@@ -113,20 +113,25 @@ $(document).ready(function() {
                 }
                 $("#eventTitle").html(titleBox);
                 $("#eventInfo").html(event.description);
-                if (event.type == "privateEvent") {
-                    $('#eventEditLink').show();
-                    $("#eventEditLink").attr('href', '{% url "admin:private_events_privateevent_changelist" %}' + event.id_number + '/change/');
-                }
-                else if (event.type == "event") {
-                    $('#eventEditLink').show();
-                    $("#eventEditLink").attr('href', '{% url "admin:core_event_changelist" %}' + event.id_number + '/change/');
-                }
-                else if (event.type == "series") {
-                    $('#eventEditLink').show();
-                    $("#eventEditLink").attr('href', '{% url "admin:core_series_changelist" %}' + event.id_number + '/change/');          
-                }
-                else {
-                    $('#eventEditLink').hide();
+                switch(event.type) {
+                    case "privateEvent":
+                        $('#eventEditLink').show();
+                        $("#eventEditLink").attr('href', '{% url "admin:private_events_privateevent_changelist" %}' + event.id_number + '/change/');
+                        break;
+                    case "privateLesson":
+                        $('#eventEditLink').show();
+                        $("#eventEditLink").attr('href', '{% url "admin:private_lessons_privatelessonevent_changelist" %}' + event.id_number + '/change/');
+                        break;
+                    case "event":
+                        $('#eventEditLink').show();
+                        $("#eventEditLink").attr('href', '{% url "admin:core_event_changelist" %}' + event.id_number + '/change/');
+                        break;
+                    case "series":
+                        $('#eventEditLink').show();
+                        $("#eventEditLink").attr('href', '{% url "admin:core_series_changelist" %}' + event.id_number + '/change/');
+                        break;
+                    default:
+                        $('#eventEditLink').hide();                        
                 }
 
                 if (!event.url) {
