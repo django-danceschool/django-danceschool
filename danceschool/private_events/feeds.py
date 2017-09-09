@@ -1,12 +1,13 @@
 from django_ical.views import ICalFeed
 from django.http import JsonResponse
-from django.core.urlresolvers import reverse
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
-import pytz
+from django.contrib.auth.models import User
 
+import pytz
 from datetime import datetime, timedelta
 
 from danceschool.core.models import StaffMember
@@ -59,28 +60,32 @@ class EventFeed(ICalFeed):
     description = _('Calendar for %s' % getConstant('contact__businessName'))
 
     def get_member(self,obj):
-        if not obj:
-            return None
-        return StaffMember.objects.get(feedKey=obj)
+        member = None
+        try:
+            member = StaffMember.objects.get(userAccount=obj)
+        except ObjectDoesNotExist:
+            pass
+        return member
 
     def get_object(self,request,instructorFeedKey=''):
         if instructorFeedKey:
-            return instructorFeedKey
-        else:
-            return None
+            try:
+                return User.objects.get(staffmember__feedKey=instructorFeedKey)
+            except (ValueError, ObjectDoesNotExist):
+                pass
+        return request.user
 
     def title(self,obj):
-        if not obj:
+        this_instructor = self.get_member(obj)
+        if not this_instructor:
             return _('%s Events Calendar' % getConstant('contact__businessName'))
-        else:
-            this_instructor = self.get_member(obj)
-            return _('%s Staff Calendar for %s' % (getConstant('contact__businessName'), this_instructor.fullName))
+        return _('%s Staff Calendar for %s' % (getConstant('contact__businessName'), this_instructor.fullName))
 
     def items(self,obj):
-        if not obj or not getConstant('calendar__privateCalendarFeedEnabled'):
+        if not getattr(obj,'is_staff') or not getConstant('calendar__privateCalendarFeedEnabled'):
             return []
 
-        this_user = self.get_member(obj).userAccount
+        this_user = obj
         instructor_groups = list(this_user.groups.all().values_list('id',flat=True))
 
         occurrences = EventOccurrence.objects.filter(event__privateevent__isnull=False).filter(
@@ -112,11 +117,15 @@ class EventFeed(ICalFeed):
         return item.end
 
 
-# The Jquery fullcalendar app requires a JSON news feed, so this function
-# creates the feed from upcoming SeriesClass and Event objects.
-def json_event_feed(request,instructorFeedKey,location_id=None):
-    if not instructorFeedKey or not getConstant('calendar__privateCalendarFeedEnabled'):
+def json_event_feed(request,location_id=None):
+    '''
+    The Jquery fullcalendar app requires a JSON news feed, so this function
+    creates the feed from upcoming PrivateEvent objects
+    '''
+
+    if not getConstant('calendar__privateCalendarFeedEnabled') or not request.user.is_staff:
         return JsonResponse({})
+    this_user = request.user
 
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
@@ -128,7 +137,6 @@ def json_event_feed(request,instructorFeedKey,location_id=None):
     if endDate:
         time_filter_dict_events['endTime__lte'] = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1)
 
-    this_user = StaffMember.objects.get(feedKey=instructorFeedKey).userAccount
     instructor_groups = list(this_user.groups.all().values_list('id',flat=True))
 
     filters = Q(event__privateevent__isnull=False) & (

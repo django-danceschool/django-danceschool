@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.utils import timezone
 from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 from django.db.models import Q
 
@@ -112,48 +111,28 @@ def json_availability_feed(request,instructor_id=None):
     return JsonResponse(eventlist,safe=False)
 
 
-# This function creates a JSON feed of all scheduled private lessons
-# so that instructors can see their own personal calendar of upcoming events.
-def json_scheduled_feed(request,instructorFeedKey=''):
-    try:
-        this_instructor = Instructor.objects.get(feedKey=instructorFeedKey)
-    except ObjectDoesNotExist:
-        return Http404()
-
-    startDate = request.GET.get('start','')
-    endDate = request.GET.get('end','')
-    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
-
-    filters = (
-        Q(instructoravailabilityslot__status=InstructorAvailabilitySlot.SlotStatus.booked) &
-        Q(eventstaffmember__staffMember=this_instructor)
-    )
-
-    if startDate:
-        filters = filters & Q(startTime__gte=ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d')))
-    if endDate:
-        filters = filters & Q(endTime__lte=ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1))
-
-    lessons = PrivateLessonEvent.objects.filter(filters).distinct()
-
-    eventlist = [PrivateLessonFeedItem(x,timeZone=timeZone).__dict__ for x in lessons]
-    return JsonResponse(eventlist,safe=False)
-
-
-def json_lesson_feed(request,location_id=None):
+def json_lesson_feed(request,location_id=None,show_others=False):
     '''
-    This function displays a JSON feed of all lessons scheduled in a location.
-    It requires that the user has permission to see all other instructor's lessons,
-    (the )
+    This function displays a JSON feed of all lessons scheduled, optionally
+    filtered by location. If show_others is specified, it requires that the
+    user has permission to see all other instructor's lessons as well.
     '''
-    if not request.user or not request.user.has_perm('private_lessons.view_others_lessons'):
-        return Http404()
+    if not request.user or not request.user.is_staff:
+        raise Http404()
 
+    # Don't allow individuals to see others' lessons without permission
+    if not request.user.has_perm('private_lessons.view_others_lessons'):
+        show_others = False
+
+    this_instructor = getattr(request.user,'staffmember',None)
     startDate = request.GET.get('start','')
     endDate = request.GET.get('end','')
     timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
 
     filters = Q(instructoravailabilityslot__status=InstructorAvailabilitySlot.SlotStatus.booked)
+    if not show_others:
+        filters = filters & Q(eventstaffmember__staffMember=this_instructor)
+
     if startDate:
         filters = filters & Q(startTime__gte=ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d')))
     if endDate:

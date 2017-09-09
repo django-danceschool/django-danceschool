@@ -4,18 +4,45 @@
 
 {% block content %}
 
-<h1>{% blocktrans with name=staffMember.fullName %}Calendar For {{ name }}{% endblocktrans %}</h1>
+<h1>{% trans "School Calendars" %}</h1>
 
 <dl>
-<dt>{% trans "Link To Your Calendar Feeds" %}:</dt>
+<dt>{% trans "Links To Calendar Feeds" %}:</dt>
 <dd>
-    <a class="btn btn-default btn-sm" href="{{ privateFeeds.publicEvents }}">{% trans "Your Classes &amp; Events" %}</a>
-    <a class="btn btn-default btn-sm" href="{{ privateFeeds.privateEvents }}">{% trans "Private Events &amp; Reminders" %}</a>
-<a class="btn btn-default btn-sm" href="{{ publicFeed }}">{% trans "Public Calendar Feed" %}</a>
+    {% if privateFeeds.ownPublicEvents %}
+        <a class="btn btn-default btn-sm" href="{{ privateFeeds.ownPublicEvents }}">{% trans "Your Classes &amp; Events" %}</a>
+    {% endif %}
+    {% if privateFeeds.privateEvents %}
+        <a class="btn btn-default btn-sm" href="{{ privateFeeds.privateEvents }}">{% trans "Private Events &amp; Reminders" %}</a>
+    {% endif %}
+
+    <a class="btn btn-default btn-sm" href="{{ publicFeed }}">{% trans "Public Calendar Feed" %}</a>
 ({% trans "copy and paste these URLs to add them to Google Calendar, etc." %})</dd>
 </dl>
 
+<div class="panel panel-default">
+    <div class="panel-heading">{% trans "Select Calendar Options" %}</div>
+    <div class="panel-body">
+        <form name='calendarSelect' id='calendarSelect'>
+
+            <p>
+            <select name="location">
+                <option data-publicevents="{{ jsonPublicFeed }}" data-privateevents="{{ jsonPrivateFeeds.privateEvents }}" data-privatelessons="{{ jsonPrivateFeeds.privateLessons }}" selected>{% trans "All Events and Reminders" %}</option>
+                <option data-publicevents="{{ jsonPublicFeed }}">{% trans "Only Public Events" %}</option>
+                <option data-publicevents="{{ jsonPrivateFeeds.ownPublicEvents }}" data-privateevents="{{ jsonPrivateFeeds.privateEvents }}" data-privatelessons="{{ jsonPrivateFeeds.ownPrivateLessons }}">{% trans "Only My Events" %}</option>
+                {% for i in locations %}
+                    <option data-id="{{ i.id }}" data-publicevents="{{ i.jsonCalendarFeed }}" data-privateevents="{{ i.jsonPrivateCalendarFeed }}" data-privatelessons="{{ i.jsonPrivateLessonFeed }}">{% trans "Location" %}: {{ i.name }}</option>
+                {% endfor %}
+            </select>
+            </p>
+
+        </form>
+    </div>
+</div>
+
 <div id="calendarbox">&nbsp;</div>
+
+<p><em>{% trans "Note" %}:</em> {% blocktrans %}For all calendar options, private reminders and private lessons displayed include only those events that are visible to your user account.{% endblocktrans %}</p>
 
 
 <!-- Modal for existing events -->
@@ -38,7 +65,7 @@
 <div id="eventInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer">{% if 'core.change_series' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a>{% endif %}<a class="btn btn-default" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
+<div class="modal-footer"><a class="btn btn-default" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a><a class="btn btn-default" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-default" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
@@ -56,7 +83,7 @@
 <div id="eventNewInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button></div>
+<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}{% if 'private_events.add_privateevent' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
@@ -84,15 +111,25 @@
 <script type="text/javascript">
 $(document).ready(function() {
 
+    function updateCalendarFeeds() {
+        var selected = $('#calendarSelect option:selected')
+        $('#calendarbox').fullCalendar('removeEvents');
+        if (selected.data('publicevents')) {
+            $('#calendarbox').fullCalendar('addEventSource', selected.data('publicevents'));            
+        }
+        if (selected.data('privateevents')) {
+            $('#calendarbox').fullCalendar('addEventSource', selected.data('privateevents'));            
+        }
+        if (selected.data('privatelessons')) {
+            $('#calendarbox').fullCalendar('addEventSource', selected.data('privatelessons'));
+        }
+        $('#calendarbox').fullCalendar('rerenderEvents');
+    }
+
     // page is now ready, initialize the calendar...
 
     $('#calendarbox').fullCalendar({
         // put your options and callbacks here
-        eventSources: [
-            {% for key,value in jsonPrivateFeeds.items %}
-                {url: '{{ value }}'},
-            {% endfor %}
-        ],
         eventTextColor: '#ffffff',
         timezone: "{{ TIME_ZONE }}",
         height: "auto",
@@ -120,7 +157,7 @@ $(document).ready(function() {
                         break;
                     case "privateLesson":
                         $('#eventEditLink').show();
-                        $("#eventEditLink").attr('href', '{% url "admin:private_lessons_privatelessonevent_changelist" %}' + event.id_number + '/change/');
+                        $("#eventEditLink").attr('href', '{{ privateLessonAdminUrl }}' + event.id_number + '/change/');
                         break;
                     case "event":
                         $('#eventEditLink').show();
@@ -155,6 +192,16 @@ $(document).ready(function() {
     $("#closeLink").click(function() {
         $("#eventContent").hide();
     });
+    $('#calendarSelect').change(function(event) {
+        // Get the ID of the location, submit to AJAX view,
+        // and finally load the calendars for thos location
+        event.preventDefault();
+        updateCalendarFeeds();
+    });
+
+    // Update calendar feeds to start
+    updateCalendarFeeds();
+
 });
 </script>
 {% endaddtoblock %}

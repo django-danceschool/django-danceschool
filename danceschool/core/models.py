@@ -352,6 +352,13 @@ class Location(models.Model):
         return self.address + ', ' + self.city + ', ' + self.state + ' ' + self.zip
     address_string.fget.short_description = _('Address')
 
+    @property
+    def jsonCalendarFeed(self):
+        '''
+        Allows for easy viewing of location-specific calendar feeds.
+        '''
+        return reverse('jsonCalendarLocationFeed', args=(self.id,))
+
     def __str__(self):
         return self.name
 

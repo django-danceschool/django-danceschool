@@ -31,7 +31,7 @@ class InstructorAvailabilityView(TemplateView):
             (thisUser and thisUser.has_perm('private_lessons.edit_others_availability'))
         ):
             return super(InstructorAvailabilityView,self).get(request,*args,**kwargs)
-        return Http404()
+        raise Http404()
 
     def get_context_data(self,**kwargs):
         context = super(InstructorAvailabilityView,self).get_context_data(**kwargs)

@@ -4,9 +4,10 @@ from .feeds import EventFeed, json_event_feed
 from .views import addPrivateEvent, PrivateCalendarView
 
 urlpatterns = [
-    # These are the calendar feeds.  They all require an instructor's feed key to keep things private.
+    # These are the calendar feeds.
+    url(r'^feed/json/$', json_event_feed, name='jsonPrivateCalendarFeed'),
+    url(r'^feed/json/location/(?P<location_id>[0-9]+)$', json_event_feed, name='jsonPrivateCalendarFeed'),
     url(r'^feed/(?P<instructorFeedKey>[\w\-_]+)/$', EventFeed(), name='privateCalendarFeed'),
-    url(r'^feed/json/(?P<instructorFeedKey>[\w\-_]+)/$', json_event_feed, name='jsonPrivateCalendarFeed'),
 
     url(r'^calendar/$', PrivateCalendarView.as_view(), name='privateCalendar'),
 

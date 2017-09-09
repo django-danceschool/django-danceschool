@@ -124,7 +124,7 @@ def json_event_feed(request,instructorFeedKey='',locationId=None):
         filters = filters & Q(endTime__lte=limit_time + timedelta(days=1))
 
     if locationId:
-        filters = filter & Q(event__location__id=locationId)
+        filters = filters & Q(event__location__id=locationId)
 
     if instructorFeedKey:
         # Private calendars do show link-only registration Events

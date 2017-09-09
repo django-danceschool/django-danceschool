@@ -12,11 +12,12 @@ class PrivateLessonsToolbar(CMSToolbar):
 
     def populate(self):
         staff_menu = self.toolbar.get_or_create_menu('core-staffmember',_('Staff'))
+        position = staff_menu.find_first(BaseItem,name=_('Your Stats')) or 0
+
+        staff_menu.add_link_item(_('Schedule a Private Lesson'), url=reverse('bookPrivateLesson'), position=position + 1)
 
         if (
-            hasattr(self.request.user,'staffmember') and
-            self.request.user.staffmember.instructor and
-            self.request.user.staffmember.feedKey
+            self.request.user.has_perm('private_lessons.edit_own_availability') or
+            self.request.user.has_perm('private_lessons.edit_others_availability')
         ):
-            position = staff_menu.find_first(BaseItem,name=_('Your Stats')) or 0
             staff_menu.add_link_item(_('Private Lesson Availability'), url=reverse('instructorAvailability'), position=position + 1)
