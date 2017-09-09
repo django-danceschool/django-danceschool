@@ -83,7 +83,7 @@
 <div id="eventNewInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}{% if 'core.add_event' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}{% if 'private_events.add_privateevent' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button></div>
+<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}{% if 'core.add_publicevent' in perms or user.is_superuser %}<a class="btn btn-default" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}{% if 'private_events.add_privateevent' in perms or user.is_superuser %}<a class="btn btn-default" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}<button class="btn btn-default" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
