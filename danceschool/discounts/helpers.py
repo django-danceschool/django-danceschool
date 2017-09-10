@@ -23,9 +23,9 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,
     pointbased_cart_object_list = []
     for cart_item in cart_object_list:
         if hasattr(cart_item.event.pricingTier,'pricingtiergroup'):
-            for y in range(0,cart_item.event.pricingTier.pricingtiergroup.points or 0):
+            for y in range(0,(cart_item.event.pricingTier.pricingtiergroup.points or 0) * int(getattr(cart_item.event,'discountPointsMultiplier',1))):
                 pointbased_cart_object_list += [cart_item]
-    pointbased_cart_object_list.sort(key=lambda x: x.event.pricingTier.pricingtiergroup.points, reverse=True)
+    pointbased_cart_object_list.sort(key=lambda x: x.event.pricingTier.pricingtiergroup.points * int(getattr(x.event,'discountPointsMultiplier',1)), reverse=True)
 
     # Discounts that require registration a number of days in advance are evaluated against
     # midnight local time of the day of registration (so that discounts always close at
@@ -102,7 +102,7 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,
             # figure out how many times it could have matched, to determine the fraction
             # that matched.
             matchedTuples = [
-                (item, float(matched_cart_items.count(item)) / item.event.pricingTier.pricingtiergroup.points)
+                (item, float(matched_cart_items.count(item)) / (item.event.pricingTier.pricingtiergroup.points * int(getattr(item.event,'discountPointsMultiplier',1))))
                 if item not in additionalItems else (item, 1)
                 for item in matchedList
             ]

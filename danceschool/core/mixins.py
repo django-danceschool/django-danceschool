@@ -1,4 +1,5 @@
 from django.contrib.auth.views import redirect_to_login
+from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.forms import ModelForm, ChoiceField, Media
@@ -114,6 +115,7 @@ class EmailRecipientMixin(object):
             'currencyCode': getConstant('general__currencyCode'),
             'currencySymbol': getConstant('general__currencySymbol'),
             'businessName': getConstant('contact__businessName'),
+            'site_url': getConstant('email__linkProtocol') + '://' + Site.objects.get_current().domain,
         })
         return context
 

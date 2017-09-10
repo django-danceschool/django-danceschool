@@ -197,26 +197,14 @@ class EventOccurrenceInline(admin.TabularInline):
 class InvoiceItemInline(admin.StackedInline):
     model = InvoiceItem
     extra = 0
-    fields = ['id','description','grossTotal','adjustments','temporaryEventRegistrationLink','finalEventRegistrationLink']
-    readonly_fields = ['id','temporaryEventRegistrationLink','finalEventRegistrationLink']
+    fields = ['id',('description','grossTotal','adjustments'),]
+    readonly_fields = ['id',]
 
     # This ensures that InvoiceItems are not deleted except through
     # the regular registration process.  Invoice items can still be
     # manually added.
     def has_delete_permission(self, request, obj=None):
         return False
-
-    def finalEventRegistrationLink(self,obj):
-        change_url = reverse('admin:core_eventregistration_change', args=(obj.finalEventRegistration.id,))
-        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.finalEventRegistration.id))
-    finalEventRegistrationLink.allow_tags = True
-    finalEventRegistrationLink.short_description = _('Final event registration')
-
-    def temporaryEventRegistrationLink(self,obj):
-        change_url = reverse('admin:core_temporaryeventregistration_change', args=(obj.temporaryEventRegistration.id,))
-        return mark_safe('<a href="%s">#%s</a>' % (change_url, obj.temporaryEventRegistration.id))
-    temporaryEventRegistrationLink.allow_tags = True
-    temporaryEventRegistrationLink.short_description = _('Temporary event registration')
 
 
 @admin.register(Invoice)
@@ -590,6 +578,7 @@ class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
     list_editable = ('availableForPrivates','privateEmail','status')
     list_filter = ('status','availableForPrivates')
     search_fields = ('=firstName','=lastName','publicEmail','privateEmail')
+    inlines = []
 
     ordering = ('status','lastName','firstName')
 

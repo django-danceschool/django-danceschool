@@ -2,9 +2,9 @@ from django import template
 from django.db.models.query import QuerySet
 from django.core.exceptions import ObjectDoesNotExist
 
-import datetime
 from calendar import month_name, day_name
 from polymorphic.query import PolymorphicQuerySet
+import re
 
 from danceschool.core.models import Event, DanceRole, Instructor, Location
 from danceschool.core.constants import getConstant
@@ -160,3 +160,9 @@ def getStatusValue(obj,value):
 
     # All these classes store choice information in the status field.
     return choice_dict.get(obj.status) or obj.status
+
+
+@register.filter
+def camelSpace(obj):
+    ''' Add spaces in camelCase words '''
+    return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', obj)

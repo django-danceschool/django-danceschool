@@ -1,0 +1,56 @@
+{% extends "cms/home.html" %}
+{% load crispy_forms_tags i18n %}
+
+{% block title %}{% trans "Schedule a Private Lesson" %}{% endblock %}
+
+{% block body_id %}privatelessons{% endblock %}
+
+{% block content %}
+	{% block summary %}
+		<div class="regsummary regsummarywell well well-sm">
+
+			<table class="table">
+			<thead>
+			<tr>
+			<th colspan="2">{% trans "You've selected:" %}</th>
+			</tr>
+
+			</thead>
+			<tbody>
+				<tr>
+					<td>{% blocktrans with lesson_teachers=teachers|join:" and " location=lesson.location.name|default:"unspecified location" %}Private lesson with {{ lesson_teachers }} at {{ location }}{% endblocktrans %}</td>
+					<td>{{ lesson.startTime|date:"D., N jS Y, P" }} - {{ lesson.endTime|date:"P" }}</td>
+				</tr>
+			</tbody>
+			</table>
+		</div>
+	{% endblock %}
+
+	{# Display any warning or error messages associated with the previous form submission #}
+	<div id="message-alerts">
+    {% for message in messages %}
+	    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+    {% endfor %}
+    </div>
+
+
+	{% block form %}
+		<h3>{% trans "Step 2: Provide Your Student Information" %}</h3>
+
+		{% if show_ajax_form %}
+			{% include "account/ajax_login.html" %}
+
+		<div class="panel panel-default">
+			<div class="panel-body">
+
+		{% endif %}
+				<form action="" method="post">
+				    {% csrf_token %}
+				    {% crispy form %}
+				</form>
+		{% if show_ajax_form %}
+			</div>
+		</div>
+		{% endif %}
+	{% endblock %}
+{% endblock %}
