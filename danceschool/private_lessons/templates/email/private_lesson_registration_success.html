@@ -1,0 +1,19 @@
+Hi {{ fullName }},
+
+Thank you for registering for a private lesson with {{ instructors|join:" and " }} at {{ businessName }}!  You have been scheduled for the following:
+
+Scheduled By: {{ fullName }}
+Email: {{ email }}{% if phone %}
+Telephone: {{ phone }}{% endif %}
+
+Start Time: {{ lesson.startTime|date:"Y-m-d, P" }}
+Duration: {{ lesson.durationMinutes }} minutes
+Location: {{ lesson.location.name }}
+Expected # Participants: {{ lesson.participants }}
+Comments/Notes:
+{{ lesson.comments }}
+
+Thanks again, and we look forward to seeing you soon!
+
+Sincerely,
+{{ businessName }}

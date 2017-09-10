@@ -1,0 +1,304 @@
+{% extends "cms/home.html" %}
+{% load sekizai_tags static crispy_forms_tags i18n %}
+
+{% block content %}
+
+<h1>{% trans "Manage Private Lesson Availability" %}</h1>
+
+{% if 'private_lessons.edit_others_availability' in perms %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        {% trans "Choose an Instructor" %}
+    </div>
+    <div class="panel-body">
+        <form name='instructorSelect' id='instructorSelect'>
+
+            <p>
+            <select name="instructor">
+                <option>{% trans "Select instructor" %}</option>
+                {% for i in instructor_list %}
+                    <option data-id="{{ i.id }}" data-defaultpricingtier="{{ i.instructorprivatelessondetails.defaultPricingTier.id }}" {% if instructor.id == i.id %}selected="selected"{% endif %}>{{ i.fullName }}</option>
+                {% endfor %}
+            </select>
+            </p>
+
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div id="alertBox"></div>
+
+{# Event modal #}
+<div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="eventModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="eventModalTitle"></h4>
+      </div>
+      <div class="modal-body" id="eventModalBody">
+          <form action="" id="" method="post">{% csrf_token %}
+              {{ update_form|crispy }}
+          </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="eventModalSubmit">{% trans "Update Availability" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Availability creation modal #}
+<div class="modal fade" id="availabilityModal" tabindex="-1" role="dialog" aria-labelledby="availabilityModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="availabilityModalTitle">{% trans "Add Private Lesson Availability Slots" %}</h4>
+      </div>
+      <div class="modal-body" id="eventModalBody">
+          <form action="" id="" method="post">{% csrf_token %}
+              {{ creation_form|crispy }}
+          </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="availabilityModalSubmit">{% trans "Update Availability" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="calendarbox">&nbsp;</div>
+
+<p>{% blocktrans %}<strong>Note:</strong> Click and drag to add multiple slots at one time.  <em>Ctrl+click</em> to select and update/delete multiple slots at one time.{% endblocktrans %}</p>
+
+{% addtoblock "css" %}
+    <link rel='stylesheet' type="text/css" href="{% static 'fullcalendar/fullcalendar.min.css' %}" />
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <link rel='stylesheet' type="text/css" href="{% static 'timepicker/jquery.timepicker.css' %}" />
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style media="screen" type="text/css">
+        .fc-day-grid-event > .fc-content {
+            white-space: normal;
+        }
+        .availabilitySlot-A {
+            background-color: #009900;
+            border-color: #006600;
+        }
+        .availabilitySlot-U {
+            background-color: #CCCCCC;
+            border-color: #999999;
+        }
+        .availabilitySlot-B {
+            background-color: #990000;
+            border-color: #660000;
+        }
+        .availabilitySlot-T {
+            background-color: #999999;
+            border-color: #666666;
+        }
+        .availabilitySlot-selected {
+            background-color: #AAAAAA;
+            border-color: #999999;
+        }
+    </style>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src="{% static 'jquery-ui/jquery-ui.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src="{% static 'timepicker/jquery.timepicker.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src="{% static 'moment/moment.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src="{% static 'fullcalendar/fullcalendar.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+    // To keep track of multi-event selections
+    window.selectedEvents = []
+
+    // page is now ready, initialize the calendar...
+
+    $('#calendarbox').fullCalendar({
+        // put your options and callbacks here
+        eventSources: [
+                {url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + {{ instructor.id }} + "/"},
+        ],
+        eventTextColor: '#ffffff',
+        height: 500,
+        aspectRatio: 1,
+        defaultView: 'agendaWeek',
+        header: {right: 'month,agendaWeek, prev,next today'},
+        selectable: true,
+        selectHelper: true,
+
+        eventClick: function(calEvent, jsEvent) {
+            if (jsEvent.ctrlKey) {
+               calEvent.className.push('availabilitySlot-selected');
+               window.selectedEvents.push(calEvent.id_number);
+               $('#calendarbox').fullCalendar('updateEvent', calEvent);
+              return;
+            }
+
+            $('#eventModalTitle').html(calEvent.title);
+            $('#eventModalLocation').html(calEvent.location);
+            window.selectedEvents.push(calEvent.id_number);
+ 
+            for (var i = 0, len = window.selectedEvents.length; i < len; i++) {
+                $('#eventModal form').first().append('<input type="hidden" name="slotIds" value="' + window.selectedEvents[i] + '" id="id_slotIds_' + window.selectedEvents[i] + '" selected="selected">');
+            }
+            window.selectedEvents = [];
+            $('.availabilitySlot-selected').removeClass('availabilitySlot-selected');
+
+            $('#id_updateStatus').val(calEvent.status);
+            $('#id_updateLocation').val(calEvent.location_id);
+            $('#id_updatePricing').val(calEvent.pricingTier_id);
+            $('#id_deleteSlot').prop('checked', false);
+            $('#eventModal').modal();
+        },
+        select: function(start, end) {
+            var startDateLabel = start.format('MMMM Do, YYYY')
+            var endDateLabel = end.format('MMMM Do, YYYY')
+            var startDate = start.format('YYYY-MM-DD')
+            var endDate = end.format('YYYY-MM-DD')
+
+            var startTime = start.format('h:mm a')
+            var endTime = end.format('h:mm a');
+
+            {% if 'private_lessons.edit_others_availability' in perms %}
+              $('#id_instructorId').val($('#instructorSelect option:selected').data('id'));
+              $('#id_pricingTier').val($('#instructorSelect option:selected').data('defaultpricingtier'));
+            {% else %}
+              $('#id_instructorId').val({{ instructor.id }});
+              $('#id_pricingTier').val({{ instructor.instructorprivatelessondetails.defaultPricingTier.id }});
+            {% endif %}
+
+            $('#id_startDate').val(startDate);
+            $('#id_endDate').val(endDate);
+
+            if (start.hasTime() && end.hasTime()) {
+                $('#id_startTime').val(startTime);
+                $('#id_endTime').val(endTime);
+            }
+
+            $('#availabilityModalTitle').html('Add slots: ' + startDateLabel );
+
+            if (startDate != endDate) {
+                $('#availabilityModalTitle').append(' to ' + endDateLabel );
+            }
+
+            $('#availabilityModal').modal();
+            $('#calendarBox').fullCalendar('unselect');
+        },
+
+    });
+
+    $('#id_startTime').timepicker();
+    $('#id_endTime').timepicker();
+
+    $('#availabilityModalSubmit').click(function() {
+        $.ajax({
+          type: "POST",
+          url: "{% url 'addAvailabilitySlot' %}",
+          data: $('#availabilityModal form').first().serialize(),
+          success: function(data) {
+            $('#alertBox').empty();
+            $('#alertBox').html('<div class="alert alert-success alert-dismissable" role="alert"><strong>SUCCESS:</strong> Slots successfully created.</div>');
+            $('#calendarbox').fullCalendar('refetchEvents');
+          },
+          error: function(data) {
+              // List form errors in the alert box.  If no errors, display a generic message.
+              var innerHTML = '<strong>ERROR:</strong> Unable to submit new availability slots.';
+
+              if (!jQuery.isEmptyObject(data.responseJSON)) {
+                innerHTML += '<ul>\n';
+
+                for (var key in data.responseJSON) {
+                  if (data.responseJSON.hasOwnProperty(key)) {
+                    innerHTML += '<li>' + data.responseJSON[key] + '</li>\n';
+                  }
+                }
+                innerHTML += '</ul>\n';
+              }
+
+              $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert">' + innerHTML + '</div>');
+          }
+        });
+    });
+
+    $('#eventModalSubmit').click(function() {
+
+        $.ajax({
+          type: "POST",
+          url: "{% url 'updateAvailabilitySlot' %}",
+          data: $('#eventModal form').first().serialize(),
+          success: function(data) {
+            $('#alertBox').empty();
+            $('#alertBox').html('<div class="alert alert-success alert-dismissable" role="alert"><strong>SUCCESS:</strong> Slot successfully updated.</div>');
+
+            // Remove previous multiple selection of slot Ids to avoid issues with repeat calls
+            $('input[name=slotIds]').remove();
+
+            $('#calendarbox').fullCalendar('refetchEvents');
+          },
+          error: function(data) {
+              $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert"><strong>ERROR:</strong> Unable to update slot information.</div>');
+              console.log(data);
+
+              // Remove previous multiple selection of slot Ids to avoid issues with repeat calls
+              $('input[name=slotIds]').remove();
+          }
+        });
+    });
+
+    $('#instructorSelect').change(function(event) {
+        // Get the ID of the instructor, submit to AJAX view,
+        // and finally load the availability of that instructor
+        event.preventDefault();
+
+        var new_id = $('#instructorSelect option:selected').data('id');
+
+        $.ajax({
+            type: "GET",
+            url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/",
+            success: function(events) {
+              $('#alertBox').empty();
+              $('#calendarbox').fullCalendar('removeEvents');
+              $('#calendarbox').fullCalendar('addEventSource', events);
+              $('#calendarbox').fullCalendar('rerenderEvents');
+            },
+            error: function() {
+
+              if (new_id) {
+                  $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert">{% blocktrans %}<strong>ERROR:</strong> Instructor availability did not load.</div>{% endblocktrans %}');
+              }
+              $('#calendarbox').fullCalendar('removeEvents');
+            },
+        });
+
+    });
+
+});
+</script>
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style type="text/css">
+        .modal {
+           position: absolute;
+           top: 40px;
+        }
+    </style>
+{% endaddtoblock %}
+{% endblock %}

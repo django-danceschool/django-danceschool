@@ -6,7 +6,7 @@ but can be changed dynamically.
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template
 
-from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, FloatPreference, ModelChoicePreference, Section
+from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, FloatPreference, ChoicePreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
 from filer.models import Folder
 from cms.models import Page
@@ -400,6 +400,24 @@ class ErrorEmailsTo(StringPreference):
         field_kwargs = super(self.__class__,self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
+
+
+@global_preferences_registry.register
+class EmailLinkProtocol(ChoicePreference):
+    section = email
+    name = 'linkProtocol'
+    choices = [
+        ('http','HTTP'),
+        ('https','HTTPS'),
+    ]
+    verbose_name = _('Protocol for URLs in email templates')
+    default = 'http'
+    help_text = _(
+        'Invoice emails and other emails sometimes include links that require ' +
+        'a protocol to be specified via the "protocol" context variable.  If ' +
+        'your site uses solely HTTPS, you may need to change this value to avoid ' +
+        'broken links.'
+    )
 
 
 @global_preferences_registry.register

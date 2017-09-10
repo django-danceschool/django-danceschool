@@ -34,8 +34,9 @@ urlpatterns = [
     # These are for the calendar feeds
     url(r'^events/feed/$', EventFeed(), name='calendarFeed'),
     url(r'^events/feed/json/$', json_event_feed, name='jsonCalendarFeed'),
-    url(r'^events/feed/(?P<instructorFeedKey>[\w\-_]+)$', EventFeed(), name='calendarFeed'),
-    url(r'^events/feed/json/(?P<instructorFeedKey>[\w\-_]+)$', json_event_feed, name='jsonCalendarFeed'),
+    url(r'^events/feed/(?P<instructorFeedKey>[\w\-_]+)/$', EventFeed(), name='calendarFeed'),
+    url(r'^events/feed/json/location/(?P<locationId>[0-9]+)/$', json_event_feed, name='jsonCalendarLocationFeed'),
+    url(r'^events/feed/json/(?P<instructorFeedKey>[\w\-_]+)/$', json_event_feed, name='jsonCalendarFeed'),
 
     # This allows creation of duplicate offset events from admin
     url(r'^events/repeat/$',RepeatEventsView.as_view(),name='repeatEvents'),

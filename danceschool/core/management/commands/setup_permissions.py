@@ -86,6 +86,7 @@ Note: This process may take a minute or two to complete.
                 'danceschool.news',
                 'danceschool.prerequisites',
                 'danceschool.private_events',
+                'danceschool.private_lessons',
                 'danceschool.stats',
                 'danceschool.vouchers',
                 'danceschool.banlist',
@@ -144,6 +145,7 @@ Note: This process may take a minute or two to complete.
                 ('add_privateevent', 'private_events', 'privateevent'),
                 ('change_privateevent', 'private_events', 'privateevent'),
                 ('delete_privateevent', 'private_events', 'privateevent'),
+                ('edit_own_availability', 'private_lessons', 'instructoravailabilityslot'),
                 ('view_banlist', 'banlist','bannedperson'),
             ]
 

@@ -1,0 +1,21 @@
+Dear {{ instructor.firstName }},
+
+This is an automated notification that you have been scheduled to teach a private lesson using the {{ businessName }} scheduling system.
+{% for customer in customers %}
+Customer: {{ customer.fullName }}
+Email: {{ customer.email }}{% if customer.phone %}
+Telephone: {{ customer.phone }}{% endif %}
+{% endfor %}
+Start Time: {{ lesson.startTime|date:"Y-m-d, P" }}
+Duration: {{ lesson.durationMinutes }} minutes
+Location: {{ lesson.location.name|default:"No location specified" }}
+Expected # Participants: {{ lesson.participants }}
+Comments/Notes:
+{{ lesson.comments }}
+
+This lesson has been scheduled based on your reported availability.  If you are no longer available to teach this lesson, please contact the school so that this lesson may be cancelled.
+
+You may view all your scheduled public and private events, including your scheduled private lessons, using the calendar at: {{ calendarUrl }}
+
+Sincerely,
+{{ businessName }}

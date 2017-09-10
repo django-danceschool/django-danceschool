@@ -63,6 +63,12 @@ class PrivateEvent(Event):
             # Event has no occurrences
             return self.name
 
+    def save(self, *args, **kwargs):
+        ''' Set registration status to hidden if it is not specified otherwise '''
+        if not self.status:
+            self.status == Event.RegStatus.hidden
+        super(PrivateEvent,self).save(*args,**kwargs)
+
     class Meta:
         verbose_name = _('Private event/calendar item')
         verbose_name_plural = _('Private events/calendar items')

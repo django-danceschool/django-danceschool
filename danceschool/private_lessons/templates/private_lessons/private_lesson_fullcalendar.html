@@ -1,0 +1,222 @@
+{% extends "cms/home.html" %}
+{% load sekizai_tags static crispy_forms_tags i18n thumbnail %}
+
+{% block content %}
+
+{# Display any warning or error messages associated with the previous form submission #}
+<div id="message-alerts">
+{% for message in messages %}
+    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+{% endfor %}
+</div>
+
+<h1>{% trans "Schedule a Private Lesson" %}</h1>
+
+{% if form.errors %}
+<div class="alert alert-danger">{% blocktrans %}<strong>ERROR:</strong> Booking was unsuccessful.{% endblocktrans %}
+{{ form.errors }}
+</div>
+{% endif %}
+
+<div class="panel panel-default">
+    <div class="panel-heading">
+        {% trans "Choose an Instructor" %}
+    </div>
+    <div class="panel-body">
+        <form name='instructorSelect' id='instructorSelect'>
+
+            <p>
+            <select name="instructor">
+                <option>{% trans "Select instructor" %}</option>
+                {% for instructor in instructor_list %}
+                    <option data-id="{{ instructor.id }}" data-fullname="{{ instructor.fullName }}" data-roles="{{ instructor.instructorprivatelessondetails.roles.all|join:', ' }}" data-couples="{{ instructor.instructorprivatelessondetails.couples }}" data-smallgroups="{{ instructor.instructorprivatelessondetails.smallGroups }}" {% if instructor.image %}data-imageurl="{% thumbnail instructor.image thumbnail_dimensions|default:'118x118' crop %}"{% endif %}>{{ instructor.fullName }}</option>
+                {% endfor %}
+            </select>
+            </p>
+
+        </form>
+    </div>
+</div>
+
+<div class="hidden" id="instructorDetails">
+  <img id="instructorDetailsImage" class="pull-left hidden" src="" />
+  <h4 id="instructorDetailsName"></h4>
+
+  <ul class="list-group">
+    <li class="list-group-item"><strong>{% trans "For students in roles" %}:</strong>&nbsp;<span id="instructorDetailsRoles"></span></li>
+    <li class="list-group-item"><strong>{% trans "Lessons for couples" %}:</strong>&nbsp;<span id="instructorDetailsCouples"></span></li>
+    <li class="list-group-item"><strong>{% trans "Lessons for small groups" %}:</strong>&nbsp;<span id="instructorDetailsSmallGroups"></span></li>
+  </ul>
+</div>
+
+
+<div id="alertBox"></div>
+
+<!-- Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="eventModalTitle">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <form method="post" id="bookingForm">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="eventModalTitle"></h4>
+      </div>
+      <div class="modal-body" id="eventModalBody">
+          {# A div to hold any alerts regarding this lesson that we want to display #}
+          <div id="modalAlerts"></div>
+          {% csrf_token %}
+          {{ form|crispy }}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="submit" form="bookingForm" value="Submit" class="btn btn-primary">{% trans "Schedule This Lesson" %}</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="calendarbox">&nbsp;</div>
+
+{% addtoblock "css" %}
+    <link rel='stylesheet' type="text/css" href='{% static 'fullcalendar/fullcalendar.min.css' %}' />
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style media="screen" type="text/css">
+        .fc-day-grid-event > .fc-content {
+            white-space: normal;
+        }
+    </style>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'jquery-ui/jquery-ui.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'moment/moment.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+    <script src='{% static 'fullcalendar/fullcalendar.min.js' %}'></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+    // page is now ready, initialize the calendar...
+
+    $('#calendarbox').fullCalendar({
+        // put your options and callbacks here
+        eventTextColor: '#ffffff',
+        height: 500,
+        aspectRatio: 1,
+        defaultView: 'listWeek',
+        header: {right: 'listWeek,agendaWeek, prev,next today'},
+
+         eventClick: function(calEvent, jsEvent) {
+            $('#id_slotId').val(calEvent.id_number);
+            $('#eventModalTitle').html(calEvent.title);
+            $('#eventModalLocation').html(calEvent.location);
+            $('#id_duration').empty();
+            calEvent.availableDurations.forEach(function(minutes){
+                var this_option = '<option value="' + minutes + '"';
+                if (minutes == {{ defaultLessonLength|default:"30" }}) {
+                  this_option += ' selected';
+                }
+                this_option += '>' + minutes + '</option>';
+
+                $('#id_duration').append(this_option);
+            });
+            $('#id_role').empty();
+            calEvent.availableRoles.forEach(function(role){
+                $('#id_role').append('<option value="' + role[0] + '">' + role[1] + '</option>');
+            })
+            if (!calEvent.pricingTier) {
+              $('#eventModalAlerts').html(
+                '<div class="alert alert-info alert-dismissable">{% trans "Online payment is not enabled for this lesson slot. Your lesson will be scheduled, but you will not be able to pay online in advance." %}</div>'
+              );
+            }
+            else {
+              $('#eventModalAlerts').html('');
+            }
+
+            $('#eventModal').modal();
+        },
+    });
+
+    $('#instructorSelect').change(function(event) {
+        // Get the ID of the instructor, submit to AJAX view,
+        // and finally load the availability of that instructor
+        event.preventDefault();
+
+        var selected = $('#instructorSelect option:selected')
+        var new_id = selected.data('id');
+
+        if (new_id) {
+          var imageUrl = selected.data('imageurl');
+          var couples = selected.data('couples');
+          if (couples == "True") { 
+            var couplesClass = "fa-check";
+            var couplesColor = "green";
+          }
+          else {
+            var couplesClass = "fa-times";
+            var couplesColor = "red";
+          }
+          var smallGroups = selected.data('smallgroups');
+          if (smallGroups == "True") { 
+            var groupsClass = "fa-check";
+            var groupsColor  = "green";
+          }
+          else {
+            var groupsClass = "fa-times";
+            var groupsColor = "red";
+          }
+
+          if (imageUrl) {
+            $('#instructorDetailsImage').attr('src', imageUrl);
+            $('#instructorDetailsImage').removeClass('hidden');
+          }
+          else {
+            $('#instructorDetailsImage').attr('src','');
+            $('#instructorDetailsImage').addClass('hidden');
+          }
+
+          // Set the instructor info from dropdown data
+          $('#instructorDetailsName').html(selected.data('fullname'));
+          $('#instructorDetailsRoles').html(selected.data('roles'));
+          $('#instructorDetailsCouples').html('<i class="fa ' + couplesClass + '" style="color: ' + couplesColor + ';"></i>');
+          $('#instructorDetailsSmallGroups').html('<i class="fa ' + groupsClass + '" style="color: ' + groupsColor + ';"></i>');
+          $('#instructorDetails').removeClass('hidden');
+
+          $.ajax({
+              type: "GET",
+              url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + new_id + "/?hideUnavailable=True",
+              success: function(events) {
+                $('#alertBox').empty();
+                $('#calendarbox').fullCalendar('removeEvents');
+                $('#calendarbox').fullCalendar('addEventSource', events);
+                $('#calendarbox').fullCalendar('rerenderEvents');
+              },
+              error: function() {
+                  $('#alertBox').html('<div class="alert alert-danger alert-dismissable" role="alert">{% blocktrans %}<strong>ERROR:</strong> Instructor availability did not load.</div>{% endblocktrans %}');
+                $('#calendarbox').fullCalendar('removeEvents');
+              },
+          });
+        }
+        else {
+          $('#instructorDetails').addClass('hidden'); 
+        }
+
+    });
+});
+</script>
+{% endaddtoblock %}
+{% addtoblock "css" %}
+    <style type="text/css">
+        .modal {
+           position: absolute;
+           top: 40px;
+        }
+    </style>
+{% endaddtoblock %}
+
+{% endblock %}

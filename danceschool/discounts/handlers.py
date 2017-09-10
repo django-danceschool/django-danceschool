@@ -1,5 +1,6 @@
 from django.dispatch import receiver
 from django.db.models import Q
+from django.apps import apps
 
 import logging
 from collections import OrderedDict
@@ -48,10 +49,26 @@ def getBestDiscount(sender,**kwargs):
             newCustomer = False
             break
 
+    eligible_filter = (
+        Q(event__series__pricingTier__isnull=False) |
+        Q(event__publicevent__pricingTier__isnull=False)
+    )
+    ineligible_filter = (
+        (Q(event__series__isnull=False) & Q(event__series__pricingTier__isnull=True)) |
+        (Q(event__publicevent__isnull=False) & Q(event__publicevent__pricingTier__isnull=True)) |
+        Q(dropIn=True)
+    )
+    if apps.is_installed('danceschool.private_lessons'):
+        eligible_filter = eligible_filter | Q(event__privatelessonevent__pricingTier__isnull=False)
+        ineligible_filter = ineligible_filter | (
+            Q(event__privatelessonevent__isnull=False) &
+            Q(event__privatelessonevent__pricingTier__isnull=True)
+        )
+
     # The items for which the customer registered.
     eventregs_list = reg.temporaryeventregistration_set.all()
-    eligible_list = eventregs_list.filter(dropIn=False).filter(Q(event__series__pricingTier__isnull=False) | Q(event__publicevent__pricingTier__isnull=False))
-    ineligible_list = eventregs_list.filter((Q(event__series__isnull=False) & Q(event__series__pricingTier__isnull=True)) | (Q(event__publicevent__isnull=False) & Q(event__publicevent__pricingTier__isnull=True)) | Q(dropIn=True))
+    eligible_list = eventregs_list.filter(dropIn=False).filter(eligible_filter)
+    ineligible_list = eventregs_list.filter(ineligible_filter)
 
     ineligible_total = sum(
         [x.event.getBasePrice(payAtDoor=payAtDoor) for x in ineligible_list.exclude(dropIn=True)] +
