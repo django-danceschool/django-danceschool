@@ -53,7 +53,7 @@ class PrivateLessonEvent(Event):
         '''
         if not self.pricingTier:
             return None
-        return self.pricingTier.getBasePrice(**kwargs)
+        return self.pricingTier.getBasePrice(**kwargs) * max(self.numSlots,1)
 
     def finalizeBooking(self,**kwargs):
         notifyStudent = kwargs.get('notifyStudent',True)
@@ -129,6 +129,21 @@ class PrivateLessonEvent(Event):
             Q(registration__eventregistration__event=self)
         ).distinct()
     customers.fget.short_description = _('Customers')
+
+    @property
+    def numSlots(self):
+        ''' Used for various pricing discounts related things '''
+        return self.instructoravailabilityslot_set.count()
+
+    @property
+    def discountPointsMultiplier(self):
+        '''
+        If installed, the discounts app looks for this property to determine
+        how many points this lesson is worth toward a discount.  Since private
+        lesson points are based on the number of slots booked, this just returns
+        the number of slots associated with this event (or 1).
+        '''
+        return max(self.numSlots,1)
 
     def nameAndDate(self,withDate=True):
         teacherNames = ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()])

@@ -262,7 +262,8 @@ class BookPrivateLessonView(FormView):
             )
 
             tr = TemporaryEventRegistration(
-                event=lesson, role=role, price=lesson.getBasePrice(payAtDoor=payAtDoor)
+                event=lesson, role=role,
+                price=lesson.getBasePrice(payAtDoor=payAtDoor) * affectedSlots.count()
             )
 
             # Any remaining form data goes into the JSONfield.

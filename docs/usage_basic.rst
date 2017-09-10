@@ -112,7 +112,7 @@ To refund students in part or in full for a registration, go to "View Registrati
 
 If you refund a customer in full for a registration, then that registration will be automatically marked as cancelled, and it will no longer show up in the "View Registrations" page.
 
-Note that automatic refunds depend on the payment processor being used to handle the refund.  The Paypal app that is included with this project does handle automated refunds.
+Note that automatic refunds depend on the payment processor being used to handle the refund.  The Paypal and Stripe apps that are included with this project do handle automated refunds.
 
 
 Creating Invoices for Registrations
