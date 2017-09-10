@@ -2439,15 +2439,26 @@ class Invoice(EmailRecipientMixin, models.Model):
             logger.error(str(msg))
             raise ValidationError(msg)
 
-        if self.fees and (self.total - self.adjustments) > 0:
-            for item in items:
+        for item in items:
+            saveFlag = False
+
+            if self.total - self.adjustments > 0:
                 item.fees = self.fees * ((item.total - item.adjustments) / (self.total - self.adjustments))
-                item.save()
-        elif self.total - self.adjustments == 0:
+                saveFlag = True
+
             # In the case of full refunds, allocate fees according to the
             # initial total price of the item only.
-            for item in items:
+            elif self.total - self.adjustments == 0 and self.total > 0:
                 item.fees = self.fees * (item.total / self.total)
+                saveFlag = True
+
+            # In the unexpected event of fees with no total, just divide
+            # the fees equally among the items.
+            elif self.fees:
+                item.fees = self.fees * (1 / len(items))
+                saveFlag = True
+
+            if saveFlag:
                 item.save()
 
     def sendNotification(self, **kwargs):
