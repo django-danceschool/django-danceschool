@@ -744,6 +744,8 @@ class PublicEventAdminForm(ModelForm):
 
     # Use the custom location capacity widget to ensure that Javascript can update location specific capacities.
     class Meta:
+        model = PublicEvent
+        exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen']
         widgets = {
             'location': LocationWithDataWidget,
             'submissionUser': HiddenInput(),
@@ -766,7 +768,6 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     ordering = ('-endTime',)
     prepopulated_fields = {'slug': ('title',)}
     inlines = [EventRoleInline,EventOccurrenceInline,EventStaffMemberInline]
-    exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen']
 
     fieldsets = (
         (None, {

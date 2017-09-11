@@ -7,7 +7,7 @@ from django.apps import apps
 from datetime import datetime
 
 from danceschool.core.utils.timezone import ensure_timezone
-from danceschool.core.models import Location
+from danceschool.core.models import Location, Room
 
 from .forms import AddPrivateEventForm, EventOccurrenceFormSet, OccurrenceFormSetHelper
 
@@ -25,6 +25,7 @@ class PrivateCalendarView(TemplateView):
 
         context.update({
             'locations': Location.objects.all().order_by('status','name'),
+            'rooms': Room.objects.all().order_by('location__status','location__name', 'name'),
             'publicFeed': reverse('calendarFeed'),
             'jsonPublicFeed': reverse('jsonCalendarFeed'),
             'jsonPrivateFeeds': {

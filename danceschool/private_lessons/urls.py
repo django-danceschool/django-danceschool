@@ -11,6 +11,8 @@ urlpatterns = [
     # JSON scheduled lesson feeds
     url(r'^scheduled/feed/json/$', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
     url(r'^scheduled/feed/json/all/$', json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'),
+    url(r'^scheduled/feed/json/(?P<location_id>[0-9]+)/(?P<room_id>[0-9]+)/$', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
+    url(r'^scheduled/feed/json/(?P<location_id>[0-9]+)/(?P<room_id>[0-9]+)/all/$', json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'),
     url(r'^scheduled/feed/json/(?P<location_id>[0-9]+)/$', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
     url(r'^scheduled/feed/json/(?P<location_id>[0-9]+)/all/$', json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'),
 

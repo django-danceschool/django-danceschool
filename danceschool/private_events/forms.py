@@ -13,6 +13,8 @@ from crispy_forms.bootstrap import Accordion, AccordionGroup
 
 from danceschool.core.models import EventOccurrence, Event
 from danceschool.core.utils.timezone import ensure_timezone
+from danceschool.core.forms import LocationWithDataWidget
+
 from .models import PrivateEvent, EventReminder
 
 EVENT_REPEAT_CHOICES = [
@@ -79,7 +81,7 @@ class AddPrivateEventForm(forms.ModelForm):
             Div('displayToGroup', style=extramargins),
             Accordion(
                 AccordionGroup(_('Add A Description'),'descriptionField',active=False),
-                AccordionGroup(_('Add A Location'),Div('location','locationString')),
+                AccordionGroup(_('Add A Location'),Div('location','room','locationString')),
                 AccordionGroup(_('Add a Link'),'link'),
             ),
         )
@@ -104,9 +106,12 @@ class AddPrivateEventForm(forms.ModelForm):
     class Meta:
         model = PrivateEvent
         exclude = []
+        widgets = {
+            'location': LocationWithDataWidget,
+        }
 
     class Media:
-        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','moment/moment.min.js','js/addEvent_rollups.js',)
+        js = ('timepicker/jquery.timepicker.min.js','jquery-ui/jquery-ui.min.js','moment/moment.min.js','js/addEvent_rollups.js','js/serieslocation_capacity_change.js',)
         css = {'all':('timepicker/jquery.timepicker.css','jquery-ui/jquery-ui.min.css',)}
 
 

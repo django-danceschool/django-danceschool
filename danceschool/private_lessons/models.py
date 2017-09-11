@@ -7,7 +7,7 @@ from django.core.urlresolvers import reverse
 from datetime import timedelta
 from djchoices import DjangoChoices, ChoiceItem
 
-from danceschool.core.models import Instructor, Location, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration, Customer
+from danceschool.core.models import Instructor, Location, Room, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration, Customer
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import EmailRecipientMixin
 from danceschool.core.utils.timezone import ensure_localtime
@@ -223,6 +223,9 @@ class InstructorAvailabilitySlot(models.Model):
     location = models.ForeignKey(
         Location,verbose_name=_('Location'),null=True,blank=True,on_delete=models.SET_NULL,
     )
+    room = models.ForeignKey(
+        Room,verbose_name=_('Room'),null=True,blank=True,on_delete=models.SET_NULL,
+    )
 
     status = models.CharField(max_length=1,choices=SlotStatus.choices,default=SlotStatus.available)
 
@@ -255,6 +258,7 @@ class InstructorAvailabilitySlot(models.Model):
         potential_slots = InstructorAvailabilitySlot.objects.filter(
             instructor=self.instructor,
             location=self.location,
+            room=self.room,
             pricingTier=self.pricingTier,
             startTime__gte=self.startTime,
             startTime__lte=self.startTime + timedelta(minutes=getConstant('privateLessons__maximumLessonLength')),

@@ -105,7 +105,7 @@ class EventFeed(ICalFeed):
 
 # The Jquery fullcalendar app requires a JSON news feed, so this function
 # creates the feed from upcoming SeriesClass and Event objects.
-def json_event_feed(request,instructorFeedKey='',locationId=None):
+def json_event_feed(request,instructorFeedKey='',locationId=None,roomId=None):
 
     if not getConstant('calendar__calendarFeedEnabled'):
         return JsonResponse({})
@@ -125,6 +125,8 @@ def json_event_feed(request,instructorFeedKey='',locationId=None):
 
     if locationId:
         filters = filters & Q(event__location__id=locationId)
+    if roomId:
+        filters = filters & Q(event__room_id=roomId)
 
     if instructorFeedKey:
         # Private calendars do show link-only registration Events

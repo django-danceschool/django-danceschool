@@ -7,6 +7,7 @@ from .models import InstructorPrivateLessonDetails, InstructorAvailabilitySlot, 
 from danceschool.core.models import Instructor, EventStaffMember
 from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline, EventRegistrationInline
 from danceschool.core.constants import getConstant
+from danceschool.core.forms import LocationWithDataWidget
 
 
 class InstructorPrivateLessonDetailsInline(admin.TabularInline):
@@ -73,16 +74,35 @@ class PrivateLessonEventRegistrationInline(EventRegistrationInline):
     readonly_fields = ['price','netPrice']
 
 
+class PrivateLessonEventAdminForm(ModelForm):
+    '''
+    Custom form for private lesson events is needed to include necessary
+    Javascript for room selection, even though capacity is not
+    an included field in this admin.
+    '''
+
+    class Meta:
+        model = PrivateLessonEvent
+        exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen','capacity','status']
+        widgets = {
+            'location': LocationWithDataWidget,
+        }
+
+    class Media:
+        js = ('js/serieslocation_capacity_change.js','js/location_related_objects_lookup.js')
+
+
 @admin.register(PrivateLessonEvent)
 class PrivateLessonEventAdmin(EventChildAdmin):
     base_model = PrivateLessonEvent
+    form = PrivateLessonEventAdminForm
     show_in_index = True
 
     list_display = ('teacherNames','customerNames','startTime','durationMinutes','location','pricingTier')
-    list_filter = ('location','startTime','pricingTier')
+    list_filter = ('location','room','startTime','pricingTier')
 
     fieldsets = (
-        (None, {'fields': ('location','pricingTier','participants','comments',)}),
+        (None, {'fields': (('location','room'),'pricingTier','participants','comments',)}),
     )
 
     def teacherNames(self,obj):

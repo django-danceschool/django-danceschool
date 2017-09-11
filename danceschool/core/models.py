@@ -380,6 +380,13 @@ class Room(models.Model):
 
     description = HTMLField(_('Description'),help_text=_('By default, only room names are listed publicly.  However, you may insert any descriptive information that you would like about this room here.'), null=True, blank=True)
 
+    @property
+    def jsonCalendarFeed(self):
+        '''
+        Allows for easy viewing of room-specific calendar feeds.
+        '''
+        return reverse('jsonCalendarLocationFeed', args=(self.location.id, self.id,))
+
     def __str__(self):
         return self.name
 
