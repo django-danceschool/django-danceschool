@@ -896,3 +896,18 @@ class RepeatEventForm(forms.Form):
 
         if quantity and endDate:
             self.add_error('quantity',ValidationError(_('Please specify either a number of repeats or an end date, not both.')))
+
+
+class InvoiceNotificationForm(forms.Form):
+    '''
+    This form just allows customers to deselect invoices for notification.
+    '''
+
+    def __init__(self,*args,**kwargs):
+        invoices = kwargs.pop('invoices',Invoice.objects.none())
+
+        # Initialize a default (empty) form to fill
+        super(InvoiceNotificationForm, self).__init__(*args, **kwargs)
+
+        for invoice in invoices:
+            self.fields['invoice_%s' % invoice.id] = forms.BooleanField(label=invoice.id, required=False,initial=True)

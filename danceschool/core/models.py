@@ -1369,7 +1369,7 @@ class Customer(EmailRecipientMixin, models.Model):
 
     # PostgreSQL can store arbitrary additional information associated with this customer
     # in a JSONfield, but to remain database agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={})
+    data = JSONField(_('Additional data'),default={},blank=True)
 
     @property
     def fullName(self):
@@ -1505,7 +1505,7 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     # By default (and for security reasons), the registration system ignores any passed data that it does not
     # expect, so you will need to hook into the registration system to ensure that any extra information that
     # you want to use is not discarded.
-    data = JSONField(_('Additional data'),null=True,blank=True)
+    data = JSONField(_('Additional data'),default={},blank=True)
 
     expirationDate = models.DateTimeField(
         _('Expiration date'),
@@ -1611,7 +1611,13 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
             email=self.email,defaults={'phone': self.phone}
         )
 
-        regArgs = {'customer': customer, 'dateTime': dateTime, 'temporaryRegistration': self}
+        regArgs = {
+            'customer': customer,
+            'firstName': self.firstName,
+            'lastName': self.lastName,
+            'dateTime': dateTime,
+            'temporaryRegistration': self
+        }
         for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount','payAtDoor']:
             regArgs[key] = kwargs.pop(key, getattr(self,key,None))
 
@@ -1703,7 +1709,7 @@ class Registration(EmailRecipientMixin, models.Model):
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),null=True,blank=True)
+    data = JSONField(_('Additional data'),default={},blank=True)
 
     @property
     def warningFlag(self):
@@ -1743,6 +1749,16 @@ class Registration(EmailRecipientMixin, models.Model):
     def fullName(self):
         return self.customer.fullName
     fullName.fget.short_description = _('Name')
+
+    @property
+    def email(self):
+        '''
+        This exists so that the Invoice views can always find an email for either
+        registrations or temporary registrations without requiring separate logic
+        for each class.
+        '''
+        return self.customer.email
+    email.fget.short_description = _('Email address')
 
     @property
     def seriesPrice(self):
@@ -1895,7 +1911,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={})
+    data = JSONField(_('Additional data'),default={},blank=True)
 
     @property
     def netPrice(self):
@@ -1990,7 +2006,7 @@ class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={})
+    data = JSONField(_('Additional data'),default={},blank=True)
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -2088,6 +2104,12 @@ class Invoice(EmailRecipientMixin, models.Model):
     id = models.UUIDField(_('Invoice number'),primary_key=True, default=uuid.uuid4, editable=False)
     validationString = models.CharField(_('Validation string'),max_length=25,default=get_validationString,editable=False)
 
+    # Invoices do not require that a recipient is specified, but doing so ensures
+    # that invoice notifications can be sent.
+    firstName = models.CharField(_('Recipient first name'),max_length=100,null=True,blank=True)
+    lastName = models.CharField(_('Recipient last name'),max_length=100,null=True,blank=True)
+    email = models.CharField(_('Recipient email address'),max_length=200,null=True,blank=True)
+
     temporaryRegistration = models.OneToOneField(
         TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True,
         on_delete=models.SET_NULL,
@@ -2114,7 +2136,7 @@ class Invoice(EmailRecipientMixin, models.Model):
     comments = models.TextField(_('Comments'),null=True,blank=True)
 
     # Additional information (record of specific transactions) can go in here
-    data = JSONField(_('Additional data'),default={})
+    data = JSONField(_('Additional data'),blank=True,default={})
 
     @classmethod
     def create_from_item(cls, amount, item_description, **kwargs):
@@ -2171,6 +2193,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         status = kwargs.pop('status',Invoice.PaymentStatus.unpaid)
 
         new_invoice = cls(
+            firstName=reg.firstName,
+            lastName=reg.lastName,
+            email=reg.email,
             grossTotal=reg.totalPrice,
             total=reg.priceWithDiscount,
             submissionUser=submissionUser,
@@ -2297,6 +2322,8 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
+        if self.email:
+            return [self.email,]
         if self.finalRegistration:
             return [self.finalRegistration.customer.email,]
         elif self.temporaryRegistration:

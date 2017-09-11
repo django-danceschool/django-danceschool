@@ -426,13 +426,10 @@ def createGenericExpenseItems(request=None,datetimeTuple=None,rule=None):
 
         limits = timelist or [ensure_timezone(datetime.min), ensure_timezone(datetime.max)]
 
-        print('Initial Limits are: %s' % ', '.join([x.strftime('%Y-%m-%d %H:%M%S') for x in limits]))
-
         if rule.advanceDays:
             limits[1] = min(limits[1],timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays:
             limits[0] = max(limits[0],timezone.now() - timedelta(days=rule.priorDays))
-        print('Midpoint Limits are: %s' % ', '.join([x.strftime('%Y-%m-%d %H:%M%S') for x in limits]))
 
         if rule.startDate:
             limits[0] = max(
@@ -450,8 +447,6 @@ def createGenericExpenseItems(request=None,datetimeTuple=None,rule=None):
                     hour=0,minute=0,second=0,microsecond=0,
                 )
             )
-
-        print('Final Limits are: %s' % ', '.join([x.strftime('%Y-%m-%d %H:%M%S') for x in limits]))
 
         # Find the first start time greater than the lower bound time.
         if rule.applyRateRule == RepeatedExpenseRule.RateRuleChoices.hourly:
@@ -473,7 +468,6 @@ def createGenericExpenseItems(request=None,datetimeTuple=None,rule=None):
                 this_time += relativedelta(months=1)
 
         while this_time <= limits[1]:
-            print('The time is: %s' % this_time.strftime('%Y-%m-%d %H:%M:%S'))
             defaults_dict = {
                 'category': rule.category,
                 'description': rule.name,
@@ -500,7 +494,6 @@ def createGenericExpenseItems(request=None,datetimeTuple=None,rule=None):
                 this_time += timedelta(days=7)
             else:
                 this_time += relativedelta(months=1)
-            print('Now the time is: %s' % this_time.strftime('%Y-%m-%d %H:%M:%S'))
     rulesToCheck.update(lastRun=timezone.now())
     return generate_count
 

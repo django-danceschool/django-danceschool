@@ -9,6 +9,13 @@
 	<dt>{% trans "Invoice Number" %}:</dt>
 	<dd>{{ object.id }}</dd>
 
+	{% if object.firstName or object.lastName or object.email %}
+	<dt>{% trans "Recipient" %}:</dt>
+	<dd>{% if object.firstName or object.lastName %}{{ object.firstName }} {{ object.lastName }}: {% endif %}{{ object.email|default:"unknown email" }}
+	{% if "core.send_invoices" in perms and object.email %}<a class="btn btn-default btn-xs" href="{% url 'sendInvoiceNotifications' object.id %}">{% trans "Notify Recipient" %}</a>{% endif %}
+	</dd>
+	{% endif %}
+
 	<dt>{% trans "Invoice Status" %}:</dt>
 	<dd>{{ object.statusLabel }}</dd>
 

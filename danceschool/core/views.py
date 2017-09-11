@@ -24,7 +24,7 @@ import re
 import logging
 
 from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
-from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm
+from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from .signals import get_customer_data
@@ -99,8 +99,8 @@ class SubmissionRedirectView(TemplateView):
 
         return context
 
-#################################
-# For Viewing Invoices
+################################################
+# For Viewing Invoices and sending notifications
 
 
 class ViewInvoiceView(AccessMixin, FinancialContextMixin, DetailView):
@@ -129,6 +129,73 @@ class ViewInvoiceView(AccessMixin, FinancialContextMixin, DetailView):
         if not getattr(self,'payments',None):
             self.payments = self.object.get_payments()
         return self.payments
+
+
+class InvoiceNotificationView(FinancialContextMixin,AdminSuccessURLMixin, PermissionRequiredMixin, StaffuserRequiredMixin, FormView):
+    success_message = _('Invoice notifications successfully sent.')
+    template_name = 'core/invoice_notification.html'
+    permission_required = 'core.send_invoices'
+    form_class = InvoiceNotificationForm
+
+    def form_valid(self, form):
+        invoice_ids = [
+            k.replace('invoice_','') for k,v in form.cleaned_data.items() if 'invoice_' in k and v is True
+        ]
+        invoices = [x for x in self.toNotify if str(x.id) in invoice_ids]
+
+        for invoice in invoices:
+            if invoice.get_default_recipients():
+                invoice.sendNotification()
+
+        messages.success(self.request, self.success_message)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def dispatch(self, request, *args, **kwargs):
+        ''' Get the set of invoices for which to permit notifications '''
+
+        if 'pk' in self.kwargs:
+            try:
+                self.invoices = Invoice.objects.filter(pk=self.kwargs.get('pk'))[:]
+            except ValueError:
+                raise Http404()
+            if not self.invoices:
+                raise Http404()
+        else:
+            ids = request.GET.get('invoices','')
+            try:
+                self.invoices = Invoice.objects.filter(id__in=[x for x in ids.split(',')])[:]
+            except ValueError:
+                return HttpResponseBadRequest(_('Invalid invoice identifiers specified.'))
+
+        if not self.invoices:
+            return HttpResponseBadRequest(_('No invoice identifiers specified.'))
+
+        toNotify = []
+        cannotNotify = []
+
+        for invoice in self.invoices:
+            if invoice.get_default_recipients():
+                toNotify.append(invoice)
+            else:
+                cannotNotify.append(invoice)
+        self.toNotify = toNotify
+        self.cannotNotify = cannotNotify
+
+        return super(InvoiceNotificationView, self).dispatch(request, *args, **kwargs)
+
+    def get_form_kwargs(self):
+        ''' Pass the set of invoices to the form for creation '''
+        kwargs = super(InvoiceNotificationView,self).get_form_kwargs()
+        kwargs['invoices'] = self.toNotify
+        return kwargs
+
+    def get_context_data(self,**kwargs):
+        context = super(InvoiceNotificationView,self).get_context_data(**kwargs)
+        context.update({
+            'toNotify': self.toNotify,
+            'cannotNotify': self.cannotNotify,
+        })
+        return context
 
 
 #################################

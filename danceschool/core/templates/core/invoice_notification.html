@@ -1,0 +1,81 @@
+{% extends "cms/admin_home.html" %}
+{% load sekizai_tags i18n danceschool_tags %}
+
+{% block content %}
+
+	<h2>{% trans "Send Invoice Notifications: Confirmation" %}</h2>
+
+	{% if toNotify %}
+
+		{% if cannotNotify %}<h4>{% trans "Notification List" %}</h4>{% endif %}
+
+		<p>{% trans "Recipients associated with the following invoices will be notified" %}:</p>
+
+		<form action="" id="" method="post" {% if 'attachment' in form.fields %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+		<table class="table">
+		<thead>
+			<tr>
+				<th>{% trans "Selected" %}</th>
+				<th>{% trans "Invoice Number" %}</th>
+				<th>{% trans "Recipient" %}</th>
+				<th>{% trans "Invoice Status" %}</th>
+				<th>{% trans "Outstanding balance" %}</th>
+				<th>{% trans "Links" %}</th>
+			</tr>
+		</thead>
+
+		<tbody>
+		{% for invoice in toNotify %}
+			{% get_field_for_object 'invoice' invoice.id form as field %}
+			<tr>
+				<td>{{ field }}</td>
+				<td>{{ invoice.id }}</td>
+				<td>{{ invoice.get_default_recipients|join:", " }}</td>
+				<td>{{ invoice.statusLabel }}</td>
+				<td>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:"-2" }}</td>
+				<td><div class="btn-group"><a class="btn btn-default btn-xs" href="{% url 'viewInvoice' invoice.id %}">{% trans "View" %}</a><a class="btn btn-default btn-xs" href="{% url 'admin:core_invoice_change' invoice.id %}">{% trans "Edit" %}</a></div></td>
+			</tr>
+		{% endfor %}
+		</tbody>
+		</table>
+
+		<input type="submit" value="{% trans 'Send Emails' %}" class="btn btn-primary">
+		<a class="btn btn-default" href="{% url 'admin:core_invoice_changelist' %}">{% trans "Return To Invoices" %}</a>
+
+		</form>
+	{% endif %}
+
+	{% if cannotNotify %}
+
+		<h4>{% trans "Unable to Notify" %}</h4>
+
+		<p>{% blocktrans %}
+		The following invoices have no recipient associated with them, so no notification emails will be sent.
+		To send notifications for these invoices, please click to edit the invoices and specify a recipient email address.
+		{% endblocktrans %}</p>
+
+		<table class="table">
+		<thead>
+			<tr>
+				<th>{% trans "Invoice Number" %}</th>
+				<th>{% trans "Invoice Status" %}</th>
+				<th>{% trans "Outstanding balance" %}</th>
+				<th>{% trans "Links" %}</th>
+			</tr>
+		</thead>
+
+		<tbody>
+		{% for invoice in cannotNotify %}
+			<tr>
+				<td>{{ invoice.id }}</td>
+				<td>{{ invoice.statusLabel }}</td>
+				<td>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:"-2" }}</td>
+				<td><div class="btn-group"><a class="btn btn-default btn-xs" href="{% url 'viewInvoice' invoice.id %}">{% trans "View" %}</a><a class="btn btn-default btn-xs" href="{% url 'admin:core_invoice_change' invoice.id %}">{% trans "Edit" %}</a></div></td>
+			</tr>
+		{% endfor %}
+		</tbody>
+		</table>
+
+	{% endif %}
+
+{% endblock %}
