@@ -4,7 +4,6 @@ from django.core.urlresolvers import reverse
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
-from cms.models.pluginmodel import CMSPlugin
 
 from .models import SquareCheckoutFormModel
 
@@ -28,7 +27,7 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
 
 
 class SquarePointOfSalePlugin(CMSPluginBase):
-    model = CMSPlugin
+    model = SquareCheckoutFormModel
     name = _('Square Point of Sale Button')
     render_template = "square/point_of_sale.html"
     cache = False

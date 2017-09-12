@@ -17,6 +17,7 @@ import json
 from json.decoder import JSONDecodeError
 from base64 import b64decode
 import binascii
+from urllib.parse import unquote
 
 from danceschool.core.models import TemporaryRegistration, Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
@@ -185,7 +186,7 @@ def processPointOfSalePayment(request):
         try:
             stateData = data.get('state','')
             if stateData:
-                metadata = json.loads(b64decode(stateData.encode()).decode())
+                metadata = json.loads(b64decode(unquote(stateData).encode()).decode())
             else:
                 metadata = {}
         except (TypeError, JSONDecodeError, binascii.Error):
@@ -215,7 +216,7 @@ def processPointOfSalePayment(request):
         try:
             stateData = request.GET.get('com.squareup.pos.REQUEST_METADATA','')
             if stateData:
-                metadata = json.loads(b64decode(stateData.encode()).decode())
+                metadata = json.loads(b64decode(unquote(stateData).encode()).decode())
             else:
                 metadata = {}
 
@@ -226,7 +227,7 @@ def processPointOfSalePayment(request):
     # Other things that can be passed in the metadata
     sourceUrl = metadata.get('sourceUrl',reverse('showRegSummary'))
     successUrl = metadata.get('successUrl',reverse('registration'))
-    submissionUserId = metadata.get('user_id', getattr(getattr(request,'user',None),'id',None))
+    submissionUserId = metadata.get('userId', getattr(getattr(request,'user',None),'id',None))
     transactionType = metadata.get('transaction_type')
     taxable = metadata.get('taxable', False)
     addSessionInfo = metadata.get('addSessionInfo',False)
@@ -312,7 +313,6 @@ def processPointOfSalePayment(request):
         this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
         this_description = _('Registration Payment: #%s' % tr_id)
 
-        return HttpResponseRedirect(successUrl)
     elif 'invoice' in metadata.keys():
         try:
             this_invoice = Invoice.objects.get(id=int(metadata.get('invoice')))
@@ -339,22 +339,22 @@ def processPointOfSalePayment(request):
             transactionType=transactionType,
         )
 
-    paymentRecord = SquarePaymentRecord.objects.create(
-        invoice=this_invoice,
+    paymentRecord, created = SquarePaymentRecord.objects.get_or_create(
         transactionId=transaction.id,
         locationId=transaction.location_id,
+        defaults={'invoice': this_invoice,}
     )
-
-    # We process the payment now, and enqueue the job to retrieve the
-    # transaction again once fees have been calculated by Square
-    this_invoice.processPayment(
-        amount=this_total,
-        fees=0,
-        paidOnline=True,
-        methodName='Square Point of Sale',
-        methodTxn=transaction.id,
-        notify=customerEmail,
-    )
+    if created:
+        # We process the payment now, and enqueue the job to retrieve the
+        # transaction again once fees have been calculated by Square
+        this_invoice.processPayment(
+            amount=this_total,
+            fees=0,
+            paidOnline=True,
+            methodName='Square Point of Sale',
+            methodTxn=transaction.id,
+            notify=customerEmail,
+        )
     updateSquareFees.schedule(args=(paymentRecord,), delay=60)
 
     if addSessionInfo:

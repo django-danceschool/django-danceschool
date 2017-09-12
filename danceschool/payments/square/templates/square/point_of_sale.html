@@ -6,7 +6,7 @@
 <p id="square-pos-notice">{% blocktrans %}<em>Note:</em> Square Point of Sale app must be installed and logged in before attempting this transaction.{% endblocktrans %}</p>
 
 {% addtoblock "js" %}
-<script type="text/javascript" src="{% static 'js/base64/base64.min.js' %}" />
+<script src="{% static 'base64/base64.min.js' %}"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
