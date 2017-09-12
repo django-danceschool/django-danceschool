@@ -1,4 +1,5 @@
 from django.dispatch import receiver
+from django.db.models import Q
 from django.db.models.signals import post_save, m2m_changed
 from django.utils.translation import ugettext_lazy as _
 
@@ -83,7 +84,7 @@ def modifyExistingExpenseItemsForSeriesClass(sender,instance,**kwargs):
         # be more than one EventStaffMember object for a given staffMember at the
         # same Event.  There is no easy way to identify which expense is which in this instance,
         # so when EventOccurrences are modified, these expenses will not update.
-        eventstaffmembers = EventStaffMember.objects.filter(esm_filters)        
+        eventstaffmembers = EventStaffMember.objects.filter(esm_filters)
         if eventstaffmembers.count() == 1:
             esm = eventstaffmembers.first()
             expense.hours = esm.netHours
