@@ -5,7 +5,6 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
-from django.apps import apps
 from django.contrib import messages
 from django.utils.html import format_html
 
@@ -16,6 +15,8 @@ import logging
 from datetime import timedelta
 import json
 from json.decoder import JSONDecodeError
+from base64 import b64decode
+import binascii
 
 from danceschool.core.models import TemporaryRegistration, Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
@@ -174,22 +175,53 @@ def processPointOfSalePayment(request):
     '''
     print('Request data is: %s' % request.GET)
 
-    errorCode = request.GET.get('com.squareup.pos.ERROR_CODE')
-    errorDescription = request.GET.get('com.squareup.pos.ERROR_DESCRIPTION')
+    # iOS transactions put all response information in the data key:
+    data = json.loads(request.GET.get('data','{}'))
+    if data:
+        status = data.get('status')
+        errorCode = data.get('error_code')
+        errorDescription = errorCode
 
-    # This is the normal transaction identifier, which will be stored in the
-    # database as a SquarePaymentRecord
-    serverTransId = request.GET.get('com.squareup.pos.SERVER_TRANSACTION_ID')
+        try:
+            stateData = data.get('state','')
+            if stateData:
+                metadata = json.loads(b64decode(stateData.encode()).decode())
+            else:
+                metadata = {}
+        except (TypeError, JSONDecodeError, binascii.Error):
+            logger.error('Invalid metadata passed from Square app.')
+            return HttpResponseBadRequest()
 
-    # This is the only identifier passed for non-card transactions.
-    clientTransId = request.GET.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
+        # This is the normal transaction identifier, which will be stored in the
+        # database as a SquarePaymentRecord
+        serverTransId = data.get('transaction_id')
 
-    # Load the metadata, which includes the registration or invoice ids
-    try:
-        metadata = json.loads(request.GET.get('com.squareup.pos.REQUEST_METADATA','{}'))
-    except (TypeError, JSONDecodeError):
-        logger.error('Invalid JSON metadata passed from Square app.')
-        return HttpResponseBadRequest()
+        # This is the only identifier passed for non-card transactions.
+        clientTransId = data.get('client_transaction_id')
+    else:
+        # Android transactions use this GET response syntax
+        errorCode = request.GET.get('com.squareup.pos.ERROR_CODE')
+        errorDescription = request.GET.get('com.squareup.pos.ERROR_DESCRIPTION')
+        status = 'ok' if not errorCode else 'error'
+
+        # This is the normal transaction identifier, which will be stored in the
+        # database as a SquarePaymentRecord
+        serverTransId = request.GET.get('com.squareup.pos.SERVER_TRANSACTION_ID')
+
+        # This is the only identifier passed for non-card transactions.
+        clientTransId = request.GET.get('com.squareup.pos.CLIENT_TRANSACTION_ID')
+
+        # Load the metadata, which includes the registration or invoice ids
+        try:
+            stateData = request.GET.get('com.squareup.pos.REQUEST_METADATA','')
+            if stateData:
+                metadata = json.loads(b64decode(stateData.encode()).decode())
+            else:
+                metadata = {}
+
+        except (TypeError, JSONDecodeError, binascii.Error):
+            logger.error('Invalid JSON metadata passed from Square app.')
+            return HttpResponseBadRequest()
 
     # Other things that can be passed in the metadata
     sourceUrl = metadata.get('sourceUrl',reverse('showRegSummary'))
@@ -200,7 +232,7 @@ def processPointOfSalePayment(request):
     addSessionInfo = metadata.get('addSessionInfo',False)
     customerEmail = metadata.get('customerEmail')
 
-    if errorCode:
+    if errorCode or status != 'ok':
         # Return the user to their original page with the error message displayed.
         logger.error('Error with Square point of sale transaction attempt.  CODE: %s; DESCRIPTION: %s' % (errorCode, errorDescription))
         messages.error(
