@@ -1,6 +1,11 @@
 {% extends "cms/home.html" %}
 {% load sekizai_tags static crispy_forms_tags i18n %}
 
+{% block extra_head %}{{ block.super }}
+{{ creation_form.media }}
+{{ update_form.media }}
+{% endblock %}
+
 {% block content %}
 
 <h1>{% trans "Manage Private Lesson Availability" %}</h1>
@@ -129,6 +134,34 @@ $(document).ready(function() {
     // To keep track of multi-event selections
     window.selectedEvents = []
 
+    var isInt = function(n) { return parseInt(Number(n)) === Number(n) };
+
+    function updateRoomOptions(selector,setRoomVal, allowEmptyRoomVal) {
+
+      this_roomOptions = $(selector + ' option:selected').data('roomoptions');
+      
+      if (!this_roomOptions) {
+        this_roomOptions = [];
+      }
+      if (this_roomOptions.length == 1 && !setRoomVal && !allowEmptyRoomVal) {
+        setRoomVal = this_roomOptions[0]['id'];
+      }
+
+      var new_option_text = '<option value="">---------</option>'
+
+      for (var i = 0, len = this_roomOptions.length; i < len; i++) {
+        new_option_text += '<option value="' + this_roomOptions[i]['id'] + '" data-defaultCapacity="' + this_roomOptions[i]['defaultCapacity'] + '">' + this_roomOptions[i]['name'] + '</option>';
+      }
+      
+      // Clear out the choices in the room field and replace them with the new options
+      if (selector == "#id_location") {
+          $('#id_room').find('option').remove().end().append(new_option_text).val(setRoomVal);
+      }
+      if (selector == "#id_updateLocation") {
+          $('#id_updateRoom').find('option').remove().end().append(new_option_text).val(setRoomVal);
+      }
+    }
+
     // page is now ready, initialize the calendar...
 
     $('#calendarbox').fullCalendar({
@@ -164,6 +197,8 @@ $(document).ready(function() {
 
             $('#id_updateStatus').val(calEvent.status);
             $('#id_updateLocation').val(calEvent.location_id);
+            updateRoomOptions('#id_updateLocation');
+            $('#id_updateRoom').val(calEvent.room_id);
             $('#id_updatePricing').val(calEvent.pricingTier_id);
             $('#id_deleteSlot').prop('checked', false);
             $('#eventModal').modal();
@@ -207,6 +242,31 @@ $(document).ready(function() {
 
     $('#id_startTime').timepicker();
     $('#id_endTime').timepicker();
+
+    // On load, if the location is not already set, then clear out the room options.
+    // If the location and room are set, then update the room options, but don't
+    // modify the prior capacity.
+    if ($('#id_location option:selected').val()) {
+      updateRoomOptions('#id_location',$('#id_room option:selected').val(),true);
+    }
+    else {
+      updateRoomOptions('#id_location');
+    }
+
+    if ($('#id_updateLocation option:selected').val()) {
+      updateRoomOptions('#id_updateLocation',$('#id_updateRoom option:selected').val(),true);
+    }
+    else {
+      updateRoomOptions('#id_updateLocation');
+    }
+
+    $('#id_location').change(function(){
+      updateRoomOptions('#id_location');
+    });
+
+    $('#id_updateLocation').change(function(){
+      updateRoomOptions('#id_updateLocation');
+    });
 
     $('#availabilityModalSubmit').click(function() {
         $.ajax({

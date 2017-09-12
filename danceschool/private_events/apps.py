@@ -9,7 +9,7 @@ class PrivateEventsAppConfig(AppConfig):
     verbose_name = _('Private Events Functions')
 
     def ready(self):
-        from danceschool.core.models import Location
+        from danceschool.core.models import Location, Room
 
         @property
         def jsonPrivateCalendarFeed(self):
@@ -19,3 +19,12 @@ class PrivateEventsAppConfig(AppConfig):
             '''
             return reverse('jsonPrivateCalendarFeed', args=(self.id,))
         Location.add_to_class('jsonPrivateCalendarFeed',jsonPrivateCalendarFeed)
+
+        @property
+        def jsonRoomPrivateCalendarFeed(self):
+            '''
+            Makes it easy to get location-specific private calendar
+            feeds when looping through locations.
+            '''
+            return reverse('jsonPrivateCalendarFeed', args=(self.location.id, self.id,))
+        Room.add_to_class('jsonPrivateCalendarFeed',jsonRoomPrivateCalendarFeed)

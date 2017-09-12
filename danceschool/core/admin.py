@@ -197,8 +197,10 @@ class EventOccurrenceInline(admin.TabularInline):
 class InvoiceItemInline(admin.StackedInline):
     model = InvoiceItem
     extra = 0
-    fields = ['id',('description','grossTotal','adjustments'),]
-    readonly_fields = ['id',]
+    add_fields = [('description','grossTotal','total','taxes','fees','adjustments'),]
+    fields = ['id',('description','grossTotal','total','taxes','fees','adjustments'),]
+    add_readonly_fields = ['fees',]
+    readonly_fields = ['id','grossTotal','total','taxes','fees']
 
     # This ensures that InvoiceItems are not deleted except through
     # the regular registration process.  Invoice items can still be
@@ -206,16 +208,41 @@ class InvoiceItemInline(admin.StackedInline):
     def has_delete_permission(self, request, obj=None):
         return False
 
+    def get_readonly_fields(self, request, obj=None):
+        if not obj:
+            return self.add_readonly_fields
+        return self.readonly_fields
+
+    def get_fields(self, request, obj=None):
+        if not obj:
+            return self.add_fields
+        return super(InvoiceItemInline, self).get_fields(request, obj)
+
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceItemInline,]
-    list_display = ['id', 'status', 'total','netRevenue','outstandingBalance','creationDate','modifiedDate','links']
+    list_display = ['id','recipientInfo','status', 'total','netRevenue','outstandingBalance','creationDate','modifiedDate','links']
     list_filter = ['status', 'paidOnline', 'creationDate', 'modifiedDate']
     search_fields = ['id','comments']
     ordering = ['-modifiedDate',]
-    readonly_fields = ['id','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','links','submissionUser','collectedByUser']
+    readonly_fields = ['id','recipientInfo','total','adjustments','taxes','fees','netRevenue','outstandingBalance','creationDate','modifiedDate','links','submissionUser','collectedByUser']
     view_on_site = True
+
+    def emailNotification(self, request, queryset):
+        # Allows use of the email view to contact specific customers.
+        selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+        return HttpResponseRedirect(reverse('sendInvoiceNotifications') + "?invoices=%s" % (",".join(selected)))
+    emailNotification.short_description = _('Send email notifications for selected invoices')
+
+    actions = ['emailNotification',]
+
+    def recipientInfo(self,obj):
+        if obj.firstName and obj.lastName and obj.email:
+            return '%s %s: %s' % (obj.firstName, obj.lastName, obj.email)
+        elif obj.email:
+            return obj.email
+    recipientInfo.short_description = _('Recipient')
 
     def viewInvoiceLink(self,obj):
         if obj.id:
@@ -223,6 +250,13 @@ class InvoiceAdmin(admin.ModelAdmin):
             return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
     viewInvoiceLink.allow_tags = True
     viewInvoiceLink.short_description = _('Invoice')
+
+    def notificationLink(self,obj):
+        if obj.id:
+            change_url = reverse('sendInvoiceNotifications', args=(obj.id,))
+            return mark_safe('<a class="btn btn-default" href="%s">Notify Recipient</a>' % (change_url,))
+    notificationLink.allow_tags = True
+    notificationLink.short_description = _('Invoice notification')
 
     def finalRegistrationLink(self,obj):
         if obj.finalRegistration:
@@ -239,27 +273,62 @@ class InvoiceAdmin(admin.ModelAdmin):
     temporaryRegistrationLink.short_description = _('Temporary registration')
 
     def links(self,obj):
-        return ''.join([
+        return mark_safe(''.join([
             self.viewInvoiceLink(obj) or '',
+            self.notificationLink(obj) or '',
             self.temporaryRegistrationLink(obj) or '',
             self.finalRegistrationLink(obj) or '',
-        ])
+        ]))
     links.allow_tags = True
     links.short_description = _('Links')
 
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.submissionUser = request.user
+        super(InvoiceAdmin, self).save_model(request, obj, form, change)
+
+    def save_related(self, request, form, formsets, change):
+        '''
+        Update the Invoice object after saving so that the invoice lines
+        match the invoice item lines.
+        '''
+        super(InvoiceAdmin, self).save_related(request, form, formsets, change)
+        invoice = form.instance
+        for attr in ['grossTotal','total','adjustments','taxes','fees']:
+            setattr(invoice,attr,sum([getattr(x,attr) for x in invoice.invoiceitem_set.all()]))
+        invoice.save()
+
+    def get_fieldsets(self,request,obj=None):
+        if not obj:
+            return self.add_fieldsets
+        else:
+            return super(InvoiceAdmin,self).get_fieldsets(request,obj)
+
     fieldsets = (
         (None, {
-            'fields': ('id','status','amountPaid','outstandingBalance','links','comments'),
+            'fields': ('id',('firstName','lastName','email'),'comments','status','amountPaid','outstandingBalance','links'),
         }),
         (_('Financial Details'), {
+            'classes': ('collapse',),
             'fields': ('total','adjustments','taxes','fees','netRevenue'),
         }),
         (_('Dates'), {
+            'classes': ('collapse',),
             'fields': ('creationDate','modifiedDate'),
         }),
         (_('Additional data'), {
             'classes': ('collapse',),
             'fields': ('submissionUser','collectedByUser','data'),
+        }),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'fields': (('firstName','lastName','email'),'comments','status','amountPaid',),
+        }),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
         }),
     )
 
@@ -744,6 +813,8 @@ class PublicEventAdminForm(ModelForm):
 
     # Use the custom location capacity widget to ensure that Javascript can update location specific capacities.
     class Meta:
+        model = PublicEvent
+        exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen']
         widgets = {
             'location': LocationWithDataWidget,
             'submissionUser': HiddenInput(),
@@ -766,7 +837,6 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     ordering = ('-endTime',)
     prepopulated_fields = {'slug': ('title',)}
     inlines = [EventRoleInline,EventOccurrenceInline,EventStaffMemberInline]
-    exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen']
 
     fieldsets = (
         (None, {

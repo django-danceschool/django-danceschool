@@ -47,6 +47,11 @@ class AvailabilityFeedItem(object):
             self.location = None
             self.location_id = None
 
+        if object.room:
+            self.room_id = object.room.id
+        else:
+            self.room_id = None
+
 
 class PrivateLessonFeedItem(object):
 
@@ -69,8 +74,10 @@ class PrivateLessonFeedItem(object):
             if timezone.is_aware(object.endTime) else object.endTime
         if getattr(object,'location',None):
             self.location = object.location.name + '\n' + object.location.address + '\n' + object.location.city + ', ' + object.location.state + ' ' + object.location.zip
+            self.room = getattr(object.room,'name',None)
         else:
             self.location = None
+            self.room = None
 
 
 # This function creates a JSON feed of all available private lesson
@@ -111,7 +118,7 @@ def json_availability_feed(request,instructor_id=None):
     return JsonResponse(eventlist,safe=False)
 
 
-def json_lesson_feed(request,location_id=None,show_others=False):
+def json_lesson_feed(request,location_id=None,room_id=None,show_others=False):
     '''
     This function displays a JSON feed of all lessons scheduled, optionally
     filtered by location. If show_others is specified, it requires that the
@@ -140,6 +147,8 @@ def json_lesson_feed(request,location_id=None,show_others=False):
 
     if location_id:
         filters = filters & Q(location__id=location_id)
+    if room_id:
+        filters = filters & Q(room_id=room_id)
 
     lessons = PrivateLessonEvent.objects.filter(filters).distinct()
 

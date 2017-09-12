@@ -35,6 +35,7 @@ urlpatterns = [
     url(r'^events/feed/$', EventFeed(), name='calendarFeed'),
     url(r'^events/feed/json/$', json_event_feed, name='jsonCalendarFeed'),
     url(r'^events/feed/(?P<instructorFeedKey>[\w\-_]+)/$', EventFeed(), name='calendarFeed'),
+    url(r'^events/feed/json/location/(?P<locationId>[0-9]+)/(?P<roomId>[0-9]+)$', json_event_feed, name='jsonCalendarLocationFeed'),
     url(r'^events/feed/json/location/(?P<locationId>[0-9]+)/$', json_event_feed, name='jsonCalendarLocationFeed'),
     url(r'^events/feed/json/(?P<instructorFeedKey>[\w\-_]+)/$', json_event_feed, name='jsonCalendarFeed'),
 

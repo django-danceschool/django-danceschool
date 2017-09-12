@@ -48,8 +48,12 @@ def clearExpiredTemporaryRegistrations():
 
 @task(retries=3)
 def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attachment_name='attachment',attachment=None,html_content=None):
-    # Ensure that email address information is in list form.
+    # Ensure that email address information is in list form and that there are no empty values
     recipients = [x for x in to + cc if x]
+    bcc = [x for x in bcc if x]
+    from_email = from_name + ' <' + from_address + '>' if from_address else None
+    reply_to = [from_address,] if from_address else None
+
     logger.info('Sending email from %s to %s' % (from_address,recipients))
 
     if getattr(settings,'DEBUG',None):
@@ -62,10 +66,10 @@ def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attac
         message = EmailMultiAlternatives(
             subject=subject,
             body=content,
-            from_email=from_name + ' <' + from_address + '>',
+            from_email=from_email,
             to=recipients,
             bcc=bcc,
-            reply_to=[from_address],
+            reply_to=reply_to,
             connection=connection,
         )
 

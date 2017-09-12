@@ -79,6 +79,7 @@ class AddAvailabilitySlotView(FormView):
                     startTime=ensure_localtime(datetime.combine(this_date, this_time)),
                     duration=interval_minutes,
                     location=form.cleaned_data.get('location'),
+                    room=form.cleaned_data.get('room'),
                     pricingTier=form.cleaned_data.get('pricingTier'),
                 )
                 this_time = (ensure_localtime(datetime.combine(this_date, this_time)) + timedelta(minutes=interval_minutes)).time()
@@ -111,6 +112,7 @@ class UpdateAvailabilitySlotView(FormView):
         else:
             for this_slot in these_slots:
                 this_slot.location = form.cleaned_data['updateLocation']
+                this_slot.room = form.cleaned_data['updateRoom']
                 this_slot.status = form.cleaned_data['updateStatus']
                 this_slot.pricingTier = form.cleaned_data.get('updatePricing')
                 this_slot.save()
@@ -176,6 +178,7 @@ class BookPrivateLessonView(FormView):
         affectedSlots = InstructorAvailabilitySlot.objects.filter(
             instructor=thisSlot.instructor,
             location=thisSlot.location,
+            room=thisSlot.room,
             pricingTier=thisSlot.pricingTier,
             startTime__gte=thisSlot.startTime,
             startTime__lt=thisSlot.startTime + timedelta(minutes=duration),
@@ -208,6 +211,7 @@ class BookPrivateLessonView(FormView):
         lesson = PrivateLessonEvent.objects.create(
             pricingTier=thisSlot.pricingTier,
             location=thisSlot.location,
+            room=thisSlot.room,
             participants=form.cleaned_data.pop('participants'),
             comments=form.cleaned_data.pop('comments'),
             status=Event.RegStatus.hidden,

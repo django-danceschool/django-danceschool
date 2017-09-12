@@ -8,8 +8,9 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Submit
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import DanceRole, Location, Instructor, PricingTier
+from danceschool.core.models import DanceRole, Location, Room, Instructor, PricingTier
 from danceschool.core.utils.timezone import ensure_localtime
+from danceschool.core.forms import LocationWithDataWidget
 
 from .models import InstructorAvailabilitySlot
 
@@ -58,7 +59,8 @@ class SlotCreationForm(forms.Form):
         input_formats=getattr(settings,'TIME_INPUT_FORMATS',[]) + ['%I:%M %p','%-I:%M %p','%I:%M%p','%-I:%M%p'],
     )
 
-    location = forms.ModelChoiceField(label=_('Location'),queryset=Location.objects.exclude(status=Location.StatusChoices.former),required=False)
+    location = forms.ModelChoiceField(label=_('Location'),queryset=Location.objects.exclude(status=Location.StatusChoices.former),required=False,widget=LocationWithDataWidget)
+    room = forms.ModelChoiceField(label=_('Room'),queryset=Room.objects.exclude(location__status=Location.StatusChoices.former),required=False)
     pricingTier = forms.ModelChoiceField(
         label=_('Pricing Tier'),queryset=PricingTier.objects.filter(expired=False),required=False,
         help_text=_('A pricing tier is required for online registration and payment. If your school handles scheduling, but not payment for lessons, then leave this blank.')
@@ -67,7 +69,8 @@ class SlotCreationForm(forms.Form):
 
     def clean(self):
         '''
-        Only allow submission if there are not already slots in the submitted window.
+        Only allow submission if there are not already slots in the submitted window,
+        and only allow rooms associated with the chosen location.
         '''
 
         super(SlotCreationForm,self).clean()
@@ -95,7 +98,8 @@ class SlotUpdateForm(forms.Form):
     slotIds = forms.ModelMultipleChoiceField(required=True,widget=forms.MultipleHiddenInput,queryset=InstructorAvailabilitySlot.objects.all())
 
     updateStatus = forms.ChoiceField(label=_('Update Status'),required=True,choices=InstructorAvailabilitySlot.SlotStatus.choices, initial=InstructorAvailabilitySlot.SlotStatus.available)
-    updateLocation = forms.ModelChoiceField(label=_('Update Location'),queryset=Location.objects.exclude(status=Location.StatusChoices.former),required=False)
+    updateLocation = forms.ModelChoiceField(label=_('Update Location'),queryset=Location.objects.exclude(status=Location.StatusChoices.former),required=False,widget=LocationWithDataWidget)
+    updateRoom = forms.ModelChoiceField(label=_('Room'),queryset=Room.objects.exclude(location__status=Location.StatusChoices.former),required=False)
     updatePricing = forms.ModelChoiceField(
         label=_('Update pricing'),queryset=PricingTier.objects.filter(expired=False),required=False,
         help_text=_('A pricing tier is required for online registration and payment. If your school handles scheduling, but not payment for lessons, then leave this blank.')

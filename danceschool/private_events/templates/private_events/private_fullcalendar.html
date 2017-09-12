@@ -26,12 +26,15 @@
         <form name='calendarSelect' id='calendarSelect'>
 
             <p>
-            <select name="location">
+            <select name="calendarFilters">
                 <option data-publicevents="{{ jsonPublicFeed }}" data-privateevents="{{ jsonPrivateFeeds.privateEvents }}" data-privatelessons="{{ jsonPrivateFeeds.privateLessons }}" selected>{% trans "All Events and Reminders" %}</option>
                 <option data-publicevents="{{ jsonPublicFeed }}">{% trans "Only Public Events" %}</option>
                 <option data-publicevents="{{ jsonPrivateFeeds.ownPublicEvents }}" data-privateevents="{{ jsonPrivateFeeds.privateEvents }}" data-privatelessons="{{ jsonPrivateFeeds.ownPrivateLessons }}">{% trans "Only My Events" %}</option>
                 {% for i in locations %}
                     <option data-id="{{ i.id }}" data-publicevents="{{ i.jsonCalendarFeed }}" data-privateevents="{{ i.jsonPrivateCalendarFeed }}" data-privatelessons="{{ i.jsonPrivateLessonFeed }}">{% trans "Location" %}: {{ i.name }}</option>
+                {% endfor %}
+                {% for i in rooms %}
+                    <option data-id="{{ i.id }}" data-publicevents="{{ i.jsonCalendarFeed }}" data-privateevents="{{ i.jsonPrivateCalendarFeed }}" data-privatelessons="{{ i.jsonPrivateLessonFeed }}">{% trans "Room" %}: {{ i.name }}, {{ i.location.name }}</option>
                 {% endfor %}
             </select>
             </p>

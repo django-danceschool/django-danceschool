@@ -47,8 +47,10 @@ class EventFeedItem(object):
         self.allDay = object.allDayForDate(object.startTime)
         if hasattr(object,'event.location'):
             self.location = object.event.location.name + '\n' + object.event.location.address + '\n' + object.event.location.city + ', ' + object.event.location.state + ' ' + object.event.location.zip
+            self.room = getattr(object.event,'room',None)
         else:
             self.location = None
+            self.room = None
         self.url = object.event.link
 
 
@@ -117,7 +119,7 @@ class EventFeed(ICalFeed):
         return item.end
 
 
-def json_event_feed(request,location_id=None):
+def json_event_feed(request,location_id=None,room_id=None):
     '''
     The Jquery fullcalendar app requires a JSON news feed, so this function
     creates the feed from upcoming PrivateEvent objects
@@ -147,6 +149,8 @@ def json_event_feed(request,location_id=None):
 
     if location_id:
         filters = filters & Q(event__location__id=location_id)
+    if room_id:
+        filters = filters & Q(event__room_id=room_id)
 
     occurrences = EventOccurrence.objects.filter(filters).filter(**time_filter_dict_events).order_by('-startTime')
 
