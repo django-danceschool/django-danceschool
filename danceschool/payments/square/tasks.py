@@ -13,4 +13,5 @@ def updateSquareFees(paymentRecord):
     invoice = paymentRecord.invoice
     invoice.fees = fees
     invoice.save()
+    invoice.allocateFees()
     return fees

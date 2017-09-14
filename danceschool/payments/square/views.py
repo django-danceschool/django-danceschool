@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.contrib import messages
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 
 import uuid
 from squareconnect.rest import ApiException
@@ -47,6 +48,7 @@ def processSquarePayment(request):
     submissionUserId = request.POST.get('user_id')
     transactionType = request.POST.get('transaction_type')
     taxable = request.POST.get('taxable', False)
+    sourceUrl = request.POST.get('sourceUrl', reverse('showRegSummary'))
     addSessionInfo = request.POST.get('addSessionInfo',False)
     successUrl = request.POST.get('successUrl',reverse('registration'))
     customerEmail = request.POST.get('customerEmail')
@@ -58,7 +60,15 @@ def processSquarePayment(request):
             amount = float(amount)
         except ValueError:
             logger.error('Invalid amount passed')
-            return HttpResponseBadRequest()
+            messages.error(
+                request,
+                format_html(
+                    '<p>{}</p><ul><li>{}</li></ul>',
+                    str(_('ERROR: Error with Square checkout transaction attempt.')),
+                    str(_('Invalid amount passed.'))
+                )
+            )
+            return HttpResponseRedirect(sourceUrl)
 
     # Parse if a specific submission user is indicated
     submissionUser = None
@@ -87,7 +97,15 @@ def processSquarePayment(request):
         # All other transactions require both a transaction type and an amount to be specified
         elif not transactionType or not amount:
             logger.error('Insufficient information passed to createSquarePayment view.')
-            raise ValueError
+            messages.error(
+                request,
+                format_html(
+                    '<p>{}</p><ul><li>{}</li></ul>',
+                    str(_('ERROR: Error with Square checkout transaction attempt.')),
+                    str(_('Insufficient information passed to createSquarePayment view.'))
+                )
+            )
+            return HttpResponseRedirect(sourceUrl)
         else:
             # Gift certificates automatically get a nicer invoice description
             if transactionType == 'Gift Certificate':
@@ -103,8 +121,15 @@ def processSquarePayment(request):
             )
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error('Invalid registration information passed to createSquarePayment view: (%s, %s, %s)' % (invoice_id, tr_id, amount))
-        logger.error(e)
-        return HttpResponseBadRequest()
+        messages.error(
+            request,
+            format_html(
+                '<p>{}</p><ul><li>{}</li></ul>',
+                str(_('ERROR: Error with Square checkout transaction attempt.')),
+                str(_('Invalid registration information passed to createSquarePayment view: (%s, %s, %s)' % (invoice_id, tr_id, amount)))
+            )
+        )
+        return HttpResponseRedirect(sourceUrl)
 
     this_currency = getConstant('general__currencyCode')
     this_total = min(this_invoice.outstandingBalance, amount)
@@ -115,21 +140,37 @@ def processSquarePayment(request):
     amount = {'amount': int(100 * this_total), 'currency': this_currency}
     body = {'idempotency_key': idempotency_key, 'card_nonce': nonce_id, 'amount_money': amount}
 
+    errors_list = []
+
     try:
         # Charge
         api_response = api_instance.charge(location_id, body)
         if api_response.errors:
             logger.error('Error in charging Square transaction: %s' % api_response.errors)
-            this_invoice.status = Invoice.PaymentStatus.error
-            this_invoice.save()
-            return HttpResponseBadRequest()
-        else:
-            logger.info('Square charge successfully created.')
+            errors_list = api_response.errors
     except ApiException as e:
         logger.error('Exception when calling TransactionApi->charge: %s\n' % e)
+        errors_list = json.loads(e.body).get('errors',[])
+
+    if errors_list:
         this_invoice.status = Invoice.PaymentStatus.error
         this_invoice.save()
-        return HttpResponseBadRequest()
+        errors_string = ''
+        for err in errors_list:
+            errors_string += '<li><strong>CODE:</strong> %s, %s</li>' % (
+                err.get('code',str(_('Unknown'))), err.get('detail',str(_('Unknown')))
+            )
+        messages.error(
+            request,
+            format_html(
+                '<p>{}</p><ul>{}</ul>',
+                str(_('ERROR: Error with Square checkout transaction attempt.')),
+                mark_safe(errors_list),
+            )
+        )
+        return HttpResponseRedirect(sourceUrl)
+    else:
+        logger.info('Square charge successfully created.')
 
     transaction = api_response.transaction
 
@@ -187,7 +228,15 @@ def processPointOfSalePayment(request):
                 metadata = {}
         except (TypeError, JSONDecodeError, binascii.Error):
             logger.error('Invalid metadata passed from Square app.')
-            return HttpResponseBadRequest()
+            messages.error(
+                request,
+                format_html(
+                    '<p>{}</p><ul><li><strong>CODE:</strong> {}</li><li><strong>DESCRIPTION:</strong> {}</li></ul>',
+                    str(_('ERROR: Error with Square point of sale transaction attempt.')),
+                    str(_('Invalid metadata passed from Square app.')),
+                )
+            )
+            return HttpResponseRedirect(reverse('showRegSummary'))
 
         # This is the normal transaction identifier, which will be stored in the
         # database as a SquarePaymentRecord
@@ -217,8 +266,16 @@ def processPointOfSalePayment(request):
                 metadata = {}
 
         except (TypeError, JSONDecodeError, binascii.Error):
-            logger.error('Invalid JSON metadata passed from Square app.')
-            return HttpResponseBadRequest()
+            logger.error('Invalid metadata passed from Square app.')
+            messages.error(
+                request,
+                format_html(
+                    '<p>{}</p><ul><li><strong>CODE:</strong> {}</li><li><strong>DESCRIPTION:</strong> {}</li></ul>',
+                    str(_('ERROR: Error with Square point of sale transaction attempt.')),
+                    str(_('Invalid metadata passed from Square app.')),
+                )
+            )
+            return HttpResponseRedirect(reverse('showRegSummary'))
 
     # Other things that can be passed in the metadata
     sourceUrl = metadata.get('sourceUrl',reverse('showRegSummary'))
