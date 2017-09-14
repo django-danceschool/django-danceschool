@@ -114,9 +114,9 @@ What you need:
 -  The ability to create a virtual environment (on Linux, install the
    ``python-virtualenv`` package)
 -  pip - the Python package manager
--  A git client that will allow you to use the command line
 -  A suitable database. For development and testing, SQLite is used by
-   default. **Strongly Recommended**: PostgreSQL server 9.4+
+   default, so you do not need to do anything to get started.  For production
+   uss, it is **strongly Recommended** to use PostgreSQL server 9.4+
 -  External library dependencies for Pillow, used for basic image
    processing (see the `Pillow
    Documentation <http://pillow.readthedocs.io/en/3.4.x/installation.html>`__).
