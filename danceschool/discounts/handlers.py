@@ -98,7 +98,7 @@ def getBestDiscount(sender,**kwargs):
 
         # If the category has changed, then the new net_allocated_prices and the
         # new net_precategory price are whatever was found to be best in the last category.
-        if discount.code.category != last_category:
+        if (discount.code.category != last_category) and best_discounts.get(last_category.name):
             net_allocated_prices = best_discounts.get(last_category.name).net_allocated_prices
             net_precategory_price = best_discounts.get(last_category.name).net_price
             last_category = discount.code.category
@@ -117,8 +117,10 @@ def getBestDiscount(sender,**kwargs):
         # the previously best discount found.
         current_code = best_discounts.get(discount.code.category.name, None)
         if (
-            (not current_code and response.net_price < net_precategory_price) or
-            (response.net_price < current_code.net_price)
+            response and (
+                (not current_code and response.net_price < net_precategory_price) or
+                (response.net_price < current_code.net_price)
+            )
         ):
             best_discounts[discount.code.category.name] = response
 
@@ -144,6 +146,7 @@ def getBestDiscount(sender,**kwargs):
         # Once the final price has been calculated, apply it iff it is less than
         # the previously best discount or combination of discounts found.
         if (
+            response and
             response.net_price < min([x.net_price for x in best_discounts.values()] + [initial_total])
         ):
             best_discounts = OrderedDict({discount.code.category.name: response})

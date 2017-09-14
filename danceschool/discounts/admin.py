@@ -58,6 +58,8 @@ class DiscountComboAdmin(admin.ModelAdmin):
 
     def restrictions(self,obj):
         text = []
+        if obj.studentsOnly:
+            text.append(_('Students only'))
         if obj.newCustomersOnly:
             text.append(_('First-time customer'))
         if obj.daysInAdvanceRequired:
