@@ -4,6 +4,14 @@
 {% block title %}{% trans "Complete Your Registration" %}{% endblock %}
 
 {% block content %}
+
+{# Display any warning or error messages associated with the previous form submission #}
+<div id="message-alerts">
+{% for message in messages %}
+    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+{% endfor %}
+</div>
+
 <div class="regsummary">
 	{% block summary %}
 
@@ -67,6 +75,12 @@
 				<strong>{% trans "Total Discounts Applied" %}:</strong> {{ currencySymbol }}{{ total_discount_amount|floatformat:"-2" }} <br /><br />
 			{% endif %}
 
+			{# Add taxes if they are not included in the published price #}
+			{% if taxes %}
+				<strong>{% trans "Subtotal" %}:</strong> {{ currencySymbol }}{{ subtotal|floatformat:"-2" }}<br>			
+				<strong>{% trans "Taxes" %}:</strong> {{ currencySymbol }}{{ taxes|floatformat:"-2" }}<br>
+			{% endif %}
+
 	        <div style="font-size: 1.2em;"><strong><em>{% trans "Total" %}:</em></strong> {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</div>
 	    </p>
 
@@ -89,7 +103,7 @@
 		 	{% if payAtDoor %}
 		 		<div class="panel panel-default">
 		 			<div class="panel-heading">
-		 				<h4 class="panel-title">{% trans "Pay Directly (Requires User Login)" %}</h4>
+		 				<h4 class="panel-title">{% trans "Immediate Payment" %}</h4>
 		 			</div>
 		 			<div class="panel-body">
 		 	{% endif %}

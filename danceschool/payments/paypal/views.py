@@ -101,19 +101,15 @@ def createPaypalPayment(request):
     this_currency = getConstant('general__currencyCode')
 
     this_total = min(this_invoice.outstandingBalance, amount)
-
-    if not getConstant('registration__buyerPaysSalesTax'):
-        this_subtotal = this_total - this_invoice.taxes
-    else:
-        this_subtotal = this_total
+    this_subtotal = this_total - this_invoice.taxes
 
     this_transaction = {
         'amount': {
-            'total': this_total,
+            'total': round(this_total,2),
             'currency': this_currency,
             'details': {
-                'subtotal': this_subtotal,
-                'tax': this_invoice.taxes,
+                'subtotal': round(this_subtotal,2),
+                'tax': round(this_invoice.taxes,2),
             },
         },
         'description': str(this_description),
@@ -131,8 +127,8 @@ def createPaypalPayment(request):
 
         this_transaction['item_list']['items'].append({
             'name': str(item.name),
-            'price': this_item_price,
-            'tax': item.taxes,
+            'price': round(this_item_price,2),
+            'tax': round(item.taxes,2),
             'currency': this_currency,
             'quantity': 1,
         })
@@ -143,21 +139,21 @@ def createPaypalPayment(request):
     if this_invoice.grossTotal != this_invoice.total:
         this_transaction['item_list']['items'].append({
             'name': str(_('Total Discounts')),
-            'price': this_invoice.total - this_invoice.grossTotal,
+            'price': round(this_invoice.total,2) - round(this_invoice.grossTotal,2),
             'currency': this_currency,
             'quantity': 1,
         })
     if this_invoice.amountPaid > 0:
         this_transaction['item_list']['items'].append({
             'name': str(_('Previously Paid')),
-            'price': -1 * this_invoice.amountPaid,
+            'price': -1 * round(this_invoice.amountPaid,2),
             'currency': this_currency,
             'quantity': 1,
         })
     if amount != this_invoice.outstandingBalance:
         this_transaction['item_list']['items'].append({
             'name': str(_('Remaining Balance After Payment')),
-            'price': amount - this_invoice.outstandingBalance,
+            'price': round(amount,2) - round(this_invoice.outstandingBalance,2),
             'currency': this_currency,
             'quantity': 1,
         })

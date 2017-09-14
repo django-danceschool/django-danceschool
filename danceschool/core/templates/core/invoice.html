@@ -21,12 +21,12 @@
 
 	{% if object.amountPaid %}
 		<dt>{% trans "Amount Paid" %}:</dt>
-		<dd>{{ currencySymbol }}{{ object.amountPaid }}</dd>
+		<dd>{{ currencySymbol }}{{ object.amountPaid|floatformat:"2" }}</dd>
 	{% endif %}
 
 	{% if object.outstandingBalance %}
 		<dt>{% trans "Outstanding Balance" %}:</dt>
-		<dd>{{ currencySymbol }}{{ object.outstandingBalance }}</dd>
+		<dd>{{ currencySymbol }}{{ object.outstandingBalance|floatformat:"2" }}</dd>
 	{% endif %}
 </dl>
 

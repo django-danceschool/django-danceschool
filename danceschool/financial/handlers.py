@@ -112,6 +112,7 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
             adjustments=instance.adjustments,
             fees=instance.fees,
             taxes=instance.taxes,
+            buyerPaysSalesTax=instance.invoice.buyerPaysSalesTax,
             category=getConstant('financial__registrationsRevenueCat'),
             submissionUser=instance.invoice.submissionUser,
             currentlyHeldBy=instance.invoice.collectedByUser,
@@ -127,6 +128,10 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
         for field in ['grossTotal','total','adjustments','fees','taxes']:
             if getattr(related_item,field) != getattr(instance,field):
                 setattr(related_item,field,getattr(instance,field))
+                saveFlag = True
+        for field in ['buyerPaysSalesTax',]:
+            if getattr(related_item,field) != getattr(instance.invoice,field):
+                setattr(related_item,field,getattr(instance.invoice,field))
                 saveFlag = True
 
         if related_item.received != received_status:

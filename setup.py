@@ -57,6 +57,7 @@ setup(
         'redis>=2.10.6',
         'requests>=2.6.0',
         'six>=1.10.0',
+        'squareconnect>=2.2.1',
         'stripe>=1.62.0',
         'unicodecsv>=0.14.1',
     ],

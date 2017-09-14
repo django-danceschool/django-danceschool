@@ -60,10 +60,9 @@ class FinancialAppConfig(AppConfig):
 
         @property
         def revenueMismatch(self):
-            comparison = self.revenueReported + self.revenueRefundsReported
-            if not getConstant('registration__buyerPaysProcessingFees'):
-                comparison += self.feesReported
-            if not getConstant('registration__buyerPaysSalesTax'):
+            comparison = self.revenueReported + \
+                self.revenueRefundsReported + self.feesReported
+            if not self.invoice.buyerPaysSalesTax:
                 comparison += self.taxesReported
 
             return round(self.total,2) != round(comparison,2)

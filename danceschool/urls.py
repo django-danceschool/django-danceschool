@@ -64,3 +64,6 @@ if apps.is_installed('danceschool.payments.paypal'):
 
 if apps.is_installed('danceschool.payments.stripe'):
     urlpatterns.append(url(r'^stripe/', include('danceschool.payments.stripe.urls')),)
+
+if apps.is_installed('danceschool.payments.square'):
+    urlpatterns.append(url(r'^square/', include('danceschool.payments.square.urls')),)

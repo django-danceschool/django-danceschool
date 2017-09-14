@@ -1,0 +1,100 @@
+{% load static i18n sekizai_tags cms_tags %}
+{% if 'square.handle_pos_payments' in perms and registration.payAtDoor %}
+
+<a role="button" id="square-pos-button" class="btn btn-primary" href="">{% trans "Send to Square App" %}</a>
+
+<p id="square-pos-notice">{% blocktrans %}<em>Note:</em> Square Point of Sale app must be installed and logged in before attempting this transaction.{% endblocktrans %}</p>
+
+{% addtoblock "js" %}
+<script src="{% static 'base64/base64.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+  /**
+   * Determine the mobile operating system.
+   * This function returns one of 'iOS', 'Android', 'Windows Phone', or 'unknown'.
+   *
+   * @returns {String}
+   */
+  function getMobileOperatingSystem() {
+    var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  
+        // Windows Phone must come first because its UA also contains "Android"
+      if (/windows phone/i.test(userAgent)) {
+          return "Windows Phone";
+      }
+  
+      if (/android/i.test(userAgent)) {
+          return "Android";
+      }
+  
+      // iOS detection from: http://stackoverflow.com/a/9039885/177710
+      if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+          return "iOS";
+      }
+  
+      return "unknown";
+  }
+
+  var amount = "{% if invoice %}{% widthratio invoice.outstandingBalance 1 100 %}{% elif registration %}{% widthratio registration.priceWithDiscountAndTaxes 1 100 %}{% else %}{% widthratio defaultAmount 1 100 %}{% endif %}"
+
+  var metadata = {
+    {% if user.is_authenticated %}
+      userId: "{{ user.id }}",
+    {% endif %}
+    {% if registration %}
+      registration: "{{ registration.id }}",
+      customerEmail: "{{ registration.email }}",
+    {% elif invoice %}
+      invoice: "{{ invoice.id }}",
+    {% endif %}
+    
+    sourceUrl: "{{ request.get_full_path }}",
+    successUrl: "{% page_url instance.successPage.id %}",
+  }
+
+  var androidHref = "intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI={{ returnUrl }};S.com.squareup.pos.CLIENT_ID={{ squareApplicationId }};S.com.squareup.pos.API_VERSION=v2.0;i.com.squareup.pos.TOTAL_AMOUNT=" + amount + ";S.com.squareup.pos.CURRENCY_CODE={{ currencyCode }};S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CARD_ON_FILE;S.com.squareup.pos.REQUEST_METADATA=" + Base64.encode(JSON.stringify(metadata)) + ";end";
+
+  var iosParams = {
+    "amount_money": {
+      "amount" : amount,
+      "currency_code" : "{{ currencyCode }}"
+    },
+    "callback_url" : "{{ returnUrl }}", // Replace this value with your application's callback URL
+    "client_id" : "{{ squareApplicationId }}", // Replace this value with your application's ID
+    "version": "1.3",
+    "notes": "Payment to {{ businessName }}",
+    "state": Base64.encode(JSON.stringify(metadata)),
+    "options" : {
+      "supported_tender_types" : ["CREDIT_CARD","SQUARE_GIFT_CARD","CARD_ON_FILE"],
+      "auto_return": true,
+    }
+  };
+  var iosHref = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(iosParams));
+
+  switch(getMobileOperatingSystem()) {
+  	  case "Android":
+    	$("#square-pos-button").attr("href", androidHref);
+  	  	break;
+  	  case "iOS":
+    	$("#square-pos-button").attr("href", iosHref);
+  	  	break;
+  	  default:
+  	    $("#square-pos-button").removeClass('btn-primary');
+  	    $("#square-pos-button").addClass('btn-default');
+  	    $("#square-pos-button").append(" ({% trans 'unavailable' %})");
+  	    $("#square-pos-notice").append(" {% trans 'Point of sale integration is only supported for iOS and Android devices.' %}");
+  	    $('#square-pos-button').click(function(e) {
+  	    	e.preventDefault();
+  	    });
+  	  	break;
+  }
+});
+</script>
+{% endaddtoblock %}
+
+
+{% endif %}
