@@ -109,10 +109,6 @@ def processSquarePayment(request):
     this_currency = getConstant('general__currencyCode')
     this_total = min(this_invoice.outstandingBalance, amount)
 
-    # TODO: Figure out how to handle taxes
-    if not getConstant('registration__buyerPaysSalesTax'):
-        pass
-
     api_instance = TransactionsApi()
     idempotency_key = str(uuid.uuid1())
     location_id = getattr(settings,'SQUARE_LOCATION_ID','')

@@ -75,6 +75,12 @@
 				<strong>{% trans "Total Discounts Applied" %}:</strong> {{ currencySymbol }}{{ total_discount_amount|floatformat:"-2" }} <br /><br />
 			{% endif %}
 
+			{# Add taxes if they are not included in the published price #}
+			{% if taxes %}
+				<strong>{% trans "Subtotal" %}:</strong> {{ currencySymbol }}{{ subtotal|floatformat:"-2" }}<br>			
+				<strong>{% trans "Taxes" %}:</strong> {{ currencySymbol }}{{ taxes|floatformat:"-2" }}<br>
+			{% endif %}
+
 	        <div style="font-size: 1.2em;"><strong><em>{% trans "Total" %}:</em></strong> {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</div>
 	    </p>
 

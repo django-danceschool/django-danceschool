@@ -431,7 +431,9 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
         context_data.update({
             'registration': reg,
             "totalPrice": reg.totalPrice,
-            "netPrice": reg.priceWithDiscount,
+            'subtotal': reg.priceWithDiscount,
+            'taxes': reg.addTaxes,
+            "netPrice": reg.priceWithDiscountAndTaxes,
             "addonItems": addons,
             "discount_codes": discount_codes,
             "discount_code_amount": discount_amount,

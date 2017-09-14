@@ -1537,6 +1537,26 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
     totalPrice.fget.short_description = _('Total price before discounts')
 
     @property
+    def addTaxes(self):
+        '''
+        If the buyer is expected to pay sales tax, this can be used in the
+        registration process to show a line item of what the taxes are.
+        '''
+        if getConstant('registration__buyerPaysSalesTax'):
+            return self.priceWithDiscount * (getConstant('registration__salesTaxRate') or 0) / 100
+        else:
+            return 0
+
+    @property
+    def priceWithDiscountAndTaxes(self):
+        '''
+        Some payment processors don't separate out taxes as a line item, so this
+        method ensures that individuals are charged the appropriate amount depending
+        on whether or no we expect them to pay any taxes on their purchase.
+        '''
+        return self.priceWithDiscount + self.addTaxes
+
+    @property
     def totalDiscount(self):
         return self.totalPrice - self.priceWithDiscount
     totalDiscount.fget.short_description = _('Total discounts')
@@ -1780,6 +1800,26 @@ class Registration(EmailRecipientMixin, models.Model):
     def netPrice(self):
         return self.priceWithDiscount
     netPrice.fget.short_description = _('Net price')
+
+    @property
+    def addTaxes(self):
+        '''
+        If the buyer is expected to pay sales tax, this can be used in the
+        registration process to show a line item of what the taxes are.
+        '''
+        if getConstant('registration__buyerPaysSalesTax'):
+            return self.priceWithDiscount * (getConstant('registration__salesTaxRate') or 0) / 100
+        else:
+            return 0
+
+    @property
+    def priceWithDiscountAndTaxes(self):
+        '''
+        Some payment processors don't separate out taxes as a line item, so this
+        method ensures that individuals are charged the appropriate amount depending
+        on whether or no we expect them to pay any taxes on their purchase.
+        '''
+        return self.priceWithDiscount + self.addTaxes
 
     @property
     def discounted(self):
@@ -2130,6 +2170,7 @@ class Invoice(EmailRecipientMixin, models.Model):
     adjustments = models.FloatField(_('Refunds/adjustments'),default=0)
     taxes = models.FloatField(_('Taxes'),validators=[MinValueValidator(0)],default=0)
     fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)],default=0)
+    buyerPaysSalesTax = models.BooleanField(_('Buyer pays sales tax'), default=False)
 
     amountPaid = models.FloatField(default=0,verbose_name=_('Net Amount Paid'),validators=[MinValueValidator(0)])
 
@@ -2154,6 +2195,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             total=amount,
             submissionUser=submissionUser,
             collectedByUser=collectedByUser,
+            buyerPaysSalesTax=getConstant('registration__buyerPaysSalesTax'),
             data=kwargs,
         )
 
@@ -2200,6 +2242,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             total=reg.priceWithDiscount,
             submissionUser=submissionUser,
             collectedByUser=collectedByUser,
+            buyerPaysSalesTax=getConstant('registration__buyerPaysSalesTax'),
             status=status,
             data=kwargs,
         )
@@ -2256,9 +2299,9 @@ class Invoice(EmailRecipientMixin, models.Model):
     @property
     def outstandingBalance(self):
         balance = self.total + self.adjustments - self.amountPaid
-        if getConstant('registration__buyerPaysSalesTax'):
+        if self.buyerPaysSalesTax:
             balance += self.taxes
-        return balance
+        return round(balance,2)
     outstandingBalance.fget.short_description = _('Outstanding balance')
 
     @property
@@ -2279,7 +2322,7 @@ class Invoice(EmailRecipientMixin, models.Model):
     @property
     def netRevenue(self):
         net = self.total - self.fees + self.adjustments
-        if not getConstant('registration__buyerPaysSalesTax'):
+        if not self.buyerPaysSalesTax:
             net -= self.taxes
         return net
     netRevenue.fget.short_description = _('Net revenue')
@@ -2369,14 +2412,14 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def calculateTaxes(self):
         '''
-        Updates the tax field to reflect the amount of taxes depending on1
+        Updates the tax field to reflect the amount of taxes depending on
         the local rate as well as whether the buyer or seller pays sales tax.
         '''
 
         tax_rate = (getConstant('registration__salesTaxRate') or 0) / 100
 
         if tax_rate > 0:
-            if getConstant('registration__buyerPaysSalesTax'):
+            if self.buyerPaysSalesTax:
                 # If the buyer pays taxes, then taxes are just added as a fraction of the price
                 self.taxes = self.total * tax_rate
             else:
@@ -2566,7 +2609,7 @@ class InvoiceItem(models.Model):
     @property
     def netRevenue(self):
         net = self.total - self.fees + self.adjustments
-        if not getConstant('registration__buyerPaysSalesTax'):
+        if not self.invoice.buyerPaysSalesTax:
             net -= self.taxes
         return net
     netRevenue.fget.short_description = _('Net revenue')

@@ -293,15 +293,6 @@ class BuyerPaysSalesTax(BooleanPreference):
 
 
 @global_preferences_registry.register
-class BuyerPaysProcessingFees(BooleanPreference):
-    section = registration
-    name = 'buyerPaysProcessingFees'
-    verbose_name = _('Buyer pays processing fees (added to total price)')
-    help_text = _('If checked, then expected processing fees will be added to the customer\' total amount expected to pay.  This feature must be implemented by individual payment processing apps.')
-    default = False
-
-
-@global_preferences_registry.register
 class AllowAjaxSignin(BooleanPreference):
     section = registration
     name = 'allowAjaxSignin'
