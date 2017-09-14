@@ -547,6 +547,9 @@ Remember, all page settings and content can be changed later via the admin inter
         if apps.is_installed('danceschool.payments.stripe'):
             call_command('setup_stripe')
 
+        if apps.is_installed('danceschool.payments.square'):
+            call_command('setup_square')
+
         call_command('setup_permissions')
 
         # Finished with setup process

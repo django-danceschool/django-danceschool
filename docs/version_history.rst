@@ -1,8 +1,28 @@
 Version History
 ===============
 
+0.4.0 - September 14, 2017
+--------------------------
+
+- **New:** Square payment processor integration, with the option for both online payments and point-of-sale transactions with a Square card reader.
+- **New:** A full private lesson scheduling system, with the ability to either use the default registration and pricing tier system, or the ability to do scheduling only.  Includes notifications for instructors and students, and scheduled lessons automatically show up on the instructor's private internal calendar.
+- **New:** More flexible internal calendaring options, including the option to view internal calendars by location and by room
+- **New:** The ability to create generic invoices for non-registration items, specify specific invoice recipients, and easily email notification updates to invoice recipients.
+- Private events can now specify rooms as well as locations, and will show up on the location/room calendars
+- All built-in payment processors now handle sales taxes appropriately (#59)
+- On refunds, changes to fees are now allocated across invoiceitems, ensuring that the associated revenue items remain correct (#57)
+- Fixed CSRF verification error with Ajax sign-in on the student info page (#58)
+- Invoice emails now contain appropriate page protocol in invoice URLs so that they will show up in notification emails as clickable links (#56)
+- numerous small bug fixes and improvements
+
+Upgrade notes:
+^^^^^^^^^^^^^^
+
+Version 0.4.0 is a fully backwards compatible release.  However, a number of small template changes and improvements have been incorporated on admin and registration templates, so if you are overriding registration templates, you may wish to check that the defaults have not changed.
+
+
 0.3.0 - September 1, 2017
------------------------
+-------------------------
 
 - **New:** Added discount categories, with the lowest-priced discount *per category* automatically applied as a method of permitting multiple simultaneous discounts.  Categories are orderable so that discounts are always applied in the same order.
 - Moved discounted student pricing from the core app to the discounts app.  Core app PricingTiers now contain only onlinePrice, doorPrice, and dropInPrice values.
