@@ -1,4 +1,4 @@
-{% load static i18n sekizai_tags %}
+{% load static i18n sekizai_tags cms_tags %}
 {% if 'square.handle_pos_payments' in perms and registration.payAtDoor %}
 
 <a role="button" id="square-pos-button" class="btn btn-primary" href="">{% trans "Send to Square App" %}</a>
@@ -53,7 +53,7 @@ $(document).ready(function(){
     {% endif %}
     
     sourceUrl: "{{ request.get_full_path }}",
-    successUrl: "{{ instance.successUrl }}",
+    successUrl: "{% page_url instance.successPage.id %}",
   }
 
   var androidHref = "intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI={{ returnUrl }};S.com.squareup.pos.CLIENT_ID={{ squareApplicationId }};S.com.squareup.pos.API_VERSION=v2.0;i.com.squareup.pos.TOTAL_AMOUNT=" + amount + ";S.com.squareup.pos.CURRENCY_CODE={{ currencyCode }};S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CARD_ON_FILE;S.com.squareup.pos.REQUEST_METADATA=" + Base64.encode(JSON.stringify(metadata)) + ";end";
