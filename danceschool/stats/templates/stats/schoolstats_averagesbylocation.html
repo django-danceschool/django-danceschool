@@ -4,13 +4,13 @@
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>{% trans "Performance By Location" %}
-  <a class="btn btn-sm btn-secondary" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
-</h2>
+<h3 class="mt-4">{% trans "Performance By Location" %}
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
+</h3>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-secondary active showLocationButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-secondary showLocationButton">{% trans "All Time" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-outline-secondary active showLocationButton">{% trans "Last 12 Months" %}</button>
+  <button type="button" class="btn btn-outline-secondary showLocationButton">{% trans "All Time" %}</button>
 </div>
 
 

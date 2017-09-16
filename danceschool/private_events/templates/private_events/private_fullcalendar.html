@@ -10,17 +10,17 @@
 <dt>{% trans "Links To Calendar Feeds" %}:</dt>
 <dd>
     {% if privateFeeds.ownPublicEvents %}
-        <a class="btn btn-secondary btn-sm" href="{{ privateFeeds.ownPublicEvents }}">{% trans "Your Classes &amp; Events" %}</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ privateFeeds.ownPublicEvents }}">{% trans "Your Classes &amp; Events" %}</a>
     {% endif %}
     {% if privateFeeds.privateEvents %}
-        <a class="btn btn-secondary btn-sm" href="{{ privateFeeds.privateEvents }}">{% trans "Private Events &amp; Reminders" %}</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{{ privateFeeds.privateEvents }}">{% trans "Private Events &amp; Reminders" %}</a>
     {% endif %}
 
-    <a class="btn btn-secondary btn-sm" href="{{ publicFeed }}">{% trans "Public Calendar Feed" %}</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ publicFeed }}">{% trans "Public Calendar Feed" %}</a>
 ({% trans "copy and paste these URLs to add them to Google Calendar, etc." %})</dd>
 </dl>
 
-<div class="card">
+<div class="card mt-4">
     <div class="card-header">{% trans "Select Calendar Options" %}</div>
     <div class="card-body">
         <form name='calendarSelect' id='calendarSelect'>
@@ -43,7 +43,7 @@
     </div>
 </div>
 
-<div id="calendarbox">&nbsp;</div>
+<div id="calendarbox" class="mt-4">&nbsp;</div>
 
 <p><em>{% trans "Note" %}:</em> {% blocktrans %}For all calendar options, private reminders and private lessons displayed include only those events that are visible to your user account.{% endblocktrans %}</p>
 

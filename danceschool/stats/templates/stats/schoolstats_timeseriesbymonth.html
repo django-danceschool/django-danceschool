@@ -11,18 +11,18 @@
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>{% trans "Students By Month of the Year" %}
-  <a class="btn btn-sm btn-secondary" href="{% url 'MonthlyPerformanceCSV' %}">{% trans "Download Data" %}</a>
-</h2>
+<h3 class="mt-4">{% trans "Students By Month of the Year" %}
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'MonthlyPerformanceCSV' %}">{% trans "Download Data" %}</a>
+</h3>
 
 <p>{% blocktrans %}Which months of the year are the most successful for us?  Click the legend at the bottom to show/hide previous years.{% endblocktrans %}</p>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-series="SeriesRegistrations" class="btn btn-secondary active monthlyPerformanceButton">{% trans "Total Series Registrations" %}</button>
-  <button type="button" data-series="Registrations" class="btn btn-secondary monthlyPerformanceButton">{% trans "Total Registrations (unique students)" %}</button>
-  <button type="button" data-series="Hours" class="btn btn-secondary monthlyPerformanceButton">{% trans "Total Hours of Class" %}</button>
-  <button type="button" data-series="StudentHours" class="btn btn-secondary monthlyPerformanceButton">{% trans "Total Student-Hours" %}</button>  
-  <button type="button" data-series="AvgStudents" class="btn btn-secondary monthlyPerformanceButton">{% trans "Avg. Students/Hour" %}</button>
+  <button type="button" data-series="SeriesRegistrations" class="btn btn-outline-secondary active monthlyPerformanceButton">{% trans "Total Series Registrations" %}</button>
+  <button type="button" data-series="Registrations" class="btn btn-outline-secondary monthlyPerformanceButton">{% trans "Total Registrations (unique students)" %}</button>
+  <button type="button" data-series="Hours" class="btn btn-outline-secondary monthlyPerformanceButton">{% trans "Total Hours of Class" %}</button>
+  <button type="button" data-series="StudentHours" class="btn btn-outline-secondary monthlyPerformanceButton">{% trans "Total Student-Hours" %}</button>  
+  <button type="button" data-series="AvgStudents" class="btn btn-outline-secondary monthlyPerformanceButton">{% trans "Avg. Students/Hour" %}</button>
 </div>
 
 <div id="MonthlyPerformance"></div>

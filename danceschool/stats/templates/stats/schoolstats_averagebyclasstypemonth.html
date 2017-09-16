@@ -5,11 +5,11 @@
 {% endaddtoblock %}
 
 
-<h2>{% trans "Performance by Class Type and Month (Student-Hours)" %}</h2>
+<h3 class="mt-4">{% trans "Performance by Class Type and Month (Student-Hours)" %}</h3>
 
 <div class="btn-group" role="group" aria-label="...">
   {% for prior_year in recentYears reversed %}
-    <button type="button" data-year="{{ prior_year }}" class="btn btn-secondary {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
+    <button type="button" data-year="{{ prior_year }}" class="btn btn-outline-secondary {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
   {% endfor %}
 </div>
 

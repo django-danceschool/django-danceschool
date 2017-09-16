@@ -5,13 +5,13 @@
 {% endaddtoblock %}
 
 
-<h2>{% trans "Performance by Class Type" %}
-  <a class="btn btn-sm btn-secondary" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
-</h2>
+<h3 class="mt-4">{% trans "Performance by Class Type" %}
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
+</h3>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-secondary active classTypeButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-secondary classTypeButton">{% trans "All Time" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-outline-secondary active classTypeButton">{% trans "Last 12 Months" %}</button>
+  <button type="button" class="btn btn-outline-secondary classTypeButton">{% trans "All Time" %}</button>
 </div>
 
 <div id="ClassTypePerformance"></div>

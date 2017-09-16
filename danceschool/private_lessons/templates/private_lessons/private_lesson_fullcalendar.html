@@ -38,8 +38,8 @@
     </div>
 </div>
 
-<div class="hidden" id="instructorDetails">
-  <img id="instructorDetailsImage" class="float-left hidden" src="" />
+<div class="mt-4" style="display: none;" id="instructorDetails">
+  <img id="instructorDetailsImage" style="display: none;" class="float-left" src="" />
   <h4 id="instructorDetailsName"></h4>
 
   <ul class="list-group">
@@ -76,7 +76,7 @@
   </div>
 </div>
 
-<div id="calendarbox">&nbsp;</div>
+<div id="calendarbox" class="mt-4">&nbsp;</div>
 
 {% addtoblock "css" %}
     <link rel='stylesheet' type="text/css" href='{% static 'fullcalendar/fullcalendar.min.css' %}' />
@@ -173,11 +173,11 @@ $(document).ready(function() {
 
           if (imageUrl) {
             $('#instructorDetailsImage').attr('src', imageUrl);
-            $('#instructorDetailsImage').removeClass('hidden');
+            $('#instructorDetailsImage').show();
           }
           else {
             $('#instructorDetailsImage').attr('src','');
-            $('#instructorDetailsImage').addClass('hidden');
+            $('#instructorDetailsImage').hide();
           }
 
           // Set the instructor info from dropdown data
@@ -185,7 +185,7 @@ $(document).ready(function() {
           $('#instructorDetailsRoles').html(selected.data('roles'));
           $('#instructorDetailsCouples').html('<i class="fa ' + couplesClass + '" style="color: ' + couplesColor + ';"></i>');
           $('#instructorDetailsSmallGroups').html('<i class="fa ' + groupsClass + '" style="color: ' + groupsColor + ';"></i>');
-          $('#instructorDetails').removeClass('hidden');
+          $('#instructorDetails').show();
 
           $.ajax({
               type: "GET",
@@ -203,7 +203,7 @@ $(document).ready(function() {
           });
         }
         else {
-          $('#instructorDetails').addClass('hidden'); 
+          $('#instructorDetails').hide();
         }
 
     });
