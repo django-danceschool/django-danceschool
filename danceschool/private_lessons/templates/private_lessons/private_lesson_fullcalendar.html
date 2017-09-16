@@ -18,11 +18,11 @@
 </div>
 {% endif %}
 
-<div class="panel panel-default">
-    <div class="panel-heading">
+<div class="card">
+    <div class="card-header">
         {% trans "Choose an Instructor" %}
     </div>
-    <div class="panel-body">
+    <div class="card-body">
         <form name='instructorSelect' id='instructorSelect'>
 
             <p>
@@ -39,7 +39,7 @@
 </div>
 
 <div class="hidden" id="instructorDetails">
-  <img id="instructorDetailsImage" class="pull-left hidden" src="" />
+  <img id="instructorDetailsImage" class="float-left hidden" src="" />
   <h4 id="instructorDetailsName"></h4>
 
   <ul class="list-group">
@@ -68,7 +68,7 @@
           {{ form|crispy }}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "Cancel" %}</button>
         <button type="submit" form="bookingForm" value="Submit" class="btn btn-primary">{% trans "Schedule This Lesson" %}</button>
       </div>
       </form>

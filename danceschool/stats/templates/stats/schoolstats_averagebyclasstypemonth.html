@@ -9,7 +9,7 @@
 
 <div class="btn-group" role="group" aria-label="...">
   {% for prior_year in recentYears reversed %}
-    <button type="button" data-year="{{ prior_year }}" class="btn btn-default {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
+    <button type="button" data-year="{{ prior_year }}" class="btn btn-secondary {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
   {% endfor %}
 </div>
 

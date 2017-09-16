@@ -10,9 +10,9 @@
 Note that a student who has taken classes in multiple roles will show up in each role's data series depending on the number of series they've taken in each.{% endblocktrans %}</p>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" class="btn btn-default active studentRetentionButton">{% trans "All Students" %}</button>
+  <button type="button" class="btn btn-secondary active studentRetentionButton">{% trans "All Students" %}</button>
   {% for prior_year in recentYears %}
-    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-default studentRetentionButton">{{ prior_year }} {% trans "Cohort" %}</button>
+    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-secondary studentRetentionButton">{{ prior_year }} {% trans "Cohort" %}</button>
   {% endfor %}
 </div>
 

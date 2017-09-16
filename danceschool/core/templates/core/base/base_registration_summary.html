@@ -101,11 +101,9 @@
 		     {% endif %}
 
 		 	{% if payAtDoor %}
-		 		<div class="panel panel-default">
-		 			<div class="panel-heading">
-		 				<h4 class="panel-title">{% trans "Immediate Payment" %}</h4>
-		 			</div>
-		 			<div class="panel-body">
+		 		<div class="card">
+	 				<h4 class="card-header">{% trans "Immediate Payment" %}</h4>
+		 			<div class="card-body">
 		 	{% endif %}
 
 		 	{% static_placeholder "registration_payment_placeholder" %}

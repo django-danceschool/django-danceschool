@@ -47,10 +47,10 @@
 		</p>
 
 		{% if 'core.change_event' in perms %}
-		<p><a class="btn btn-default" href="{% url 'admin:core_event_change' event.id %}">{% trans "Edit Event Details" %}</a></p>
+		<p><a class="btn btn-secondary" href="{% url 'admin:core_event_change' event.id %}">{% trans "Edit Event Details" %}</a></p>
 		{% endif %}
 		{% if 'core.view_registration_summary' in perms and event.registrationEnabled %}
-		<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
+		<p><a class="btn btn-secondary" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
 		{% endif %}
 
 

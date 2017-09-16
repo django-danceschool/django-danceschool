@@ -130,7 +130,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
             else:
                 collapse_id = 'override_' + str(int(random() * 10.0**12))
 
-            output.append(u'<button class="btn btn-default btn-xs" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul>' % {'id': collapse_id, 'string': _('Additional Choices')})
+            output.append(u'<button class="btn btn-outline-secondary btn-sm" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul>' % {'id': collapse_id, 'string': _('Additional Choices')})
 
             for i, (option_value, option_label) in enumerate(override_choices):
                 if 'disabled' in final_attrs:
@@ -154,7 +154,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
                 option_label = conditional_escape(force_text(option_label,encoding='utf=8'))
                 output.append(u'<li><label%s>%s %s</label></li>' % (label_for, rendered_cb, option_label))
             if submit_button_flag:
-                output.append(u'<input class="btn" type="submit" value="%s &raquo;" />' % _('Register now'))
+                output.append(u'<input class="btn btn-outline-primary btn-sm" type="submit" value="%s &raquo;" />' % _('Register now'))
             output.append(u'</ul></div>')
 
         return mark_safe(u'\n'.join(output))
@@ -314,7 +314,7 @@ class RegistrationContactForm(forms.Form):
 
     def get_mid_layout(self):
         mid_layout = Layout(
-            Div('agreeToPolicies','student',css_class='well'),
+            Div('agreeToPolicies','student',css_class='card card-body bg-light'),
         )
         return mid_layout
 
@@ -463,13 +463,13 @@ class DoorAmountForm(forms.Form):
         if doorPortion:
             door_layout = Layout(
                 HTML("""
-                    <div class="panel panel-default">
-                        <div class="panel-heading" role="tab" id="door_headingOne">
-                            <h4 class="panel-title">
+                    <div class="card">
+                        <div class="card-header" role="tab" id="door_headingOne">
+                            <h4 class="mb-0">
                             """ + str(_('Cash Payment')) + """
                             </h4>
                         </div>
-                        <div class="panel-body">
+                        <div class="card-body">
                     """),
                 'paid',
                 'receivedBy',
@@ -487,13 +487,13 @@ class DoorAmountForm(forms.Form):
         if invoicePortion:
             invoice_layout = Layout(
                 HTML("""
-                    <div class="panel panel-default">
-                        <div class="panel-heading" role="tab" id="door_headingTwo">
-                            <h4 class="panel-title">
+                    <div class="card">
+                        <div class="card-header" role="tab" id="door_headingTwo">
+                            <h4 class="mb-0">
                                 """ + str(_('Send Invoice')) + """
                             </h4>
                         </div>
-                        <div class="panel-body">
+                        <div class="card-body">
                     """),
                 'invoiceSent',
                 'invoicePayerEmail',
@@ -508,7 +508,7 @@ class DoorAmountForm(forms.Form):
             invoice_layout = Layout(HTML(""))
 
         self.helper.layout = Layout(
-            HTML('<div class="panel-group" id="door_accordion" role="tablist" aria-multiselectable="true">'),
+            HTML('<div id="door_accordion" role="tablist" aria-multiselectable="true">'),
             Hidden('submissionUser',subUser),
             door_layout,
             invoice_layout,

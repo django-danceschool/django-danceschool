@@ -13,7 +13,7 @@
 	<tbody>
     {% for person in object_list %}
     	<tr>
-    		<td>{% if person.photo %}<img class="pull-left" src="{% thumbnail person.photo thumbnail_dimensions|default:'133x133' crop %}" width="{{ thumbnail.width|default:'133' }}" />{% endif %}</td>
+    		<td>{% if person.photo %}<img class="float-left" src="{% thumbnail person.photo thumbnail_dimensions|default:'133x133' crop %}" width="{{ thumbnail.width|default:'133' }}" />{% endif %}</td>
     		<td>{{ person.fullName }}</td>
     		<td>{{ person.relatedEmails|join:",<br />" }}</td>
     		<td>{{ person.notes }}</td>

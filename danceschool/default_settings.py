@@ -119,7 +119,7 @@ HUEY = SqliteHuey(
 # HUEY = RedisHuey('danceschool',connection_pool=pool)
 
 # For Crispy forms Bootstrap templates
-CRISPY_TEMPLATE_PACK = 'bootstrap3'
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 CRISPY_FAIL_SILENTLY = True
 
 DJANGOCMS_FORMS_PLUGIN_MODULE = 'Forms'

@@ -6,12 +6,12 @@
 
 
 <h2>{% trans "Performance by Class Type" %}
-  <a class="btn btn-xs btn-default" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
+  <a class="btn btn-sm btn-secondary" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
 </h2>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active classTypeButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-default classTypeButton">{% trans "All Time" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-secondary active classTypeButton">{% trans "Last 12 Months" %}</button>
+  <button type="button" class="btn btn-secondary classTypeButton">{% trans "All Time" %}</button>
 </div>
 
 <div id="ClassTypePerformance"></div>

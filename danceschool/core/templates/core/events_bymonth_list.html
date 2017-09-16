@@ -2,7 +2,7 @@
 
 <div class="event_list {{ instance.cssClasses }}">
     {% if instance.title %}<h3>{{ instance.title }}</h3>{% endif %}
-    <ul class="unstyled">
+    <ul class="list-unstyled">
         {% for event in event_list %}
             {% ifchanged event.month %}
                 {% if not forloop.first %}</ul>{% endif %}

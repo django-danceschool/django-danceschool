@@ -5,12 +5,12 @@
 {% endaddtoblock %}
 
 <h2>{% trans "Performance By Location" %}
-  <a class="btn btn-xs btn-default" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
+  <a class="btn btn-sm btn-secondary" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
 </h2>
 
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active showLocationButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-default showLocationButton">{% trans "All Time" %}</button>
+  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-secondary active showLocationButton">{% trans "Last 12 Months" %}</button>
+  <button type="button" class="btn btn-secondary showLocationButton">{% trans "All Time" %}</button>
 </div>
 
 

@@ -10,19 +10,19 @@
 {% endif %}
 
 <div class="btn-group" role="group">
-	<a class="btn btn-default" href="{% url 'registration' %}">{% trans "Register for Classes" %}</a>
+	<a class="btn btn-outline-secondary" href="{% url 'registration' %}">{% trans "Register for Classes" %}</a>
 	{% if request.user == object %}
 		{% if perms.core.view_registration_summary %}
-			<a class="btn btn-default" href="{% url 'viewregistrations_selectevent' %}">{% trans "View Registrations" %}</a>
+			<a class="btn btn-outline-secondary" href="{% url 'viewregistrations_selectevent' %}">{% trans "View Registrations" %}</a>
 		{% endif %}
 		{% if perms.core.view_staff_directory %}
-			<a class="btn btn-default" href="{% url 'staffDirectory' %}">{% trans "Staff Directory" %}</a>
+			<a class="btn btn-outline-secondary" href="{% url 'staffDirectory' %}">{% trans "Staff Directory" %}</a>
 		{% endif %}		
 		{% if perms.core.view_own_instructor_stats %}
-			<a class="btn btn-default" href="{% url 'instructorStats' %}">{% trans "Your Instructor Stats" %}</a>
+			<a class="btn btn-outline-secondary" href="{% url 'instructorStats' %}">{% trans "Your Instructor Stats" %}</a>
 		{% endif %}
 		{% if perms.core.update_instructor_bio %}
-			<a class="btn btn-default" href="{% url 'instructorBioChange' %}">{% trans "Update Your Contact Info" %}</a>
+			<a class="btn btn-outline-secondary" href="{% url 'instructorBioChange' %}">{% trans "Update Your Contact Info" %}</a>
 		{% endif %}
 	{% endif %}
 </div>
@@ -33,7 +33,7 @@
 
 {% if staffmember %}
 
-	<h3>{% trans "Current and Upcoming Series" %}</h3>
+	<h3 class="mt-4">{% trans "Current and Upcoming Series" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
@@ -73,7 +73,7 @@
 		<h2>{% if staffmember %}{% trans "Customer" %} {% endif %}{% blocktrans with name=object.get_full_name %}Summary Statistics for {{ name }}{% endblocktrans %}</h2>
 	{% endif %}
 
-	<h3>
+	<h3 class="mt-4">
 		{% if staffmember %}
 			{% trans "Basic Customer Information" %}
 		{% else %}
@@ -94,7 +94,7 @@
 		{% endif %}
 	</dl>
 
-	<h3>{% trans "Class Series Taken" %}</h3>
+	<h3 class="mt-4">{% trans "Class Series Taken" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
@@ -145,7 +145,7 @@
 
 {# Other Series Registered From Verified Email Addresses #}
 {% if verified_eventregs %}
-	<h3>{% trans "Series Registered From Other Email Addresses" %}</h3>
+	<h3 class="mt-4">{% trans "Series Registered From Other Email Addresses" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>
@@ -194,7 +194,7 @@
 
 {# Series Registered By This Person #}
 {% if submitted_eventregs %}
-	<h3>{% trans "Other Series Registered By You" %}</h3>
+	<h3 class="mt-4">{% trans "Other Series Registered By You" %}</h3>
 
 	<table class="table table-striped table-bordered">
 	<thead>

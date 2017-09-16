@@ -6,16 +6,16 @@
 {% trans "Other/Not Specified" as grouper_default %}
 
 <div class="row">
-<div class="col-md-12 col-sm-12 col-xs-12">
+<div class="col-12">
 
-	<a href="{% url 'financesByMonth' %}" class="btn btn-default">{% trans "Return to Monthly Summary" %}</a>
+	<a href="{% url 'financesByMonth' %}" class="btn btn-secondary">{% trans "Return to Monthly Summary" %}</a>
 
 	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-default {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-default {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-default {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 <hr />
@@ -24,7 +24,7 @@
 </div>
 
 <div class="row" style="margin-top: 30px;">
-<div class="col-md-12 col-sm-12 col-xs-12">
+<div class="col-12">
 
 <h1>{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
 

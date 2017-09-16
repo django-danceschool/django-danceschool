@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="row">
-<div class="pull-left col-sm-8">
+<div class="float-left col-sm-8">
 	<dl>
 		<dt>{% trans "School Revenues (YTD):" %}</dt><dd>{{ statement.revenues_ytd|floatformat:2 }}</dd>
 		<dt{% trans "School Expenses (YTD)" %}:</dt><dd>{{ statement.expenses_ytd|floatformat:2 }}</dd>
@@ -23,9 +23,9 @@
 <div class="col-sm-4">
 	<h4>{% trans "Export Financial Data (CSV)" %}</h4>
 	<div class="btn-group" role="group" aria-label="...">
-	  <a href="{% url 'financesByEventCSV' %}" class="btn btn-default">{% trans "This View" %}</a>
-	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-default">{% trans "All Expenses" %}</a>
-	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-default">{% trans "All Revenues" %}</a>
+	  <a href="{% url 'financesByEventCSV' %}" class="btn btn-secondary">{% trans "This View" %}</a>
+	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-secondary">{% trans "All Expenses" %}</a>
+	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-secondary">{% trans "All Revenues" %}</a>
 	</div>
 </div>
 {% endif %}
@@ -37,7 +37,7 @@
 <table class="table">
 <thead>
 	<tr>
-		<td rowspan="2" colspan="2">{% trans "Series" %}</td><td colspan="{{ roles|length }}">{% trans "# Registrations" %}</td><td colspan="2">{% trans "Series Revenue" %}</td><td colspan="3">{% trans "Series Expenses" %}</td><td rowspan="2">{% trans "Net Profit" %}</td>
+		<th rowspan="2" colspan="2">{% trans "Series" %}</th><th colspan="{{ roles|length }}">{% trans "# Registrations" %}</th><th colspan="2">{% trans "Series Revenue" %}</th><th colspan="3">{% trans "Series Expenses" %}</th><th rowspan="2">{% trans "Net Profit" %}</th>
 	</tr>
 	<tr>
 		{% for this_role in roles %}

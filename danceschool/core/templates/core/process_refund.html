@@ -20,9 +20,9 @@
 </dl>
 
 {% if payments %}
-	<div class="panel panel-default">
-		<div class="panel-heading"><h4 class="panel-title">{% trans "Payment Details" %}</h4></div>
-		<div class="panel-body">
+	<div class="card">
+		<h4 class="card-header">{% trans "Payment Details" %}</h4>
+		<div class="card-body">
 			{% for payment in payments %}
 				{{ payment.methodName }}: {{ payment.recordId }}<br />
 				{% if not payment.refundable %}
@@ -116,8 +116,8 @@
 <hr />
 
 <p>
-	<a class="btn btn-default btn-sm" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
-	<a class="btn btn-default btn-sm" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Event" %}</a>
+	<a class="btn btn-secondary btn-sm" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
+	<a class="btn btn-secondary btn-sm" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Event" %}</a>
 </p>
 
 {% addtoblock "js" %}

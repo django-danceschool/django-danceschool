@@ -27,9 +27,9 @@
 	</table>
 
 	{% if payments %}
-		<div class="panel panel-default">
-			<div class="panel-heading"><h4 class="panel-title">{% trans "Payment Details" %}</h4></div>
-			<div class="panel-body">
+		<div class="card">
+			<h4 class="card-header">{% trans "Payment Details" %}</h4>
+			<div class="card-body">
 				{% for payment in payments %}
 					{{ payment.methodName }}: {{ payment.recordId }}<br />
 					{% if not payment.refundable %}
@@ -41,7 +41,7 @@
 	{% endif %}
 
 	<a class="btn btn-success" href="?confirmed=True">{% trans "Process Refund" %}</a>
-	<a class="btn btn-default" href="{% url 'refundProcessing' form_data.id %}">{% trans "Return To Form" %}</a>
+	<a class="btn btn-secondary" href="{% url 'refundProcessing' form_data.id %}">{% trans "Return To Form" %}</a>
 
 {% addtoblock "css" %}
 	<style type="text/css">

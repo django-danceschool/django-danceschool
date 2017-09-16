@@ -15,9 +15,9 @@
 
 	<hr />
 
-	<div class="panel panel-default">
-	<div class="panel-heading"><h4 class="panel-title">{% trans "Message" %}</h4></div>
-	<div class="panel-body">
+	<div class="card">
+	<h4 class="card-header">{% trans "Message" %}</h4>
+	<div class="card-body">
 		{% if richTextChoice == "HTML" %}
 			{{ html_message|safe }}
 		{% else %}
@@ -26,17 +26,17 @@
 	</div>
 	</div>
 
-	<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
-	  <div class="panel panel-default">
-	    <div class="panel-heading" role="tab" id="headingOne">
-	      <h4 class="panel-title">
+	<div id="accordion" role="tablist" aria-multiselectable="true">
+	  <div class="card">
+	    <div class="card-header" role="tab" id="headingOne">
+	      <h5 class="mb-0">
 	        <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
 	          {% trans "Recipients" %}
 	        </a>
-	      </h4>
+	      </h5>
 	    </div>
-	    <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
-	      <div class="panel-body">
+	    <div id="collapseOne" class="collapse show" role="tabpanel" aria-labelledby="headingOne" data-parent="#accordion">
+	      <div class="card-body">
 
 			<h4>
 				{% if month and not series and not customers_to_send %}
@@ -59,16 +59,16 @@
 	      </div>
 	    </div>
 	  </div>
-	  <div class="panel panel-default">
-	    <div class="panel-heading" role="tab" id="headingTwo">
-	      <h4 class="panel-title">
-	        <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+	  <div class="card">
+	    <div class="card-header" role="tab" id="headingTwo">
+	      <h5 class="mb-0">
+	        <a class="collapse" role="button" data-toggle="collapse" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
 	          {% trans "Detailed Recipients" %}
 	        </a>
-	      </h4>
+	      </h5>
 	    </div>
-	    <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
-	      <div class="panel-body">
+	    <div id="collapseTwo" class="collapse" role="tabpanel" aria-labelledby="headingTwo" data-parent="#accordion">
+	      <div class="card-body">
 
 			{% if to %}
 			<h5>CC:</h5>
@@ -106,7 +106,7 @@
 	</div>
 
 	<a class="btn btn-success" href="?confirmed=True">{% trans "Send Emails" %}</a>
-	<a class="btn btn-default" href="{% url 'emailStudents' %}">{% trans "Return To Form" %}</a>
+	<a class="btn btn-secondary" href="{% url 'emailStudents' %}">{% trans "Return To Form" %}</a>
 
 {% addtoblock "css" %}
 	<style type="text/css">
