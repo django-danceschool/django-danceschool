@@ -421,7 +421,7 @@ Remember, all page settings and content can be changed later via the admin inter
         else:
             add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
             if add_home_page:
-                home_page = create_page('Home', 'cms/home.html', initial_language, menu_title='Home', in_navigation=True, published=True)
+                home_page = create_page('Home', 'cms/frontpage.html', initial_language, menu_title='Home', in_navigation=True, published=True)
                 content_placeholder = home_page.placeholders.get(slot='content')
                 add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
                 publish_page(home_page, this_user, initial_language)

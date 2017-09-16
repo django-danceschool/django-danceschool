@@ -21,6 +21,7 @@ LANGUAGES = [('en', 'English'),]
 CMS_TEMPLATES = [
     ('cms/admin_home.html', 'Administrative Function base template'),
     ('cms/home.html', 'Base Template, one column'),
+    ('cms/frontpage.html', 'Front page template'),
     ('cms/twocolumn_leftsidebar.html', 'Two columns, sidebar at left'),
     ('cms/twocolumn_rightsidebar.html', 'Two columns, sidebar at right'),
 ]
