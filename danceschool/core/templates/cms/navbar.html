@@ -6,10 +6,10 @@
     <span class="navbar-toggler-icon"></span>
   </button>
   <div class="collapse navbar-collapse" id="navbarCollapse">
-    <ul class="navbar-nav mr-auto">
+    <ul class="navbar-nav ml-auto">
       {% for child in children %}
         {% if child.children %}
-          <li class="child{% if child.selected %} active selected{% endif %}{% if child.ancestor %} ancestor{% endif %}{% if child.sibling %} sibling{% endif %}{% if child.descendant %} descendant{% endif %} nav-item">
+          <li class="child{% if child.selected %} active selected{% endif %}{% if child.ancestor %} ancestor{% endif %}{% if child.sibling %} sibling{% endif %}{% if child.descendant %} descendant{% endif %} nav-item dropdown">
             <a href="{{ child.attr.redirect_url|default:child.get_absolute_url }}" class="nav-link dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{ child.get_menu_title }}&nbsp;<span class="caret"></span></a>
             <ul class="dropdown-menu">
               {% show_menu from_level to_level extra_inactive extra_active "cms/navbar_sub.html" "" "" child %}
