@@ -658,7 +658,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def firstOccurrenceTime(self):
         if self.firstOccurrence:
-            return self.firstOccurrence.startTime
+            return timezone.localtime(self.firstOccurrence.startTime)
         return None
     firstOccurrenceTime.fget.short_description = _('Begins')
 
@@ -670,7 +670,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def nextOccurrenceTime(self):
         if self.nextOccurrence:
-            return self.nextOccurrence.startTime
+            return timezone.localtime(self.nextOccurrence.startTime)
         return None
     nextOccurrenceTime.fget.short_description = _('Next occurs')
 
@@ -682,7 +682,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def lastOccurrenceTime(self):
         if self.lastOccurrence:
-            return self.lastOccurrence.endTime
+            return timezone.localtime(self.lastOccurrence.endTime)
         return None
     lastOccurrenceTime.fget.short_description = _('Ends')
 
