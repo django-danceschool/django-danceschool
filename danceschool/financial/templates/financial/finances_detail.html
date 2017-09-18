@@ -8,14 +8,14 @@
 <div class="row">
 <div class="col-12">
 
-	<a href="{% url 'financesByMonth' %}" class="btn btn-secondary">{% trans "Return to Monthly Summary" %}</a>
+	<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
 
 	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 <hr />
@@ -23,12 +23,12 @@
 </div>
 </div>
 
-<div class="row" style="margin-top: 30px;">
+<div class="row">
 <div class="col-12">
 
-<h1>{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
+<h1 class="my-4">{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
 
-<h2>{% trans "Period Summary" %}</h2>
+<h3 class="mt-4">{% trans "Period Summary" %}</h3>
 
 <table class="table summary_table">
 	<tr>
@@ -42,7 +42,7 @@
 	</tr>	
 </table>
 
-<h2>{% trans "Revenues" %}</h2>
+<h3 class="mt-4">{% trans "Revenues" %}</h3>
 
 <table class="table table-hover">
 	<thead>
@@ -116,7 +116,7 @@
 
 <hr />
 
-<h2>{% trans "Expenses" %}</h2>
+<h3 class="mt-4">{% trans "Expenses" %}</h3>
 
 {% if instructionExpenseItems %}
 	<table class="table table-hover">

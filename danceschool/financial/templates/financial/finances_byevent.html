@@ -21,18 +21,18 @@
 
 {% if perms.financial.export_financial_data %}
 <div class="col-sm-4">
-	<h4>{% trans "Export Financial Data (CSV)" %}</h4>
+	<h5>{% trans "Export Financial Data (CSV)" %}</h5>
 	<div class="btn-group" role="group" aria-label="...">
-	  <a href="{% url 'financesByEventCSV' %}" class="btn btn-secondary">{% trans "This View" %}</a>
-	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-secondary">{% trans "All Expenses" %}</a>
-	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-secondary">{% trans "All Revenues" %}</a>
+	  <a href="{% url 'financesByEventCSV' %}" class="btn btn-outline-secondary">{% trans "This View" %}</a>
+	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-outline-secondary">{% trans "All Expenses" %}</a>
+	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-outline-secondary">{% trans "All Revenues" %}</a>
 	</div>
 </div>
 {% endif %}
 </div>
 
 
-<h3>{% trans "Details By Event" %}</h3>
+<h3 class="mt-4">{% trans "Details By Event" %}</h3>
 
 <table class="table">
 <thead>

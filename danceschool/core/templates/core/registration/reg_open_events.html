@@ -6,7 +6,7 @@
 {% regroup regOpenEvents|dictsort:"month" by month as open_list %}
 	{% for month in open_list %}
 	<div class="classmonth">
-		<input class="btn btn-secondary float-right" type="submit" value="Register now &raquo;" />
+		<input class="btn btn-outline-secondary mb-2 float-right" type="submit" value="Register now &raquo;" />
         <h3>{{ month.grouper|readable_month }} {% trans "Events" %}</h3>
 		<div class="table serieslist">
 			{% for event in month.list %}

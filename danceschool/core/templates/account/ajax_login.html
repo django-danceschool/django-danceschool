@@ -1,9 +1,9 @@
 {% load account socialaccount sekizai_tags crispy_forms_tags i18n %}
 
-<div class="card" id="returning-customers-panel">
+<div class="card mb-4" id="returning-customers-panel">
   {% get_providers as socialaccount_providers %}
 
-  <h4 class="card-header">{% trans "Returning Customers" %}</h4>
+  <div class="card-header">{% trans "Returning Customers" %}</div>
 
   {# Offer Sign-in or Signup #}
   <div class="card-body" id="ajax_login_choice">

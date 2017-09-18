@@ -7,15 +7,10 @@
 
 {% block content %}
 	{% block summary %}
-		<div class="regsummary regsummarywell card card-body bg-light">
+		<div class="card card-body bg-light pb-0">
+			<h5 class="card-title">{% trans "You've selected:" %}</h5>
 
 			<table class="table">
-			<thead>
-			<tr>
-			<th colspan="2">{% trans "You've selected:" %}</th>
-			</tr>
-
-			</thead>
 			<tbody>
 			{% for item in reg.temporaryeventregistration_set.all %}
 				<tr>
@@ -43,7 +38,7 @@
 
 
 	{% block form %}
-		<h3>{% trans "Step 2: Provide Your Student Information" %}</h3>
+		<h3 class="mt-4">{% trans "Step 2: Provide Your Student Information" %}</h3>
 
 		{% if show_ajax_form %}
 			{% include "account/ajax_login.html" %}

@@ -3,13 +3,13 @@
 
 {% block content %}
 <div class="row">
-<div class="col-md-12 col-sm-12">
+<div class="col-md-12 col-sm-12 mb-4">
 	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financesByMonth' current_year %}" type="button" class="btn btn-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
-	  <a href="{% url 'financesByMonth' current_year %}?basis=paymentDate" type="button" class="btn btn-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
-	  <a href="{% url 'financesByMonth' current_year %}?basis=submissionDate" type="button" class="btn btn-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
+	  <a href="{% url 'financesByMonth' current_year %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+	  <a href="{% url 'financesByMonth' current_year %}?basis=paymentDate" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+	  <a href="{% url 'financesByMonth' current_year %}?basis=submissionDate" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 </div>
@@ -31,31 +31,31 @@
 
 {% if perms.financial.export_financial_data %}
 <div class="col-sm-4">
-	<h4>{% trans "Export Financial Data (CSV)" %}</h4>
+	<h5>{% trans "Export Financial Data (CSV)" %}</h5>
 	<div class="btn-group" role="group" aria-label="...">
-	  <a href="{% url 'financesByMonthCSV' %}" class="btn btn-secondary">{% trans "This View" %}</a>
-	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-secondary">{% trans "All Expenses" %}</a>
-	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-secondary">{% trans "All Revenues" %}</a>
+	  <a href="{% url 'financesByMonthCSV' %}" class="btn btn-outline-secondary">{% trans "This View" %}</a>
+	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-outline-secondary">{% trans "All Expenses" %}</a>
+	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-outline-secondary">{% trans "All Revenues" %}</a>
 	</div>
 </div>
 {% endif %}
 </div>
 
-<div class="card">
+<div class="card mt-4">
 <h4 class="card-header">{% trans "School Performance Over Time" %}</h4>
 <div class="card-body">
 	<div id="monthlychart"></div>
 	<div class="btn-group" role="group" aria-label="..." id='chartselector_buttons'>
-	  <button type="button" class="btn btn-secondary active" data-y-accessor='profit'>{% trans "Profits" %}</button>
-	  <button type="button" class="btn btn-secondary" data-y-accessor='registrations'>{% trans "Registrations" %}</button>
-	  <button type="button" class="btn btn-secondary" data-y-accessor='revenues'>{% trans "Revenues" %}</button>
-	  <button type="button" class="btn btn-secondary" data-y-accessor='expenses'>{% trans "Expenses" %}</button>
+	  <button type="button" class="btn btn-outline-secondary active" data-y-accessor='profit'>{% trans "Profits" %}</button>
+	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='registrations'>{% trans "Registrations" %}</button>
+	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='revenues'>{% trans "Revenues" %}</button>
+	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='expenses'>{% trans "Expenses" %}</button>
 	</div>
 </div>
 </div>
 
 
-<div class="card">
+<div class="card mt-4">
 <h4 class="card-header">{% trans "Details By Month" %}</h4>
 <div class="card-body">
 	<table class="table">

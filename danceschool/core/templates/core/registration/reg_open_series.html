@@ -6,7 +6,7 @@
 {% regroup regOpenSeries|dictsort:"month" by month as open_list %}
 	{% for month in open_list %}
 	<div class="classmonth">
-		<input class="btn btn-secondary float-right" type="submit" value="{% trans 'Register now' %} &raquo;" />
+		<input class="btn btn-outline-secondary mb-2 float-right" type="submit" value="{% trans 'Register now' %} &raquo;" />
         <h3>{{ month.grouper|readable_month }} {% trans "Class Series" %}</h3>
 		<div class="table serieslist">
 		{% regroup month.list|dictsort:"weekday" by weekday as weekday_list %}

@@ -2,7 +2,7 @@
 
 {% trans "Instructors" as title_default %}
 
-{% if instructor_list and "core.change_instructor" in perms %}<p><a class="btn btn-secondary" href="{% url 'admin:core_instructor_changelist' %}">{% trans "Edit Instructor Bios" %}</a></p>{% endif %}
+{% if instructor_list and "core.change_instructor" in perms %}<p><a class="btn btn-outline-secondary" href="{% url 'admin:core_instructor_changelist' %}">{% trans "Edit Instructor Bios" %}</a></p>{% endif %}
 
 {% if instructor_list and list_title %}
     <h2>{{ list_title|default:title_default }}</h2>
