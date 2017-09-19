@@ -101,9 +101,9 @@ class ExpenseReportingForm(forms.ModelForm):
                     'approved',
                     'paid',
                     Div(
-                        Field('paymentDate', css_class='datepicker'),
-                        'paymentMethod',
-                        css_class='form-inline'
+                        Field('paymentDate', css_class='datepicker', wrapper_class='col-md-3'),
+                        Field('paymentMethod', wrapper_class='col-md-6'),
+                        css_class='form-row',
                     ),
                     # The hidden input of accrual date must be passed as a naive datetime.
                     # Django will take care of converting it to local time
@@ -112,7 +112,7 @@ class ExpenseReportingForm(forms.ModelForm):
                     css_class='card-body collapse',
                     id='collapsepayment',
                 ),
-                css_class='card')
+                css_class='card my-4')
         else:
             payment_section = None
 

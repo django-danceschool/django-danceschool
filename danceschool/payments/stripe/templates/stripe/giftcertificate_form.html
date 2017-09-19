@@ -1,6 +1,6 @@
 {% load cms_tags sekizai_tags i18n %}
 
-<form id="stripeCertificateForm" action="{% url 'stripeHandler' %}" method="POST">
+<form id="stripeCertificateForm" action="{% url 'stripeHandler' %}" method="POST" class="my-4">
 {% csrf_token %}
 <p><input id="id_amount" name="stripeAmount" type="text" value="{{ instance.defaultAmount }}" /></p>
 

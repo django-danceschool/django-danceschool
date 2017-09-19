@@ -1,6 +1,6 @@
 {% load cms_tags i18n %}
 
-<form action="{% url 'stripeHandler' %}" method="POST">
+<form action="{% url 'stripeHandler' %}" method="POST" class="my-4">
 {% csrf_token %}
 <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
 {% if user.is_authenticated %}

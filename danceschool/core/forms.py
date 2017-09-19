@@ -10,7 +10,7 @@ from django.utils.translation import ugettext_lazy as _, ugettext
 
 from itertools import chain
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Div, HTML, Hidden, Submit
+from crispy_forms.layout import Layout, Div, Field, HTML, Hidden, Submit
 from dal import autocomplete
 from random import random
 import json
@@ -130,7 +130,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
             else:
                 collapse_id = 'override_' + str(int(random() * 10.0**12))
 
-            output.append(u'<button class="btn btn-outline-secondary btn-sm" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul>' % {'id': collapse_id, 'string': _('Additional Choices')})
+            output.append(u'<button class="btn btn-outline-secondary btn-sm mb-4" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul>' % {'id': collapse_id, 'string': _('Additional Choices')})
 
             for i, (option_value, option_label) in enumerate(override_choices):
                 if 'disabled' in final_attrs:
@@ -307,20 +307,32 @@ class RegistrationContactForm(forms.Form):
     def get_top_layout(self):
 
         top_layout = Layout(
-            Div('firstName','lastName','email',css_class='form-inline'),
-            Div('phone',css_class='form-inline'),
+            Div(
+                Field('firstName', wrapper_class='col'),
+                Field('lastName', wrapper_class='col'),
+                css_class='row'
+            ),
+            Div(
+                Field('email', wrapper_class='col'),
+                Field('phone',wrapper_class='col'),
+                css_class='row'
+            ),
         )
         return top_layout
 
     def get_mid_layout(self):
         mid_layout = Layout(
-            Div('agreeToPolicies','student',css_class='card card-body bg-light'),
+            Div('agreeToPolicies','student',css_class='card card-body bg-light my-2'),
         )
         return mid_layout
 
     def get_bottom_layout(self):
         bottom_layout = Layout(
-            Div('gift','howHeardAboutUs',css_class='form-inline'),
+            Div(
+                Field('gift', wrapper_class='col'),
+                Field('howHeardAboutUs', wrapper_class='col'),
+                css_class='row mt-4'
+            ),
             'comments',
         )
         return bottom_layout
@@ -463,12 +475,10 @@ class DoorAmountForm(forms.Form):
         if doorPortion:
             door_layout = Layout(
                 HTML("""
-                    <div class="card">
-                        <div class="card-header" role="tab" id="door_headingOne">
-                            <h4 class="mb-0">
+                    <div class="card mt-4">
+                        <h6 class="card-header" role="tab" id="door_headingOne">
                             """ + str(_('Cash Payment')) + """
-                            </h4>
-                        </div>
+                        </h6>
                         <div class="card-body">
                     """),
                 'paid',
@@ -487,12 +497,10 @@ class DoorAmountForm(forms.Form):
         if invoicePortion:
             invoice_layout = Layout(
                 HTML("""
-                    <div class="card">
-                        <div class="card-header" role="tab" id="door_headingTwo">
-                            <h4 class="mb-0">
+                    <div class="card mt-4">
+                        <h6 class="card-header" role="tab" id="door_headingTwo">
                                 """ + str(_('Send Invoice')) + """
-                            </h4>
-                        </div>
+                        </h6>
                         <div class="card-body">
                     """),
                 'invoiceSent',
