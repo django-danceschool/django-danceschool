@@ -1,0 +1,203 @@
+/* This CSS is used (and included) only on the class registration page */
+
+/* Registration stuff */
+
+#classes #validation {
+    color: #db2d25;
+    font-size: large;
+}
+
+#classes .classmonth, #classes .category_heading {
+    position: relative;
+}
+
+#classes .series {
+    margin-bottom: 12px;
+    display: inline-block;
+    padding-left: 15px;
+    width: 100%;
+}
+
+#classes .series div, #classes .series div {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    vertical-align: top;
+}
+
+#classes .series .time {
+    vertical-align: top;
+    white-space: nowrap;
+    width: 1px;
+}
+
+#classes .series .seriestype {
+    font-weight: 700;
+    font-size: 1.15em;
+    border-bottom: 1px dotted #ccc;
+}
+
+#classes .series .dates {
+    float: left;
+}
+
+#classes .series .leadfollow {
+    float: right;
+    margin-top: 10px;
+    width: 200px;
+    font-size: 16px;
+}
+
+.leadfollow-options {
+    padding-left: 20px;
+}
+
+.leadfollow-options ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+#classes .series .checkboxvalidation {
+    color: #db2d25;
+    clear: both;
+    float: right;
+}
+/* Class summary */
+
+.classregsummary {
+    width: 100%;
+}
+
+#classes .weekdaygroup {
+    display: inline-table;
+    width: 100%;
+}
+
+#classes .weekday {
+    width: 28px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background-color: #85a2b2;
+    border-left: 1px solid #477087;
+    border-bottom: 1px dotted #ddd;
+    display: table-cell;
+}
+
+#classes .weekday div {
+    position: relative;
+    min-height: 165px;
+}
+
+#classes .weekday div h3 {
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+    position: absolute;
+    display: block;
+    width: 75px;
+    top: 30px;
+    left: -25px;
+    direction: rtl;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+#classes .weekdaycontents {
+    display: table-cell;
+    vertical-align: top;
+    border-top: 1px dotted #ddd;
+}
+
+#classes .weekdaycontents h3 {
+    margin-top: 5px;
+}
+
+#classes .series .info {
+    width: 100%;
+}
+
+
+#aboutus .bio img, #retired .bio img {
+    padding-right: 7px;
+    padding-bottom: 3px;
+    float: left;
+}
+
+.SoldOut {
+     text-align: center;
+     color:red; 
+     font-size: large;
+}
+.SoldOutSub {
+     text-align: center;
+     color:red; 
+}
+
+#classregform h4 {
+    font-size: 18px;
+}
+
+#classregform h3.title {
+    font-size: 22px;
+}
+
+
+@media screen and (max-width:767px) {
+    #classes .weekdaygroup {
+        border-left: 1px dotted #ddd;
+        border-right: 1px dotted #ddd;
+        border-bottom: 1px dotted #ddd;
+    }
+
+    #classes .weekday {
+        width: 100%;
+        border-bottom: 1px solid #477087;
+        border-left: none;
+        display: table-row;
+    }
+    #classes .weekday div {
+        position: relative;
+        height: 28px;
+        min-height: 0;
+        display: table-cell;
+    }
+
+    #classes .weekday div h3 {
+        -webkit-transform: none;
+        -moz-transform: none;
+        direction: inherit;
+        position: inherit;
+        display: block;
+        top: inherit;
+        left: inherit;
+        font-size: 20px;
+        margin: 5px 10px;
+
+    }
+
+    #classes .weekdaycontents {
+        display: table-row;
+    }
+
+    #classes .series {
+        width: 100%;
+        margin-bottom: 10px;
+        padding-left: 10px;
+    }
+
+    #classes .series .time {
+        padding-left: 0;
+    }
+
+    #classes .series .info {
+        padding-right: 10px;
+    }
+}
+
+@media screen and (max-width:479px) {
+    #classes .series .leadfollow {
+        float: left;
+    }
+}

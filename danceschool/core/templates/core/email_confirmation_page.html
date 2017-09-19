@@ -21,7 +21,7 @@
 		{% if richTextChoice == "HTML" %}
 			{{ html_message|safe }}
 		{% else %}
-			<pre class="unstyled">{{ message }}</pre>
+			<pre>{{ message }}</pre>
 		{% endif %}
 	</div>
 	</div>
@@ -103,16 +103,4 @@
 
 	<a class="btn btn-success" href="?confirmed=True">{% trans "Send Emails" %}</a>
 	<a class="btn btn-secondary" href="{% url 'emailStudents' %}">{% trans "Return To Form" %}</a>
-
-{% addtoblock "css" %}
-	<style type="text/css">
-		pre.unstyled {
-			border: 0;
-			padding: 0;
-			background-color: transparent;
-		    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
-		    font-size: 14px;
-		}
-	</style>
-{% endaddtoblock %}
 {% endblock %}

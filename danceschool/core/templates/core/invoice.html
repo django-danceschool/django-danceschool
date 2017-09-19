@@ -129,7 +129,7 @@
 <div class="card">
 <h4 class="card-header">{% trans "Comments/Notes" %}</h4>
 <div class="card-body">
-	<pre class="unstyled">{{ object.comments }}</pre>
+	<pre>{{ object.comments }}</pre>
 </div>
 </div>
 
@@ -140,15 +140,4 @@
 	{% static_placeholder "registration_payment_placeholder" %}
 {% endif %}
 
-{% addtoblock "css" %}
-	<style type="text/css">
-		pre.unstyled {
-			border: 0;
-			padding: 0;
-			background-color: transparent;
-		    font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
-		    font-size: 14px;
-		}
-	</style>
-{% endaddtoblock %}
 {% endblock %}
