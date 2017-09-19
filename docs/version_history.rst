@@ -1,6 +1,14 @@
 Version History
 ===============
 
+0.4.1 - Septmeber 19, 2017
+--------------------------
+
+- Fixed bug with iCal calendar feed slicing in the core app
+- Fixed bug with discount categories that have no applicable discount ordered before discount categories with applicable discount codes
+- Fixed template inheritance issue on registration offline template.
+
+
 0.4.0 - September 14, 2017
 --------------------------
 
