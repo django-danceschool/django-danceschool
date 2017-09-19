@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<h3>{% trans "Invoice #" %}{{ invoice.id }}
+<h3 class="my-4">{% trans "Invoice #" %}{{ invoice.id }}
 {% if registration %}
 	{% blocktrans with name=registration.fullName %}
 	for {{ name }}
@@ -11,7 +11,7 @@
 {% endif %}
 </h3>
 
-<dl>
+<dl class="card card-body">
 	<dt>{% trans "Date &amp; Time" %}:</dt><dd>{{ invoice.creationDate|date:'DATETIME_FORMAT' }}</dd>
 	<dt>{% trans "Net Amount Paid" %}:</dt><dd>{{ invoice.amountPaid }}</dd>
 	<dt>{% trans "Price with Discounts" %}:</dt><dd>{{ invoice.total }}</dd>
@@ -21,7 +21,7 @@
 
 {% if payments %}
 	<div class="card">
-		<h4 class="card-header">{% trans "Payment Details" %}</h4>
+		<h6 class="card-header">{% trans "Payment Details" %}</h6>
 		<div class="card-body">
 			{% for payment in payments %}
 				{{ payment.methodName }}: {{ payment.recordId }}<br />
@@ -37,7 +37,10 @@
 
 <form id="refund_form" method="post" action="">{% csrf_token %}
 
-<h2>{% trans "Total Refund Amount" %}: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h2>
+<div class="my-4">
+<input type="submit" class="btn btn-primary float-right" value="{% trans 'Process Refund' %}" />
+<h3>{% trans "Total Refund Amount" %}: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h3>
+</div>
 
 {% if invoice.revenueNotYetReceived %}
 	<div class="alert alert-danger" role="alert">{% trans "Revenue has been recorded for this registration that has not yet been marked as received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below." %}</div>
@@ -76,18 +79,16 @@
 {{ form.total_refund_amount }}
 {{ form.initial_refund_amount }}
 
-<input type="submit" class="btn btn-primary" value="{% trans 'Process Refund' %}" />
-
-	<h4>{% trans "Item Details" %}</h4>
-	<table class="regrefundtable table" border=1>
+	<h6>{% trans "Item Details" %}</h6>
+	<table class="regrefundtable table table-bordered">
 	<thead>
 		<tr>
-			<td>{% trans "Item ID" %}</td>
-			<td>{% trans "Item Name" %}</td>
-			<td>{% trans "Price (Gross)" %}</td>
-			<td>{% trans "Price (Net)" %}</td>
-			<td>{% trans "Cancelled" %}</td>
-			<td>{% trans "Refunds/Adjustments" %}</td>
+			<th>{% trans "Item ID" %}</th>
+			<th>{% trans "Item Name" %}</th>
+			<th>{% trans "Price (Gross)" %}</th>
+			<th>{% trans "Price (Net)" %}</th>
+			<th>{% trans "Cancelled" %}</th>
+			<th>{% trans "Refunds/Adjustments" %}</th>
 		</tr>
 	</thead>
 	<tbody>

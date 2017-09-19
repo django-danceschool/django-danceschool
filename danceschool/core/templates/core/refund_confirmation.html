@@ -7,9 +7,7 @@
 
 	<p>{% trans "Please confirm the following before sending" %}:</p>
 
-	<hr />
-
-	<table class="table">
+	<table class="table my-2">
 		<tr>
 			<th>{% trans "Refund This Amount" %}:</th>
 			<th>{{ currencySymbol }}{{ amount_to_refund|floatformat:"2" }}</th>
@@ -27,8 +25,8 @@
 	</table>
 
 	{% if payments %}
-		<div class="card">
-			<h4 class="card-header">{% trans "Payment Details" %}</h4>
+		<div class="card my-2">
+			<h6 class="card-header">{% trans "Payment Details" %}</h6>
 			<div class="card-body">
 				{% for payment in payments %}
 					{{ payment.methodName }}: {{ payment.recordId }}<br />
@@ -40,8 +38,10 @@
 		</div>
 	{% endif %}
 
-	<a class="btn btn-success" href="?confirmed=True">{% trans "Process Refund" %}</a>
-	<a class="btn btn-secondary" href="{% url 'refundProcessing' form_data.id %}">{% trans "Return To Form" %}</a>
+	<div class="my-4">
+		<a class="btn btn-success" href="?confirmed=True">{% trans "Process Refund" %}</a>
+		<a class="btn btn-secondary" href="{% url 'refundProcessing' form_data.id %}">{% trans "Return To Form" %}</a>
+	</div>
 
 {% addtoblock "css" %}
 	<style type="text/css">

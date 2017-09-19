@@ -3,7 +3,7 @@
 
 {% block content %}
     {% if 'news.add_newsitem' in perms or user.is_superuser %}
-    <a class="btn btn-secondary" href="{% url 'admin:news_newsitem_add' %}">{% trans "Post News Item" %}</a>
+    <a class="btn btn-outline-secondary mb-4" href="{% url 'admin:news_newsitem_add' %}">{% trans "Post News Item" %}</a>
     {% endif %}
     {% for news_item in newsitem_list %}
     	<div class="post">

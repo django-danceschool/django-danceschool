@@ -49,7 +49,7 @@
 
 
 <!-- Modal for existing events -->
-<div aria-labelledby="eventDetails" class="modal fade" id="eventContent" role="dialog" tabindex="-1" title="{% trans "Event Details" %}">
+<div aria-labelledby="eventDetails" class="modal fade my-5" id="eventContent" role="dialog" tabindex="-1" title="{% trans "Event Details" %}">
 <div class="modal-dialog" role="document">
 <div class="modal-content">
 <div class="modal-header"><button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
@@ -68,14 +68,14 @@
 <div id="eventInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer"><a class="btn btn-secondary" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a><a class="btn btn-secondary" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-secondary" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
+<div class="modal-footer"><a class="btn btn-outline-secondary" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a><a class="btn btn-outline-secondary" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-outline-secondary" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
 
 <!-- Modal to create new events -->
-<div aria-labelledby="eventNew" class="modal fade" id="eventNew" role="dialog" tabindex="-1" title="{% trans 'Add Event' %}">
-<div class="modal-dialog" role="document">
+<div aria-labelledby="eventNew" class="modal fade my-5" id="eventNew" role="dialog" tabindex="-1" title="{% trans 'Add Event' %}">
+<div class="modal-dialog modal-lg" role="document">
 <div class="modal-content">
 <div class="modal-header"><button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
 
@@ -83,10 +83,19 @@
 </div>
 
 <div class="modal-body">
-<div id="eventNewInfo">&nbsp;</div>
+<div id="eventNewInfo">
+    <div id="eventNewExistingInfo" class="mb-4"></div>
+    <div id="eventNewLinks">
+        {% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-outline-secondary" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}
+        {% if 'core.add_publicevent' in perms or user.is_superuser %}<a class="btn btn-outline-secondary" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}
+        {% if 'private_events.add_privateevent' in perms or user.is_superuser %}<a class="btn btn-outline-secondary" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}
+    </div>
+</div>
 </div>
 
-<div class="modal-footer">{% if 'core.add_series' in perms or user.is_superuser %}<a class="btn btn-secondary" href="{% url 'admin:core_series_add' %}" id="seriesNewLink" type="button">{% trans "Add A Class" %}</a>{% endif %}{% if 'core.add_publicevent' in perms or user.is_superuser %}<a class="btn btn-secondary" href="{% url 'admin:core_publicevent_add' %}" id="eventNewLink" type="button">{% trans "Add A Public Event" %}</a>{% endif %}{% if 'private_events.add_privateevent' in perms or user.is_superuser %}<a class="btn btn-secondary" href="" id="privateEventNewLink" type="button">{% trans "Add A Private Event/Reminder" %}</a>{% endif %}<button class="btn btn-secondary" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button></div>
+<div class="modal-footer">
+    <button class="btn btn-secondary" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button>
+</div>
 </div>
 </div>
 </div>
@@ -188,6 +197,21 @@ $(document).ready(function() {
         dayClick: function (date, jsEvent, view) {
             $('#eventNewTitle').html(date.format('dddd, MMMM Do YYYY'));
             $('#privateEventNewLink').attr('href', "{% url 'addPrivateEvent' %}?startTime=" + date.format('YYYY-MM-DD'));
+            todayEvents = $('#calendarbox').fullCalendar('clientEvents',function(event) {
+                return (event.start.isSame(date.endOf('day'),'day'));
+            });
+            if (todayEvents.length > 0) {
+                existingList = '<h6>{% trans "Currently scheduled" %}</h6><ul>';
+                todayEvents.forEach(function(element) {
+                    existingList += '<li>' + element.title + ': ' + element.start.format('h:mm a') + ' - ' + element.end.format('h:mm a') + '</li>';
+                });
+                existingList += '</ul>';
+
+                $('#eventNewExistingInfo').html(existingList);
+            }
+            else {
+                $('#eventNewExistingInfo').html('{% trans "No currently scheduled events." %}');
+            }
             $("#eventNew").modal();
         }
         {% endif %}

@@ -5,30 +5,33 @@
 
 <h1>{% trans "Duplicate Selected Events" %}</h1>
 
-<p>{% blocktrans %}You have selected the following events to repeat:{% endblocktrans %}</p>
+<div class="card my-4">
+<div class="card-body">
+<h5 class="card-title">{% blocktrans %}You have selected the following events to repeat:{% endblocktrans %}</h5>
 
-<div class="card">
-	<div class="card-body">
-		<ul>
-			{% for event in events %}
-			<li>
-				{% if event.url %}<a href="{{ event.url }}" target="_blank">{% endif %}{{ event.name }}{% if event.url %}</a>{% endif %}: 
+<table class="table">
+	<tbody>
+		{% for event in events %}
+		<tr>
+			<th scope="row">{% if event.url %}<a href="{{ event.url }}" target="_blank">{% endif %}{{ event.name }}{% if event.url %}</a>{% endif %}</th>
+			<td>
 				{% with event.numOccurrences as count %}
 				{% blocktrans with pluralize=count|pluralize first_time=event.firstOccurrenceTime last_time=event.lastOccurrenceTime %}
 				{{ count }} occurrence{{ pluralize }} from {{ first_time }} to {{ last_time }}
 				{% endblocktrans %}
 				{% endwith %}
-			</li>
-			{% endfor %}
-		</ul>
-	</div>
+			</td>
+		</tr>
+		{% endfor %}
+	</tbody>
+</table>
 </div>
-
-<p>
+<p class="card-body">
 {% blocktrans %}
 Please select the start date, interval, and end date/number of repeat events that you would like to create.  All event data, including occurrences and event-specific roles, will be preserved.  However, event staff (such as instructors and substitute teachers) will not be assigned to any newly-created events.
 {% endblocktrans %}
 </p>
+</div>
 
 <form action="" id="" method="post" {% if 'attachment' in form.fields %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
 {{ form|crispy }}
