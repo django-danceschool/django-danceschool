@@ -72,14 +72,14 @@ class EventFeed(ICalFeed):
         if not getConstant('calendar__calendarFeedEnabled'):
             return []
 
-        item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')[:100]
+        item_set = EventOccurrence.objects.exclude(event__status=Event.RegStatus.hidden).filter(Q(event__series__isnull=False) | Q(event__publicevent__isnull=False)).order_by('-startTime')
 
         if not obj:
             # Public calendar does not show hidden Events _or_ link-only registration Events
-            return [EventFeedItem(x) for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)]
+            return [EventFeedItem(x) for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)[:100]]
         else:
             # Private calendars do show link-only registration Events
-            return [EventFeedItem(x) for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=obj)]
+            return [EventFeedItem(x) for x in item_set.filter(event__eventstaffmember__staffMember__feedKey=obj)[:100]]
 
     def item_guid(self,item):
         return item.id + '@' + item.url
