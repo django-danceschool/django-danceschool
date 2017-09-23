@@ -1,33 +1,32 @@
 {% load danceschool_tags i18n %}
 
 {% if regClosedEvents %}
-	<h2>{% trans "Upcoming Events (No Registration Required)" %}</h2>
+	<h2 class="mt-4 reg-section-header">{% trans "Upcoming Events (No Registration Required)" %}</h2>
 	<hr />
 {% regroup regClosedEvents|dictsort:"month" by month as open_list %}
 	{% for month in open_list %}
-	<div class="classmonth">
-        <h3>{{ month.grouper|readable_month }} {% trans "Events" %}</h3>
-		<div class="table serieslist">
+	<div class="reg-section">
+        <h3 class="mt-4">{{ month.grouper|readable_month }} {% trans "Events" %}</h3>
+		<div class="reg-event-group mt-4">
 			{% for event in month.list %}
-				<div class="weekdaygroup">
-					<div class="weekday">
-						<div><h3>{% if event.numOccurrences > 1 %}{% trans "Begins" %} {% endif %}{{ event.firstOccurrenceTime|date:"N j" }}</h3></div>
-					</div>
-					<div class="weekdaycontents">
+				<div class="card reg-weekday-group">
+					<h3 class="card-header reg-weekday-header">{% if event.numOccurrences > 1 %}{% trans "Begins" %} {% endif %}{{ event.firstOccurrenceTime|date:"N j" }}</h3>
+					
 					<a name="{{ event.slug }}"></a>
-                    <table class="series" id="eventtable_{{ event.id}}">
-                        <tr>
-                            <th class="time">
-								<h4>{{ event.startTime|date:"g:i A" }} - <br />
-								{{ event.endTime|date:"g:i A" }} </h4>
-							</th>
-                            <td class="info">
-                                <h3 class="title">{{ event.name }}</h3>
-                                <h4>
+					
+					<h5 class="card-header reg-event-header">
+						{{ event.startTime|date:"g:i A" }} - {{ event.endTime|date:"g:i A" }}
+					</h5>
+
+					<div class="card-body row reg-event" id="reg-event-{{ event.id}}">
+						<div class="col-lg-9 col-md-8 reg-event-info">
+
+							<h3 class="card-title reg-event-title">{{ event.name }}</h3>
+							
+							<h6 class="card-subtitle text-muted reg-event-details">
 								{% if event.teachers %}
 									{% trans "with" %} {{ event.teachers|join:" &amp; "}}
 								{% endif %}
-
 								at
 									{% if directions_url %}
 									<a href = "{{ directions_url }}#{{ event.location.name|slugify }}">
@@ -37,9 +36,10 @@
 										{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
 									{% endif %}
 
-                                    {% if event.url %}<small><a href="{{ event.url }}">{% trans "more info" %}</a></small>{% endif %}
-                                </h4>
-                                <div class="dates">
+	                                {% if event.url %}<small><a href="{{ event.url }}">{% trans "more info" %}</a></small>{% endif %}
+							</h6>
+	                        	                        
+	                        <div class="card-text reg-event-dates mt-4">
 								{% for occurrence in event.eventoccurrence_set.all %}
 									{% if occurrence.startTime.date == occurrence.endTime.date and event.numOccurrences == 1 %}
 										{{ occurrence.startTime|date:"g:i A" }}
@@ -53,12 +53,10 @@
 										{{ occurrence.endTime|date:"D. N j, g:i A" }}
 									{% endif %}<br />
 								{% endfor %}
-								</div>
-                            </td>
-                        </tr>
-                    </table>
+							</div>
+						</div>
 					</div>
-				</div>
+				</div> 
 			{% endfor %}
 		</div>
 	</div>

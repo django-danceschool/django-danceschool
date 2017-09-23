@@ -96,7 +96,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
         str_values = set([force_text(v,encoding='utf-8') for v in value])
 
         if regular_choices:
-            output.append(u'<ul>')
+            output.append(u'<ul class="list-unstyled">')
 
             for i, (option_value, option_label) in enumerate(regular_choices):
                 if 'disabled' in final_attrs:
@@ -130,7 +130,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
             else:
                 collapse_id = 'override_' + str(int(random() * 10.0**12))
 
-            output.append(u'<button class="btn btn-outline-secondary btn-sm mb-4" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul>' % {'id': collapse_id, 'string': _('Additional Choices')})
+            output.append(u'<button class="btn btn-outline-secondary btn-sm mb-4" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul class="list-unstyled">' % {'id': collapse_id, 'string': _('Additional Choices')})
 
             for i, (option_value, option_label) in enumerate(override_choices):
                 if 'disabled' in final_attrs:
