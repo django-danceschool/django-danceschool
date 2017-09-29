@@ -1,0 +1,91 @@
+{% load sekizai_tags static i18n %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+<h3 class="mt-4">{% trans "Advance Registration" %}</h3>
+
+<p>{% blocktrans %}This graph shows how far in advance students register, relative to the start date of the first class they registered for.{% endblocktrans %}</p>
+
+<div class="card">
+
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.1 }}" class="nav-link showAdvanceRegistrationButton active">{% trans "Last Month" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.3 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 3 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.6 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 6 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 12 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link showAdvanceRegistrationButton">{% trans "All Time" %}</a>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+    <div id="advanceRegistrationChart"></div>
+  </div>
+</div>
+
+{% addtoblock "js" %}
+  <script src="{% static 'd3/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'c3/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  var advanceRegistrationChart = c3.generate({
+      bindto: '#advanceRegistrationChart',
+    data: {
+      url: "{% url 'AdvanceRegistrationDaysJSON' %}?startDate={{ limitMonthDates.1 }}",
+      mimeType: 'json',
+      types: {
+        pct: 'step',
+        cumulative_pct: 'area-step',
+      },
+      keys: {
+        x: 'days',
+        value: ['pct','cumulative_pct']
+      }
+    },
+    axis: {
+        x: {
+            type: 'indexed', // this needed to load string x value
+        },
+    }
+  });
+
+  $('.showAdvanceRegistrationButton').click(function(e) {
+      var startDate = $(this).attr('data-startDate');
+
+      advanceRegistrationChart.load({
+      url: "{% url 'AdvanceRegistrationDaysJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        types: {
+          pct: 'step',
+          cumulative_pct: 'area-step',
+        },
+        keys: {
+          x: 'days',
+          value: ['pct','cumulative_pct'],
+        }
+      });
+
+      $('.showAdvanceRegistrationButton').removeClass('active');
+      $(this).addClass('active');
+      e.preventDefault();
+  });
+
+});
+</script>
+{% endaddtoblock %}

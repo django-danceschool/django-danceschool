@@ -8,8 +8,13 @@
 
 <p>{% blocktrans %}This chart indicates the proportion of series registrations that receive the student discount, the proportion of series registrations that are paid for at the door, etc.{% endblocktrans %}</p>
 
-<div id="RegistrationTypeAverages"></div>
+<div class="card">
 
+  <div class="card-body">
+    <div id="RegistrationTypeAverages"></div>
+  </div>
+
+</div>
 
 {% addtoblock "js" %}
   <script src="{% static 'd3/d3.min.js' %}"></script>

@@ -7,6 +7,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from danceschool.core.mixins import PluginTemplateMixin
+from danceschool.core.registries import plugin_templates_registry, PluginTemplateBase
 
 from .models import NewsItem, LatestNewsPluginModel
 
@@ -14,7 +15,6 @@ from .models import NewsItem, LatestNewsPluginModel
 class LatestNewsItemPlugin(PluginTemplateMixin, CMSPluginBase):
     model = LatestNewsPluginModel
     name = _('Show Latest News Items')
-    template_choices = [('news/latest_news.html',_('Default Template')),]
     render_template = 'news/latest_news.html'
     cache = True
     module = _('News')
@@ -38,3 +38,10 @@ class LatestNewsItemPlugin(PluginTemplateMixin, CMSPluginBase):
 
 
 plugin_pool.register_plugin(LatestNewsItemPlugin)
+
+
+@plugin_templates_registry.register
+class LatestNewsPluginTemplate(PluginTemplateBase):
+    template_name = 'news/latest_news.html'
+    plugin = 'LatestNewsItemPlugin'
+    description = _('Default Template')

@@ -7,14 +7,22 @@
 
 <h3 class="mt-4">{% trans "Performance by Class Type and Month (Student-Hours)" %}</h3>
 
-<div class="btn-group" role="group" aria-label="...">
-  {% for prior_year in recentYears reversed %}
-    <button type="button" data-year="{{ prior_year }}" class="btn btn-outline-secondary {% if forloop.first %}active{% endif %} classTypeMonthlyButton">{{ prior_year }}</button>
-  {% endfor %}
+<div class="card">
+
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      {% for prior_year in recentYears reversed %}
+        <li class="nav-item">
+          <a href="#" data-year="{{ prior_year }}" class="nav-link classTypeMonthlyButton {% if forloop.first %}active{% endif %}">{{ prior_year }}</a>
+
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="card-body">
+    <div id="ClassTypeMonthlyPerformance"></div>
+  </div>
 </div>
-
-<div id="ClassTypeMonthlyPerformance"></div>
-
 
 {% addtoblock "js" %}
   <script src="{% static 'd3/d3.min.js' %}"></script>
@@ -76,13 +84,14 @@ $(document).ready(function(){
 
   getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours");
 
-  $('.classTypeMonthlyButton').click(function(){
+  $('.classTypeMonthlyButton').click(function(e){
       var year = $(this).attr('data-year');
       
       getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours&year=" + year);
 
       $('.classTypeMonthlyButton').removeClass('active');
       $(this).addClass('active');
+      e.preventDefault();
   });
 
 });

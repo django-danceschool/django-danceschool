@@ -8,13 +8,23 @@
   <a class="btn btn-sm btn-outline-secondary" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
 </h3>
 
-<div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-outline-secondary active showLocationButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-outline-secondary showLocationButton">{% trans "All Time" %}</button>
+<div class="card">
+
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showLocationButton active">{% trans "Last 12 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-year="{{ prior_year }}" class="nav-link showLocationButton">{% trans "All Time" %}</a>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+    <div id="LocationPerformance"></div>
+  </div>
+
 </div>
-
-
-<div id="LocationPerformance"></div>
 
 
 {% addtoblock "js" %}
@@ -77,6 +87,7 @@ $(document).ready(function(){
       });
       $('.showLocationButton').removeClass('active');
       $(this).addClass('active');
+      event.preventDefault();
   });
 
 

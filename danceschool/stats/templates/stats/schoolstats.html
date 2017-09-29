@@ -5,102 +5,24 @@
 
 <h2 class="mt-4">{% trans "School Performance Statistics" %}</h2>
 
-<table class="classregsummary table">
-<tr>
-    <td>{% trans "Total # Students" %}:</td><td> {{ totalStudents }}</td>
-</tr>
-<tr>
-  <td>{% trans "Total # Series Taught" %}:</td><td> {{ numSeries }} </td>
-</tr>
-<tr>
-  <td>{% trans "Total # Series Registrations" %}: </td><td> {{ totalSeriesRegs }} </td>
-</tr>
-<tr>
-    <td>{% trans "Total Time Studio in Existence" %}:</td> <td>{{ totalTime }}</td>
-</tr>
-</table>
+<div class="card card-body">
+  <table class="classregsummary table mb-0">
+  <tr>
+      <td>{% trans "Total # Students" %}:</td><td> {{ totalStudents }}</td>
+  </tr>
+  <tr>
+    <td>{% trans "Total # Series Taught" %}:</td><td> {{ numSeries }} </td>
+  </tr>
+  <tr>
+    <td>{% trans "Total # Series Registrations" %}: </td><td> {{ totalSeriesRegs }} </td>
+  </tr>
+  <tr>
+      <td>{% trans "Total Time Studio in Existence" %}:</td> <td>{{ totalTime }}</td>
+  </tr>
+  </table>
+</div>
 
 {% static_placeholder 'stats_graphs' %}
-
-<h3 class="mt-4">{% trans "Top Students and Teachers" %}</h3>
-
-<div class="card">
-  <div class="card-header">
-    <ul class="nav nav-tabs card-header-tabs" role="tablist">
-      <li class="nav-item">
-        <a class="nav-link active" href="#topCustomersTwelve" role="tab" data-toggle="tab">{% trans "Top Customers" %}</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#topCustomers" role="tab" data-toggle="tab">{% trans "All-Time Top Customers" %}</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#topInstructors" role="tab" data-toggle="tab">{% trans "Most Active Teachers" %}</a>
-      </li>
-    </ul>
-  </div>
-
-  <div class="card-body tab-content">
-    {# Top Customers of Last Twelve Months #}
-    <div role="tabpanel" class="tab-pane fade show active" id="topCustomersTwelve">
-      <h4 class="card-title">{% trans "Top Customers of the Last Twelve Months" %}</h4>
-
-      <table class="table">
-      <thead>
-        <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taken" %}</td></tr>
-      </thead>
-      <tbody>
-        {% for customer in bestCustomersLastTwelveMonths %}
-        <tr>
-          <td>{{ customer.first_name }} {{ customer.last_name}}</td>
-          <td>{{ customer.eventregistration__count }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      </table>
-    </div>
-
-    {# Top Customers All Time #}
-    <div role="tabpanel" class="tab-pane fade" id="topCustomers">
-      <h4 class="card-title">{% trans "All-Time Top Customers" %}</h4>
-
-      <table class="table">
-      <thead>
-        <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taken" %}</td></tr>
-      </thead>
-      <tbody>
-        {% for customer in bestCustomersAllTime %}
-        <tr>
-          <td>{{ customer.first_name }} {{ customer.last_name}}</td>
-          <td>{{ customer.eventregistration__count }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      </table>
-    </div>
-
-    {# Most Active Teachers #}
-    <div role="tabpanel" class="tab-pane fade" id="topInstructors">
-      <h4 class="card-title">{% trans "Most Active Teachers of This Calendar Year" %}</h4>
-
-      <table class="table">
-      <thead>
-        <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taught" %}</td></tr>
-      </thead>
-      <tbody>
-        {% for teacher in mostActiveTeachersThisYear %}
-        <tr>
-          <td>{{ teacher.0 }} {{ teacher.1 }}</td>
-          <td>{{ teacher.2 }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      </table>
-    </div>
-  </div>
-
-
-
-</div>
 
 <hr />
 

@@ -512,7 +512,7 @@ Remember, all page settings and content can be changed later via the admin inter
                     'stats/schoolstats_cohortretention.html',
                     'stats/schoolstats_averagesbylocation.html',
                     'stats/schoolstats_registrationtypes.html',
-                    'stats/schoolstats_referralcounts.html',
+                    'stats/schoolstats_bestcustomers.html',
                 ]
                 for template in template_list:
                     add_plugin(stats_placeholder, 'StatsGraphPlugin', initial_language, template=template)

@@ -21,6 +21,12 @@ urlpatterns = [
     url(r'^locationperformance/csv/$',stats.LocationPerformanceCSV,name='LocationPerformanceCSV'),
     url(r'^locationperformance/json/$',stats.LocationPerformanceJSON,name='LocationPerformanceJSON'),
 
+    url(r'^advanceregistration/json/$',stats.AdvanceRegistrationDaysJSON,name='AdvanceRegistrationDaysJSON'),
+    url(r'^registrationhours/json/$',stats.RegistrationHoursJSON,name='RegistrationHoursJSON'),
+    url(r'^multiregistration/json/$',stats.MultiRegistrationJSON,name='MultiRegistrationJSON'),
+
     url(r'^registrationtypeaverages/json/$',stats.RegistrationTypeAveragesJSON,name='RegistrationTypeAveragesJSON'),
     url(r'^referralcounts/json/$',stats.RegistrationReferralCountsJSON,name='RegistrationReferralCountsJSON'),
+
+    url(r'^bestcustomers/json/$',stats.getBestCustomersJSON,name='bestCustomersJSON'),
 ]

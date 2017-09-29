@@ -15,6 +15,7 @@ import re
 
 from .constants import getConstant
 from .tasks import sendEmail
+from .registries import plugin_templates_registry
 
 
 class EmailRecipientMixin(object):
@@ -291,8 +292,21 @@ class PluginTemplateMixin(object):
         return super(PluginTemplateMixin, self).get_form(request, obj, **kwargs)
 
     def get_template_choices(self):
+        # If templates are explicitly specified, use those
         if hasattr(self,'template_choices') and self.template_choices:
             return self.template_choices
-        elif self.render_template:
+
+        # If templates are registered, use those
+        registered = [
+            x for x in plugin_templates_registry.values() if
+            getattr(x,'plugin',None) in [z.__name__ for z in self.__class__.__mro__]
+        ]
+        if registered:
+            return [(x.template_name, getattr(x,'description',None) or x.template_name) for x in registered]
+
+        # If just one template is specified, use that
+        if self.render_template:
             return [(self.render_template,self.render_template),]
+
+        # No choices to report
         return []

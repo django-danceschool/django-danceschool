@@ -1,0 +1,132 @@
+{% load sekizai_tags static i18n %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+<h3 class="mt-4">{% trans "Multi-Series Registrations and Hours Registered" %}</h3>
+
+<div class="card">
+
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.1 }}" class="nav-link showMultiSeriesButton active">{% trans "Last Month" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.3 }}" class="nav-link showMultiSeriesButton">{% trans "Last 3 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.6 }}" class="nav-link showMultiSeriesButton">{% trans "Last 6 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showMultiSeriesButton">{% trans "Last 12 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link showMultiSeriesButton">{% trans "All Time" %}</a>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body row">
+    <div class="col-md-6">
+      <h4 class="card-title">{% trans "Number of Series Registered" %}</h4>      
+      <div id="multiSeriesChart"></div>      
+    </div>
+    <div class="col-md-6">
+      <h4 class="card-title">{% trans "Hours of Class Registered" %}</h4>
+      <div id="registrationHoursChart"></div>
+    </div>
+
+  </div>
+</div>
+
+{% addtoblock "js" %}
+  <script src="{% static 'd3/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'c3/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+  var multiSeriesChart = c3.generate({
+      bindto: '#multiSeriesChart',
+    data: {
+      url: "{% url 'MultiRegistrationJSON' %}?startDate={{ limitMonthDates.1 }}",
+      mimeType: 'json',
+      types: {
+        pct: 'bar',
+        cumulative_pct: 'bar',
+      },
+      keys: {
+        x: 'items',
+        value: ['pct','cumulative_pct']
+      }
+    },
+    axis: {
+        x: {
+            type: 'category', // this needed to load string x value
+        },
+    }
+  });
+
+  var registrationHoursChart = c3.generate({
+      bindto: '#registrationHoursChart',
+    data: {
+      url: "{% url 'RegistrationHoursJSON' %}?startDate={{ limitMonthDates.1 }}",
+      mimeType: 'json',
+      types: {
+        pct: 'step',
+        cumulative_pct: 'area-step',
+      },
+      keys: {
+        x: 'hours',
+        value: ['pct','cumulative_pct']
+      }
+    },
+    axis: {
+        x: {
+            type: 'indexed', // this needed to load string x value
+        },
+    }
+  });
+
+
+  $('.showMultiSeriesButton').click(function(e) {
+      var startDate = $(this).attr('data-startDate');
+
+      multiSeriesChart.load({
+      url: "{% url 'MultiRegistrationJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        types: {
+          pct: 'bar',
+          cumulative_pct: 'bar',
+        },
+        keys: {
+          x: 'items',
+          value: ['pct','cumulative_pct'],
+        },
+      });
+
+      registrationHoursChart.load({
+      url: "{% url 'RegistrationHoursJSON' %}?startDate=" + startDate,
+        mimeType: 'json',
+        types: {
+          pct: 'step',
+          cumulative_pct: 'area-step',
+        },
+        keys: {
+          x: 'hours',
+          value: ['pct','cumulative_pct'],
+        },
+      });
+
+      $('.showMultiSeriesButton').removeClass('active');
+      $(this).addClass('active');
+      e.preventDefault();
+  });
+
+});
+</script>
+{% endaddtoblock %}

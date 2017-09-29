@@ -1,0 +1,144 @@
+{% load sekizai_tags static i18n %}
+
+{% addtoblock "css" %}
+  <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
+{% endaddtoblock %}
+
+<h3 class="mt-4">{% trans "Statistics on Discount Usage" %}</h3>
+
+<div class="card">
+	<div class="card-header">
+		<ul class="nav nav-tabs card-header-tabs" role="tablist">
+			<li class="nav-item">
+				<a class="nav-link active registrationDiscountButton" href="#" data-startDate="{{ limitMonthDates.12 }}" role="tab" data-toggle="tab">{% trans "Last 12 Months" %}</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link registrationDiscountButton" href="#" data-startDate="{{ limitMonthDates.1 }}" role="tab" data-toggle="tab">{% trans "Last Month" %}</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link registrationDiscountButton" href="#" role="tab" data-toggle="tab">{% trans "All Time" %}</a>
+			</li>
+		</ul>
+	</div>	
+	<div class="card-body row tab-content">
+
+    <div class="col-md-6">
+      <h4 class="card-title">{% trans "Percentage of Registration Using Discounts" %}</h4>
+
+      <div id="discountFrequencyChart"></div>
+    </div>
+    <div class="col-md-6">
+      <h4 class="card-title">{% trans "Most Popular Discounts" %}</h4>
+
+      <table class="table">
+      	<thead><tr><th>{% trans "Name" %}</th><th>{% trans "Uses" %}</th></tr></thead>
+      	<tbody id="popularDiscountsTable">
+
+      	</tbody>
+      </table>
+    </div>
+
+	</div>
+</div>
+
+{% addtoblock "js" %}
+  <script src="{% static 'd3/d3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+  <script src="{% static 'c3/c3.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+var discountFrequencyChart = null;
+var startDate = '{{ limitMonthDates.12 }}';
+
+$.ajax({
+  dataType: "json",
+  url: '{% url "discountFrequencyJSON" %}?startDate=' + startDate,
+  success: function(jsonData) {
+	var data = {};
+	var counts = [];
+	jsonData.forEach(function(e) {
+	    counts.push(e.discounts.toString());
+	    data[e.discounts] = e.count;
+	});
+
+	discountFrequencyChart = c3.generate({
+		bindto: '#discountFrequencyChart',
+	    data: {
+	        json: [ data ],
+	        type : 'pie',
+	        keys: {
+	        	value: counts,
+	        }
+	    }
+	});
+  }
+});
+
+$.ajax({
+  dataType: "json",
+  url: '{% url "popularDiscountsJSON" %}?startDate=' + startDate,
+  success: function(jsonData) {
+  	var tableData = '';
+
+  	jsonData.forEach(function(e) {
+        tableData += '<tr><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
+  	});
+
+  	$('#popularDiscountsTable').append(tableData);
+  }
+});
+
+$('.registrationDiscountButton').click(function(e) {
+  var startDate = $(this).attr('data-startDate');
+
+  $.ajax({
+    dataType: "json",
+    url: '{% url "discountFrequencyJSON" %}?startDate=' + startDate,
+    success: function(jsonData) {
+	  	var data = {};
+	  	var counts = [];
+	  	jsonData.forEach(function(e) {
+	  	    counts.push(e.discounts.toString());
+	  	    data[e.discounts] = e.count;
+	  	});
+	  	discountFrequencyChart.load({
+		    data: {
+		        json: [ data ],
+		        type : 'pie',
+		        keys: {
+		        	value: counts,
+		        }
+		    }  		
+	  	});
+    }
+  });
+
+  $.ajax({
+    dataType: "json",
+    url: '{% url "popularDiscountsJSON" %}?startDate=' + startDate,
+    success: function(jsonData) {
+    	$('#popularDiscountsTable').html('');
+    	var tableData = '';
+  
+    	jsonData.forEach(function(e) {
+          tableData += '<tr><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
+    	});
+  
+    	$('#popularDiscountsTable').append(tableData);
+    }
+  });
+
+
+  $('.registrationDiscountButton').removeClass('active');
+  $(this).addClass('active');
+  e.preventDefault();
+
+});
+
+});
+</script>
+{% endaddtoblock %}
