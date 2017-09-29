@@ -34,6 +34,7 @@ from .constants import getConstant
 from .signals import post_registration
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
+from .utils.timezone import localtime
 
 
 if six.PY3:
@@ -658,7 +659,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def firstOccurrenceTime(self):
         if self.firstOccurrence:
-            return timezone.localtime(self.firstOccurrence.startTime)
+            return localtime(self.firstOccurrence.startTime)
         return None
     firstOccurrenceTime.fget.short_description = _('Begins')
 
@@ -670,7 +671,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def nextOccurrenceTime(self):
         if self.nextOccurrence:
-            return timezone.localtime(self.nextOccurrence.startTime)
+            return localtime(self.nextOccurrence.startTime)
         return None
     nextOccurrenceTime.fget.short_description = _('Next occurs')
 
@@ -682,7 +683,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def lastOccurrenceTime(self):
         if self.lastOccurrence:
-            return timezone.localtime(self.lastOccurrence.endTime)
+            return localtime(self.lastOccurrence.endTime)
         return None
     lastOccurrenceTime.fget.short_description = _('Ends')
 
