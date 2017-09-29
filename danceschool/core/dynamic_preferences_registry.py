@@ -75,6 +75,19 @@ class DefaultAdminSuccessPage(IntegerPreference):
 
 
 @global_preferences_registry.register
+class EnableCronTasks(BooleanPreference):
+    section = general
+    name = 'enableCronTasks'
+    verbose_name = _('Enable Periodic (Cron) Tasks')
+    help_text = _(
+        'Uncheck this if you will be using crontab, a scheduling service such as Heroku, ' +
+        'or if you otherwise do not wish to permit automatic generation of expenses, closing ' +
+        'of class registration, etc.'
+    )
+    default = True
+
+
+@global_preferences_registry.register
 class StaffCategoryInstructor(ModelChoicePreference):
     section = general
     name = 'eventStaffCategoryInstructor'

@@ -17,6 +17,9 @@ def updateFinancialItems():
     Every hour, create any necessary revenue items and expense items for
     activities that need them.
     '''
+    if not getConstant('general__enableCronTasks'):
+        return
+
     logger.info('Creating automatically-generated financial items.')
 
     if getConstant('financial__autoGenerateExpensesEventStaff'):
