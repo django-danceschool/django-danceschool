@@ -411,6 +411,21 @@ Remember, all page settings and content can be changed later via the admin inter
         except IndexError:
             initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
 
+        # First, add the footer if no footer exists
+        sp = StaticPlaceholder.objects.get_or_create(code='footer')
+        sp_draft = sp[0].draft
+        sp_public = sp[0].public
+        if not sp_public.cmsplugin_set.all():
+            address_string = '{}{}{}, {} {}<br />'.format(
+                school_address1 + '<br />\n' if school_address1 else '',
+                school_address2 + '<br />\n' if school_address2 else '',
+                school_city, school_state, school_postal
+            )
+            email_string = '<a href="mailto:{}">{}</a>'.format(school_email, school_email)
+            initial_footer = '<hr />\n\n<p class="text-center"><strong>{}</strong><br />\n%s\n</p>' % (school_name, address_string, email_string)
+            add_plugin(sp_draft, 'TextPlugin', initial_language, body=initial_footer)
+            add_plugin(sp_public, 'TextPlugin', initial_language, body=initial_footer)
+
         registration_first = self.boolean_input('Perform a "registration-only" setup with registration on the home page? [y/N]', False)
         if registration_first:
             home_page = create_page(
