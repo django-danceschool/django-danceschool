@@ -11,6 +11,8 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,
     filters = Q(active=True)
     if customer:
         filters = filters & (Q(customerdiscount__isnull=True) | Q(customerdiscount__customer=customer))
+    else:
+        filters = filters & Q(customerdiscount__isnull=True)
 
     # Existing customers can't get discounts marked for new customers only.  Add-ons are handled separately.
     if addOn:
