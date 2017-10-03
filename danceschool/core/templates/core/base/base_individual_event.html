@@ -24,7 +24,6 @@
 {% block body_id %}classes{% endblock %}
 
 {% block content %}
-	<div class='post individualevent'>
 	<h1 class="my-4">{{ eventset.0.name }}</h1>
 
 	{% for event in eventset %}
@@ -62,11 +61,14 @@
 	<hr />
 
 	{% endfor %}
-	</div>
 
-	<h3>{% trans "About this Event" %}</h3>
-	<div class='eventDescription'>
-		{{ eventset.0.description|safe }}
+	<div class="row">
+		<div class="col-12">
+			<h3>{% trans "About this Event" %}</h3>
+			<div class='eventDescription'>
+				{{ eventset.0.description|safe }}
+			</div>
+		</div>
 	</div>
 	
 {% endblock %}

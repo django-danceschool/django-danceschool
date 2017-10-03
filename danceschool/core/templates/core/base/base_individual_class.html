@@ -28,7 +28,6 @@
 {% block body_id %}classes{% endblock %}
 
 {% block content %}
-	<div class='post individualseries'>
 	<h1 class="my-4">
 		{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
 		{{ month }} {{ year }}: {{ title }}
@@ -60,8 +59,8 @@
 				{% if 'core.view_registration_summary' in perms %}
 					<a class="btn btn-outline-secondary" href="{% url 'viewregistrations' series.id %}">{% trans "View Registrations" %}</a>
 				{% endif %}
+				</div>
 			{% endif %}
-			</div>
 			</div>
 		</div>
 		<div class="col-md-8 order-1">
@@ -105,11 +104,14 @@
 	<hr />
 
 	{% endfor %}
-	</div>
 
-	<h3>{% trans "Class Description" %}</h3>
-	<div class='classDescription'>
-		<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
+	<div class="row">
+		<div class="col-12">
+			<h3>{% trans "Class Description" %}</h3>
+			<div class='classDescription'>
+				<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
+			</div>
+		</div>
 	</div>
 
 	{% addtoblock "js" %}
