@@ -1,17 +1,34 @@
 from django.utils import timezone
+from django.db.models import Q
 
 from datetime import timedelta
 
 from .models import DiscountCombo
 
 
-def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,addOn=False,cannotCombine=False):
+def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,customer=None,addOn=False,cannotCombine=False):
+
+    filters = Q(active=True)
+    if customer:
+        filters = filters & (Q(customerdiscount__isnull=True) | Q(customerdiscount__customer=customer))
 
     # Existing customers can't get discounts marked for new customers only.  Add-ons are handled separately.
     if addOn:
-        availableDiscountCodes = DiscountCombo.objects.filter(active=True,discountType=DiscountCombo.DiscountType.addOn).exclude(expirationDate__lte=timezone.now())
+        filters = filters & Q(discountType=DiscountCombo.DiscountType.addOn)
+
+        availableDiscountCodes = DiscountCombo.objects.filter(
+            filters
+        ).exclude(expirationDate__lte=timezone.now()).distinct()
     else:
-        availableDiscountCodes = DiscountCombo.objects.filter(active=True,category__cannotCombine=cannotCombine).exclude(discountType=DiscountCombo.DiscountType.addOn).exclude(expirationDate__lte=timezone.now())
+        filters = filters & Q(category__cannotCombine=cannotCombine)
+
+        availableDiscountCodes = DiscountCombo.objects.filter(
+            filters
+        ).exclude(
+            discountType=DiscountCombo.DiscountType.addOn
+        ).exclude(
+            expirationDate__lte=timezone.now()
+        ).distinct()
 
     if not newCustomer:
         availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)
