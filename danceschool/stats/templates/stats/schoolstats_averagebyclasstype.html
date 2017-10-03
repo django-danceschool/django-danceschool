@@ -5,17 +5,29 @@
 {% endaddtoblock %}
 
 
-<h2>{% trans "Performance by Class Type" %}
-  <a class="btn btn-xs btn-default" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
-</h2>
+<h3 class="mt-4">{% trans "Performance by Class Type" %}
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
+</h3>
 
-<div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default active classTypeButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-default classTypeButton">{% trans "All Time" %}</button>
+
+<div class="card">
+
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" class="nav-link active classTypeButton" data-startDate="{{ limitMonthDates.12 }}">{% trans "Last 12 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link classTypeButton">{% trans "All Time" %}</a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body">
+    <div id="ClassTypePerformance"></div>
+  </div>
+
 </div>
-
-<div id="ClassTypePerformance"></div>
-
 
 {% addtoblock "js" %}
   <script src="{% static 'd3/d3.min.js' %}"></script>
@@ -79,11 +91,12 @@ $(document).ready(function(){
   // Set the initial data on load
   loadClassPerformanceChart("{% url 'AveragesByClassTypeJSON' %}?startDate={{ limitMonthDates.12 }}");
 
-  $('.classTypeButton').click(function(){
+  $('.classTypeButton').click(function(e){
       var startDate = $(this).attr('data-startDate');
       loadClassPerformanceChart("{% url 'AveragesByClassTypeJSON' %}?startDate=" + startDate);
       $('.classTypeButton').removeClass('active');
       $(this).addClass('active');
+      e.preventDefault();
   });
 
 });

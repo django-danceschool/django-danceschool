@@ -3,80 +3,26 @@
 
 {% block content %}
 
-<h2>{% trans "School Performance Statistics" %}</h2>
+<h2 class="mt-4">{% trans "School Performance Statistics" %}</h2>
 
-<table class="classregsummary table">
-<tr>
-    <td>{% trans "Total # Students" %}:</td><td> {{ totalStudents }}</td>
-</tr>
-<tr>
-  <td>{% trans "Total # Series Taught" %}:</td><td> {{ numSeries }} </td>
-</tr>
-<tr>
-  <td>{% trans "Total # Series Registrations" %}: </td><td> {{ totalSeriesRegs }} </td>
-</tr>
-<tr>
-    <td>{% trans "Total Time Studio in Existence" %}:</td> <td>{{ totalTime }}</td>
-</tr>
-</table>
+<div class="card card-body">
+  <table class="classregsummary table mb-0">
+  <tr>
+      <td>{% trans "Total # Students" %}:</td><td> {{ totalStudents }}</td>
+  </tr>
+  <tr>
+    <td>{% trans "Total # Series Taught" %}:</td><td> {{ numSeries }} </td>
+  </tr>
+  <tr>
+    <td>{% trans "Total # Series Registrations" %}: </td><td> {{ totalSeriesRegs }} </td>
+  </tr>
+  <tr>
+      <td>{% trans "Total Time Studio in Existence" %}:</td> <td>{{ totalTime }}</td>
+  </tr>
+  </table>
+</div>
 
 {% static_placeholder 'stats_graphs' %}
-
-<h2>{% trans "Top Students and Teachers" %}</h2>
-
-<div class="row">
-<div class="col-sm-4">
-  <table class="table">
-    <caption>{% trans "All Time Top Customers" %}</caption>
-  <thead>
-    <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taken" %}</td></tr>
-  </thead>
-  <tbody>
-    {% for customer in bestCustomersAllTime %}
-    <tr>
-      <td>{{ customer.first_name }} {{ customer.last_name}}</td>
-      <td>{{ customer.eventregistration__count }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-  </table>
-</div>
-
-<div class="col-sm-4">
-  <table class="table">
-    <caption>{% trans "Top Customers of the Last 12 Months" %}</caption>
-  <thead>
-    <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taken" %}</td></tr>
-  </thead>
-  <tbody>
-    {% for customer in bestCustomersLastTwelveMonths %}
-    <tr>
-      <td>{{ customer.first_name }} {{ customer.last_name}}</td>
-      <td>{{ customer.eventregistration__count }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-  </table>
-</div>
-
-<div class="col-sm-4">
-  <table class="table">
-    <caption>{% trans "Most Active Teachers of This Calendar Year" %}</caption>
-  <thead>
-    <tr><td>{% trans "Name" %}</td><td>{% trans "# Classes Taught" %}</td></tr>
-  </thead>
-  <tbody>
-    {% for teacher in mostActiveTeachersThisYear %}
-    <tr>
-      <td>{{ teacher.0 }} {{ teacher.1 }}</td>
-      <td>{{ teacher.2 }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-  </table>
-</div>
-
-</div>
 
 <hr />
 

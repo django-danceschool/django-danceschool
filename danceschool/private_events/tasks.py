@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 @db_periodic_task(crontab(minute='*'))
 def sendReminderEmails():
+
+    if not getConstant('general__enableCronTasks'):
+        return
+
     reminders_needed = EventReminder.objects.filter(**{
         'time__lte': timezone.now(),
         'completed':False,

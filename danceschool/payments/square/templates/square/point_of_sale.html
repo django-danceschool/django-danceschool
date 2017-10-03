@@ -83,8 +83,7 @@ $(document).ready(function(){
     	$("#square-pos-button").attr("href", iosHref);
   	  	break;
   	  default:
-  	    $("#square-pos-button").removeClass('btn-primary');
-  	    $("#square-pos-button").addClass('btn-default');
+  	    $("#square-pos-button").addClass('disabled');
   	    $("#square-pos-button").append(" ({% trans 'unavailable' %})");
   	    $("#square-pos-notice").append(" {% trans 'Point of sale integration is only supported for iOS and Android devices.' %}");
   	    $('#square-pos-button').click(function(e) {

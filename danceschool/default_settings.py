@@ -21,6 +21,7 @@ LANGUAGES = [('en', 'English'),]
 CMS_TEMPLATES = [
     ('cms/admin_home.html', 'Administrative Function base template'),
     ('cms/home.html', 'Base Template, one column'),
+    ('cms/frontpage.html', 'Front page template'),
     ('cms/twocolumn_leftsidebar.html', 'Two columns, sidebar at left'),
     ('cms/twocolumn_rightsidebar.html', 'Two columns, sidebar at right'),
 ]
@@ -119,7 +120,7 @@ HUEY = SqliteHuey(
 # HUEY = RedisHuey('danceschool',connection_pool=pool)
 
 # For Crispy forms Bootstrap templates
-CRISPY_TEMPLATE_PACK = 'bootstrap3'
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 CRISPY_FAIL_SILENTLY = True
 
 DJANGOCMS_FORMS_PLUGIN_MODULE = 'Forms'

@@ -28,99 +28,88 @@
 {% block body_id %}classes{% endblock %}
 
 {% block content %}
-	<div class='post'>
-	<div class="individualseries">
-	<h2>
+	<div class='post individualseries'>
+	<h1 class="my-4">
 		{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
 		{{ month }} {{ year }}: {{ title }}
 		{% endblocktrans %}
-	</h2>
+	</h1>
 
 	{% for series in seriesset %}
-		{% if series.teachers %}
-			<div class="col-sm-4 hidden-xs pull-right">
+	<div class="row">
+		<div class="col-md-4 order-2">
+			<div class="row mb-4">
 			{% for teacher in series.teachers %}
-				<img src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="pull-right" style="margin: 5px;" /> 
+				<img src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="float-right" style="margin: 5px;" /> 
 			{% endfor %}
 			</div>
-		{% endif %}
+			<div class="row">
+			{% if not series.soldOut and not series.registrationClosed %}
+				<a class="btn btn-primary btn-lg" href="{% url 'registration' %}">{% trans "Register for this class!" %}</a>
+			{% elif series.soldOut %}
+				{% trans "Sold out!" %}
+			{% else %}
+				{% trans "Registration closed!" %}
+			{% endif %}
 
-		{% if not series.special %}
-			<h3>
+			{% if 'core.change_series' in perms or 'core.view_registration_summary' in perms %}
+				<div class="btn-group mt-4">
+				{% if 'core.change_series' in perms %}
+					<a class="btn btn-outline-secondary" href="{% url 'admin:core_series_change' series.id %}">{% trans "Edit Class Details" %}</a>
+				{% endif %}
+				{% if 'core.view_registration_summary' in perms %}
+					<a class="btn btn-outline-secondary" href="{% url 'viewregistrations' series.id %}">{% trans "View Registrations" %}</a>
+				{% endif %}
+			{% endif %}
+			</div>
+			</div>
+		</div>
+		<div class="col-md-8 order-1">
+			<h4>
 				{% blocktrans with weekday=series.startTime|date:'l' startTime=series.startTime|date:'h:i A' location=series.location startDate=series.startTime|date:'F jS' %}
 					{{ weekday }}s, {{ startTime }} at {{ location }}, Beginning {{ startDate }}
 				{% endblocktrans %}
+			</h4>
 
-			</h3>
-		{% else %}
-			<h3>
-				{% blocktrans with startTime=series.startTime|date:'l, F jS, h:i A' location=series.location %}
-					Begins {{ startTime }} at {{ location }}
-				{% endblocktrans %}
-			</h3>
-		{% endif %}
+			{% if series.teachers %}
+				<h4 class="instructor-names">{% trans "with" %} 
+				{% for teacher in series.teachers %}
+						{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} {% trans "and" %} {% endif %}
+				{% endfor %}
+				</h4>
+			{% endif %}
 
-		{% if series.teachers %}
-			<h3 class="instructor-names">{% trans "With" %} 
-			{% for teacher in series.teachers %}
-					{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} {% trans "and" %} {% endif %}
+			<p class='schedule'>
+			<strong>{% trans "Class Schedule" %}:</strong><br />
+			{% for class in series.eventoccurrence_set.all reversed %}
+				{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
 			{% endfor %}
-			</h3>
-			<div class="visible-xs col-xs-12">
-			{% for teacher in series.teachers %}
-				{% if not teacher.assistant and teacher.image %}
-					<img src="{% thumbnail teacher.image 118x118 crop %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" style="margin: 5px auto;" />
-				{% endif %}
-			{% endfor %}
-			</div>
-		{% endif %}
+			</p>
 
-		<p class='schedule'>
-		<strong>{% trans "Class Schedule" %}:</strong><br />
-		{% for class in series.eventoccurrence_set.all reversed %}
-			{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
-		{% endfor %}
-		</p>
+			<p class='address'>
+			<strong>{{ series.location.name }}{% if series.room.name %} - {{ series.room.name }}{% endif %}</strong><br />
+			{{ series.location.address }}<br />
+			{{ series.location.city }}, {{ series.location.state }} {{ series.location.zip }}<br />
+			<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ series.location.name|slugify }}">{% trans "More Info" %}</a>
+			</p>
 
-		<p class='address'>
-		<strong>{{ series.location.name }}{% if series.room.name %} - {{ series.room.name }}{% endif %}</strong><br />
-		{{ series.location.address }}<br />
-		{{ series.location.city }}, {{ series.location.state }} {{ series.location.zip }}<br />
-		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ series.location.name|slugify }}">{% trans "More Info" %}</a>
-		</p>
+		    {% if series.pricingTier.id != default_pricingtier_id %}
+		    <p class="pricinginfo">
+		    	<strong>{% trans "Pricing" %}:</strong>&nbsp;
+				<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong>" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.doorPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }}</a>
+			</p>
+			{% endif %}
+		</div>
+	</div>	
 
-	    {% if series.pricingTier.id != default_pricingtier_id %}
-	    <p class="pricinginfo">
-	    	<strong>{% trans "Pricing" %}:</strong>&nbsp;
-			<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong>" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.doorPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }}</a>
-		</p>
-		{% endif %}
+	<hr />
 
-		<p>
-		{% if not series.soldOut and not series.registrationClosed %}
-			<a class="btn btn-primary" href="{% url 'registration' %}">{% trans "Register for this class!" %}</a>
-		{% elif series.soldOut %}
-			{% trans "Sold out!" %}
-		{% else %}
-			{% trans "Registration closed!" %}
-		{% endif %}
-		</p>
-
-		{% if 'core.change_series' in perms %}
-		<p><a class="btn btn-default" href="{% url 'admin:core_series_change' series.id %}">{% trans "Edit Class Details" %}</a></p>
-		{% endif %}
-		{% if 'core.view_registration_summary' in perms %}
-		<p><a class="btn btn-default" href="{% url 'viewregistrations' series.id %}">{% trans "View Registrations" %}</a></p>
-		{% endif %}
-
-		<hr />
 	{% endfor %}
 	</div>
 
-		<h3>{% trans "Class Description" %}</h3>
-		<div class='classDescription'>
-			<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
-		</div>
+	<h3>{% trans "Class Description" %}</h3>
+	<div class='classDescription'>
+		<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
 	</div>
 
 	{% addtoblock "js" %}

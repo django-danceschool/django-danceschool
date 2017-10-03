@@ -4,19 +4,32 @@
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>{% trans "Number of Classes Taken By Starting Cohort" %}</h2>
+<h3 class="mt-4">{% trans "Number of Classes Taken By Starting Cohort" %}</h3>
 
 <p>{% blocktrans %}How many people decide to progress beyond beginner and how many students stick with us a while?
 Note that a student who has taken classes in multiple roles will show up in each role's data series depending on the number of series they've taken in each.{% endblocktrans %}</p>
 
-<div class="btn-group" role="group" aria-label="...">
-  <button type="button" class="btn btn-default active studentRetentionButton">{% trans "All Students" %}</button>
-  {% for prior_year in recentYears %}
-    <button type="button" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="btn btn-default studentRetentionButton">{{ prior_year }} {% trans "Cohort" %}</button>
-  {% endfor %}
-</div>
+<div class="card">
 
-<div id="totalClassesTaken"></div>
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" class="nav-link studentRetentionButton active">{% trans "All Students" %}</a>
+      </li>
+      {% for prior_year in recentYears %}
+        <li class="nav-item">
+          <a href="#" data-cohortStart="{{ prior_year }}-01-01" data-cohortEnd="{{ prior_year|add:'1' }}-01-01" class="nav-link studentRetentionButton">{{ prior_year }} {% trans "Cohort" %}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+
+  <div class="card-body">
+    <div id="totalClassesTaken"></div>
+  </div>
+
+</div>
 
 
 {% addtoblock "js" %}
@@ -87,12 +100,13 @@ $(document).ready(function(){
   // Set the initial data on load
   loadClassesTakenChart("{% url 'ClassCountHistogramJSON' %}");
 
-  $('.studentRetentionButton').click(function(){
+  $('.studentRetentionButton').click(function(e){
       var cohortStart = $(this).attr('data-cohortStart');
       var cohortEnd = $(this).attr('data-cohortEnd');
       loadClassesTakenChart("{% url 'ClassCountHistogramJSON' %}?cohortStart=" + cohortStart + "&cohortEnd=" + cohortEnd);
       $('.studentRetentionButton').removeClass('active');
       $(this).addClass('active');
+      e.preventDefault();
   });
 
 });

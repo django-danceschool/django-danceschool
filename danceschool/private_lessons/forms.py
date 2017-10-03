@@ -140,6 +140,6 @@ class PrivateLessonStudentInfoForm(forms.Form):
         self.helper.layout = Layout(
             Div('firstName','lastName','email',css_class='form-inline'),
             Div('phone',css_class='form-inline'),
-            Div('agreeToPolicies',css_class='well'),
+            Div('agreeToPolicies',css_class='card card-body bg-light'),
             Submit('submit',_('Complete Registration'))
         )

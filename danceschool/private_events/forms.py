@@ -8,7 +8,7 @@ from django.db.models import Q
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Div, Submit
+from crispy_forms.layout import Layout, Field, Div, Submit
 from crispy_forms.bootstrap import Accordion, AccordionGroup
 
 from danceschool.core.models import EventOccurrence, Event
@@ -56,9 +56,6 @@ class AddPrivateEventForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
 
-        # Some fields in this form have 0 margins, this just addresses that directly.
-        extramargins = 'margin-top: 1.5em; margin-bottom: 1.5em;'
-
         if user:
             kwargs.update(initial={
                 'displayToUsers': [user.id,],
@@ -76,9 +73,12 @@ class AddPrivateEventForm(forms.ModelForm):
             'status',
             'submissionUser',
             'title',
-            Div('category','visibleTo',css_class='form-inline', style=extramargins),
-            Div('displayToUsers', style=extramargins),
-            Div('displayToGroup', style=extramargins),
+            Div(
+                Field('category', wrapper_class='col'),
+                Field('visibleTo', wrapper_class='col'),
+                css_class='form-row'),
+            Div('displayToUsers'),
+            Div('displayToGroup'),
             Accordion(
                 AccordionGroup(_('Add A Description'),'descriptionField',active=False),
                 AccordionGroup(_('Add A Location'),Div('location','room','locationString')),
@@ -138,16 +138,27 @@ class OccurrenceFormSetHelper(FormHelper):
     def __init__(self, *args, **kwargs):
         super(OccurrenceFormSetHelper, self).__init__(*args, **kwargs)
 
-        # Some fields in this form have 0 margins, this just addresses that directly.
-        extramargins = 'margin-top: 1.5em; margin-bottom: 1.5em;'
-
         self.form_tag = False  # Our template must explicitly include the <form tag>
         self.layout = Layout(
-            Div('startTime','endTime','allDay',css_class='form-inline', style=extramargins),
-            Div('extraOccurrencesToAdd','extraOccurrenceRule',css_class="form-inline", style=extramargins),
-            Div('sendReminderTo','sendReminderWhen','sendReminderWhich',css_class="form-inline", style=extramargins),
-            Div('sendReminderGroup',style=extramargins),
-            Div('sendReminderUsers',style=extramargins),
+            Div(
+                Field('startTime', wrapper_class='col',),
+                Field('endTime', wrapper_class='col',),
+                Field('allDay', wrapper_class='col',),
+                css_class='form-row'
+            ),
+            Div(
+                Field('extraOccurrencesToAdd', wrapper_class='col',),
+                Field('extraOccurrenceRule', wrapper_class='col',),
+                css_class="form-row"
+            ),
+            Div(
+                Field('sendReminderTo', wrapper_class='col',),
+                Field('sendReminderWhen', wrapper_class='col',),
+                Field('sendReminderWhich', wrapper_class='col',),
+                css_class="form-row"
+            ),
+            Div('sendReminderGroup'),
+            Div('sendReminderUsers'),
             Submit('submit', u'Submit', css_class='btn btn-primary'),
         )
 

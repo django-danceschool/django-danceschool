@@ -5,7 +5,9 @@
 
 <h1>{% blocktrans with name=instructor.fullName %}Payment History for {{ name }}{% endblocktrans %}</h1>
 
-<img class="pull-left" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
+<a class='btn btn-outline-secondary btn-sm mb-5 float-right' href="{% if request.user == instructor.userAccount %}{% url 'instructorPaymentsCSV' current_year %}{% elif instructor %}{% url 'instructorPaymentsCSV' current_year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{% trans "Download Expense History" %}{% if current_year != "all" %} {% trans "for this year" %}{% endif %} (CSV)</a>
+
+<img class="float-left m-4" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
 
 <dl>
 	<dt>{% trans "Total Pending Payments" %}:</dt><dd>{{ total_awaiting_payment }}</dd>
@@ -14,24 +16,24 @@
 	<dt>{% trans "Total Costs Reimbursements (This Year)" %}:</dt><dd>{{ total_reimbursements }}</dd>
 </dl>
 
-<h4>{% trans "Filter By Year" %}</h4>
+<h4 class="mt-5">{% trans "Filter By Year" %}</h4>
 <div class="btn-group" role="group" aria-label="...">
-  <a type="button" class="btn btn-default" {% if current_year == 'all' or not current_year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' 'all' %}{% elif instructor %}{% url 'instructorPayments' 'all' instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{% trans "All" %}</a>
+  <a type="button" class="btn btn-outline-secondary" {% if current_year == 'all' or not current_year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' 'all' %}{% elif instructor %}{% url 'instructorPayments' 'all' instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{% trans "All" %}</a>
   {% for year in eligible_years %}
-  <a type="button" class="btn btn-default" {% if current_year|add:'0' == year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' year %}{% elif instructor %}{% url 'instructorPayments' year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{{ year }}</a>
+  <a type="button" class="btn btn-outline-secondary" {% if current_year|add:'0' == year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' year %}{% elif instructor %}{% url 'instructorPayments' year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{{ year }}</a>
   {% endfor %}
 </div>
 
 {% if current_year and not current_year == 'all' %}
-<h4>{% trans "Reporting Basis" %}</h4>
+<h4 class="mt-5">{% trans "Reporting Basis" %}</h4>
 <div class="btn-group" role="group" aria-label="...">
-  <button type="button" class="btn btn-default" id="button_accrual_basis">{% trans "Accrual Date" %}</button>
-  <button type="button" class="btn btn-default" id="button_payment_basis">{% trans "Payment Date" %}</button>
-  <button type="button" class="btn btn-default" id="button_submission_basis">{% trans "Submission Date" %}</button>
+  <button type="button" class="btn btn-secondary" id="button_accrual_basis">{% trans "Accrual Date" %}</button>
+  <button type="button" class="btn btn-secondary" id="button_payment_basis">{% trans "Payment Date" %}</button>
+  <button type="button" class="btn btn-secondary" id="button_submission_basis">{% trans "Submission Date" %}</button>
 </div>
 {% endif %}
 
-<h3>{% trans "Pending Payments" %}</h3>
+<h3 class="mt-5">{% trans "Pending Payments" %}</h3>
 
 <table class="table">
 <thead>
@@ -50,13 +52,13 @@
 		<td>{{ this_item.total }}</td>
 		<td>{{ this_item.reimbursement|yesno }}</td>
 		<td>{{ this_item.approved|yesno }}</td>
-		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-default btn-xs" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
+		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
 	</tr>
 {% endfor %}
 </tbody>
 </table>
 
-<h3>{% trans "Prior Payments" %}</h3>
+<h3 class="mt-5">{% trans "Prior Payments" %}</h3>
 
 <table class="table">
 <thead>
@@ -73,18 +75,18 @@
 		<td>{{ this_item.hours }}</td>
 		<td>{{ this_item.total }}</td>
 		<td>{{ this_item.submissionDate|date:'N j, Y' }}</td>
-		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-default btn-xs" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
+		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
 	</tr>
 {% endfor %}
 </tbody>
 </table>
 
-<h3>{% trans "Reimbursements" %}</h3>
+<h3 class="mt-5">{% trans "Reimbursements" %}</h3>
 
 <table class="table">
 <thead>
 	<tr>
-		<td>{% trans "Payment Date" %}</td><td>{% trans "Category" %}</td><td>{% trans "Description" %}</td><td>{% trans "Hours" %}</td><td>{% trans "Total Amount" %}</td><td>{% trans "Submission Date" %}</td>{% if 'financial.change_expenseitem' in perms %}<td>{% trans "Edit" %}</td>{% endif %}
+		<th>{% trans "Payment Date" %}</th><th>{% trans "Category" %}</th><th>{% trans "Description" %}</th><th>{% trans "Hours" %}</th><th>{% trans "Total Amount" %}</th><th>{% trans "Submission Date" %}</th>{% if 'financial.change_expenseitem' in perms %}<th>{% trans "Edit" %}</th>{% endif %}
 	</tr>
 </thead>
 <tbody>
@@ -96,15 +98,11 @@
 		<td>{{ this_item.hours }}</td>
 		<td>{{ this_item.total }}</td>
 		<td>{{ this_item.submissionDate|date:'N j, Y' }}</td>
-		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-default btn-xs" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
+		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
 	</tr>
 {% endfor %}
 </tbody>
 </table>
-
-
-<div class='btn btn-default btn-sm'><a href="{% if request.user == instructor.userAccount %}{% url 'instructorPaymentsCSV' current_year %}{% elif instructor %}{% url 'instructorPaymentsCSV' current_year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{% trans "Download Expense History" %}{% if current_year != "all" %} {% trans "for this year" %}{% endif %} (CSV)</a></div>
-<div style="display:block; width: 100%">&nbsp;</div>
 
 {% addtoblock "js" %}
 	<script type="text/javascript">

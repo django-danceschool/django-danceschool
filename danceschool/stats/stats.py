@@ -1,4 +1,5 @@
 from django.db.models import Count, Avg, Sum, IntegerField, Case, When, Q, Min, FloatField, F
+from django.db.models.functions import TruncDate
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, JsonResponse
 from django.utils.translation import ugettext as _
@@ -9,9 +10,11 @@ import unicodecsv as csv
 from collections import Counter, OrderedDict
 from bisect import bisect
 from calendar import month_name
+from datetime import datetime
 
-from danceschool.core.models import Customer, Series, EventOccurrence, Registration, EventRegistration, DanceTypeLevel, Location, DanceRole
+from danceschool.core.models import Customer, Series, EventOccurrence, Registration, EventRegistration, DanceTypeLevel, Location, DanceRole, SeriesTeacher, Instructor
 from danceschool.core.utils.requests import getDateTimeFromGet
+from danceschool.core.utils.timezone import ensure_timezone
 
 
 def getAveragesByClassType(startDate=None,endDate=None):
@@ -644,6 +647,100 @@ def RegistrationReferralCountsJSON(request):
 
 
 @staff_member_required
+def MultiRegistrationJSON(request):
+    startDate = getDateTimeFromGet(request,'startDate')
+    endDate = getDateTimeFromGet(request,'endDate')
+
+    timeFilters = {}
+
+    if startDate:
+        timeFilters['dateTime__gte'] = startDate
+    if endDate:
+        timeFilters['dateTime__lte'] = endDate
+
+    er_counter_sorted = sorted(Counter(
+        Registration.objects.filter(**timeFilters).annotate(
+            er_count=Count('eventregistration')).values_list('er_count',flat=True)
+    ).items())
+
+    results_list = []
+    cumulative = 0
+    total = sum([x[1] for x in er_counter_sorted])
+
+    for x in er_counter_sorted:
+        cumulative += x[1]
+        results_list.append({
+            'items': x[0], 'count': x[1], 'cumulative': cumulative,
+            'pct': 100 * (x[1] / total), 'cumulative_pct': 100 * (cumulative / total)
+        })
+    return JsonResponse(results_list,safe=False)
+
+
+@staff_member_required
+def RegistrationHoursJSON(request):
+    startDate = getDateTimeFromGet(request,'startDate')
+    endDate = getDateTimeFromGet(request,'endDate')
+
+    timeFilters = {}
+
+    if startDate:
+        timeFilters['dateTime__gte'] = startDate
+    if endDate:
+        timeFilters['dateTime__lte'] = endDate
+
+    hours_counter_sorted = sorted(Counter(
+        Registration.objects.filter(**timeFilters).annotate(
+            er_sum=Sum('eventregistration__event__duration')).values_list('er_sum',flat=True)
+    ).items())
+
+    results_list = []
+    cumulative = 0
+    total = sum([x[1] for x in hours_counter_sorted])
+
+    for x in hours_counter_sorted:
+        cumulative += x[1]
+        results_list.append({
+            'hours': x[0], 'count': x[1], 'cumulative': cumulative,
+            'pct': 100 * (x[1] / total), 'cumulative_pct': 100 * (cumulative / total)
+        })
+    return JsonResponse(results_list,safe=False)
+
+
+@staff_member_required
+def AdvanceRegistrationDaysJSON(request):
+    startDate = getDateTimeFromGet(request,'startDate')
+    endDate = getDateTimeFromGet(request,'endDate')
+
+    timeFilters = {}
+
+    if startDate:
+        timeFilters['dateTime__gte'] = startDate
+    if endDate:
+        timeFilters['dateTime__lte'] = endDate
+
+    advance_days_sorted = sorted(Counter(
+        Registration.objects.filter(**timeFilters).annotate(
+            min_start=Min('eventregistration__event__startTime')
+        ).annotate(
+            advance=(TruncDate('dateTime') - TruncDate('min_start'))
+        ).values_list(
+            'advance',flat=True)
+    ).items())
+
+    results_list = []
+    cumulative = 0
+    total = sum([x[1] for x in advance_days_sorted])
+
+    for x in advance_days_sorted:
+        cumulative += x[1]
+        results_list.append({
+            'days': x[0], 'count': x[1], 'cumulative': cumulative,
+            'pct': 100 * (x[1] / total), 'cumulative_pct': 100 * (cumulative / total)
+        })
+    return JsonResponse(results_list,safe=False)
+
+
+@staff_member_required
 def getGeneralStats(request):
     # total number of students:
     totalStudents = Customer.objects.distinct().count()
@@ -661,3 +758,39 @@ def getGeneralStats(request):
     totalTime = '%s years, %s months, %s days' % (timeDiff.years, timeDiff.months,timeDiff.days)
 
     return (totalStudents,numSeries,totalSeriesRegs,totalTime)
+
+
+@staff_member_required
+def getBestCustomersJSON(request):
+
+    bestCustomersLastTwelveMonths = Customer.objects.values(
+        'first_name','last_name'
+    ).filter(**{
+        'eventregistration__registration__dateTime__gte': ensure_timezone(
+            datetime(timezone.now().year - 1,timezone.now().month,timezone.now().day)
+        ),
+        'eventregistration__dropIn':False,'eventregistration__cancelled':False
+    }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:10]
+
+    bestCustomersAllTime = Customer.objects.values(
+        'first_name','last_name'
+    ).filter(**{
+        'eventregistration__dropIn':False,
+        'eventregistration__cancelled':False
+    }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:10]
+
+    mostActiveTeachersThisYear = SeriesTeacher.objects.filter(
+        event__year=timezone.now().year
+    ).exclude(
+        staffMember__instructor__status=Instructor.InstructorStatus.guest
+    ).values_list(
+        'staffMember__firstName','staffMember__lastName'
+    ).annotate(Count('staffMember')).order_by('-staffMember__count')
+
+    bestCustomerData = {
+        'bestCustomersLastTwelveMonths': list(bestCustomersLastTwelveMonths),
+        'bestCustomersAllTime': list(bestCustomersAllTime),
+        'mostActiveTeachersThisYear': list(mostActiveTeachersThisYear),
+    }
+
+    return JsonResponse(bestCustomerData)

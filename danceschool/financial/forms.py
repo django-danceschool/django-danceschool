@@ -94,25 +94,25 @@ class ExpenseReportingForm(forms.ModelForm):
         if user.has_perm('financial.mark_expenses_paid'):
             payment_section = Div(
                 Div(
-                    HTML('<div class="panel-title"><a data-toggle="collapse" href="#collapsepayment">%s</a> (%s)</div>' % (_('Mark as Approved/Paid'),_('click to expand'))),
-                    css_class='panel-heading'
+                    HTML('<a data-toggle="collapse" href="#collapsepayment">%s</a> (%s)' % (_('Mark as Approved/Paid'),_('click to expand'))),
+                    css_class='card-header'
                 ),
                 Div(
                     'approved',
                     'paid',
                     Div(
-                        Field('paymentDate', css_class='datepicker'),
-                        'paymentMethod',
-                        css_class='form-inline'
+                        Field('paymentDate', css_class='datepicker', wrapper_class='col-md-3'),
+                        Field('paymentMethod', wrapper_class='col-md-6'),
+                        css_class='form-row',
                     ),
                     # The hidden input of accrual date must be passed as a naive datetime.
                     # Django will take care of converting it to local time
                     Field('accrualDate', type="hidden",value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()),
                     HTML('<p style="margin-top: 30px;"><strong>%s</strong> %s</p>' % (_('Note:'),_('For accounting purposes, please do not mark expenses as paid unless they have already been paid to the recipient.'))),
-                    css_class='panel-body collapse',
+                    css_class='card-body collapse',
                     id='collapsepayment',
                 ),
-                css_class='panel panel-default')
+                css_class='card my-4')
         else:
             payment_section = None
 
@@ -120,7 +120,7 @@ class ExpenseReportingForm(forms.ModelForm):
         if user.has_perm('financial.add_expensecategory'):
             related_url = reverse('admin:financial_expensecategory_add') + '?_to_field=id&_popup=1'
             added_html = [
-                '<a href="%s" class="btn btn-default related-widget-wrapper-link add-related" id="add_id_category"> ' % related_url,
+                '<a href="%s" class="btn btn-outline-secondary related-widget-wrapper-link add-related" id="add_id_category"> ' % related_url,
                 '<img src="%sadmin/img/icon-addlink.svg" width="10" height="10" alt="%s"/></a>' % (getattr(settings,'STATIC_URL','/static/'), _('Add Another'))
             ]
             category_field = Div(

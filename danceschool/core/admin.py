@@ -247,28 +247,28 @@ class InvoiceAdmin(admin.ModelAdmin):
     def viewInvoiceLink(self,obj):
         if obj.id:
             change_url = reverse('viewInvoice', args=(obj.id,))
-            return mark_safe('<a class="btn btn-default" href="%s">View Invoice</a>' % (change_url,))
+            return mark_safe('<a class="btn btn-outline-secondary" href="%s">View Invoice</a>' % (change_url,))
     viewInvoiceLink.allow_tags = True
     viewInvoiceLink.short_description = _('Invoice')
 
     def notificationLink(self,obj):
         if obj.id:
             change_url = reverse('sendInvoiceNotifications', args=(obj.id,))
-            return mark_safe('<a class="btn btn-default" href="%s">Notify Recipient</a>' % (change_url,))
+            return mark_safe('<a class="btn btn-outline-secondary" href="%s">Notify Recipient</a>' % (change_url,))
     notificationLink.allow_tags = True
     notificationLink.short_description = _('Invoice notification')
 
     def finalRegistrationLink(self,obj):
         if obj.finalRegistration:
             change_url = reverse('admin:core_registration_change', args=(obj.finalRegistration.id,))
-            return mark_safe('<a class="btn btn-default" href="%s">Registration</a>' % (change_url,))
+            return mark_safe('<a class="btn btn-outline-secondary" href="%s">Registration</a>' % (change_url,))
     finalRegistrationLink.allow_tags = True
     finalRegistrationLink.short_description = _('Final registration')
 
     def temporaryRegistrationLink(self,obj):
         if obj.temporaryRegistration:
             change_url = reverse('admin:core_temporaryregistration_change', args=(obj.temporaryRegistration.id,))
-            return mark_safe('<a class="btn btn-default" href="%s">Temporary Registration</a>' % (change_url,))
+            return mark_safe('<a class="btn btn-outline-secondary" href="%s">Temporary Registration</a>' % (change_url,))
     temporaryRegistrationLink.allow_tags = True
     temporaryRegistrationLink.short_description = _('Temporary registration')
 

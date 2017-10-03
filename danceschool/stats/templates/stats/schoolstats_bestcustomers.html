@@ -1,0 +1,95 @@
+{% load static sekizai_tags i18n %}
+
+<h3 class="mt-4">{% trans "Top Students and Teachers" %}</h3>
+
+<div class="card">
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" href="#topCustomersTwelve" role="tab" data-toggle="tab">{% trans "Top Customers" %}</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#topCustomers" role="tab" data-toggle="tab">{% trans "All-Time Top Customers" %}</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#topInstructors" role="tab" data-toggle="tab">{% trans "Most Active Teachers" %}</a>
+      </li>
+    </ul>
+  </div>
+
+  <div class="card-body tab-content">
+    {# Top Customers of Last Twelve Months #}
+    <div role="tabpanel" class="tab-pane fade show active" id="topCustomersTwelve">
+      <h4 class="card-title">{% trans "Top Customers of the Last Twelve Months" %}</h4>
+
+      <table class="table">
+      <thead>
+        <tr><th>{% trans "Name" %}</th><th>{% trans "# Classes Taken" %}</th></tr>
+      </thead>
+      <tbody id="bestCustomersLastTwelveMonthsTable">
+      </tbody>
+      </table>
+    </div>
+
+    {# Top Customers All Time #}
+    <div role="tabpanel" class="tab-pane fade" id="topCustomers">
+      <h4 class="card-title">{% trans "All-Time Top Customers" %}</h4>
+
+      <table class="table">
+      <thead>
+        <tr><th>{% trans "Name" %}</th><th>{% trans "# Classes Taken" %}</th></tr>
+      </thead>
+      <tbody id="bestCustomersAllTimeTable">
+      </tbody>
+      </table>
+    </div>
+
+    {# Most Active Teachers #}
+    <div role="tabpanel" class="tab-pane fade" id="topInstructors">
+      <h4 class="card-title">{% trans "Most Active Teachers of This Calendar Year" %}</h4>
+
+      <table class="table">
+      <thead>
+        <tr><th>{% trans "Name" %}</th><th>{% trans "# Classes Taught" %}</th></tr>
+      </thead>
+      <tbody id="mostActiveTeachersThisYearTable">
+      </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+  $.ajax({
+    dataType: "json",
+    url: '{% url "bestCustomersJSON" %}',
+    success: function(jsonData) {
+      var bestAll = jsonData.bestCustomersAllTime;
+      var bestTwelve = jsonData.bestCustomersLastTwelveMonths;
+      var topInstructors = jsonData.mostActiveTeachersThisYear;
+
+      var tableData = '';
+      bestAll.forEach(function(e) {
+          tableData += '<tr><td>' + e.first_name + ' ' + e.last_name + '</td><td>' + e.eventregistration__count + '</td></tr>';
+      });
+      $('#bestCustomersAllTimeTable').append(tableData);
+
+      var tableData = '';
+      bestTwelve.forEach(function(e) {
+          tableData += '<tr><td>' + e.first_name + ' ' + e.last_name + '</td><td>' + e.eventregistration__count + '</td></tr>';
+      });
+      $('#bestCustomersLastTwelveMonthsTable').append(tableData);
+
+      var tableData = '';
+      topInstructors.forEach(function(e) {
+          tableData += '<tr><td>' + e[0] + ' ' + e[1] + '</td><td>' + e[2] + '</td></tr>';
+      });
+      $('#mostActiveTeachersThisYearTable').append(tableData);
+    }
+  });
+});
+</script>
+{% endaddtoblock %}

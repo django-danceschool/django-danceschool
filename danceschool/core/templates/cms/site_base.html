@@ -20,7 +20,8 @@
     <title>{% block title %}{% page_attribute "page_title" %}{% endblock %}</title>
 
     {# Javascript Includes: Jquery and bootstrap go at the top to avoid issues with included scripts #}
-    <script type="text/javascript" src="{% static 'jquery/jquery-2.2.4.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'jquery/jquery.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'popper/popper.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
 
     {% block extra_head %}
@@ -72,7 +73,7 @@
           {% show_menu 0 100 100 100 "cms/navbar.html" %}
       {% endblock %}
 
-      <div class="container" id="wrapper">
+      <div class="container my-4" id="wrapper">
 
           {% block main %}
             {# Default to a single column page #}

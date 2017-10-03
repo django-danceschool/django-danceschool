@@ -11,22 +11,40 @@
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>{% trans "Students By Month of the Year" %}
-  <a class="btn btn-xs btn-default" href="{% url 'MonthlyPerformanceCSV' %}">{% trans "Download Data" %}</a>
-</h2>
+<h3 class="mt-4">{% trans "Students By Month of the Year" %}
+  <a class="btn btn-sm btn-outline-secondary" href="{% url 'MonthlyPerformanceCSV' %}">{% trans "Download Data" %}</a>
+</h3>
 
-<p>{% blocktrans %}Which months of the year are the most successful for us?  Click the legend at the bottom to show/hide previous years.{% endblocktrans %}</p>
+<p>{% blocktrans %}Which months of the year are the most successful?  Click the legend at the bottom to show/hide previous years.{% endblocktrans %}</p>
 
-<div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-series="SeriesRegistrations" class="btn btn-default active monthlyPerformanceButton">{% trans "Total Series Registrations" %}</button>
-  <button type="button" data-series="Registrations" class="btn btn-default monthlyPerformanceButton">{% trans "Total Registrations (unique students)" %}</button>
-  <button type="button" data-series="Hours" class="btn btn-default monthlyPerformanceButton">{% trans "Total Hours of Class" %}</button>
-  <button type="button" data-series="StudentHours" class="btn btn-default monthlyPerformanceButton">{% trans "Total Student-Hours" %}</button>  
-  <button type="button" data-series="AvgStudents" class="btn btn-default monthlyPerformanceButton">{% trans "Avg. Students/Hour" %}</button>
+<div class="card">
+
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" class="nav-link active monthlyPerformanceButton" data-series="SeriesRegistrations">{% trans "Total Series Registrations" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link monthlyPerformanceButton" data-series="Registrations">{% trans "Total Registrations (unique students)" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link monthlyPerformanceButton" data-series="Hours">{% trans "Total Hours of Class" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link monthlyPerformanceButton" data-series="StudentHours">{% trans "Total Student-Hours" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link monthlyPerformanceButton" data-series="AvgStudents">{% trans "Avg. Students/Hour" %}</a>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+
+    <div id="MonthlyPerformance"></div>
+
+  </div>
+
 </div>
-
-<div id="MonthlyPerformance"></div>
-
 
 {% addtoblock "js" %}
   <script src="{% static 'd3/d3.min.js' %}"></script>
@@ -57,7 +75,7 @@ $(document).ready(function(){
     }
   });
 
-  $('.monthlyPerformanceButton').click(function(){
+  $('.monthlyPerformanceButton').click(function(e){
     var series = $(this).attr('data-series')
 
     monthlyPerformanceChart.load({
@@ -73,7 +91,7 @@ $(document).ready(function(){
 
     $('.monthlyPerformanceButton').removeClass('active');
     $(this).addClass('active');
-
+    e.preventDefault();
   });
 
 });</script>

@@ -1,19 +1,19 @@
 {% load account socialaccount sekizai_tags crispy_forms_tags i18n %}
 
-<div class="panel panel-default" id="returning-customers-panel">
+<div class="card mb-4" id="returning-customers-panel">
   {% get_providers as socialaccount_providers %}
 
-  <div class="panel-heading"><h4 class="panel-title">{% trans "Returning Customers" %}</h4></div>
+  <div class="card-header">{% trans "Returning Customers" %}</div>
 
   {# Offer Sign-in or Signup #}
-  <div class="panel-body" id="ajax_login_choice">
+  <div class="card-body" id="ajax_login_choice">
 
     <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signin_form" aria-expanded="false" aria-controls="#signin_form" >{% trans "Sign In" %}</a>
     <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signup_form" aria-expanded="false" aria-controls="#signup_form">{% trans "Create An Account" %}</a>
   </div>
 
   {# Sign-in Form #}
-  <div class="panel-body panel-collapse collapse" id="signin_form">
+  <div class="card-body card-collapse collapse" id="signin_form">
     {% if socialaccount_providers %}
     <p>{% blocktrans with site.name as site_name %}Please sign in with one
     of your existing third party accounts. Or, <a href="#ajax_login_choice" id="signup_switch">sign up</a>
@@ -45,7 +45,7 @@
   </div>
 
   {# Signup Form #}
-  <div class="panel-body panel-collapse collapse" id="signup_form">
+  <div class="card-body card-collapse collapse" id="signup_form">
     <p>{% blocktrans %}Already have an account? Then please <a href="#ajax_login_choice" id="signin_switch">sign in</a>.{% endblocktrans %}</p>
 
     <form class="signup" id="ajax_signup_form" method="post" action="{% url 'account_signup' %}">

@@ -4,15 +4,15 @@
 {% block content %}
     <div>
 
-        <h1>{% trans "Add an Event or Reminder (non-Public)" %}</h1>
+        <h1 class="mt-5 mb-3">{% trans "Add an Event or Reminder (non-Public)" %}</h1>
 
         {% if form.errors %}
         <div class="alert alert-danger"><strong>{% trans "ERROR" %}:</strong><br />{{ form.errors }}</div>
         {% endif %}
 
         <form action="" method="post">
-            <div class="panel panel-default">
-                <div class="panel-body">
+            <div class="card">
+                <div class="card-body">
                 {% crispy form form.helper %}
                 {{ formset.management_form }}
                 {% for this_form in formset %}

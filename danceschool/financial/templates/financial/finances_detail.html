@@ -6,16 +6,16 @@
 {% trans "Other/Not Specified" as grouper_default %}
 
 <div class="row">
-<div class="col-md-12 col-sm-12 col-xs-12">
+<div class="col-12">
 
-	<a href="{% url 'financesByMonth' %}" class="btn btn-default">{% trans "Return to Monthly Summary" %}</a>
+	<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
 
 	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-default {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-default {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-default {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 <hr />
@@ -23,14 +23,14 @@
 </div>
 </div>
 
-<div class="row" style="margin-top: 30px;">
-<div class="col-md-12 col-sm-12 col-xs-12">
+<div class="row">
+<div class="col-12">
 
-<h1>{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
+<h1 class="my-4 text-center">{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
 
-<h2>{% trans "Period Summary" %}</h2>
+<h3 class="mt-5 mb-3">{% trans "Period Summary" %}</h3>
 
-<table class="table summary_table">
+<table class="table table-bordered">
 	<tr>
 		<th>{% trans "Total Revenues" %}</th><td>{{ currencySymbol }}{{ totalRevenues|floatformat:"2" }}</td>
 	</tr>
@@ -42,11 +42,11 @@
 	</tr>	
 </table>
 
-<h2>{% trans "Revenues" %}</h2>
+<h3 class="mt-5 mb-3">{% trans "Revenues" %}</h3>
 
 <table class="table table-hover">
-	<thead>
-		<tr class="active">
+	<thead class="thead-default">
+		<tr>
 			<th colspan="2">{% trans "Registrations:" %}</th>
 			<th>{{ currencySymbol }}{{ totalRegistrationRevenues|floatformat:"2" }} </th>
 		</tr>
@@ -56,7 +56,7 @@
 			<tbody>
 				<tr data-toggle="collapse" data-target="#accordionevent_{{ event.grouper.id }}" class="clickable">
 					<th colspan="2">
-						<span class="glyphicon glyphicon-plus"></span>{{ event.grouper|default:grouper_default }}
+						<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>{{ event.grouper|default:grouper_default }}
 					</th>
 					<td>{% get_item_by_key registrationRevenueEventTotals 'id' event.grouper.id as cat %} {{ currencySymbol }}{{ cat.event_net|default:registrationRevenueOtherTotal.event_net|floatformat:"2" }}</td>
 				</tr>
@@ -80,8 +80,8 @@
 
 {% if otherRevenueItems %}
 	<table class="table table-hover">
-		<thead>
-			<tr class="active">
+		<thead class="thead-default">
+			<tr>
 				<th colspan="2">{% trans "Other Revenues" %}:</th>
 				<th>{{ currencySymbol }}{{ totalOtherRevenues|floatformat:"2" }} </th>
 			</tr>
@@ -91,7 +91,7 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordionotherrevenue_{{ category.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span> {{ category.grouper|default:grouper_default }}
+							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper|default:grouper_default }}
 						</th>
 						<td>{% get_item_by_key revenueCategoryTotals 'id' category.grouper.id as cat %} {{ currencySymbol }}{{ cat.category_net|floatformat:"2" }}</td>
 					</tr>
@@ -116,12 +116,12 @@
 
 <hr />
 
-<h2>{% trans "Expenses" %}</h2>
+<h3 class="mt-5 mb-3">{% trans "Expenses" %}</h3>
 
 {% if instructionExpenseItems %}
 	<table class="table table-hover">
-		<thead>
-			<tr class="active">
+		<thead class="thead-default">
+			<tr>
 				<th colspan="2">{% trans "Instruction" %}:</th>
 				<th>{{ currencySymbol }}{{ totalInstructionExpenses|floatformat:"2" }}</th>
 			</tr>
@@ -131,7 +131,7 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordioninstructor_{{ teacher.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span>
+							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>
 							{% if teacher.grouper.first_name or teacher.grouper.last_name %}
 								{{ teacher.grouper.first_name }} {{ teacher.grouper.last_name }}
 							{% else %}
@@ -163,8 +163,8 @@
 
 {% if venueExpenseItems %}
 	<table class="table table-hover">
-		<thead>
-			<tr class="active">
+		<thead class="thead-default">
+			<tr>
 				<th colspan="2">{% trans "Venue Rental" %}:</th>
 				<th>{{ currencySymbol }}{{ totalVenueExpenses|floatformat:"2" }}</th>
 			</tr>
@@ -174,7 +174,7 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordionlocation_{{ venue.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span> {{ venue.grouper.name|default:grouper_default }}
+							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ venue.grouper.name|default:grouper_default }}
 						</th>
 						<td>{% get_item_by_key venueExpenseVenueTotals 'id' venue.grouper.id as cat %} {{ currencySymbol }}{{ cat.location_net|default:venueExpenseOtherTotal.location_net|floatformat:"2" }}</td>
 					</tr>
@@ -200,8 +200,8 @@
 
 {% if otherExpenseItems %}
 	<table class="table table-hover">
-		<thead>
-			<tr class="active">
+		<thead class="thead-default">
+			<tr>
 				<th colspan="2">{% trans "Other Expenses" %}:</th>
 				<th>{{ currencySymbol }}{{ totalOtherExpenses|floatformat:"2" }}</th>
 			</tr>
@@ -211,7 +211,7 @@
 				<tbody>
 					<tr data-toggle="collapse" data-target="#accordionotherexpense_{{ category.grouper.id }}" class="clickable">
 						<th colspan="2">
-							<span class="glyphicon glyphicon-plus"></span> {{ category.grouper.name|default:grouper_default }}
+							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper.name|default:grouper_default }}
 						</th>
 						<td>{% get_item_by_key expenseCategoryTotals 'id' category.grouper.id as cat %} {{ currencySymbol }}{{ cat.category_net|floatformat:"2" }}</td>
 					</tr>
@@ -241,17 +241,12 @@
 {% addtoblock "css" %}
 	<style type="text/css">
 		thead tr {
-			font-size: 1.2em;
+			font-size: 1.1em;
 		}
-		h1 {
-			text-align: center;
-		}
-		.summary_table {
-			border: 2px solid #ccc;
-		}
-		th .glyphicon {
+
+		th .fa {
 			font-size: 0.8em;
-			color: #666;
+			color: #888;
 		}
 	</style>
 {% endaddtoblock %}
@@ -260,9 +255,9 @@
 <script type="text/javascript">
 	$(document).ready(function() {
 		$('.collapse').on('shown.bs.collapse', function(){
-		$(this).prev('tbody').find(".glyphicon-plus").removeClass("glyphicon-plus").addClass("glyphicon-minus");
+		$(this).prev('tbody').find(".fa-plus-circle").removeClass("fa-plus-circle").addClass("fa-minus-circle");
 		}).on('hidden.bs.collapse', function(){
-		$(this).prev('tbody').find(".glyphicon-minus").removeClass("glyphicon-minus").addClass("glyphicon-plus");
+		$(this).prev('tbody').find(".fa-minus-circle").removeClass("fa-minus-circle").addClass("fa-plus-circle");
 		});
 	});
 </script>

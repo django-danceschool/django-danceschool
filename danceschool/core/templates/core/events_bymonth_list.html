@@ -2,7 +2,7 @@
 
 <div class="event_list {{ instance.cssClasses }}">
     {% if instance.title %}<h3>{{ instance.title }}</h3>{% endif %}
-    <ul class="unstyled">
+    <ul class="list-unstyled">
         {% for event in event_list %}
             {% ifchanged event.month %}
                 {% if not forloop.first %}</ul>{% endif %}
@@ -19,7 +19,7 @@
 		{% page_url 'calendar' as calendar_url %}
         {% url 'registration' as registration_url %}
 
-        {% if calendar_url %}<a href="{{ calendar_url }}"><span class="glyphicon glyphicon-calendar"></span>&nbsp;{% trans "View Calendar" %}</a>{% if registration_url %}&nbsp;/{% endif %}{% endif %}
+        {% if calendar_url %}<a href="{{ calendar_url }}"><i class="fa fa-calendar"></i>&nbsp;{% trans "View Calendar" %}</a>{% if registration_url %}&nbsp;/{% endif %}{% endif %}
 		{% if registration_url %}<a href="">{% trans "Register Now" %} &raquo;</a>{% endif %}
 	</p>
 </div>

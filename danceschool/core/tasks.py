@@ -23,6 +23,9 @@ def updateSeriesRegistrationStatus():
     '''
     from .models import Series
 
+    if not getConstant('general__enableCronTasks'):
+        return
+
     logger.info('Checking status of Series that are open for registration.')
 
     open_series = Series.objects.filter().filter(**{'registrationOpen': True})
@@ -40,6 +43,9 @@ def clearExpiredTemporaryRegistrations():
     delete instances that have been expired for one minute.
     '''
     from .models import TemporaryRegistration
+
+    if not getConstant('general__enableCronTasks'):
+        return
 
     if getConstant('registration__deleteExpiredTemporaryRegistrations'):
         TemporaryRegistration.objects.filter(expirationDate__lte=timezone.now() - timedelta(minutes=1)).delete()

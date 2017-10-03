@@ -5,11 +5,11 @@
 <div id="error_payment"></div>
 
 {# These div elements are the placeholder elements that are replaced by the SqPaymentForm's iframes. #}
-<div class="panel panel-default">
-  <div class="panel-heading">
-  {% trans "Pay with Square" %}
-  </div>
-  <div class="panel-body">
+<div class="card my-4">
+  <h6 class="card-header">
+  {% trans "Pay Now with Square" %}
+  </h6>
+  <div class="card-body">
     <label>{% trans "Card Number" %}</label>
     <div id="sq-card-number"></div>
     <label>{% trans "CVV" %}</label>
@@ -34,9 +34,8 @@
         <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
       {% endif %}
       <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
-      <input class="btn btn-primary" type="submit" onclick="requestCardNonce(event)">
+      <input class="btn btn-primary mt-2" type="submit" value="{% trans 'Pay Now' %}" onclick="requestCardNonce(event)">
     </form>
-
   </div>
 </div>
 

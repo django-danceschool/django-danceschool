@@ -2,7 +2,7 @@
 
 {% trans "Instructors" as title_default %}
 
-{% if instructor_list and "core.change_instructor" in perms %}<p><a class="btn btn-default" href="{% url 'admin:core_instructor_changelist' %}">{% trans "Edit Instructor Bios" %}</a></p>{% endif %}
+{% if instructor_list and "core.change_instructor" in perms %}<p><a class="btn btn-outline-secondary" href="{% url 'admin:core_instructor_changelist' %}">{% trans "Edit Instructor Bios" %}</a></p>{% endif %}
 
 {% if instructor_list and list_title %}
     <h2>{{ list_title|default:title_default }}</h2>
@@ -21,7 +21,7 @@
         {% if teacher.availableForPrivates %}<small><a href="mailto:{{ teacher.publicEmail }}">{% trans "schedule a private" %}</a></small>{% endif %}
     </h3>
 
-    <img class="pull-left instructor-bio-photo" src="{% if teacher.image %}{% thumbnail teacher.image thumbnail_dimensions|default:'133x133' crop %}{% endif %}" width="{{ thumbnail.width|default:'133' }}" />
+    <img class="float-left instructor-bio-photo" src="{% if teacher.image %}{% thumbnail teacher.image thumbnail_dimensions|default:'133x133' crop %}{% endif %}" width="{{ thumbnail.width|default:'133' }}" />
     <div class="post-body">
         {% render_model teacher "bio" "" "" "safe" %}
     </div>

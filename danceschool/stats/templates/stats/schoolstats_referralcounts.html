@@ -4,20 +4,36 @@
   <link href="{% static 'c3/c3.min.css' %}" rel="stylesheet" type="text/css">
 {% endaddtoblock %}
 
-<h2>{% trans "Website Referrals" %}</h2>
+<h3 class="mt-4">{% trans "Website Referrals" %}</h3>
 
 <p>{% blocktrans %}When a customer clicks on a Facebook link, a mailing list link, etc., we can send them to a special URL that allows us to track where they came from.  When those customers register for classes, that referral information gets attached to their registration.  This graph shows how many
 registrations have used each referral code (i.e. how many students are registering by clicking on Facebook pages, etc.){% endblocktrans %}</p>
 
-<div class="btn-group" role="group" aria-label="...">
-  <button type="button" data-startDate="{{ limitMonthDates.1 }}" class="btn btn-default active showReferralCountsButton">{% trans "Last Month" %}</button>
-  <button type="button" data-startDate="{{ limitMonthDates.3 }}" class="btn btn-default showReferralCountsButton">{% trans "Last 3 Months" %}</button>
-  <button type="button" data-startDate="{{ limitMonthDates.6 }}" class="btn btn-default showReferralCountsButton">{% trans "Last 6 Months" %}</button>
-  <button type="button" data-startDate="{{ limitMonthDates.12 }}" class="btn btn-default showReferralCountsButton">{% trans "Last 12 Months" %}</button>
-  <button type="button" class="btn btn-default showReferralCountsButton">{% trans "All Time" %}</button>
-</div>
+<div class="card">
 
-<div id="ReferralCounts"></div>
+  <div class="card-header">
+    <ul class="nav nav-tabs card-header-tabs">
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.1 }}" class="nav-link showReferralCountsButton active">{% trans "Last Month" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.3 }}" class="nav-link showReferralCountsButton">{% trans "Last 3 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.6 }}" class="nav-link showReferralCountsButton">{% trans "Last 6 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showReferralCountsButton">{% trans "Last 12 Months" %}</a>
+      </li>
+      <li class="nav-item">
+        <a href="#" class="nav-link showReferralCountsButton">{% trans "All Time" %}</a>
+      </li>
+    </ul>
+  </div>
+  <div class="card-body">
+    <div id="ReferralCounts"></div>
+  </div>
+</div>
 
 {% addtoblock "js" %}
   <script src="{% static 'd3/d3.min.js' %}"></script>
@@ -47,7 +63,7 @@ $(document).ready(function(){
     }
   });
 
-  $('.showReferralCountsButton').click(function() {
+  $('.showReferralCountsButton').click(function(e) {
       var startDate = $(this).attr('data-startDate');
 
       referralCountsChart.load({
@@ -62,7 +78,7 @@ $(document).ready(function(){
 
       $('.showReferralCountsButton').removeClass('active');
       $(this).addClass('active');
-
+      e.preventDefault();
   });
 
 });

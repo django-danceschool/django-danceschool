@@ -9,16 +9,13 @@ from datetime import datetime, timedelta
 
 from .models import InstructorListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, Instructor, Event, Series, PublicEvent, Location
 from .mixins import PluginTemplateMixin
+from .registries import plugin_templates_registry, PluginTemplateBase
 
 
 class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
     model = InstructorListPluginModel
     name = _('Set of Instructor Images or Bios')
     render_template = 'core/instructor_image_set.html'
-    template_choices = [
-        ('core/instructor_image_set.html',_('Instructor Images')),
-        ('core/instructor_list.html', _('Instructor Bios with Images')),
-    ]
     cache = True
     module = _('Staff')
 
@@ -68,7 +65,6 @@ class LocationListPlugin(PluginTemplateMixin, CMSPluginBase):
     model = LocationListPluginModel
     name = _('Information on All Public Locations')
     render_template = 'core/location_directions.html'
-    template_choices = [('core/location_directions.html',_('Directions for Each Location'))]
     module = _('Locations')
 
     def render(self, context, instance, placeholder):
@@ -82,7 +78,6 @@ class LocationPlugin(PluginTemplateMixin, CMSPluginBase):
     model = LocationPluginModel
     name = _('Individual Location Information')
     render_template = 'core/location_directions.html'
-    template_choices = [('core/location_directions.html',_('Directions for Each Location'))]
     cache = True
     module = _('Locations')
 
@@ -98,11 +93,7 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
     name = _('List of Events')
     cache = True
     module = _('Events')
-
     render_template = 'core/events_bymonth_list.html'
-    template_choices = [
-        ('core/events_bymonth_list.html',_('Default List of Events By Month')),
-    ]
 
     fieldsets = (
         (None, {
@@ -180,3 +171,38 @@ plugin_pool.register_plugin(LocationPlugin)
 plugin_pool.register_plugin(LocationListPlugin)
 plugin_pool.register_plugin(EventListPlugin)
 plugin_pool.register_plugin(PublicCalendarPlugin)
+
+
+@plugin_templates_registry.register
+class InstructorImageSetTemplate(PluginTemplateBase):
+    plugin = 'InstructorListPlugin'
+    template_name = 'core/instructor_image_set.html'
+    description = _('Instructor Images')
+
+
+@plugin_templates_registry.register
+class InstructorListTemplate(PluginTemplateBase):
+    plugin = 'InstructorListPlugin'
+    template_name = 'core/instructor_list.html'
+    description = _('Instructor Bios with Images')
+
+
+@plugin_templates_registry.register
+class LocationDirectionsTemplate(PluginTemplateBase):
+    plugin = 'LocationListPlugin'
+    template_name = 'core/location_directions.html'
+    description = _('Directions for Each Location')
+
+
+@plugin_templates_registry.register
+class SingleLocationDirectionsTemplate(PluginTemplateBase):
+    plugin = 'LocationPlugin'
+    template_name = 'core/location_directions.html'
+    description = _('Directions for This Location')
+
+
+@plugin_templates_registry.register
+class EventListPluginTemplate(PluginTemplateBase):
+    plugin = 'EventListPlugin'
+    template_name = 'core/events_bymonth_list.html'
+    description = _('Default List of Events By Month')

@@ -51,6 +51,7 @@ setup(
         'intervaltree>=2.1.0',
         'paypalrestsdk>=1.12.0',
         'peewee>=2.10.1',
+        'persisting-theory>=0.2.1',
         'Pillow>=3.4.2',
         'python-dateutil>=2.4.1',
         'pytz>=2017.2',

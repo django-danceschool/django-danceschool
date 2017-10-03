@@ -26,35 +26,10 @@ class SchoolStatsView(PermissionRequiredMixin, TemplateView):
 
         (totalStudents,numSeries,totalSeriesRegs,totalTime) = getGeneralStats(request)
 
-        bestCustomersLastTwelveMonths = Customer.objects.values(
-            'first_name','last_name'
-        ).filter(**{
-            'eventregistration__registration__dateTime__gte': ensure_timezone(datetime(timezone.now().year - 1,timezone.now().month,timezone.now().day)),
-            'eventregistration__dropIn':False,'eventregistration__cancelled':False
-        }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
-
-        bestCustomersAllTime = Customer.objects.values(
-            'first_name','last_name'
-        ).filter(**{
-            'eventregistration__dropIn':False,
-            'eventregistration__cancelled':False
-        }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:20]
-
-        mostActiveTeachersThisYear = SeriesTeacher.objects.filter(
-            event__year=timezone.now().year
-        ).exclude(
-            staffMember__instructor__status=Instructor.InstructorStatus.guest
-        ).values_list(
-            'staffMember__firstName','staffMember__lastName'
-        ).annotate(Count('staffMember')).order_by('-staffMember__count')
-
         context_data.update({
             'totalStudents':totalStudents,
             'numSeries':numSeries,
             'totalSeriesRegs':totalSeriesRegs,
             'totalTime':totalTime,
-            'bestCustomersAllTime': bestCustomersAllTime,
-            'bestCustomersLastTwelveMonths': bestCustomersLastTwelveMonths,
-            'mostActiveTeachersThisYear': mostActiveTeachersThisYear,
         })
         return context_data

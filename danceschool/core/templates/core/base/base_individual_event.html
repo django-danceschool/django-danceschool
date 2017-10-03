@@ -24,45 +24,49 @@
 {% block body_id %}classes{% endblock %}
 
 {% block content %}
-	<div class='post'>
-	<div class="individualevent">
-	<h2>{{ eventset.0.name }}</h2>
+	<div class='post individualevent'>
+	<h1 class="my-4">{{ eventset.0.name }}</h1>
 
 	{% for event in eventset %}
-		<h3>{{ event.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ event.eventoccurrence_set.all.first.endTime|date:'h:i A' }}</h3>
+	<div class="row">
+		<div class="col-md-4 order-2">
+			<p>
+			{% if event.registrationOpen %}
+				<a class="btn btn-primary btn-lg" href="{% url 'registration' %}">{% trans "Register for this event!" %}</a>
+			{% endif %}
+			</p>
 
-		<p class='address'>
-		<strong>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</strong><br />
-		{{ event.location.address }}<br />
-		{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
-		<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ event.location.name|slugify }}">{% trans "Map this" %}</a>
-		</p>
+			{% if 'core.change_event' in perms %}
+			<p><a class="btn btn-outline-secondary" href="{% url 'admin:core_event_change' event.id %}">{% trans "Edit Event Details" %}</a></p>
+			{% endif %}
+			{% if 'core.view_registration_summary' in perms and event.registrationEnabled %}
+			<p><a class="btn btn-outline-secondary" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
+			{% endif %}
+		</div>
+		<div class="col-md-8 order-1">
+			<h3>{{ event.eventoccurrence_set.all.first.startTime|date:'l, F d, h:i A' }} - {{ event.eventoccurrence_set.all.first.endTime|date:'h:i A' }}</h3>
 
-		<p>
-		{% if event.registrationOpen %}
-			<a class="btn btn-primary" href="{% url 'registration' %}">{% trans "Register for this event!" %}</a>
-		{% else %}
-			{% trans "Registration for this event is not required." %}</a>
-		{% endif %}
-		</p>
+			<p class='address'>
+			<strong>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</strong><br />
+			{{ event.location.address }}<br />
+			{{ event.location.city }}, {{ event.location.state }} {{ event.location.zip }}<br />
+			<a href="{% page_url 'directions' as directions_url %}{{ directions_url }}#{{ event.location.name|slugify }}">{% trans "Map this" %}</a>
 
-		{% if 'core.change_event' in perms %}
-		<p><a class="btn btn-default" href="{% url 'admin:core_event_change' event.id %}">{% trans "Edit Event Details" %}</a></p>
-		{% endif %}
-		{% if 'core.view_registration_summary' in perms and event.registrationEnabled %}
-		<p><a class="btn btn-default" href="{% url 'viewregistrations' event.id %}">{% trans "View Registrations" %}</a></p>
-		{% endif %}
+			{% if not event.registrationOpen %}
+				<p class="font-italic">{% trans "Registration for this event is not required." %}</p>
+			{% endif %}
+			</p>
+		</div>
+	</div>
 
+	<hr />
 
-		<hr />
 	{% endfor %}
 	</div>
 
 	<h3>{% trans "About this Event" %}</h3>
 	<div class='eventDescription'>
 		{{ eventset.0.description|safe }}
-	</div>
-
 	</div>
 
     {% block footer %}{{ block.super }}{% endblock %}
