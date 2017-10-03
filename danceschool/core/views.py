@@ -341,8 +341,10 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
             this_item.adjustments = -1 * float(item_request[1])
             this_item.save()
 
+            add_taxes = this_item.taxes if self.invoice.buyerPaysSalesTax else 0
+
             # If the refund is a complete refund, then cancel the EventRegistration entirely.
-            if abs(this_item.total + this_item.adjustments) < 0.01 and this_item.finalEventRegistration:
+            if abs(this_item.total + add_taxes + this_item.adjustments) < 0.01 and this_item.finalEventRegistration:
                 this_item.finalEventRegistration.cancelled = True
                 this_item.finalEventRegistration.save()
 

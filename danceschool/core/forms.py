@@ -598,10 +598,12 @@ class RefundForm(forms.ModelForm):
             initial = False
             if item.finalEventRegistration:
                 initial = item.finalEventRegistration.cancelled
+            item_max = item.total + item.taxes if this_invoice.buyerPaysSalesTax else item.total
+
             self.fields["item_cancelled_%s" % item.id] = forms.BooleanField(
                 label=_('Cancelled'),required=False,initial=initial)
             self.fields['item_refundamount_%s' % item.id] = forms.FloatField(
-                label=_('Refund Amount'),required=False,initial=(-1) * item.adjustments, min_value=0, max_value=item.total)
+                label=_('Refund Amount'),required=False,initial=(-1) * item.adjustments, min_value=0, max_value=item_max)
 
         self.fields['comments'] = forms.CharField(
             label=_('Explanation/Comments (optional)'),required=False,

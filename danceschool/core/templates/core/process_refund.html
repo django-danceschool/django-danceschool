@@ -87,6 +87,9 @@
 			<th>{% trans "Item Name" %}</th>
 			<th>{% trans "Price (Gross)" %}</th>
 			<th>{% trans "Price (Net)" %}</th>
+			{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
+				<th>{% trans "Taxes" %}</th>
+			{% endif %}
 			<th>{% trans "Cancelled" %}</th>
 			<th>{% trans "Refunds/Adjustments" %}</th>
 		</tr>
@@ -98,6 +101,9 @@
 			<td>{{ item.name }}</td>
 			<td id="item_price_{{ item.id }}">{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
 			<td id="item_netPrice_{{ item.id }}">{{ currencySymbol }}{{ item.total|floatformat:2 }}</td>
+			{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
+				<td id="item_taxes_{{ item.id }}">{{ currencySymbol }}{{ item.taxes|floatformat:2 }}</td>
+			{% endif %}
 			<td>{% get_field_for_object 'item_cancelled' item.id form as field_cancelled %}{{ field_cancelled }}</td>
 			<td>{% get_field_for_object 'item_refundamount' item.id form as field_refundAmount %}{{ field_refundAmount }} {{ field_cancelled.errors }}{{ field_refundAmount.errors }}</td>
 		</tr>
@@ -139,9 +145,15 @@
 			if (this.checked) {
 				var thisType = this.id.split("_")[1];
 				var thisId = this.id.split("_")[3];
-				var netPrice = parseFloat($("#" + thisType + "_netPrice_" + thisId).html().replace("{{ currencySymbol }}",""))
+				var netPrice = parseFloat($("#" + thisType + "_netPrice_" + thisId).html().replace("{{ currencySymbol }}",""));
+				{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
+					var taxes = parseFloat($("#" + thisType + "_taxes_" + thisId).html().replace("{{ currencySymbol }}",""));
+					var refundable = netPrice + taxes;
+				{% else %}
+					var refundable = netPrice;
+				{% endif %}
 
-				$("#id_" + thisType + "_refundamount_" + thisId).val(netPrice.toFixed(2))
+				$("#id_" + thisType + "_refundamount_" + thisId).val(refundable.toFixed(2));
 			}
 
 
@@ -162,10 +174,19 @@
 				var thisType = n.id.split("_")[1];
 				var thisId = n.id.split("_")[3];
 				var thisRefund = parseFloat($("#id_" + thisType + "_refundamount_" + thisId).val());
+				var netPrice = parseFloat($("#" + thisType + "_netPrice_" + thisId).html().replace("$",""));
 
-				if (thisRefund != parseFloat($("#" + thisType + "_netPrice_" + thisId).html().replace("$",""))) {
+				{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
+					var taxes = parseFloat($("#" + thisType + "_taxes_" + thisId).html().replace("{{ currencySymbol }}",""));
+					var refundable = netPrice + taxes;
+				{% else %}
+					var refundable = netPrice;
+				{% endif %}
+
+				if (thisRefund != refundable) {
 					alertFlag = true;
 				}
+
 			});
 
 			if (alertFlag == true) {
