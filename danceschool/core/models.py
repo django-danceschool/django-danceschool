@@ -1181,11 +1181,13 @@ class Series(Event):
         super(Series,self).clean()
 
     def __str__(self):
-        if self.month and self.year:
+        if self.month and self.year and self.classDescription:
             # In case of unsaved series, month and year are not yet set.
             return month_name[self.month or 0] + ' ' + str(self.year) + ": " + self.classDescription.title
-        else:
+        elif self.classDescription:
             return str(_('Class Series: %s' % self.classDescription.title))
+        else:
+            return str(_('Class Series'))
 
     class Meta:
         verbose_name = _('Class series')
