@@ -15,7 +15,6 @@ from squareconnect.apis.transactions_api import TransactionsApi
 import logging
 from datetime import timedelta
 import json
-from json.decoder import JSONDecodeError
 from base64 import b64decode
 import binascii
 from urllib.parse import unquote
@@ -226,7 +225,7 @@ def processPointOfSalePayment(request):
                 metadata = json.loads(b64decode(unquote(stateData).encode()).decode())
             else:
                 metadata = {}
-        except (TypeError, JSONDecodeError, binascii.Error):
+        except (TypeError, ValueError, binascii.Error):
             logger.error('Invalid metadata passed from Square app.')
             messages.error(
                 request,
@@ -265,7 +264,7 @@ def processPointOfSalePayment(request):
             else:
                 metadata = {}
 
-        except (TypeError, JSONDecodeError, binascii.Error):
+        except (TypeError, ValueError, binascii.Error):
             logger.error('Invalid metadata passed from Square app.')
             messages.error(
                 request,
