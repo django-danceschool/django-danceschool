@@ -1,6 +1,20 @@
 Version History
 ===============
 
+0.5.0 - October 3, 2017
+-----------------------
+
+- **New:** All templates have been overhauled to use the latest Bootstrap 4 beta.  This will ensure long-term compatibility of your website design.
+- **New:** Discounts can now be customer specific, so that they will only be available to certain customers.
+- **New:** Additional stats charts are now available, including information on the usage of discounts and vouchers, details regarding time of advance registration, and details on multi-class registrations.
+- Improved the templates for stats charts for more consistent formatting using Bootstrap 4 cards.
+- Fixed issue with refunding sales tax for complete refunds.
+- Fixed issue with footer templates repeating on certain pages.  Footer is now a static placeholder by default for easy editing.
+- Registration page templates now use Bootstrap 4 cards for easier themeing and configuration
+- Added management tasks for all cron jobs for easier Heroku integration
+- Numerous small bug fixes and template improvements.
+- 
+
 0.4.1 - Septmeber 19, 2017
 --------------------------
 
