@@ -723,7 +723,7 @@ class EmailContactForm(forms.Form):
         return self.cleaned_data
 
     class Media:
-        js = ('js/emailcontact_sendToSet.js','js/emailcontact_ajax.js','js/emailcontact_htmlmessage.js')
+        js = ('js/emailcontact_sendToSet.js','js/emailcontact_ajax.js')
 
 
 class SeriesTeacherChoiceField(forms.ModelChoiceField):
