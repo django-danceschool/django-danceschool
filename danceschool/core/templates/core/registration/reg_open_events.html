@@ -10,9 +10,8 @@
         <h3 class="mt-4">{{ month.grouper|readable_month }} {% trans "Events" %}</h3>
 		<div class="reg-event-group mt-4">
 			{% for event in month.list %}
-				<div class="card reg-weekday-group">
-					<h3 class="card-header reg-weekday-header">{% if event.numOccurrences > 1 %}{% trans "Begins" %} {% endif %}{{ event.firstOccurrenceTime|date:"N j" }}</h3>
-					
+				<h3 class="reg-weekday-header">{% if event.numOccurrences > 1 %}{% trans "Begins" %} {% endif %}{{ event.firstOccurrenceTime|date:"N j" }}</h3>
+				<div class="card reg-weekday-group">					
 					<a name="{{ event.slug }}"></a>
 					
 					<h5 class="card-header reg-event-header">
