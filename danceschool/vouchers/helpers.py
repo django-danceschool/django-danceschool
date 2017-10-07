@@ -81,42 +81,40 @@ def createReferrerVoucher(customer):
 
 def referralVoucherExists(customer):
 
-    cvs = CustomerVoucher.objects.filter(customer=customer)
+    for cv in CustomerVoucher.objects.filter(customer=customer):
+        vrd = VoucherReferralDiscount.objects.filter(referrerVoucher=cv.voucher).first()
+        if vrd:
+            return vrd
 
-    for cv in cvs:
-
-        vrds = VoucherReferralDiscount.objects.filter(referrerVoucher=cv.voucher)
-        if len(vrds) > 0:
-            return True,vrds[0]
-
-    return False,[]
-
-
-def ensureReferralVouchersExist(customer,referreeDiscount=getConstant('referrals__refereeDiscount'),referrerDiscount=getConstant('referrals__referrerDiscount')):
+def ensureReferralVouchersExist(customer):
     # is there a referral voucher for this person?
     # Find all CustomerVouchers for this person
-    exists,vrd = referralVoucherExists(customer)
+    vrd = referralVoucherExists(customer)
 
-    if not exists:
+    referreeDiscount = getConstant('referrals__refereeDiscount')
+    referrerDiscount = getConstant('referrals__referrerDiscount')
+
+    if vrd:
+        vrd.amount = referrerDiscount
+        vrd.save()
+
+        vrd.referreeVoucher.maxAmountPerUse = referreeDiscount
+        vrd.referreeVoucher.save()
+    else:
         name = _('Referral: %s' % customer.fullName)
 
         # create the referree voucher
-        referreeVoucher = createReferreeVoucher(name,referreeDiscount)
+        referreeVoucher = createReferreeVoucher(name, referreeDiscount)
 
         # create the referrer voucher
         referrerVoucher = createReferrerVoucher(customer)
 
         # create the thing that ties them together
-        vrd = VoucherReferralDiscount(referrerVoucher=referrerVoucher,
-                                      referreeVoucher=referreeVoucher,
-                                      referrerBonus=referrerDiscount)
-        vrd.save()
-
-    # TODO: Do I need to save?
-    vrd.amount = referrerDiscount
-    vrd.save()
-    vrd.referreeVoucher.maxAmountPerUse = referreeDiscount
-    vrd.referreeVoucher.save()
+        vrd = VoucherReferralDiscount.objects.get_or_create(
+            referrerVoucher=referrerVoucher,
+            referreeVoucher=referreeVoucher,
+            referrerBonus=referrerDiscount
+        )
 
     return vrd
 
