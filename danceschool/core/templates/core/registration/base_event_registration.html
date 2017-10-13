@@ -54,9 +54,7 @@
     {% endblock %}
     
     <div id="classes">
-        <div id="validation">
-            {{ form.non_field_errors }}
-        </div>
+        <div class="alert alert-danger" id="validation">{{ form.non_field_errors }}</div>
 
         {# List of Category-separated Series #}
         {% block category_separate_series %}
@@ -104,6 +102,8 @@
         	{% include "core/registration/reg_closed_series.html" %}
 		{% endblock %}
 
+		<input class="btn btn-lg btn-outline-secondary mt-4" type="submit" value="{% trans 'Register now' %} &raquo;" />
+
     </div>
 </form>
 {% endblock %}
@@ -130,6 +130,17 @@
 		</script>
 	{% endaddtoblock %}
 {% endblock %}
+
+{% block content_css %}
+	{% addtoblock "css" %}
+	<style>
+		#validation:empty {
+			display: none;
+		}
+	</style>
+	{% endaddtoblock %}
+{% endblock %}
+
 
 {% endif %}
 
