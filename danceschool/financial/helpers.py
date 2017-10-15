@@ -309,9 +309,9 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                 category__isnull=False).values_list('category__id',flat=True))
             eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
-        if rule.advanceDays:
+        if rule.advanceDays is not None:
             event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
-        if rule.priorDays:
+        if rule.priorDays is not None:
             event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
         if rule.startDate:
             event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(

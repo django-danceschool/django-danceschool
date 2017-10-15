@@ -96,13 +96,15 @@ def getBestDiscount(sender,**kwargs):
 
         # If the category has changed, then the new net_allocated_prices and the
         # new net_precategory price are whatever was found to be best in the last category.
-        if (discount.code.category != last_category) and best_discounts:
-            # Since this is an OrderedDict, we can get the last element of the dict from
-            # the iterator, which is the last category for which there was a valid discount.
-            last_discount = best_discounts.get(next(reversed(best_discounts)))
-            net_allocated_prices = last_discount.net_allocated_prices
-            net_precategory_price = last_discount.net_price
+        if (discount.code.category != last_category):
             last_category = discount.code.category
+
+            if best_discounts:
+                # Since this is an OrderedDict, we can get the last element of the dict from
+                # the iterator, which is the last category for which there was a valid discount.
+                last_discount = best_discounts.get(next(reversed(best_discounts)))
+                net_allocated_prices = last_discount.net_allocated_prices
+                net_precategory_price = last_discount.net_price
 
         # The second item in each tuple is now adjusted, so that each item that is wholly or partially
         # applied against the discount will be wholly (value goes to 0) or partially subtracted from the
