@@ -99,7 +99,7 @@ def getBestDiscount(sender,**kwargs):
         if (discount.code.category != last_category) and best_discounts:
             # Since this is an OrderedDict, we can get the last element of the dict from
             # the iterator, which is the last category for which there was a valid discount.
-            last_discount = next(reversed(best_discounts))
+            last_discount = best_discounts.get(next(reversed(best_discounts)))
             net_allocated_prices = last_discount.net_allocated_prices
             net_precategory_price = last_discount.net_price
             last_category = discount.code.category
