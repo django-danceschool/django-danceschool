@@ -289,13 +289,6 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
         if staffCategory:
             eventstaff_filter = Q(staffMember=staffMember) & Q(category=staffCategory)
             replacements['type'] = staffCategory.name
-        else:
-            # We don't want to generate duplicate expenses when there is both a category-limited
-            # rule and a non-limited rule for the same person, so we have to construct the list
-            # of categories that are to be excluded if no category is specified by this rule.
-            coveredCategories = list(staffMember.expenserules.filter(
-                category__isnull=False).values_list('category__id',flat=True))
-            eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
             # For standard categories of staff, map the EventStaffCategory to
             # an ExpenseCategory using the stored constants.  Otherwise, the
@@ -307,6 +300,14 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                 getConstant('general__eventStaffCategorySubstitute')
             ]:
                 expense_category = getConstant('financial__classInstructionExpenseCat')
+
+        else:
+            # We don't want to generate duplicate expenses when there is both a category-limited
+            # rule and a non-limited rule for the same person, so we have to construct the list
+            # of categories that are to be excluded if no category is specified by this rule.
+            coveredCategories = list(staffMember.expenserules.filter(
+                category__isnull=False).values_list('category__id',flat=True))
+            eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
         if rule.advanceDays:
             event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
