@@ -1,0 +1,102 @@
+{% load danceschool_tags i18n %}
+
+<div class="card p-4">
+  <div class="card-body reg-event"
+       id="reg-event-{{ event.id }}">
+    <div class="row">
+      <div class="col-md-12">
+        <a name="{{ event.slug }}">
+          <h3 class="card-title reg-event-title">{{ event.name }}</h3>
+        </a>
+        <div class="card-subtitle text-muted reg-event-details">
+          {% if event.teachers %}
+            {% trans "with" %} {{ event.teachers|join:" &amp; " }}
+          {% endif %}
+          at
+          {% if directions_url %}
+            <a href="{{ directions_url }}#{{ event.location.name|slugify }}">
+              {{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+            </a>
+          {% else %}
+            {{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+          {% endif %}
+
+          <div class="card-text reg-event-dates">
+            <small>
+              {% readable_weekday weekday.grouper %}s {{ event.startTime|date:"g:i A" }}
+              - {{ event.endTime|date:"g:i A" }} —
+              {% for occurrence in event.eventoccurrence_set.all %}
+                {{ occurrence.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
+              {% endfor %}
+            </small>
+          </div>
+
+          {% if event.url %}
+            <small><a href="{{ event.url }}">{% trans "more info" %}</a></small>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-9 col-md-8">
+        {{ event.classDescription.description }}
+        <div class="card-text reg-event-pricing mt-4">
+          {% if event.pricingTier and event.registrationOpen %}
+            <a class="pricingPopover seriestype"
+               data-container="body"
+               data-toggle="popover"
+               data-placement="bottom"
+               title="<strong>{{ event.pricingTier.name }}</strong>"
+               data-html="true"
+               href="#"
+               data-trigger="hover"
+               data-content="<em>{% trans 'Pre-Registered' %}</em><br />
+
+
+                       {{ currencySymbol }}{{ event.pricingTier.onlinePrice|floatformat:2 }}<br /><em>{% trans 'At the Door' %}</em><br />
+                       {{ currencySymbol }}{{ event.pricingTier.doorPrice|floatformat:2 }}"
+            >{{ event.pricingTier.name }}</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-auto ml-auto pull-right reg-event-register">
+        {% if event.registrationOpen %}
+          {# if event registration is still open then show the registration form#}
+          {% get_field_for_object 'event' event.id form as field %}
+          {{ field }}
+          {% if validationStr %}
+            <div class="alert alert-danger">
+              {{ field.errors }}
+            </div>
+          {% endif %}
+        {% else %}
+          {# else show the number of registrants#}
+          <ul class="list-unstyled">
+            {% for role in event.availableRoles %}
+              <li>{{ role.pluralName }} ({% numRegisteredForRole event role %} {% trans "registered" %})</li>
+            {% empty %}
+              <li>({{ event.numRegistered }} {% trans "registered" %})</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+      {% if event.soldOut %}
+        <div class="col-12 reg-event-soldout">
+          <h5 class="card-title">{% trans "Sold Out!" %}</h5>
+          <h6 class="card-subtitle">{% trans "Please join us for another class, another month, or schedule a private lesson!" %}</h6>
+        </div>
+      {% endif %}
+      {% if perms.core.override_register_closed %}
+        <div class="col-auto">
+          {# Include the front desk admin button #}
+
+          {% get_field_for_object 'event' event.id form as field %}
+          {{ field }}
+          {% if validationStr %}
+            <div class="alert alert-danger">
+              {{ field.errors }}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

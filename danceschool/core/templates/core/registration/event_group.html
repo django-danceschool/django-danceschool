@@ -1,0 +1,24 @@
+{% load danceschool_tags i18n %}
+
+
+<h2 class="mt-4 reg-section-header">{% trans group_header %}</h2>
+<hr />
+{% regroup group|dictsort:"month" by month as group_list %}
+{% for month in group_list %}
+  <div class="reg-section">
+    <h3 class="mt-4">{{ month.grouper|readable_month }} {% trans group_section %}</h3>
+    <div class="reg-event-group mt-4">
+      {% regroup month.list|dictsort:"weekday" by weekday as weekday_list %}
+      {% for weekday in weekday_list %}
+
+        <h3 class="reg-weekday-header">{% readable_weekday weekday.grouper %}s</h3>
+        <div class="card reg-weekday-group">
+
+          {% for event in weekday.list %}
+            {%  include "core/registration/event_card.html" with event=event %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endfor %}
