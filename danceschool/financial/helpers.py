@@ -160,9 +160,15 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
         event_locfilter = Q(room=venue) if isinstance(venue,Room) else Q(location=venue)
 
         if rule.advanceDays:
-            event_timefilters = event_timefilters & Q(startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+            if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
+                event_timefilters = event_timefilters & Q(endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+            elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
+                event_timefilters = event_timefilters & Q(startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays:
-            event_timefilters = event_timefilters & Q(startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+            if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
+                event_timefilters = event_timefilters & Q(endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+            elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
+                event_timefilters = event_timefilters & Q(startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
         if rule.startDate:
             event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
                 year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
@@ -195,13 +201,16 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
                 # are allocated directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
                 replacements['name'] = event.name
+                replacements['dates'] = event.startTime.strftime('%Y-%m-%d')
+                if event.startTime.strftime('%Y-%m-%d') != event.endTime.strftime('%Y-%m-%d'):
+                    replacements['dates'] += ' %s %s' % (_('to'),event.endTime.strftime('%Y-%m-%d'))
 
                 ExpenseItem.objects.create(
                     event=event,
                     category=rental_category,
                     payToLocation=loc,
                     expenseRule=rule,
-                    description='%(type)s %(of)s %(location)s %(for)s: %(name)s' % replacements,
+                    description='%(type)s %(of)s %(location)s %(for)s: %(name)s, %(dates)s' % replacements,
                     submissionUser=submissionUser,
                     total=event.duration * rule.rentalRate,
                     accrualDate=event.startTime,
@@ -310,9 +319,15 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
             eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
         if rule.advanceDays is not None:
-            event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+            if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
+                event_timefilters = event_timefilters & Q(event__endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+            elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
+                event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays is not None:
-            event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+            if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
+                event_timefilters = event_timefilters & Q(event__endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+            elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
+                event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
         if rule.startDate:
             event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
                 year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
@@ -337,12 +352,15 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                 # are allocated directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
                 replacements['event'] = staffer.event.name
+                replacements['dates'] = staffer.event.startTime.strftime('%Y-%m-%d')
+                if staffer.event.startTime.strftime('%Y-%m-%d') != staffer.event.endTime.strftime('%Y-%m-%d'):
+                    replacements['dates'] += ' %s %s' % (_('to'),staffer.event.endTime.strftime('%Y-%m-%d'))
 
                 params = {
                     'event': staffer.event,
                     'category': expense_category,
                     'expenseRule': rule,
-                    'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s' % replacements,
+                    'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
                     'submissionUser': submissionUser,
                     'hours': staffer.netHours,
                     'wageRate': rule.rentalRate,

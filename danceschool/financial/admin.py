@@ -235,7 +235,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
 class LocationRentalInfoInline(admin.StackedInline):
     model = LocationRentalInfo
     extra = 1
-    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'),'disabled')
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','advanceDaysReference','priorDays','priorDaysReference'),'disabled')
     classes = ('collapse',)
 
     def has_add_permission(self, request, obj=None):
@@ -245,7 +245,7 @@ class LocationRentalInfoInline(admin.StackedInline):
 class RoomRentalInfoInline(admin.StackedInline):
     model = RoomRentalInfo
     extra = 1
-    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'),'disabled')
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','advanceDaysReference','priorDays','priorDaysReference'),'disabled')
     classes = ('collapse',)
 
     def has_add_permission(self, request, obj=None):
@@ -256,7 +256,7 @@ class StaffMemberWageInfoInline(admin.StackedInline):
     model = StaffMemberWageInfo
     min_num = 1
     extra = 0
-    fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','priorDays'),'disabled')
+    fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','advanceDaysReference','priorDays','priorDaysReference'),'disabled')
     classes = ('collapse',)
 
 
@@ -285,7 +285,7 @@ class RepeatedExpenseRuleChildAdmin(PolymorphicChildModelAdmin):
             'fields': ('rentalRate','applyRateRule','disabled','lastRun')
         }),
         (_('Generation rules'),{
-            'fields': ('dayStarts','weekStarts','monthStarts','advanceDays','priorDays',),
+            'fields': ('dayStarts','weekStarts','monthStarts',('advanceDays','advanceDaysReference'),('priorDays','priorDaysReference')),
         }),
         (_('Start and End Date (optional)'), {
             'fields': ('startDate','endDate')
@@ -354,7 +354,7 @@ class GenericRepeatedExpenseAdmin(RepeatedExpenseRuleChildAdmin):
             'fields': ('name','rentalRate','applyRateRule','disabled','lastRun')
         }),
         (_('Generation rules'),{
-            'fields': ('dayStarts','weekStarts','monthStarts','advanceDays','priorDays',),
+            'fields': ('dayStarts','weekStarts','monthStarts',('advanceDays','advanceDaysReference'),('priorDays','priorDaysReference')),
         }),
         (_('Expense item parameters'),{
             'fields': ('category','payToUser','payToLocation','payToName',)
