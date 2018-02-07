@@ -8,7 +8,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-danceschool',
-    version='0.5.0',
+    version='0.5.1',
     packages=['danceschool'],
     include_package_data=True,
     license='BSD License',
@@ -22,7 +22,7 @@ setup(
     author_email='lee.c.tucker@gmail.com',
     install_requires=[
         'beautifulsoup4>=4.6.0',
-        'Django>=1.10,<1.11',
+        'Django>=1.11,<2.0',
         'django-admin-sortable2>=0.6.10',
         'django-allauth>=0.31.0',
         'django-autocomplete-light>=3.2.0',
@@ -30,11 +30,11 @@ setup(
         'django-choices>=1.5.0',
         'django-ckeditor>=5.0.0',
         'django-ckeditor-filebrowser-filer>=0.2.1',
-        'django-cms>=3.4.0',
+        'django-cms>=3.5.0,<3.6.0',
         'django-colorful>=1.2',
         'django-crispy-forms>=1.6.0',
         'django-daterange-filter>=1.2.0',
-        'django-dynamic-preferences>=1.3',
+        'django-dynamic-preferences>=1.4.2',
         'django-easy-pdf>=0.1.0',
         'django-filer>=1.2.7',
         'django-ical>=1.4',
