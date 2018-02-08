@@ -1,3 +1,4 @@
+# Third Party Imports
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from filer.fields.image import FilerImageField
@@ -6,16 +7,16 @@ from jsonfield import JSONField
 
 class BannedPerson(models.Model):
 
-    firstName = models.CharField(_('First name'),max_length=30,)
-    lastName = models.CharField(_('First name'),max_length=30,)
+    firstName = models.CharField(_('First name'), max_length=30,)
+    lastName = models.CharField(_('First name'), max_length=30,)
 
-    photo = FilerImageField(verbose_name=_('Photo'),blank=True,null=True,related_name='banned_person_image')
+    photo = FilerImageField(verbose_name=_('Photo'), blank=True, null=True, related_name='banned_person_image')
 
-    notes = models.TextField(_('Notes for internal purposes'),null=True,blank=True)
+    notes = models.TextField(_('Notes for internal purposes'), null=True, blank=True)
 
     expirationDate = models.DateTimeField(
         _('Expiration date'),
-        null=True,blank=True,
+        null=True, blank=True,
         help_text=_('Leave blank for no expiration.')
     )
 
@@ -25,8 +26,8 @@ class BannedPerson(models.Model):
         default=False
     )
 
-    submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
-    modifiedDate = models.DateTimeField(_('Last updated'),auto_now=True)
+    submissionDate = models.DateTimeField(_('Submission date'), auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last updated'), auto_now=True)
 
     @property
     def fullName(self):
@@ -43,8 +44,8 @@ class BannedPerson(models.Model):
 
     class Meta:
         permissions = (
-            ('view_banlist',_('Can view the list of banned individuals.')),
-            ('ignore_ban',_('Can register users despite banned credentials')),
+            ('view_banlist', _('Can view the list of banned individuals.')),
+            ('ignore_ban', _('Can register users despite banned credentials')),
         )
 
         ordering = ('lastName', 'firstName')
@@ -53,7 +54,7 @@ class BannedPerson(models.Model):
 
 
 class BannedEmail(models.Model):
-    person = models.ForeignKey(BannedPerson,verbose_name=_('Individual'))
+    person = models.ForeignKey(BannedPerson, verbose_name=_('Individual'))
     email = models.EmailField(_('Email address'), unique=True)
 
     class Meta:
@@ -62,11 +63,11 @@ class BannedEmail(models.Model):
 
 
 class BanFlaggedRecord(models.Model):
-    person = models.ForeignKey(BannedPerson,verbose_name=_('Person'))
-    dateTime = models.DateTimeField(_('Date and time'),auto_now_add=True)
-    ipAddress = models.GenericIPAddressField(_('IP address'),null=True,blank=True)
-    flagCode = models.CharField(_('Flag code'),max_length=8,help_text=_('Search for this code for easier reference.'))
-    data = JSONField(_('Session and form data'),default={})
+    person = models.ForeignKey(BannedPerson, verbose_name=_('Person'))
+    dateTime = models.DateTimeField(_('Date and time'), auto_now_add=True)
+    ipAddress = models.GenericIPAddressField(_('IP address'), null=True, blank=True)
+    flagCode = models.CharField(_('Flag code'), max_length=8, help_text=_('Search for this code for easier reference.'))
+    data = JSONField(_('Session and form data'), default={})
 
     def __str__(self):
         return str(_('%s: %s at %s' % (self.person.fullName, self.dateTime, self.ipAddress)))
