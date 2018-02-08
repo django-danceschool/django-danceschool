@@ -1,6 +1,15 @@
 Version History
 ===============
 
+0.5.1 - February 7, 2018
+-----------------------
+
+- Updated to use Django 1.11 and Django CMS 3.5
+- Overhaul and simplification of event templates
+- Fixed dependency version issues with Django-dynamic-preferences and django-polymorphic apps
+- Misc. bugfixes and linting improvements
+
+
 0.5.0 - October 3, 2017
 -----------------------
 
@@ -13,7 +22,7 @@ Version History
 - Registration page templates now use Bootstrap 4 cards for easier themeing and configuration
 - Added management tasks for all cron jobs for easier Heroku integration
 - Numerous small bug fixes and template improvements.
-- 
+
 
 0.4.1 - Septmeber 19, 2017
 --------------------------

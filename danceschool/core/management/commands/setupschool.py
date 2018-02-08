@@ -432,6 +432,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 'Registration', 'cms/home.html', initial_language, menu_title='Registration',
                 apphook='RegistrationApphook', in_navigation=True, published=True
             )
+            home_page.set_as_homepage()
             self.stdout.write('Registration page added.\n')
         else:
             add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
@@ -440,6 +441,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 content_placeholder = home_page.placeholders.get(slot='content')
                 add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
                 publish_page(home_page, this_user, initial_language)
+                home_page.set_as_homepage()
                 self.stdout.write('Home page added.\n')
             add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
             if add_registration_link:
