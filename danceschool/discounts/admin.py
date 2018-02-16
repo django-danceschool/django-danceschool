@@ -1,9 +1,11 @@
-from django.forms import ModelForm
+from django.forms import ModelForm, ModelChoiceField
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount
-from danceschool.core.models import Registration, TemporaryRegistration, PricingTier
+from dal import autocomplete
+
+from .models import DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount, CustomerDiscount
+from danceschool.core.models import Registration, TemporaryRegistration, PricingTier, Customer
 
 
 class DiscountCategoryAdmin(admin.ModelAdmin):
@@ -19,6 +21,35 @@ class DiscountComboComponentInline(admin.StackedInline):
     fields = (('pointGroup','quantity',),'allWithinPointGroup',('level','weekday'),)
 
 
+class CustomerDiscountInlineForm(ModelForm):
+    customer = ModelChoiceField(
+        queryset=Customer.objects.all(),
+        widget=autocomplete.ModelSelect2(
+            url='autocompleteCustomer',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a customer name'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 4,
+                'class': 'modern-style',
+            }
+        )
+    )
+
+    class Meta:
+        model = CustomerDiscount
+        exclude = []
+
+
+class CustomerDiscountInline(admin.StackedInline):
+    model = CustomerDiscount
+    form = CustomerDiscountInlineForm
+    extra = 1
+    classes = ['collapse',]
+
+
 class DiscountComboAdminForm(ModelForm):
 
     class Meta:
@@ -30,7 +61,7 @@ class DiscountComboAdminForm(ModelForm):
 
 
 class DiscountComboAdmin(admin.ModelAdmin):
-    inlines = [DiscountComboComponentInline,]
+    inlines = [DiscountComboComponentInline,CustomerDiscountInline]
     form = DiscountComboAdminForm
 
     list_display = ('name','category','discountType','active','expirationDate','restrictions')

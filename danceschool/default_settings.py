@@ -13,7 +13,7 @@ import sys
 from os import path
 
 # Required for Django CMS.  Override in your own settings.py
-LANGUAGES = [('en', 'English'),]
+LANGUAGES = [('en', 'English'), ]
 
 # Override in settings.py to add your own templates, or override the
 # defaults directly by placing templates with the same name in a
@@ -58,7 +58,7 @@ CKEDITOR_IMAGE_BACKEND = 'pillow'
 CKEDITOR_SETTINGS = {
     'language': '',
     'toolbar_CMS': [
-        {'name': 'basicstyles','items': ['Bold', 'Italic', 'Underline', '-', 'RemoveFormat']},
+        {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', '-', 'RemoveFormat']},
         {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', '-', 'Undo', 'Redo']},
         {
             'name': 'paragraph',
@@ -68,11 +68,11 @@ CKEDITOR_SETTINGS = {
         {'name': 'styles', 'items': ['Format']},
         '/',
         {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
-        {'name': 'insert','items': ['FilerImage','Table', 'HorizontalRule', 'Smiley', 'Iframe']},
-        {'name': 'tools', 'items': ['Maximize', 'ShowBlocks','Source']},
+        {'name': 'insert', 'items': ['FilerImage', 'Table', 'HorizontalRule', 'Smiley', 'Iframe']},
+        {'name': 'tools', 'items': ['Maximize', 'ShowBlocks', 'Source']},
     ],
     'toolbar_HTMLField': [
-        {'name': 'basicstyles','items': ['Bold', 'Italic', 'Underline', '-', 'RemoveFormat']},
+        {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', '-', 'RemoveFormat']},
         {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', '-', 'Undo', 'Redo']},
         {
             'name': 'paragraph',
@@ -82,8 +82,8 @@ CKEDITOR_SETTINGS = {
         {'name': 'styles', 'items': ['Format']},
         '/',
         {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
-        {'name': 'insert','items': ['FilerImage','Table', 'HorizontalRule', 'Smiley', 'Iframe']},
-        {'name': 'tools', 'items': ['Maximize', 'ShowBlocks','Source']},
+        {'name': 'insert', 'items': ['FilerImage', 'Table', 'HorizontalRule', 'Smiley', 'Iframe']},
+        {'name': 'tools', 'items': ['Maximize', 'ShowBlocks', 'Source']},
     ],
     'skin': 'moono',
     'extraPlugins': ','.join(
@@ -108,7 +108,7 @@ HUEY = SqliteHuey(
     filename=path.join(
         path.dirname(
             path.abspath(
-                getattr(sys.modules['__main__'],'__file__',path.dirname(__file__)),
+                getattr(sys.modules['__main__'], '__file__', path.dirname(__file__)),
             )
         ),
         'huey.sqlite3'
@@ -126,5 +126,5 @@ CRISPY_FAIL_SILENTLY = True
 DJANGOCMS_FORMS_PLUGIN_MODULE = 'Forms'
 DJANGOCMS_FORMS_TEMPLATES = (
     ('djangocms_forms/form_template/default.html', 'Default'),
-    ('forms/djangocms_forms_crispy.html','Crispy Form (recommended)'),
+    ('forms/djangocms_forms_crispy.html', 'Crispy Form (recommended)'),
 )

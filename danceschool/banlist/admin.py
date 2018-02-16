@@ -27,7 +27,9 @@ class BannedPersonAdmin(admin.ModelAdmin):
     enabled.boolean = True
 
     def photoThumbnail(self,obj):
-        return u'<img src="%s" />' % (obj.photo.icons.get('64'))
+        if obj.photo:
+            return u'<img src="%s" />' % (obj.photo.icons.get('64'))
+        return ''
     photoThumbnail.short_description = _('Thumbnail')
     photoThumbnail.allow_tags = True
 

@@ -19,19 +19,27 @@ urlpatterns = [
             form_class=GlobalPreferenceForm,
             template_name='dynamic_preferences/form_danceschool.html',)),
         name="dynamic_preferences.global"),
+
     url(r'^settings/global/(?P<section>[\w\ ]+)$',
         user_passes_test(lambda u: u.is_superuser)(PreferenceFormView.as_view(
             registry=global_preferences_registry,
             form_class=GlobalPreferenceForm,
             template_name='dynamic_preferences/form_danceschool.html',)),
         name="dynamic_preferences.global.section"),
+
     # For Django-filer
     url(r'^filer/', include('filer.urls')),
     url(r'^', include('filer.server.urls')),
+
     # For Django-filer in CKeditor
     url(r'^filebrowser_filer/', include('ckeditor_filebrowser_filer.urls')),
+
     # For automatically-generated sitemaps
-    url(r'^sitemap\.xml$', sitemap, {'sitemaps': {'event': EventSitemap, 'page': CMSSitemap}},name='django.contrib.sitemaps.views.sitemap'),
+    url(r'^sitemap\.xml$',
+        sitemap,
+        {'sitemaps': {'event': EventSitemap, 'page': CMSSitemap}},
+        name='django.contrib.sitemaps.views.sitemap'),
+
     # For better authentication
     url(r'^accounts/', include('allauth.urls')),
 

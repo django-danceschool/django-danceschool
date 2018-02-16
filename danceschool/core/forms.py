@@ -21,6 +21,7 @@ from .models import EventStaffMember, SubstituteTeacher, Event, EventOccurrence,
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 from .utils.emails import get_text_for_html
+from .utils.timezone import ensure_localtime
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -246,11 +247,11 @@ class ClassChoiceForm(forms.Form):
             if isinstance(event,Series):
                 if event.allowDropins and user and user.has_perm('core.register_dropins'):
                     for occurrence in event.eventoccurrence_set.all():
-                        field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}), _('Drop-in: ') + occurrence.startTime.strftime('%B %-d')),)
+                        field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}), _('Drop-in: ') + ensure_localtime(occurrence.startTime).strftime('%B %-d')),)
                         self.permitted_event_keys.append('dropin_' + str(occurrence.id))
                 elif (user and user.has_perm('core.override_register_dropins')):
                     for occurrence in event.eventoccurrence_set.all():
-                        field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}),{'label': _('Drop-in: ') + occurrence.startTime.strftime('%B %-d'),'override':True}),)
+                        field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}),{'label': _('Drop-in: ') + ensure_localtime(occurrence.startTime).strftime('%B %-d'),'override':True}),)
                         self.permitted_event_keys.append('dropin_' + str(occurrence.id))
 
             self.fields['event_' + str(event.id)] = CheckboxSeriesChoiceField(
@@ -598,10 +599,12 @@ class RefundForm(forms.ModelForm):
             initial = False
             if item.finalEventRegistration:
                 initial = item.finalEventRegistration.cancelled
+            item_max = item.total + item.taxes if this_invoice.buyerPaysSalesTax else item.total
+
             self.fields["item_cancelled_%s" % item.id] = forms.BooleanField(
                 label=_('Cancelled'),required=False,initial=initial)
             self.fields['item_refundamount_%s' % item.id] = forms.FloatField(
-                label=_('Refund Amount'),required=False,initial=(-1) * item.adjustments, min_value=0, max_value=item.total)
+                label=_('Refund Amount'),required=False,initial=(-1) * item.adjustments, min_value=0, max_value=item_max)
 
         self.fields['comments'] = forms.CharField(
             label=_('Explanation/Comments (optional)'),required=False,
@@ -720,7 +723,7 @@ class EmailContactForm(forms.Form):
         return self.cleaned_data
 
     class Media:
-        js = ('js/emailcontact_sendToSet.js','js/emailcontact_ajax.js','js/emailcontact_htmlmessage.js')
+        js = ('js/emailcontact_sendToSet.js','js/emailcontact_ajax.js')
 
 
 class SeriesTeacherChoiceField(forms.ModelChoiceField):

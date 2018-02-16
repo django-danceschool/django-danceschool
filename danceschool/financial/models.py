@@ -73,6 +73,10 @@ class RepeatedExpenseRule(PolymorphicModel):
         weekly = ChoiceItem('W',_('Per week'))
         monthly = ChoiceItem('M',_('Per month'))
 
+    class MilestoneChoices(DjangoChoices):
+        start = ChoiceItem('S',_('First occurrence starts'))
+        end = ChoiceItem('E',_('Last occurrence ends'))
+
     rentalRate = models.FloatField(
         _('Expense Rate'),validators=[MinValueValidator(0)],help_text=_('In default currency')
     )
@@ -125,12 +129,26 @@ class RepeatedExpenseRule(PolymorphicModel):
         default=30,
     )
 
+    advanceDaysReference = models.CharField(
+        _('in advance of'),
+        max_length=1,
+        choices=MilestoneChoices.choices,
+        default=MilestoneChoices.start,
+    )
+
     priorDays = models.PositiveSmallIntegerField(
         _('Generate expenses up to __ days in the past'),
         help_text=_('Leave blank for no limit.'),
         default=180,
         null=True,
         blank=True
+    )
+
+    priorDaysReference = models.CharField(
+        _('prior to'),
+        max_length=1,
+        choices=MilestoneChoices.choices,
+        default=MilestoneChoices.end,
     )
 
     disabled = models.BooleanField(

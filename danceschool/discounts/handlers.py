@@ -43,11 +43,9 @@ def getBestDiscount(sender,**kwargs):
 
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
-    customers = Customer.objects.filter(user__email=reg.email)
-    for c in customers:
-        if c.numClassSeries > 0:
-            newCustomer = False
-            break
+    customer = Customer.objects.filter(email=reg.email,first_name=reg.firstName,last_name=reg.lastName).first()
+    if customer and customer.numClassSeries > 0:
+        newCustomer = False
 
     eligible_filter = (
         Q(event__series__pricingTier__isnull=False) |
@@ -78,7 +76,7 @@ def getBestDiscount(sender,**kwargs):
     # Get the applicable discounts and sort them in ascending category order
     # so that the best discounts are always listed in the order that they will
     # be applied.
-    discountCodesApplicable = getApplicableDiscountCombos(eligible_list, newCustomer, reg.student, addOn=False, cannotCombine=False)
+    discountCodesApplicable = getApplicableDiscountCombos(eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=False)
     discountCodesApplicable.sort(key=lambda x: x.code.category.order)
 
     # Once we have a list of codes to try, calculate the discounted price for each possibility,
@@ -98,13 +96,15 @@ def getBestDiscount(sender,**kwargs):
 
         # If the category has changed, then the new net_allocated_prices and the
         # new net_precategory price are whatever was found to be best in the last category.
-        if (discount.code.category != last_category) and best_discounts:
-            # Since this is an OrderedDict, we can get the last element of the dict from
-            # the iterator, which is the last category for which there was a valid discount.
-            last_discount = next(reversed(best_discounts))
-            net_allocated_prices = last_discount.net_allocated_prices
-            net_precategory_price = last_discount.net_price
+        if (discount.code.category != last_category):
             last_category = discount.code.category
+
+            if best_discounts:
+                # Since this is an OrderedDict, we can get the last element of the dict from
+                # the iterator, which is the last category for which there was a valid discount.
+                last_discount = best_discounts.get(next(reversed(best_discounts)))
+                net_allocated_prices = last_discount.net_allocated_prices
+                net_precategory_price = last_discount.net_price
 
         # The second item in each tuple is now adjusted, so that each item that is wholly or partially
         # applied against the discount will be wholly (value goes to 0) or partially subtracted from the
@@ -131,7 +131,7 @@ def getBestDiscount(sender,**kwargs):
     # compared against the base price, and there is no need to allocate across items since
     # only one code will potentially be applied.
     uncombinedCodesApplicable = getApplicableDiscountCombos(
-        eligible_list, newCustomer, reg.student, addOn=False, cannotCombine=True
+        eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=True
     )
 
     for discount in uncombinedCodesApplicable:
@@ -201,16 +201,14 @@ def getAddonItems(sender, **kwargs):
         return
 
     newCustomer = True
-    customers = Customer.objects.filter(user__email=reg.email)
-    for c in customers:
-        if c.numClassSeries > 0:
-            newCustomer = False
-            break
+    customer = Customer.objects.filter(email=reg.email,first_name=reg.firstName,last_name=reg.lastName).first()
+    if customer and customer.numClassSeries > 0:
+        newCustomer = False
 
     # No need to get all objects, just the ones that could qualify one for an add-on
     cart_object_list = reg.temporaryeventregistration_set.filter(dropIn=False).filter(Q(event__series__pricingTier__isnull=False) | Q(event__publicevent__pricingTier__isnull=False))
 
-    availableAddons = getApplicableDiscountCombos(cart_object_list, newCustomer, reg.student, addOn=True)
+    availableAddons = getApplicableDiscountCombos(cart_object_list, newCustomer, reg.student, customer=customer, addOn=True)
     return [x.code.name for x in availableAddons]
 
 
