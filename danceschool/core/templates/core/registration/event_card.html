@@ -83,19 +83,19 @@
           <h5 class="card-title">{% trans "Sold Out!" %}</h5>
           <h6 class="card-subtitle">{% trans "Please join us for another class, another month, or schedule a private lesson!" %}</h6>
         </div>
-      {% endif %}
-      {% if perms.core.override_register_closed %}
-        <div class="col-auto">
-          {# Include the front desk admin button #}
+        {% if perms.core.override_register_closed %}
+          <div class="col-auto">
+            {# Include the front desk admin button #}
 
-          {% get_field_for_object 'event' event.id form as field %}
-          {{ field }}
-          {% if validationStr %}
-            <div class="alert alert-danger">
-              {{ field.errors }}
-            </div>
-          {% endif %}
-        </div>
+            {% get_field_for_object 'event' event.id form as field %}
+            {{ field }}
+            {% if validationStr %}
+              <div class="alert alert-danger">
+                {{ field.errors }}
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
       {% endif %}
     </div>
   </div>
