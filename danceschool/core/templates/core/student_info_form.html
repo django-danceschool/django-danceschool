@@ -19,12 +19,32 @@
 				</tr>
 			{% endfor %}
 			</tbody>
+			{% if addonItems %}
 			<tbody>
-				<tr class="subtotal">
-					<th>{% trans "Subtotal before discounts:" %}</th>
-					<th>{{ currencySymbol }}{{ subtotal|floatformat:2 }}</th>
+				{% for addon in addonItems %}
+				<tr class="addons">
+					<th>{% trans "Free Add-On" %}:</th><td>{{ addon.name }}</td>
+				</tr>
+				{% endfor %}
+			</tbody>
+			{% endif %}
+			{% if discount_code_amount > 0 %}
+			<tbody>
+				{% for code in discount_codes %}
+					<tr>
+						<th>{% trans "Discount Code Applied" %}: {{ code.0 }}</th>
+						<td>-{{ currencySymbol }}{{ code.2|floatformat:2 }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+			{% endif %}
+			<tbody>
+				<tr style="font-size: 1.2em;">
+					<th><em>{% trans "Subtotal" %}:</em></th>
+					<th>{{ currencySymbol }}{{ discounted_subtotal|floatformat:2 }}</th>
 				</tr>
 			</tbody>
+
 			</table>
 		</div>
 	{% endblock %}

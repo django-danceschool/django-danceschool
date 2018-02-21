@@ -8,6 +8,7 @@ from collections import OrderedDict
 from danceschool.core.signals import request_discounts, apply_discount, apply_addons, post_registration
 from danceschool.core.constants import getConstant
 from danceschool.core.models import Customer
+from danceschool.core.classreg import RegistrationSummaryView
 
 from .helpers import getApplicableDiscountCombos
 from .models import DiscountCombo, TemporaryRegistrationDiscount, RegistrationDiscount
@@ -44,7 +45,7 @@ def getBestDiscount(sender,**kwargs):
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
     customer = Customer.objects.filter(email=reg.email,first_name=reg.firstName,last_name=reg.lastName).first()
-    if customer and customer.numClassSeries > 0:
+    if (customer and customer.numClassSeries > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
     eligible_filter = (

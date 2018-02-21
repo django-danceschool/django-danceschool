@@ -57,8 +57,7 @@ class ClassRegistrationReferralView(RedirectView):
 
 class ClassRegistrationView(FinancialContextMixin, FormView):
     '''
-    This is the main view that is called from the class registration page, but
-    all of the subsequent views in the process are in classreg.py
+    This is the main view that is called from the class registration page.y
     '''
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
@@ -553,11 +552,61 @@ class StudentInfoView(FormView):
         context_data = super(StudentInfoView,self).get_context_data(**kwargs)
         reg = self.temporaryRegistration
 
+        initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
+
+        # If the discounts app is enabled, then the return value to this signal
+        # will contain information on the discounts to be applied, as well as
+        # the total price of discount-ineligible items to be added to the
+        # price.  These should be in the form of a named tuple such as the
+        # DiscountApplication namedtuple defined in the discounts app, with
+        # 'items' and 'ineligible_total' keys.
+        discount_responses = request_discounts.send(
+            sender=StudentInfoView,
+            registration=reg,
+        )
+        discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
+
+        # This signal handler is designed to handle a single non-null response,
+        # and that response must be in the form of a list of namedtuples, each
+        # with a with a code value, a net_price value, and a discount_amount value
+        # (as with the DiscountInfo namedtuple provided by the DiscountCombo class). If more
+        # than one response is received, then the one with the minumum net price is applied
+        discount_codes = []
+        discounted_total = initial_price
+        total_discount_amount = 0
+
+        try:
+            if discount_responses:
+                discount_responses.sort(key=lambda k: min([getattr(x,'net_price',initial_price) for x in k.items] + [initial_price]) if k and hasattr(k,'items') else initial_price)
+                discount_codes = getattr(discount_responses[0],'items',[])
+                if discount_codes:
+                    discounted_total = min([getattr(x,'net_price',initial_price) for x in discount_codes]) + getattr(discount_responses[0],'ineligible_total',0)
+                    total_discount_amount = initial_price - discounted_total
+        except (IndexError, TypeError) as e:
+            logger.error('Error in applying discount responses: %s' % e)
+
+        # Get any free add-on items that should be applied
+        addon_responses = apply_addons.send(
+            sender=StudentInfoView,
+            registration=reg
+        )
+        addons = []
+        for response in addon_responses:
+            try:
+                if response[1]:
+                    addons += list(response[1])
+            except (IndexError, TypeError) as e:
+                logger.error('Error in applying addons: %s' % e)
+
         context_data.update({
             'reg': reg,
             'payAtDoor': reg.payAtDoor,
             'currencySymbol': getConstant('general__currencySymbol'),
-            'subtotal': sum([x.price for x in reg.temporaryeventregistration_set.all()]),
+            'subtotal': initial_price,
+            'addonItems': addons,
+            'discount_codes': discount_codes,
+            'discount_code_amount': total_discount_amount,
+            'discounted_subtotal': discounted_total,
         })
 
         if reg.payAtDoor or self.request.user.is_authenticated or not getConstant('registration__allowAjaxSignin'):
