@@ -203,7 +203,7 @@ def getAddonItems(sender, **kwargs):
 
     newCustomer = True
     customer = Customer.objects.filter(email=reg.email,first_name=reg.firstName,last_name=reg.lastName).first()
-    if customer and customer.numClassSeries > 0:
+    if (customer and customer.numClassSeries > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
     # No need to get all objects, just the ones that could qualify one for an add-on
