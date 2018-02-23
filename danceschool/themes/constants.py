@@ -1,3 +1,7 @@
+from django.conf import settings
+from django.utils.translation import ugettext_lazy as _
+
+
 CAROUSEL_PAUSE_CHOICES = (
     ('hover', 'hover'),
     ('mouseenter', 'mouseenter'),
@@ -28,3 +32,31 @@ CAROUSEL_ASPECT_RATIO_CHOICES = (
         for x, y in CAROUSEL_ASPECT_RATIOS
     ])
 )
+
+# The default grid size for Bootstrap 4 is 12. You can change this setting
+# to whatever layout you require. We suggest that the value is at
+# least devisable by 2, 3 and 4.
+GRID_SIZE = getattr(
+    settings,
+    'DJANGOCMS_BOOTSTRAP4_GRID_SIZE',
+    12,
+)
+
+GRID_COLUMN_CHOICES = getattr(
+    settings,
+    'DJANGOCMS_BOOTSTRAP4_GRID_COLUMN_CHOICES',
+    (
+        ('col', _('Column')),
+        ('w-100', _('Break')),
+        ('', _('Empty'))
+    ),
+)
+
+DEVICE_CHOICES = (
+    ('xs', _('Extra small')),   # default <576px
+    ('sm', _('Small')),         # default ≥576px
+    ('md', _('Medium')),        # default ≥768px
+    ('lg', _('Large')),         # default ≥992px
+    ('xl', _('Extra large')),   # default ≥1200px
+)
+DEVICE_SIZES = tuple([size for size, name in DEVICE_CHOICES])

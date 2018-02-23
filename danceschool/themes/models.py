@@ -1,15 +1,17 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.html import strip_tags
+from django.core.validators import MaxValueValidator
 
 import os
+from functools import partial
 
 from cms.models.pluginmodel import CMSPlugin
 from djangocms_text_ckeditor.fields import HTMLField
 from djangocms_link.models import AbstractLink
 from filer.fields.image import FilerImageField
 
-from .constants import CAROUSEL_ASPECT_RATIO_CHOICES, CAROUSEL_PAUSE_CHOICES, CAROUSEL_RIDE_CHOICES
+from .constants import CAROUSEL_ASPECT_RATIO_CHOICES, CAROUSEL_PAUSE_CHOICES, CAROUSEL_RIDE_CHOICES, DEVICE_SIZES, GRID_COLUMN_CHOICES, GRID_SIZE
 
 
 class SimpleBootstrapCardModel(CMSPlugin):
@@ -34,6 +36,21 @@ class SimpleBootstrapCardModel(CMSPlugin):
         return text
 
 
+class BootstrapRowModel(CMSPlugin):
+    '''
+    This plugin model allows for creation of Bootstrap rows for easy grid construction.
+    '''
+
+    template = models.CharField(_('Row template'),max_length=250,null=True,blank=True)
+
+    def __str__(self):
+        return str(self.pk)
+
+    def get_short_description(self):
+        text = 'Bootstrap Grid Row #{}'.format(self.pk)
+        return text
+
+
 class BootstrapColumnModel(CMSPlugin):
     '''
     This plugin model allows for creation of Bootstrap columns, which can
@@ -42,12 +59,49 @@ class BootstrapColumnModel(CMSPlugin):
 
     template = models.CharField(_('Column template'),max_length=250,null=True,blank=True)
 
+    column_type = models.CharField(
+        verbose_name=_('Column type'),
+        choices=GRID_COLUMN_CHOICES,
+        default=GRID_COLUMN_CHOICES[0][0],
+        blank=True,
+        max_length=255,
+    )
+    column_size = models.PositiveSmallIntegerField(
+        verbose_name=_('Column size'),
+        blank=True,
+        null=True,
+        validators=[MaxValueValidator(GRID_SIZE)],
+        help_text=_(
+            'Numeric value from 1 - {bound}. '
+            'Spreads the columns evenly when empty.').format(bound=GRID_SIZE)
+    )
+
     def __str__(self):
         return str(self.pk)
 
     def get_short_description(self):
-        text = 'Bootstrap Grid Column #{}'.format(self.pk)
+        text = ''
+        classes = self.get_grid_values()
+        if self.column_size:
+            text += '(col-{}) '.format(self.column_size)
+        else:
+            text += '(auto) '
+        if self.column_type != 'col':
+            text += '.{} '.format(self.column_type)
+        if classes:
+            text += '.{}'.format(' .'.join(self.get_grid_values()))
         return text
+
+    def get_grid_values(self):
+        classes = []
+        for device in DEVICE_SIZES:
+            for element in ('col', 'order', 'ml', 'mr'):
+                size = getattr(self, '{}_{}'.format(device, element))
+                if size and (element == 'col' or element == 'order'):
+                    classes.append('{}-{}-{}'.format(element, device, int(size)))
+                elif size:
+                    classes.append('{}-{}-{}'.format(element, device, 'auto'))
+        return classes
 
 
 class BootstrapCarousel(CMSPlugin):
@@ -173,3 +227,47 @@ class BootstrapCarouselSlide(AbstractLink, CMSPlugin):
             return '{} ({})'.format(image_text, content_text)
         else:
             return image_text or content_text
+
+
+IntegerFieldPartial = partial(
+    models.PositiveSmallIntegerField,
+    blank=True,
+    null=True,
+    validators=[MaxValueValidator(12)],
+)
+
+BooleanFieldPartial = partial(
+    models.BooleanField,
+    default=False,
+)
+
+# Loop through Bootstrap 4 device choices and generate
+# model fields to cover col-*, order-*
+for size in DEVICE_SIZES:
+    # Grid size
+    BootstrapColumnModel.add_to_class(
+        '{}_col'.format(size),
+        IntegerFieldPartial(),
+    )
+    # Grid ordering
+    BootstrapColumnModel.add_to_class(
+        '{}_order'.format(size),
+        IntegerFieldPartial(),
+    )
+    # Grid margin left (ml)
+    BootstrapColumnModel.add_to_class(
+        '{}_ml'.format(size),
+        BooleanFieldPartial(),
+    )
+    # Grid margin right (ml)
+    BootstrapColumnModel.add_to_class(
+        '{}_mr'.format(size),
+        BooleanFieldPartial(),
+    )
+
+    def __str__(self):
+        return str(self.pk)
+
+    def get_short_description(self):
+        text = 'Bootstrap Grid Column #{}'.format(self.pk)
+        return text

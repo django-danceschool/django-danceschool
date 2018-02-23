@@ -1,6 +1,6 @@
 {% load i18n cms_tags %}
 
-<{{ instance.tag_type }} {{ instance.attributes_str }}
+<div {{ instance.attributes_str }}
     id="carousel-{{ instance.pk }}"
     data-interval="{{ instance.carousel_interval|lower }}"
     data-keyboard="{{ instance.carousel_keyboard|lower }}"
@@ -37,4 +37,4 @@
             <span class="sr-only">{% trans "Next" %}</span>
         </a>
     {% endif %}
-</{{ instance.tag_type }}>
+</div>

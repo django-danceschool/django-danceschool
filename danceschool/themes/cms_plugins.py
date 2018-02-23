@@ -8,8 +8,10 @@ from cms.models.pluginmodel import CMSPlugin
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.registries import plugin_templates_registry, PluginTemplateBase
 
-from .models import SimpleBootstrapCardModel, BootstrapColumnModel, BootstrapCarousel, BootstrapCarouselSlide
-from .constants import CAROUSEL_DEFAULT_SIZE
+from .models import SimpleBootstrapCardModel, BootstrapRowModel, BootstrapColumnModel, BootstrapCarousel, BootstrapCarouselSlide
+from .constants import CAROUSEL_DEFAULT_SIZE, DEVICE_SIZES
+from .helpers import concat_classes
+from .forms import BootstrapRowForm
 
 
 class PictureTemplatePlugin(PicturePlugin):
@@ -66,13 +68,52 @@ class SimpleBootstrapCardPlugin(PluginTemplateMixin, CMSPluginBase):
 
 
 class BootstrapRowPlugin(CMSPluginBase):
-    model = CMSPlugin
+    model = BootstrapRowModel
     name = _('Grid Row')
-    render_template = 'bootstrap/row.html'
+    form = BootstrapRowForm
+    render_template = 'bootstrap/row_default.html'
     cache = True
     module = _('Bootstrap')
     allow_children = True
     child_classes = ['BootstrapColumnPlugin',]
+
+    # change_form_template = 'djangocms_bootstrap4/admin/grid_row.html'
+    # render_template = 'djangocms_bootstrap4/grid_row.html'
+
+    fieldsets = [
+        (None, {
+            'fields': (
+                'create',
+                'template',
+            )
+        }),
+    ]
+
+    def save_model(self, request, obj, form, change):
+        super(BootstrapRowPlugin, self).save_model(request, obj, form, change)
+        data = form.cleaned_data
+        for x in range(int(data['create']) if data['create'] is not None else 0):
+            extra = {}
+            for size in DEVICE_SIZES:
+                extra['{}_col'.format(size)] = data.get(
+                    'create_{}_col'.format(size)
+                )
+            col = BootstrapColumnModel(
+                parent=obj,
+                placeholder=obj.placeholder,
+                language=obj.language,
+                position=obj.numchild,
+                plugin_type=BootstrapColumnPlugin.__name__,
+                **extra
+            )
+            obj.add_child(instance=col)
+
+    def render(self, context, instance, placeholder):
+        # instance.attributes['class'] = 'row'
+
+        return super(BootstrapRowPlugin, self).render(
+            context, instance, placeholder
+        )
 
 
 class BootstrapColumnPlugin(PluginTemplateMixin, CMSPluginBase):
@@ -84,6 +125,49 @@ class BootstrapColumnPlugin(PluginTemplateMixin, CMSPluginBase):
     require_parent = True
     parent_classes = ['BootstrapRowPlugin']
     allow_children = True
+
+    # change_form_template = 'djangocms_bootstrap4/admin/grid_column.html'
+    # render_template = 'djangocms_bootstrap4/grid_column.html'
+
+    fieldsets = [
+        (None, {
+            'fields': (
+                'template',
+                'column_type',
+                'column_size',
+            )
+        }),
+        (_('Responsive settings'), {
+            'classes': ('collapse',),
+            'fields': (
+                ['{}_col'.format(size) for size in DEVICE_SIZES],
+                ['{}_order'.format(size) for size in DEVICE_SIZES],
+                ['{}_ml'.format(size) for size in DEVICE_SIZES],
+                ['{}_mr'.format(size) for size in DEVICE_SIZES],
+            )
+        }),
+    ]
+
+    def render(self, context, instance, placeholder):
+        column = ''
+        classes = instance.get_grid_values()
+
+        if instance.column_size:
+            column = 'col-{}'.format(instance.column_size)
+        if classes:
+            column += ' {}'.format(' '.join(cls for cls in classes if cls))
+
+        # attr_classes = concat_classes([
+        #     instance.column_type,
+        #     column,
+        #     instance.column_alignment,
+        #     instance.attributes.get('class'),
+        # ])
+        # instance.attributes['class'] = attr_classes
+
+        return super(BootstrapColumnPlugin, self).render(
+            context, instance, placeholder
+        )
 
 
 class BootstrapCarouselPlugin(PluginTemplateMixin, CMSPluginBase):
@@ -109,14 +193,6 @@ class BootstrapCarouselPlugin(PluginTemplateMixin, CMSPluginBase):
             )
         }),
     ]
-
-    def render(self, context, instance, placeholder):
-        link_classes = ['carousel', 'slide']
-        instance.attributes['class'] = link_classes
-
-        return super(BootstrapCarouselPlugin, self).render(
-            context, instance, placeholder
-        )
 
 
 class BootstrapCarouselSlidePlugin(CMSPluginBase):
@@ -173,6 +249,8 @@ plugin_pool.register_plugin(PictureTemplatePlugin)
 plugin_pool.register_plugin(BootstrapCardGroupPlugin)
 plugin_pool.register_plugin(BootstrapCardDeckPlugin)
 plugin_pool.register_plugin(SimpleBootstrapCardPlugin)
+plugin_pool.register_plugin(BootstrapRowPlugin)
+plugin_pool.register_plugin(BootstrapColumnPlugin)
 plugin_pool.register_plugin(BootstrapCarouselPlugin)
 plugin_pool.register_plugin(BootstrapCarouselSlidePlugin)
 

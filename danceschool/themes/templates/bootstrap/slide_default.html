@@ -1,6 +1,6 @@
 {% load cms_tags %}
 
-<{{ instance.tag_type }} class="carousel-item{% if forloop.first %} active{% endif %}" {{ instance.attributes_str }}>
+<div class="carousel-item{% if forloop.first %} active{% endif %}" {{ instance.attributes_str }}>
     {% if link %}
         <a href="{{ link }}"{% if instance.target %} target="{{ instance.target }}"{% endif %}>
     {% endif %}
@@ -23,4 +23,4 @@
             {% render_plugin plugin %}
         {% endfor %}
     </div>
-</{{ instance.tag_type }}>
+</div>

@@ -85,7 +85,7 @@ CKEDITOR_SETTINGS = {
         {'name': 'insert', 'items': ['FilerImage', 'Table', 'HorizontalRule', 'Smiley', 'Iframe']},
         {'name': 'tools', 'items': ['Maximize', 'ShowBlocks', 'Source']},
     ],
-    'skin': 'moono',
+    'skin': 'moono-lisa',
     'extraPlugins': ','.join(
         [
             # you extra plugins here
