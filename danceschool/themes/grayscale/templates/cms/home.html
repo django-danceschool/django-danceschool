@@ -1,0 +1,27 @@
+{% extends "cms/site_base.html" %}
+{% load static sekizai_tags cms_tags %}
+
+{% block extra_head %}
+
+	{% addtoblock "meta" %}
+		<meta name="robots" content="index, follow">
+	{% endaddtoblock %}
+
+	{% addtoblock "css" %}
+	    <link href="https://fonts.googleapis.com/css?family=Lora:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+	    <link href='https://fonts.googleapis.com/css?family=Cabin:700' rel='stylesheet' type='text/css'>
+
+	    <!-- Custom styles for this template -->
+	    <link href="{% static 'css/grayscale.min.css' %}" rel="stylesheet">
+	{% endaddtoblock %}
+
+	{% addtoblock "js" %}
+	    <!-- Plugin JavaScript -->
+	    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+	{% endaddtoblock %}
+	{% addtoblock "js" %}
+	    <!-- Custom scripts for this template -->
+	    <script src="js/grayscale.min.js"></script>
+	{% endaddtoblock %}
+
+{% endblock %}
