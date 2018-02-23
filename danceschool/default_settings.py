@@ -85,7 +85,7 @@ CKEDITOR_SETTINGS = {
         {'name': 'insert', 'items': ['FilerImage', 'Table', 'HorizontalRule', 'Smiley', 'Iframe']},
         {'name': 'tools', 'items': ['Maximize', 'ShowBlocks', 'Source']},
     ],
-    'skin': 'moono-lisa',
+    'skin': 'moono',
     'extraPlugins': ','.join(
         [
             # you extra plugins here
@@ -128,3 +128,30 @@ DJANGOCMS_FORMS_TEMPLATES = (
     ('djangocms_forms/form_template/default.html', 'Default'),
     ('forms/djangocms_forms_crispy.html', 'Crispy Form (recommended)'),
 )
+
+# For optional themes, these settings ensure that header image plugins have sensible
+# defaults, and that the
+CMS_PLACEHOLDER_CONF = {
+    None: {
+        'excluded_plugins': ['PictureTemplatePlugin',],
+    },
+    'splash_image': {
+        'name': 'Splash Background Image',
+        'plugins': ['PictureTemplatePlugin',],
+        'excluded_plugins': [],
+        'limits': {
+            'global': 1,
+        },
+    },
+    'splash_title': {
+        'name': 'Front Page Title',
+    },
+    'splash_caption': {
+        'name': 'Front Page Caption'
+    }
+}
+
+# DJANGOCMS_PICTURE_TEMPLATES = []
+DJANGOCMS_PICTURE_TEMPLATES = [
+    ('link_only', 'Picture URL Only'),
+]

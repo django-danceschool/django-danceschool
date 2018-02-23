@@ -5,16 +5,13 @@
 
 {% block content %}
     <!-- Intro Header -->
-    <header class="masthead">
+    <header class="masthead" style="background: url('{% placeholder splash_image or %}https://jsalmonte.files.wordpress.com/2013/05/dclx-2013-sunday-154.jpg{% endplaceholder %}') no-repeat bottom center scroll; background-size: cover;">
       <div class="intro-body">
         <div class="container">
           <div class="row">
             <div class="col-lg-8 mx-auto">
-              <h1 class="brand-heading">{% getSchoolName %}</h1>
-              <p class="intro-text">Intro text should be set by dynamic preferences.</p>
-              <a href="#about" class="btn btn-circle js-scroll-trigger">
-                <i class="fa fa-angle-double-down animated"></i>
-              </a>
+              <h1 class="brand-heading">{% placeholder splash_title or %}{% getSchoolName %}{% endplaceholder %}</h1>
+              <p class="intro-text">{% placeholder splash_caption or %}Enter your caption here.{% endplaceholder %}</p>
             </div>
           </div>
         </div>
