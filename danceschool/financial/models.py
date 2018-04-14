@@ -591,7 +591,7 @@ class ExpenseItem(models.Model):
     expenseStartDate.fget.short_description = _('Start Date')
 
     @property
-    def expenseEndDate(self,obj):
+    def expenseEndDate(self):
         theTime = self.accrualDate
         if self.periodEnd:
             theTime = self.periodEnd
