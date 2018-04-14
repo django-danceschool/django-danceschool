@@ -598,7 +598,7 @@ class ExpenseItem(models.Model):
         elif self.event:
             theTime = self.event.endTime
         return theTime
-    expenseEndDate.short_description = _('End Date')
+    expenseEndDate.fget.short_description = _('End Date')
 
     @property
     def payTo(self):
