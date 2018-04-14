@@ -55,11 +55,11 @@ class ExpenseItemAdminForm(ModelForm):
 class ExpenseItemAdmin(admin.ModelAdmin):
     form = ExpenseItemAdminForm
 
-    list_display = ('category','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
+    list_display = ('category','expenseStartDate','expenseEndDate','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
     search_fields = ('description','comments','=category__name','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
-    list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter),'expenseRule')
-    readonly_fields = ('submissionUser','expenseRule')
+    list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('expenseStartDate',DateRangeFilter),('expenseEndDate',DateRangeFilter),('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter),'expenseRule')
+    readonly_fields = ('submissionUser','expenseRule','expenseStartDate','expenseEndDate')
     actions = ('approveExpense','unapproveExpense')
 
     fieldsets = (
@@ -74,6 +74,24 @@ class ExpenseItemAdmin(admin.ModelAdmin):
             'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','expenseRule','event','payToUser','payToLocation','payToName')
         }),
     )
+
+    def expenseStartDate(self,obj):
+        theTime = obj.accrualDate
+        if obj.periodStart:
+            theTime = obj.periodStart
+        elif obj.event:
+            theTime = obj.event.startTime
+        return theTime
+    expenseStartDate.short_description = _('Start Date')
+
+    def expenseEndDate(self,obj):
+        theTime = obj.accrualDate
+        if obj.periodEnd:
+            theTime = obj.periodEnd
+        elif obj.event:
+            theTime = obj.event.endTime
+        return theTime
+    expenseEndDate.short_description = _('End Date')
 
     def approveExpense(self, request, queryset):
         rows_updated = queryset.update(approved=True)
