@@ -1,6 +1,12 @@
 Version History
 ===============
 
+0.5.3 - April 14, 2018
+----------------------
+
+- Improved admin listing of expense items.
+- Fixed duplicate listing of venue expense items in FinancialDetailView.
+
 0.5.2 - February 21, 2018
 -----------------------
 
