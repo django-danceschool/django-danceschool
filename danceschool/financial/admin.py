@@ -75,24 +75,6 @@ class ExpenseItemAdmin(admin.ModelAdmin):
         }),
     )
 
-    def expenseStartDate(self,obj):
-        theTime = obj.accrualDate
-        if obj.periodStart:
-            theTime = obj.periodStart
-        elif obj.event:
-            theTime = obj.event.startTime
-        return theTime
-    expenseStartDate.short_description = _('Start Date')
-
-    def expenseEndDate(self,obj):
-        theTime = obj.accrualDate
-        if obj.periodEnd:
-            theTime = obj.periodEnd
-        elif obj.event:
-            theTime = obj.event.endTime
-        return theTime
-    expenseEndDate.short_description = _('End Date')
-
     def approveExpense(self, request, queryset):
         rows_updated = queryset.update(approved=True)
         if rows_updated == 1:

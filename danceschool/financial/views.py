@@ -519,7 +519,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         })
 
         context.update({
-            'registrationRevenueItems': revenueItems.filter(category=getConstant('financial__registrationsRevenueCat')).order_by('-event__startTime'),
+            'registrationRevenueItems': revenueItems.filter(category=getConstant('financial__registrationsRevenueCat')).order_by('-event__startTime','event__uuid'),
             'otherRevenueItems': revenueItems.exclude(category=getConstant('financial__registrationsRevenueCat')).order_by('category'),
             'revenueCategoryTotals': RevenueCategory.objects.filter(revenueitem__in=revenueItems).annotate(category_total=Sum('revenueitem__total'),category_adjustments=Sum('revenueitem__adjustments'),category_fees=Sum('revenueitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') - F('category_fees')),
         })

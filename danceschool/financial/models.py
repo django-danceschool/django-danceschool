@@ -581,6 +581,26 @@ class ExpenseItem(models.Model):
     netExpense.fget.short_description = _('Net expense')
 
     @property
+    def expenseStartDate(self):
+        theTime = self.accrualDate
+        if self.periodStart:
+            theTime = self.periodStart
+        elif self.event:
+            theTime = self.event.startTime
+        return theTime
+    expenseStartDate.fget.short_description = _('Start Date')
+
+    @property
+    def expenseEndDate(self,obj):
+        theTime = self.accrualDate
+        if self.periodEnd:
+            theTime = self.periodEnd
+        elif self.event:
+            theTime = self.event.endTime
+        return theTime
+    expenseEndDate.short_description = _('End Date')
+
+    @property
     def payTo(self):
         '''
         Returns a string indicating who the expense is to be paid to.
