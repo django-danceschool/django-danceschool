@@ -35,7 +35,7 @@ setup(
         'django-crispy-forms>=1.6.0',
         'django-daterange-filter>=1.2.0',
         'django-dynamic-preferences>=1.4.2',
-        'django-easy-pdf>=0.1.0',
+        'django-easy-pdf==0.1.0',
         'django-filer>=1.2.7',
         'django-ical>=1.4',
         'django-imagekit>=3.3',
@@ -61,6 +61,7 @@ setup(
         'squareconnect>=2.2.1',
         'stripe>=1.62.0',
         'unicodecsv>=0.14.1',
+        'xhtml2pdf==0.1b1',
     ],
     classifiers=[
         'Environment :: Web Environment',
