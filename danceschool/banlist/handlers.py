@@ -13,7 +13,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.db.models import Q
 
 # Local Application Specific Imports
-from banlist.models import BannedPerson, BanFlaggedRecord
+from danceschool.banlist.models import BannedPerson, BanFlaggedRecord
 from danceschool.core.signals import check_student_info
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.tasks import sendEmail
