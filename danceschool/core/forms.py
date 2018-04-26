@@ -76,7 +76,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
         if value is None:
             value = []
         has_id = attrs and 'id' in attrs
-        final_attrs = self.build_attrs(attrs, name=name)
+        final_attrs = self.build_attrs(attrs, extra_attrs={'name': name})
         output = [u'',]
 
         # Separate out regular choices and override-only choices

@@ -1,6 +1,21 @@
 Version History
 ===============
 
+0.5.3 - April 14, 2018
+----------------------
+
+- Improved admin listing of expense items.
+- Fixed duplicate listing of venue expense items in FinancialDetailView.
+
+0.5.2 - February 21, 2018
+-----------------------
+
+- Discounts now show up on the registration cart page, not just the final page (#79)
+- Fixed issue with change in name of CKEditor theme (#83)
+- Fixed Django 1.11 migration issues with registration template
+- Permitted configurable rules for determination of event months
+
+
 0.5.1 - February 7, 2018
 -----------------------
 

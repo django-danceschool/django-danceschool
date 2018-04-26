@@ -23,6 +23,7 @@ from multiselectfield import MultiSelectField
 from calendar import month_name, day_name
 from djchoices import DjangoChoices, ChoiceItem
 from math import ceil
+from itertools import accumulate
 import logging
 from jsonfield import JSONField
 import string
@@ -633,18 +634,42 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     def getYearAndMonth(self):
 
+        rule = getConstant('registration__eventMonthRule')
+
+        class_counter = list(Counter([(x.startTime.year, x.startTime.month) for x in self.eventoccurrence_set.order_by('startTime')]).items())
+
         # Count occurrences by year and month, and find any months with more than one occurrence in them.  Return the
         # first of these.  If no months have more than one occurrence, return the month of the first occurrence.
-        class_counter = Counter([(x.startTime.year, x.startTime.month) for x in self.eventoccurrence_set.all()])
-        multiclass_months = [x[0] for x in class_counter.items() if x[1] > 1]
-        all_months = [x[0] for x in class_counter.items()]
+        if rule == 'FirstMulti' and class_counter:
+            multiclass_months = [x[0] for x in class_counter if x[1] > 1]
+            all_months = [x[0] for x in class_counter]
 
-        if multiclass_months:
-            return min(multiclass_months)
-        elif all_months:
-            return min(all_months)
-        else:
-            return (None,None)
+            if multiclass_months:
+                return min(multiclass_months)
+            elif all_months:
+                return min(all_months)
+        # Return the month with the most occurrences (ties are broken in favor of earlier months)
+        elif rule == 'Most' and class_counter:
+            class_counter.sort(key=lambda x: (-x[1], x[0]))
+            return class_counter[0][0]
+        # Return the month of the last occurrence
+        elif rule == 'Last' and class_counter:
+            class_counter.sort(key=lambda x: x[0], reverse=True)
+            return class_counter[0][0]
+        # Return the month of the first occurrence
+        elif rule == '1' and class_counter:
+            class_counter.sort(key=lambda x: x[0])
+            return class_counter[0][0]
+        # Return the month of the second occurrence
+        elif rule == '2' and class_counter:
+            class_counter.sort(key=lambda x: x[0])
+            cumulative_list = list(accumulate([x[1] for x in class_counter]))
+            if max(cumulative_list) >= 2:
+                return class_counter[next(x[0] for x in enumerate(cumulative_list) if x[1] >= 2)][0]
+            else:
+                return class_counter[len(class_counter) - 1][0]
+
+        return (None,None)
 
     @property
     def numOccurrences(self):

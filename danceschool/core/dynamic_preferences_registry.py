@@ -288,6 +288,25 @@ class RegistrationDisplayLimitDays(IntegerPreference):
 
 
 @global_preferences_registry.register
+class EventMonthRule(ChoicePreference):
+    section = registration
+    name = 'eventMonthRule'
+    choices = [
+        ('1', 'Month of first occurrence'),
+        ('2', 'Month of second occurrence'),
+        ('Last', 'Month of last occurrence'),
+        ('FirstMulti', 'First month with more than one occurrence (or first)'),
+        ('Most', 'Month with the most occurrences'),
+    ]
+    verbose_name = _('Rule for Assigning Events to Months')
+    default = 'FirstMulti'
+    help_text = _(
+        'When events are listed by month in various views, this rule determines '
+        'the month to which each event is assigned.'
+    )
+
+
+@global_preferences_registry.register
 class SalesTaxRate(FloatPreference):
     section = registration
     name = 'salesTaxRate'

@@ -500,7 +500,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
 
         context.update({
             'instructionExpenseItems': expenseItems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).order_by('payToUser__last_name','payToUser__first_name'),
-            'venueExpenseItems': expenseItems.filter(category=getConstant('financial__venueRentalExpenseCat')).order_by('payToLocation'),
+            'venueExpenseItems': expenseItems.filter(category=getConstant('financial__venueRentalExpenseCat')).order_by('payToLocation__name'),
             'otherExpenseItems': expenseItems.exclude(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat'),getConstant('financial__venueRentalExpenseCat')]).order_by('category'),
             'expenseCategoryTotals': ExpenseCategory.objects.filter(expenseitem__in=expenseItems).annotate(category_total=Sum('expenseitem__total'),category_adjustments=Sum('expenseitem__adjustments'),category_fees=Sum('expenseitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') + F('category_fees')),
         })
@@ -519,7 +519,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         })
 
         context.update({
-            'registrationRevenueItems': revenueItems.filter(category=getConstant('financial__registrationsRevenueCat')).order_by('-event__startTime'),
+            'registrationRevenueItems': revenueItems.filter(category=getConstant('financial__registrationsRevenueCat')).order_by('-event__startTime','event__uuid'),
             'otherRevenueItems': revenueItems.exclude(category=getConstant('financial__registrationsRevenueCat')).order_by('category'),
             'revenueCategoryTotals': RevenueCategory.objects.filter(revenueitem__in=revenueItems).annotate(category_total=Sum('revenueitem__total'),category_adjustments=Sum('revenueitem__adjustments'),category_fees=Sum('revenueitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') - F('category_fees')),
         })
