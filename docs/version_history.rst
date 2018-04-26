@@ -1,6 +1,15 @@
 Version History
 ===============
 
+0.5.4 - April 26, 2018
+----------------------
+
+- Fixed html5lib version inconsistency issue.
+- Fixed missing URLs for djangocmsforms app.
+- Simplified README.
+- Misc. cleanup
+
+
 0.5.3 - April 14, 2018
 ----------------------
 
