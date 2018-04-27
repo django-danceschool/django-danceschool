@@ -307,6 +307,25 @@ class EventMonthRule(ChoicePreference):
 
 
 @global_preferences_registry.register
+class ShowDescriptionRule(ChoicePreference):
+    section = registration
+    name = 'showDescriptionRule'
+    choices = [
+        ('0', 'No description'),
+        ('10', 'First 10 words'),
+        ('20', 'First 20 words'),
+        ('50', 'First 50 words'),
+        ('all', 'Full description'),
+    ]
+    verbose_name = _('Rule for showing class descriptions on the regisration page')
+    help_text = _(
+        'This option determines how much of each event\'s description is shown on the class registration page. '
+        'Users can always select the \'more info\' link to access the full description.'
+    )
+    default = 'all'
+
+
+@global_preferences_registry.register
 class SalesTaxRate(FloatPreference):
     section = registration
     name = 'salesTaxRate'
