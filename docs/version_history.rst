@@ -1,6 +1,11 @@
 Version History
 ===============
 
+0.5.5 - April 26, 2018
+----------------------
+
+- Fixed banlist module reference issue.
+
 0.5.4 - April 26, 2018
 ----------------------
 
