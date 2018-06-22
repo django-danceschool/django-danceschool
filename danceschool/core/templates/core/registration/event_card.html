@@ -37,7 +37,11 @@
         </div>
       </div>
       <div class="col-lg-9 col-md-8">
-        {{ event.classDescription.description }}
+        {% if showDescriptionRule == "all" %}
+          {{ event.classDescription.description }}
+        {% elif showDescriptionRule != "0" %}
+          {{ event.classDescription.description|truncatewords_html:showDescriptionRule }}
+        {% endif %}
         <div class="card-text reg-event-pricing mt-4">
           {% if event.pricingTier and event.registrationOpen %}
             <a class="pricingPopover seriestype"

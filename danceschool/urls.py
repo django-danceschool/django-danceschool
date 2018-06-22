@@ -43,6 +43,9 @@ urlpatterns = [
     # For better authentication
     url(r'^accounts/', include('allauth.urls')),
 
+    # For Django CMS forms
+    url(r'^', include('djangocms_forms.urls')),
+    
     # The URLS associated with all built-in core functionality.
     url(r'^', include('danceschool.core.urls')),
     url(r'^register/', include('danceschool.core.urls_registration')),

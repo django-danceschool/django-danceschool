@@ -1,3 +1,9 @@
+# Python Imports
+import logging
+import string
+import random
+
+# Third Party Imports
 from django.dispatch import receiver
 from django.contrib import messages
 from django.core.exceptions import ValidationError
@@ -6,15 +12,11 @@ from django.utils.translation import ugettext
 from django.utils.translation import ugettext_lazy as _
 from django.db.models import Q
 
+# Local Application Specific Imports
+from danceschool.banlist.models import BannedPerson, BanFlaggedRecord
 from danceschool.core.signals import check_student_info
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.tasks import sendEmail
-
-from .models import BannedPerson, BanFlaggedRecord
-
-import logging
-import string
-import random
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -30,7 +32,7 @@ def get_client_ip(request):
 
 
 @receiver(check_student_info)
-def checkBanlist(sender,**kwargs):
+def checkBanlist(sender, **kwargs):
     '''
     Check that this individual is not on the ban list.
     '''
@@ -40,14 +42,14 @@ def checkBanlist(sender,**kwargs):
 
     logger.debug('Signal to check RegistrationContactForm handled by banlist app.')
 
-    formData = kwargs.get('formData',{})
+    formData = kwargs.get('formData', {})
     first = formData.get('firstName')
     last = formData.get('lastName')
     email = formData.get('email')
 
-    request = kwargs.get('request',{})
-    session = getattr(request,'session',{}).get(REG_VALIDATION_STR,{})
-    registrationId = getattr(kwargs.get('registration',None),'id',None)
+    request = kwargs.get('request', {})
+    session = getattr(request, 'session', {}).get(REG_VALIDATION_STR, {})
+    registrationId = getattr(kwargs.get('registration', None), 'id', None)
 
     records = BannedPerson.objects.exclude(
         disabled=True
@@ -90,9 +92,11 @@ def checkBanlist(sender,**kwargs):
             'have been asked to notify the school at %s with code %s to proceed.' % (respondTo, flagCode)
         )
 
-        sendEmail(subject,message,send_from,to=[notify])
+        sendEmail(subject, message, send_from, to=[notify])
 
-    message = ugettext('There appears to be an issue with this registration.  Please contact %s to proceed with the registration process.  You may reference the error code %s.' % (respondTo, flagCode))
+    message = ugettext('There appears to be an issue with this registration. '
+                       'Please contact %s to proceed with the registration process. '
+                       'You may reference the error code %s.' % (respondTo, flagCode))
 
     if request.user.has_perm('banlist.ignore_ban'):
         messages.warning(request, message)

@@ -1,6 +1,26 @@
 Version History
 ===============
 
+0.5.5 - April 26, 2018
+----------------------
+
+- Fixed banlist module reference issue.
+
+0.5.4 - April 26, 2018
+----------------------
+
+- Fixed html5lib version inconsistency issue.
+- Fixed missing URLs for djangocmsforms app.
+- Simplified README.
+- Misc. cleanup
+
+
+0.5.3 - April 14, 2018
+----------------------
+
+- Improved admin listing of expense items.
+- Fixed duplicate listing of venue expense items in FinancialDetailView.
+
 0.5.2 - February 21, 2018
 -----------------------
 

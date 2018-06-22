@@ -73,6 +73,7 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
     def get_context_data(self,**kwargs):
         ''' Add the event and series listing data '''
         context = self.get_listing()
+        context['showDescriptionRule'] = getConstant('registration__showDescriptionRule') or 'all'
         context.update(kwargs)
 
         return super(ClassRegistrationView,self).get_context_data(**context)

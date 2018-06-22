@@ -55,11 +55,11 @@ class ExpenseItemAdminForm(ModelForm):
 class ExpenseItemAdmin(admin.ModelAdmin):
     form = ExpenseItemAdminForm
 
-    list_display = ('category','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
+    list_display = ('category','expenseStartDate','expenseEndDate','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
     search_fields = ('description','comments','=category__name','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
     list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter),'expenseRule')
-    readonly_fields = ('submissionUser','expenseRule')
+    readonly_fields = ('submissionUser','expenseRule','expenseStartDate','expenseEndDate')
     actions = ('approveExpense','unapproveExpense')
 
     fieldsets = (
