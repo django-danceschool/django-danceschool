@@ -7,7 +7,7 @@ from dal import autocomplete
 from danceschool.core.models import Customer, Registration, TemporaryRegistration
 from danceschool.core.admin import CustomerAdmin
 
-from .models import VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse, VoucherCredit
+from .models import VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher, CustomerGroupVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse, VoucherCredit
 
 
 class CustomerVoucherInlineForm(ModelForm):
@@ -30,6 +30,12 @@ class CustomerVoucherInlineForm(ModelForm):
     class Meta:
         model = CustomerVoucher
         exclude = []
+
+
+class CustomerGroupVoucherInline(admin.StackedInline):
+    model = CustomerGroupVoucher
+    extra = 1
+    classes = ['collapse',]
 
 
 class CustomerVoucherInline(admin.StackedInline):
@@ -115,7 +121,7 @@ class VoucherCreditInline(admin.TabularInline):
 
 
 class VoucherAdmin(admin.ModelAdmin):
-    inlines = [DanceTypeVoucherInline,ClassVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
+    inlines = [DanceTypeVoucherInline,ClassVoucherInline,CustomerGroupVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
     list_display = ['voucherId','name','category','amountLeft','maxAmountPerUse','expirationDate','isEnabled','restrictions']
     list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
     search_fields = ['voucherId','name','description']

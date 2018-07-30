@@ -1380,6 +1380,29 @@ class PublicEvent(Event):
         verbose_name_plural = _('Public events')
 
 
+class CustomerGroup(EmailRecipientMixin, models.model):
+    '''
+    A customer group can be used to send emails and to define group-specific
+    discounts and vouchers.
+    '''
+    name = models.CharField(_('Group name'),max_length=100)
+
+    def memberCount(self):
+        return self.customer_set.count()
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [x.email for x in self.customer_set.all()]
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ('name',)
+        verbose_name = _('Customer group')
+        verbose_name_plural = _('Customer groups')
+
+
 @python_2_unicode_compatible
 class Customer(EmailRecipientMixin, models.Model):
     '''
@@ -1394,6 +1417,12 @@ class Customer(EmailRecipientMixin, models.Model):
     last_name = models.CharField(_('Last name'), max_length=30)
     email = models.EmailField(_('Email address'))
     phone = models.CharField(_('Telephone'),max_length=20,null=True,blank=True)
+
+    groups = models.ManyToManyField(
+        CustomerGroup,
+        verbose_name=_('Customer groups'),blank=True,
+        help_text=_('Customer groups may be used for group-specific discounts and vouchers, as well as for email purposes.')
+    )
 
     # PostgreSQL can store arbitrary additional information associated with this customer
     # in a JSONfield, but to remain database agnostic we are using django-jsonfield

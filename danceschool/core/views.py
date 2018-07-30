@@ -23,7 +23,7 @@ from cms.models import Page
 import re
 import logging
 
-from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
+from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, CustomerGroup, Customer
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
@@ -529,16 +529,24 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
     template_name = 'cms/forms/display_form_classbased_admin.html'
 
     def dispatch(self, request, *args, **kwargs):
-        ''' If a list of customers was passed, then parse it '''
+        ''' If a list of customers or groups was passed, then parse it '''
         ids = request.GET.get('customers')
+        groups = request.GET.get('customergroup')
+        self.customers = None
 
-        if ids:
+        if ids or groups:
+            # Initial filter applies to no one but allows appending by logical or
+            filters = Q(id__isnull=True)
+
+            if ids:
+                filters = filters | Q(id__in=[int(x) for x in ids.split(',')])
+            if groups:
+                filters = filters | Q(customergroup__id__in=[int(x) for x in groups.split(',')])
+
             try:
-                self.customers = Customer.objects.filter(id__in=[int(x) for x in ids.split(',')])
+                self.customers = Customer.objects.filter(filters)
             except ValueError:
                 return HttpResponseBadRequest(_('Invalid customer ids passed'))
-        else:
-            self.customers = None
 
         return super(SendEmailView,self).dispatch(request, *args, **kwargs)
 

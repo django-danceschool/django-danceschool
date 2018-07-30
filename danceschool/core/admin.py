@@ -13,7 +13,7 @@ from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 import json
 import six
 
-from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
+from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
 from .forms import LocationWithDataWidget
 
@@ -451,6 +451,9 @@ class CustomerAdmin(admin.ModelAdmin):
         (None, {
             'fields': (('first_name','last_name'),'email','phone','user',)
         }),
+        (_('Groups'), {
+            'fields': ('groups',)
+        }),
         (_('Additional Customer Data'), {
             'classes': ('collapse',),
             'fields': (('numClassSeries','numPublicEvents',),'data',),
@@ -464,6 +467,20 @@ class CustomerAdmin(admin.ModelAdmin):
     emailCustomers.short_description = _('Email selected customers')
 
     inlines = [CustomerRegistrationInline,]
+    actions = ['emailCustomers']
+
+
+@admin.register(CustomerGroup)
+class CustomerGroupAdmin(admin.ModelAdmin):
+    list_display = ('name','memberCount')
+    readonly_fields = ('memberCount',)
+
+    def emailCustomers(self, request, queryset):
+        # Allows use of the email view to contact specific customer groups.
+        selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+        return HttpResponseRedirect(reverse('emailStudents') + "?customergroup=%s" % (",".join(selected)))
+    emailCustomers.short_description = _('Email selected customer groups')
+
     actions = ['emailCustomers']
 
 
@@ -892,3 +909,4 @@ admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
 admin.site.register(EventStaffCategory)
+admin.site.register(CustomerGroup)

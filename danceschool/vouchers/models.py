@@ -7,7 +7,7 @@ from django.utils import timezone
 import random
 import string
 
-from danceschool.core.models import Customer, Registration, TemporaryRegistration, ClassDescription, DanceTypeLevel
+from danceschool.core.models import CustomerGroup, Customer, Registration, TemporaryRegistration, ClassDescription, DanceTypeLevel
 
 
 @python_2_unicode_compatible
@@ -91,7 +91,10 @@ class Voucher(models.Model):
     hasExpired.fget.short_description = _('Has Expired')
 
     def getIsValidForAnyCustomer(self):
-        isvalid = len(CustomerVoucher.objects.filter(voucher=self)) == 0
+        isvalid = (
+            len(CustomerVoucher.objects.filter(voucher=self)) +
+            len(CustomerGroupVoucher.objects.filter(voucher=self)) == 0
+        )
         return isvalid
 
     isValidForAnyCustomer = property(fget=getIsValidForAnyCustomer)
@@ -149,9 +152,18 @@ class Voucher(models.Model):
         if self.disabled:
             raise ValidationError(_('This voucher has been disabled.'))
 
-        # customer is either in list or there is no list
-        if not self.isValidForAnyCustomer and (not customer or not CustomerVoucher.objects.filter(voucher=self,customer=customer).exists()):
-            raise ValidationError(_('This voucher is associated with a specific customer.'))
+        # customer is either in the list or there is no list
+        if not self.isValidForAnyCustomer:
+            if not customer:
+                raise ValidationError(_('This voucher is associated with a specific customer or customer group.'))
+
+            cvs = CustomerVoucher.objects.filter(voucher=self)
+            cgvs = CustomerGroupVoucher.objects.filter(voucher=self)
+
+            if cvs.exists() and not cvs.filter(customer=customer).exists():
+                raise ValidationError(_('This voucher is associated with a specific customer.'))
+            elif cgvs.exists() and not cgvs.filter(group__in=customer.customergroup_set.all()).exists():
+                raise ValidationError(_('This voucher is associated with a specific customer group.'))
 
         if self.forFirstTimeCustomersOnly and customer and customer.numClassSeries > 0:
             raise ValidationError(_('This voucher can only be used by first time customers.'))
@@ -208,6 +220,15 @@ class ClassVoucher(models.Model):
     class Meta:
         verbose_name = _('Class-specific voucher restriction')
         verbose_name_plural = _('Class-specific voucher restrictions')
+
+
+class CustomerGroupVoucher(models.Model):
+    group = models.ForeignKey(CustomerGroup,verbose_name=_('Customer group'))
+    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+
+    class Meta:
+        verbose_name = _('Group-specific voucher restriction')
+        verbose_name_plural = _('Group-specific voucher restrictions')
 
 
 class CustomerVoucher(models.Model):

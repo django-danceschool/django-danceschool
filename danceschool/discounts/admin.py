@@ -4,7 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from dal import autocomplete
 
-from .models import DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount, CustomerDiscount
+from .models import DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount, CustomerGroupDiscount, CustomerDiscount
 from danceschool.core.models import Registration, TemporaryRegistration, PricingTier, Customer
 
 
@@ -43,6 +43,12 @@ class CustomerDiscountInlineForm(ModelForm):
         exclude = []
 
 
+class CustomerGroupDiscountInline(admin.StackedInline):
+    model = CustomerGroupDiscount
+    extra = 1
+    classes = ['collapse',]
+
+
 class CustomerDiscountInline(admin.StackedInline):
     model = CustomerDiscount
     form = CustomerDiscountInlineForm
@@ -61,7 +67,7 @@ class DiscountComboAdminForm(ModelForm):
 
 
 class DiscountComboAdmin(admin.ModelAdmin):
-    inlines = [DiscountComboComponentInline,CustomerDiscountInline]
+    inlines = [DiscountComboComponentInline,CustomerGroupDiscountInline,CustomerDiscountInline]
     form = DiscountComboAdminForm
 
     list_display = ('name','category','discountType','active','expirationDate','restrictions')
