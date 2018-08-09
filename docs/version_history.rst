@@ -1,6 +1,11 @@
 Version History
 ===============
 
+0.5.6 - August 8, 2018
+----------------------
+
+- Fixed xhtml2pdf version incompatibility issues.
+
 0.5.5 - April 26, 2018
 ----------------------
 
