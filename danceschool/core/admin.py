@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect
+from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect, ModelMultipleChoiceField
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
@@ -12,6 +12,7 @@ from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModel
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 import json
 import six
+from dal import autocomplete
 
 from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
@@ -470,10 +471,46 @@ class CustomerAdmin(admin.ModelAdmin):
     actions = ['emailCustomers']
 
 
+class CustomerGroupAdminForm(ModelForm):
+    customers = ModelMultipleChoiceField(
+        queryset=Customer.objects.all(),
+        required=False,
+        widget=autocomplete.ModelSelect2Multiple(
+            url='autocompleteCustomer',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a customer name'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 4,
+                'class': 'modern-style',
+            }
+        )
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(CustomerGroupAdminForm, self).__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial['customers'] = self.instance.customer_set.values_list('pk', flat=True)
+
+    def save(self, *args, **kwargs):
+        instance = super(CustomerGroupAdminForm, self).save(*args, **kwargs)
+        if instance.pk:
+            instance.customer_set.clear()
+            instance.customer_set.add(*self.cleaned_data['customers'])
+        return instance
+
+    class Meta:
+        model = CustomerGroup
+        exclude = []
+
+
 @admin.register(CustomerGroup)
 class CustomerGroupAdmin(admin.ModelAdmin):
     list_display = ('name','memberCount')
     readonly_fields = ('memberCount',)
+    form = CustomerGroupAdminForm
 
     def emailCustomers(self, request, queryset):
         # Allows use of the email view to contact specific customer groups.
@@ -909,4 +946,3 @@ admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
 admin.site.register(EventStaffCategory)
-admin.site.register(CustomerGroup)

@@ -23,7 +23,7 @@ from cms.models import Page
 import re
 import logging
 
-from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, CustomerGroup, Customer
+from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
@@ -541,7 +541,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
             if ids:
                 filters = filters | Q(id__in=[int(x) for x in ids.split(',')])
             if groups:
-                filters = filters | Q(customergroup__id__in=[int(x) for x in groups.split(',')])
+                filters = filters | Q(groups__id__in=[int(x) for x in groups.split(',')])
 
             try:
                 self.customers = Customer.objects.filter(filters)

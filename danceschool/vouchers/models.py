@@ -162,7 +162,7 @@ class Voucher(models.Model):
 
             if cvs.exists() and not cvs.filter(customer=customer).exists():
                 raise ValidationError(_('This voucher is associated with a specific customer.'))
-            elif cgvs.exists() and not cgvs.filter(group__in=customer.customergroup_set.all()).exists():
+            elif cgvs.exists() and not cgvs.filter(group__in=customer.groups.all()).exists():
                 raise ValidationError(_('This voucher is associated with a specific customer group.'))
 
         if self.forFirstTimeCustomersOnly and customer and customer.numClassSeries > 0:

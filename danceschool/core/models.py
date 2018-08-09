@@ -1380,7 +1380,7 @@ class PublicEvent(Event):
         verbose_name_plural = _('Public events')
 
 
-class CustomerGroup(EmailRecipientMixin, models.model):
+class CustomerGroup(EmailRecipientMixin, models.Model):
     '''
     A customer group can be used to send emails and to define group-specific
     discounts and vouchers.
