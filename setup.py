@@ -63,7 +63,7 @@ setup(
         'squareconnect>=2.2.1',
         'stripe>=1.62.0',
         'unicodecsv>=0.14.1',
-        'xhtml2pdf==0.1b1',
+        'xhtml2pdf>=0.2.2',
     ],
     classifiers=[
         'Environment :: Web Environment',

@@ -6,7 +6,7 @@ from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
 from collections import namedtuple
 
-from danceschool.core.models import PricingTier, DanceTypeLevel, Registration, TemporaryRegistration, Customer
+from danceschool.core.models import PricingTier, DanceTypeLevel, Registration, TemporaryRegistration, Customer, CustomerGroup
 
 
 class PointGroup(models.Model):
@@ -282,6 +282,16 @@ class RegistrationDiscount(models.Model):
         unique_together = ('registration', 'discount')
         verbose_name = _('Discount applied to registration')
         verbose_name_plural = _('Discounts applied to registrations')
+
+
+class CustomerGroupDiscount(models.Model):
+    ''' Some discounts are only available for specific customer groups '''
+    group = models.ForeignKey(CustomerGroup,verbose_name=_('Customer group'))
+    discountCombo = models.ForeignKey(DiscountCombo,verbose_name=_('Discount'))
+
+    class Meta:
+        verbose_name = _('Group-specific discount restriction')
+        verbose_name_plural = _('Group-specific discount restrictions')
 
 
 class CustomerDiscount(models.Model):

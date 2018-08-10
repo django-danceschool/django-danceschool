@@ -20,7 +20,7 @@ Overview of Features
 The following are the main features of the project:
 
 -  Class registration (Including conditional pricing)
--  Emailmanagement
+-  Email management
 -  Paypal and Stripe integration for registration and refunds
 -  Instructor scheduling (Including substitutions)
 -  Internal scheduling (Private calendars for staff members)

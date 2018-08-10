@@ -30,7 +30,7 @@ def get_default_duration():
 class SlotBookingForm(forms.Form):
     slotId = forms.IntegerField(required=True,widget=forms.HiddenInput)
     duration = forms.ChoiceField(label=_('Duration'),choices=get_duration_choices,initial=get_default_duration)
-    role = forms.ChoiceField(label=_('Dance role'),choices=[(x.id, x.name) for x in DanceRole.objects.all()])
+    role = forms.ModelChoiceField(label=_('Dance role'),queryset=DanceRole.objects.all())
     participants = forms.IntegerField(label=_('Expected # Participants'),initial=1, min_value=1, help_text=_('Be advised that group lessons may be charged a different rate.'))
     comments = forms.CharField(label=_('Comments/Notes'), required=False, help_text=_('Please enter any comments or notes that you would like to be provided to the instructor before the lesson, such as the topics on which you may want to focus.'))
 

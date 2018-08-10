@@ -97,6 +97,10 @@ class EventsToolbar(CMSToolbar):
             related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
             related_menu.add_link_item(_('Customers'),url=reverse('admin:core_customer_changelist'))
 
+        if self.request.user.has_perm('core.change_customergroup'):
+            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
+            related_menu.add_link_item(_('Customer Groups'),url=reverse('admin:core_customergroup_changelist'))
+
         if self.request.user.has_perm('core.change_dancetypelevel'):
             related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
             related_menu.add_link_item(_('Dance Roles'),url=reverse('admin:core_dancerole_changelist'))
