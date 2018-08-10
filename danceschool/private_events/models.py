@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ValidationError
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from colorful.fields import RGBColorField
@@ -9,7 +8,6 @@ from colorful.fields import RGBColorField
 from danceschool.core.models import Event, EventCategory, EventOccurrence
 
 
-@python_2_unicode_compatible
 class PrivateEventCategory(EventCategory):
     '''
     Private events have their own categorization relative to public events,
@@ -23,7 +21,6 @@ class PrivateEventCategory(EventCategory):
         verbose_name_plural = _('Private events categories')
 
 
-@python_2_unicode_compatible
 class PrivateEvent(Event):
     '''
     Calendar events may have multiple occurrences.
@@ -74,7 +71,6 @@ class PrivateEvent(Event):
         verbose_name_plural = _('Private events/calendar items')
 
 
-@python_2_unicode_compatible
 class EventReminder(models.Model):
     event = models.ForeignKey(Event,verbose_name=_('Event'))
     eventOccurrence = models.ForeignKey(EventOccurrence,verbose_name=_('Event Occurrence'))

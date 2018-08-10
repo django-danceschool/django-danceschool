@@ -334,7 +334,7 @@ class ShowDescriptionRule(ChoicePreference):
         ('10', _('First 10 words')),
         ('20', _('First 20 words')),
         ('50', _('First 50 words')),
-        ('all', _('Full description')_,
+        ('all', _('Full description')),
     ]
     verbose_name = _('Rule for showing class descriptions on the regisration page')
     help_text = _(

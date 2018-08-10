@@ -4,7 +4,6 @@ from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Q, Sum
-from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
 from django.apps import apps
@@ -16,7 +15,6 @@ from djangocms_text_ckeditor.fields import HTMLField
 import uuid
 from datetime import datetime, timedelta
 from collections import Counter
-import six
 from filer.fields.image import FilerImageField
 from colorful.fields import RGBColorField
 from multiselectfield import MultiSelectField
@@ -36,11 +34,6 @@ from .signals import post_registration
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
 from .utils.timezone import ensure_localtime
-
-
-if six.PY3:
-    # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
-    unicode = str
 
 
 # Define logger for this file
@@ -76,7 +69,6 @@ def get_validationString():
     return ''.join(random.choice(string.ascii_uppercase) for i in range(25))
 
 
-@python_2_unicode_compatible
 class DanceRole(models.Model):
     '''
     Most typically for partnered dances, this will be only Lead and Follow.
@@ -105,7 +97,6 @@ class DanceRole(models.Model):
         ordering = ('order',)
 
 
-@python_2_unicode_compatible
 class DanceType(models.Model):
     '''
     Many dance studios will have only one dance type, but this allows the studio to
@@ -126,7 +117,6 @@ class DanceType(models.Model):
         ordering = ('order',)
 
 
-@python_2_unicode_compatible
 class DanceTypeLevel(models.Model):
     '''
     Levels are defined within dance types.
@@ -146,7 +136,6 @@ class DanceTypeLevel(models.Model):
         ordering = ('danceType__order','order',)
 
 
-@python_2_unicode_compatible
 class StaffMember(PolymorphicModel):
     '''
     StaffMembers include instructors and anyone else who you may wish to
@@ -206,7 +195,6 @@ class StaffMember(PolymorphicModel):
         )
 
 
-@python_2_unicode_compatible
 class Instructor(StaffMember):
     '''
     These go on the instructors page.
@@ -268,7 +256,6 @@ class Instructor(StaffMember):
         )
 
 
-@python_2_unicode_compatible
 class ClassDescription(models.Model):
     '''
     All the classes we teach.
@@ -322,7 +309,6 @@ class ClassDescription(models.Model):
         verbose_name_plural = _('Class series descriptions')
 
 
-@python_2_unicode_compatible
 class Location(models.Model):
     '''
     Events are held at locations.
@@ -370,7 +356,6 @@ class Location(models.Model):
         ordering = ('orderNum',)
 
 
-@python_2_unicode_compatible
 class Room(models.Model):
     '''
     Locations may have multiple rooms, each of which may have its own capacity.
@@ -399,7 +384,6 @@ class Room(models.Model):
         ordering = ('location__name','name',)
 
 
-@python_2_unicode_compatible
 class PricingTier(models.Model):
     name = models.CharField(max_length=50,unique=True,help_text=_('Give this pricing tier a name (e.g. \'Default 4-week series\')'))
 
@@ -488,7 +472,6 @@ class EventSession(models.Model):
         verbose_name_plural = _('Event sessions')
 
 
-@python_2_unicode_compatible
 class EventCategory(models.Model):
     '''
     This abstract base class defines the categorization schema used for
@@ -509,7 +492,6 @@ class EventCategory(models.Model):
         abstract = True
 
 
-@python_2_unicode_compatible
 class SeriesCategory(EventCategory):
     '''
     Categorization for class series events, inherits from EventCategory.
@@ -522,7 +504,6 @@ class SeriesCategory(EventCategory):
         verbose_name_plural = _('Series categories')
 
 
-@python_2_unicode_compatible
 class PublicEventCategory(EventCategory):
     '''
     Categorization for public events, inherits from EventCategory.
@@ -536,7 +517,6 @@ class PublicEventCategory(EventCategory):
         verbose_name_plural = _('Public event categories')
 
 
-@python_2_unicode_compatible
 class Event(EmailRecipientMixin, PolymorphicModel):
     '''
     All public and private events, including class series, inherit off of this model.
@@ -1014,7 +994,6 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         ordering = ('-year','-month','-startTime')
 
 
-@python_2_unicode_compatible
 class EventOccurrence(models.Model):
     '''
     All events have one or more occurrences.  For example, class series have classes,
@@ -1089,7 +1068,6 @@ class EventOccurrence(models.Model):
         ordering = ('event','startTime')
 
 
-@python_2_unicode_compatible
 class EventRole(models.Model):
     event = models.ForeignKey(Event,on_delete=models.CASCADE)
     role = models.ForeignKey(DanceRole,on_delete=models.CASCADE)
@@ -1102,7 +1080,6 @@ class EventRole(models.Model):
         verbose_name_plural = _('Event dance roles')
 
 
-@python_2_unicode_compatible
 class EventStaffCategory(models.Model):
     name = models.CharField(_('Name'),max_length=50,unique=True)
 
@@ -1115,7 +1092,6 @@ class EventStaffCategory(models.Model):
         verbose_name_plural = _('Event staff categories')
 
 
-@python_2_unicode_compatible
 class EventStaffMember(models.Model):
     '''
     Events have staff members of various types.  Instructors and
@@ -1166,7 +1142,6 @@ class EventStaffMember(models.Model):
         verbose_name_plural = _('Event staff members')
 
 
-@python_2_unicode_compatible
 class Series(Event):
     '''
     A series is a particular type (subclass) of event which has instructors
@@ -1288,7 +1263,6 @@ class SeriesTeacherManager(models.Manager):
         return super(SeriesTeacherManager,self).create(**kwargs)
 
 
-@python_2_unicode_compatible
 class SeriesTeacher(EventStaffMember):
     '''
     A proxy model that provides staff member properties specific to
@@ -1331,7 +1305,6 @@ class SubstituteTeacherManager(models.Manager):
         return super(SubstituteTeacherManager,self).create(**kwargs)
 
 
-@python_2_unicode_compatible
 class SubstituteTeacher(EventStaffMember):
     '''
     Keeps track of substitute teaching.  The series and seriesTeacher fields are both needed, because
@@ -1366,7 +1339,6 @@ class SubstituteTeacher(EventStaffMember):
         verbose_name_plural = _('Substitute instructors')
 
 
-@python_2_unicode_compatible
 class PublicEvent(Event):
     '''
     Special Events which may have their own display page.
@@ -1453,7 +1425,6 @@ class CustomerGroup(EmailRecipientMixin, models.Model):
         verbose_name_plural = _('Customer groups')
 
 
-@python_2_unicode_compatible
 class Customer(EmailRecipientMixin, models.Model):
     '''
     Not all customers choose to log in when they sign up for classes, and sometimes Users register their spouses, friends,
@@ -1588,7 +1559,6 @@ class Customer(EmailRecipientMixin, models.Model):
         verbose_name_plural = _('Customers')
 
 
-@python_2_unicode_compatible
 class TemporaryRegistration(EmailRecipientMixin, models.Model):
     firstName = models.CharField(_('First name'),max_length=100,null=True)
     lastName = models.CharField(_('Last name'),max_length=100,null=True)
@@ -1811,7 +1781,6 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         verbose_name_plural = _('Temporary registrations')
 
 
-@python_2_unicode_compatible
 class Registration(EmailRecipientMixin, models.Model):
     '''
     There is a single registration for an online transaction.
@@ -2039,7 +2008,6 @@ class Registration(EmailRecipientMixin, models.Model):
         )
 
 
-@python_2_unicode_compatible
 class EventRegistration(EmailRecipientMixin, models.Model):
     '''
     An EventRegistration is associated with a Registration and records
@@ -2184,7 +2152,6 @@ class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
         verbose_name_plural = _('Temporary event registrations')
 
 
-@python_2_unicode_compatible
 class EmailTemplate(models.Model):
     name = models.CharField(_('Template name'),max_length=100,unique=True)
     subject = models.CharField(_('Subject line'),max_length=200,null=True,blank=True)
@@ -2232,7 +2199,6 @@ class EmailTemplate(models.Model):
         )
 
 
-@python_2_unicode_compatible
 class Invoice(EmailRecipientMixin, models.Model):
 
     class PaymentStatus(DjangoChoices):
@@ -2685,7 +2651,6 @@ class Invoice(EmailRecipientMixin, models.Model):
         )
 
 
-@python_2_unicode_compatible
 class InvoiceItem(models.Model):
     '''
     Since we potentially want to facilitate financial tracking by Event and not

@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.utils.encoding import python_2_unicode_compatible
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
@@ -25,7 +24,6 @@ def ordinal(n):
     return "%d%s" % (n,"tsnrhtdd"[(math.floor(n / 10) % 10 != 1) * (n % 10 < 4) * n % 10::4])
 
 
-@python_2_unicode_compatible
 class ExpenseCategory(models.Model):
     '''
     These are the different available categories of payment
@@ -42,7 +40,6 @@ class ExpenseCategory(models.Model):
         verbose_name_plural = _('Expense categories')
 
 
-@python_2_unicode_compatible
 class RevenueCategory(models.Model):
     '''
     These are the different available categories of payment
@@ -480,7 +477,6 @@ class GenericRepeatedExpense(RepeatedExpenseRule):
         verbose_name_plural = _('Other repeated expenses')
 
 
-@python_2_unicode_compatible
 class ExpenseItem(models.Model):
     '''
     Expenses may be associated with EventStaff or with Events, or they may be associated with nothing
@@ -708,7 +704,6 @@ class ExpenseItem(models.Model):
         )
 
 
-@python_2_unicode_compatible
 class RevenueItem(models.Model):
     '''
     All revenue-producing transactions (e.g. class payments, other payments) should have an associated RevenueItem

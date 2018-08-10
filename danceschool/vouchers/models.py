@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 import random
@@ -10,7 +9,6 @@ import string
 from danceschool.core.models import CustomerGroup, Customer, Registration, TemporaryRegistration, ClassDescription, DanceTypeLevel
 
 
-@python_2_unicode_compatible
 class VoucherCategory(models.Model):
     name = models.CharField(_('Name'),max_length=80,unique=True)
     description = models.TextField(_('Description'),null=True,blank=True)
@@ -23,7 +21,6 @@ class VoucherCategory(models.Model):
         verbose_name_plural = _('Voucher categories')
 
 
-@python_2_unicode_compatible
 class Voucher(models.Model):
     # unique identifier
     voucherId = models.CharField(_('Voucher Code'),max_length=100,unique=True)

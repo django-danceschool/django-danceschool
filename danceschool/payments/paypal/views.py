@@ -6,7 +6,6 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.utils.functional import SimpleLazyObject
 from django.utils import timezone
 
-import six
 import logging
 from paypalrestsdk import Payment
 from paypalrestsdk.exceptions import ResourceNotFound
@@ -16,10 +15,6 @@ from danceschool.core.models import TemporaryRegistration, Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
 
 from .models import PaypalPaymentRecord
-
-if six.PY3:
-    # Ensures that checks for Unicode data types (and unicode type assignments) do not break.
-    unicode = str
 
 
 # Define logger for this file

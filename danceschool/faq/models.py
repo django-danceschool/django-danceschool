@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from cms.models.pluginmodel import CMSPlugin
@@ -7,7 +6,6 @@ from cms.models.pluginmodel import CMSPlugin
 from djangocms_text_ckeditor.fields import HTMLField
 
 
-@python_2_unicode_compatible
 class FAQCategory(models.Model):
 
     name = models.CharField(_('Name'),max_length=200,unique=True)
@@ -24,7 +22,6 @@ class FAQCategory(models.Model):
         verbose_name_plural = _('FAQ categories')
 
 
-@python_2_unicode_compatible
 class FAQ(models.Model):
 
     category = models.ForeignKey(FAQCategory,null=True,verbose_name=_('Category'))

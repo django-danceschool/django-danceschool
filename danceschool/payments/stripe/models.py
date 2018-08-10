@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from cms.models.pluginmodel import CMSPlugin
@@ -15,7 +14,6 @@ from danceschool.core.models import PaymentRecord
 logger = logging.getLogger(__name__)
 
 
-@python_2_unicode_compatible
 class StripeCharge(PaymentRecord):
 
     def __init__(self, *args, **kwargs):

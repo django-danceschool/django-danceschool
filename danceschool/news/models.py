@@ -1,5 +1,4 @@
 from django.db import models
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
@@ -8,7 +7,6 @@ from cms.models.pluginmodel import CMSPlugin
 from djangocms_text_ckeditor.fields import HTMLField
 
 
-@python_2_unicode_compatible
 class NewsItem(models.Model):
     '''
     Each NewsItem will be posted on the news page, with the most recent news first.
