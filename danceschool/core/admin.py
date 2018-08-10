@@ -807,9 +807,9 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
-    list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','customers')
-    list_editable = ('status','category')
-    list_filter = ('location','status','registrationOpen','category','pricingTier')
+    list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','session','customers')
+    list_editable = ('status','category','session')
+    list_filter = ('location','status','registrationOpen','category','session','pricingTier')
 
     def customers(self,obj):
         return obj.numRegistered
@@ -823,7 +823,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('classDescription',('location','room'),'pricingTier',('category','allowDropins'),('uuidLink',)),
+            'fields': ('classDescription',('location','room'),'pricingTier',('category','session','allowDropins'),('uuidLink',)),
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse',),
@@ -884,9 +884,9 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     form = PublicEventAdminForm
     show_in_index = True
 
-    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','status','registrationOpen','pricingTier','category','numRegistered')
-    list_filter = ('location','status','registrationOpen','pricingTier','category')
-    list_editable = ('status','category')
+    list_display = ('name','numOccurrences','firstOccurrenceTime','lastOccurrenceTime','location','status','registrationOpen','pricingTier','category','session','numRegistered')
+    list_filter = ('location','status','registrationOpen','pricingTier','category','session')
+    list_editable = ('status','category','session')
     search_fields = ('name',)
     ordering = ('-endTime',)
     prepopulated_fields = {'slug': ('title',)}
@@ -894,7 +894,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('title','slug','category',('location','room'),)
+            'fields': ('title','slug','category','session',('location','room'),)
         }),
         (_('Registration/Visibility'), {
             'fields': ('status',('pricingTier','capacity'),),

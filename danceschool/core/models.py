@@ -443,6 +443,51 @@ class PricingTier(models.Model):
         verbose_name_plural = _('Pricing tiers')
 
 
+class EventSession(models.Model):
+    '''
+    Event sessions can be used to group different types of events together both for
+    registration purposes and for application of discounts/vouchers.  By default,
+    sessions are ordered according to their start date, which is set automatically based
+    on the events associated with the session.
+    '''
+
+    name = models.CharField(_('Name'),max_length=100,help_text=_('Session name will be displayed.'))
+    description = models.TextField(_('Description'),null=True,blank=True,help_text=_('Add an optional description.'))
+    slug = models.SlugField(
+        _('Slug'),
+        max_length=50,
+        help_text=_('Events can be accessed by a URL based on this slug, as well as by a URL specified by month.'),
+    )
+
+    startTime = models.DateTimeField(
+        _('Start Time'),
+        help_text=_('This value should be populated automatically based on the first start time of any event associated with this session.'),
+        null=True,blank=True,
+    )
+    endTime = models.DateTimeField(
+        _('Start Time'),
+        help_text=_('This value should be populated automatically based on the last end time of any event associated with this session.'),
+        null=True,blank=True,
+    )
+
+    def save(self, *args, **kwargs):
+        logger.debug('Save method for EventSession called. Updating start and end times')
+
+        # Update the start and end time variables based on associated events.
+        self.startTime = self.event_set.order_by('startTime').first().startTime
+        self.endTime = self.event_set.order_by('endTime').last().endTime
+
+        super(EventSession,self).save(*args,**kwargs)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ('startTime','name')
+        verbose_name = _('Event session')
+        verbose_name_plural = _('Event sessions')
+
+
 @python_2_unicode_compatible
 class EventCategory(models.Model):
     '''
@@ -506,6 +551,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         hidden = ChoiceItem('X',_('Event hidden and registration closed'))
 
     status = models.CharField(_('Registration status'),max_length=1,choices=RegStatus.choices,help_text=_('Set the registration status and visibility status of this event.'))
+    session = models.ForeignKey(EventSession,verbose_name=_('Session'),help_text=_('Optional event sessions can be used to order events for registration.'),null=True,blank=True,on_delete=models.SET_NULL)
 
     # The UUID field is used for private registration links
     uuid = models.UUIDField(_('Unique link ID'), default=uuid.uuid4, editable=False)
@@ -954,6 +1000,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
                 self.registrationOpen = open
             logger.debug('Finished checking status and ready for super call. Value is %s' % self.registrationOpen)
         super(Event,self).save(*args,**kwargs)
+
+        # Update start time and end time for associated event session.
+        if self.session:
+            self.session.save()
 
     def __str__(self):
         return str(_('Event: %s' % self.name))
