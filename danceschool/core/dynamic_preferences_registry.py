@@ -288,15 +288,34 @@ class RegistrationDisplayLimitDays(IntegerPreference):
 
 
 @global_preferences_registry.register
+class RegistrationOrgRule(ChoicePreference):
+    section = registration
+    name = 'orgRule'
+    choices = [
+        ('SessionFirst', _('Session if available, otherwise month')),
+        ('Month', _('Month')),
+        ('Session', _('Session (if no session, group as "Other")')),
+        ('SessionMonth',_('Session and Month')),
+        ('Weekday',_('Weekday')),
+    ]
+    verbose_name = _('Rule for Organizing Series and Events for Registration')
+    default = 'SessionFirst'
+    help_text = _(
+        'In registration, events may be grouped by defined sessions, by month, '
+        'the combination of both session and month, or by weekday.'
+    )
+
+
+@global_preferences_registry.register
 class EventMonthRule(ChoicePreference):
     section = registration
     name = 'eventMonthRule'
     choices = [
-        ('1', 'Month of first occurrence'),
-        ('2', 'Month of second occurrence'),
-        ('Last', 'Month of last occurrence'),
-        ('FirstMulti', 'First month with more than one occurrence (or first)'),
-        ('Most', 'Month with the most occurrences'),
+        ('1', _('Month of first occurrence')),
+        ('2', _('Month of second occurrence')),
+        ('Last', _('Month of last occurrence')),
+        ('FirstMulti', _('First month with more than one occurrence (or first)')),
+        ('Most', _('Month with the most occurrences')),
     ]
     verbose_name = _('Rule for Assigning Events to Months')
     default = 'FirstMulti'
@@ -311,11 +330,11 @@ class ShowDescriptionRule(ChoicePreference):
     section = registration
     name = 'showDescriptionRule'
     choices = [
-        ('0', 'No description'),
-        ('10', 'First 10 words'),
-        ('20', 'First 20 words'),
-        ('50', 'First 50 words'),
-        ('all', 'Full description'),
+        ('0', _('No description')),
+        ('10', _('First 10 words')),
+        ('20', _('First 20 words')),
+        ('50', _('First 50 words')),
+        ('all', _('Full description')_,
     ]
     verbose_name = _('Rule for showing class descriptions on the regisration page')
     help_text = _(
