@@ -77,7 +77,7 @@ class DiscountComboAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('name','category',('active','expirationDate'),'newCustomersOnly','studentsOnly','daysInAdvanceRequired','discountType',)
+            'fields': ('name','category',('active','expirationDate'),'newCustomersOnly','studentsOnly','daysInAdvanceRequired','firstXRegistered','discountType',)
         }),
         (_('Flat-Price Discount (in default currency)'), {
             'classes': ('type_flatPrice',),
@@ -101,6 +101,8 @@ class DiscountComboAdmin(admin.ModelAdmin):
             text.append(_('First-time customer'))
         if obj.daysInAdvanceRequired:
             text.append(_('%s day advance registration' % obj.daysInAdvanceRequired))
+        if obj.firstXRegistered:
+            text.append(_('First %s to register' % obj.firstXRegistered))
         return ', '.join([str(x) for x in text])
     restrictions.short_description = _('Restrictions')
 

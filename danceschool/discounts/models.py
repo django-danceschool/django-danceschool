@@ -113,7 +113,21 @@ class DiscountCombo(models.Model):
     daysInAdvanceRequired = models.PositiveIntegerField(
         _('Must register __ days in advance'),
         null=True, blank=True,
-        help_text=_('For this discount to apply, all components must be satisfied by events that begin this many days in the future (measured from midnight of the date of registration).  Leave blank for no restriction.'),
+        help_text=_(
+            'For this discount to apply, all components must be satisfied by events that begin '
+            'this many days in the future (measured from midnight of the date of registration). '
+            'Leave blank for no restriction.'
+        ),
+    )
+    firstXRegistered = models.PositiveSmallIntegerField(
+        _('Only for first __ registrants'),
+        null=True, blank=True,
+        help_text=_(
+            'For this discount to apply, all components must be satisfied by events that have fewer '
+            'than this many individuals registered (including registrations in progress). '
+            'Only one discount per category can be applied, so if you define tiered discounts '
+            'in the same category, only the best available discount will be used.'
+        )
     )
 
     discountType = models.CharField(_('Discount type'),max_length=1,help_text=_('Is this a flat price, a dollar amount discount, a \'percentage off\' discount, or a free add-on?'),choices=DiscountType.choices,default=DiscountType.dollarDiscount)

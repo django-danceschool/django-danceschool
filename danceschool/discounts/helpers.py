@@ -96,6 +96,15 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,
                         y.event.startTime - today_midnight < timedelta(days=x.daysInAdvanceRequired)
                     ):
                         match_flag = False
+                    # If the discount combo is only available for the first X registrants,
+                    # then check that we don't already have X individuals registered.
+                    # This includes TemporaryRegistrations (so too many discounts don't get
+                    # handed out if registration is in progress).
+                    elif (
+                        x.firstXRegistered is not None and
+                        y.event.getNumRegistered(includeTemporaryRegs=True) > x.firstXRegistered
+                    ):
+                        match_flag = False
 
                     # If we found no reason that it's not a match, then it's a match,
                     # and we can move on to the next object in the cart.
