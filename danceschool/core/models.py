@@ -458,8 +458,10 @@ class EventSession(models.Model):
         logger.debug('Save method for EventSession called. Updating start and end times')
 
         # Update the start and end time variables based on associated events.
-        self.startTime = self.event_set.order_by('startTime').first().startTime
-        self.endTime = self.event_set.order_by('endTime').last().endTime
+        events = self.event_set.all()
+        if events:
+            self.startTime = events.order_by('startTime').first().startTime
+            self.endTime = events.order_by('endTime').last().endTime
 
         super(EventSession,self).save(*args,**kwargs)
 
@@ -612,6 +614,68 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         return ''
     description.fget.short_description = _('Description')
+
+    @property
+    def organizer(self):
+        '''
+        Since events can be organized for registration in different ways (e.g. by month,
+        by session, or the interaction of the two), this property is used to make it easy
+        for templates to include necessary organizing information.  Note that this method
+        has nothing to do with the sorting of any queryset in use, which still has to be
+        handled elsewhere.
+        '''
+        rule = getConstant('registration__orgRule')
+
+        # Default grouping is "Other", in case session, month, or weekday are not specified.
+        org = {
+            'name': 'Other',
+            'id': None,
+        }
+
+        def updateForMonth(self, org):
+            ''' Function to avoid repeated code '''
+            if self.month:
+                org.update({
+                    'name': month_name[self.month],
+                    'id': 'month_%s' % self.month,
+                })
+            return org
+
+        def updateForSession(self, org):
+            ''' Function to avoid repeated code '''
+            if self.session:
+                org.update({
+                    'name': self.session.name,
+                    'id': self.session.pk,
+                })
+            return org
+
+        if rule == 'SessionFirst':
+            org = updateForSession(self, org)
+            if not org.get('id'):
+                org = updateForMonth(self, org)
+        elif rule == 'Month':
+            org = updateForMonth(self, org)
+        elif rule == 'Session':
+            org = updateForSession(self, org)
+        elif rule == 'SessionMonth':
+            if self.session and self.month:
+                org.update({
+                    'name': '%s: %s' % (month_name[self.month], self.session.name),
+                    'id': 'month_%s_session_%s' % (self.month, self.session.pk),
+                })
+            elif not self.month:
+                org = updateForSession(self, org)
+            elif not self.session:
+                org = updateForMonth(self, org)
+        elif rule == 'Weekday':
+            w = self.weekday
+            if w:
+                org.update({
+                    'name': day_name[w],
+                    'id': w,
+                })
+        return org
 
     @property
     def displayColor(self):
@@ -778,13 +842,16 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         return count
     numDropIns.fget.short_description = _('# Drop-ins')
 
-    @property
-    def numRegistered(self, includeTemporaryRegs=False):
+    def getNumRegistered(self, includeTemporaryRegs=False):
         count = self.eventregistration_set.filter(cancelled=False,dropIn=False).count()
         if includeTemporaryRegs:
             count += self.temporaryeventregistration_set.filter(dropIn=False).exclude(
                 registration__expirationDate__lte=timezone.now()).count()
         return count
+
+    @property
+    def numRegistered(self):
+        return self.getNumRegistered()
     numRegistered.fget.short_description = _('# Registered')
 
     @property
