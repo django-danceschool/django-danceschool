@@ -6,7 +6,7 @@ from datetime import timedelta
 from .models import DiscountCombo
 
 
-def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,customer=None,addOn=False,cannotCombine=False):
+def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,customer=None,addOn=False,cannotCombine=False,dateTime=None):
 
     filters = Q(active=True)
     if customer:
@@ -102,7 +102,7 @@ def getApplicableDiscountCombos(cart_object_list,newCustomer=True,student=False,
                     # handed out if registration is in progress).
                     elif (
                         x.firstXRegistered is not None and
-                        y.event.getNumRegistered(includeTemporaryRegs=True) > x.firstXRegistered
+                        y.event.getNumRegistered(includeTemporaryRegs=True, dateTime=dateTime) > x.firstXRegistered
                     ):
                         match_flag = False
 

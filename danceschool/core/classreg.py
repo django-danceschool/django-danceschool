@@ -18,7 +18,7 @@ from .models import Event, Series, PublicEvent, TemporaryRegistration, Temporary
 from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import post_student_info, request_discounts, apply_discount, apply_addons, apply_price_adjustments
-from .mixins import FinancialContextMixin
+from .mixins import FinancialContextMixin, EventOrderMixin
 
 
 # Define logger for this file
@@ -55,9 +55,9 @@ class ClassRegistrationReferralView(RedirectView):
         return super(ClassRegistrationReferralView,self).get(request,*args,**kwargs)
 
 
-class ClassRegistrationView(FinancialContextMixin, FormView):
+class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, FormView):
     '''
-    This is the main view that is called from the class registration page.y
+    This is the main view that is called from the class registration page.
     '''
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
@@ -214,11 +214,13 @@ class ClassRegistrationView(FinancialContextMixin, FormView):
             ).filter(
                 Q(instance_of=PublicEvent) |
                 Q(instance_of=Series)
+            ).annotate(
+                **self.get_annotations()
             ).exclude(
                 Q(status=Event.RegStatus.hidden) |
                 Q(status=Event.RegStatus.regHidden) |
                 Q(status=Event.RegStatus.linkOnly)
-            ).order_by('year','month','startTime')
+            ).order_by(*self.get_ordering())
 
         return self.allEvents
 

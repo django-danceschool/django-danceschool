@@ -38,7 +38,7 @@ class InstructorAvailabilityView(TemplateView):
         context = super(InstructorAvailabilityView,self).get_context_data(**kwargs)
 
         context.update({
-            'instructor': getattr(self.request,'user').staffmember,
+            'instructor': getattr(getattr(self.request,'user'),'staffmember'),
             'instructor_list': Instructor.objects.filter(
                 availableForPrivates=True,instructorprivatelessondetails__isnull=False
             ),

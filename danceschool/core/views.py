@@ -26,7 +26,7 @@ import logging
 from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
 from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
-from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
+from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin, EventOrderMixin
 from .signals import get_customer_data
 from .utils.requests import getIntFromGet
 
@@ -35,20 +35,22 @@ from .utils.requests import getIntFromGet
 logger = logging.getLogger(__name__)
 
 
-class EventRegistrationSelectView(PermissionRequiredMixin, ListView):
+class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, ListView):
     '''
     This view is used to select an event for viewing registration data in the EventRegistrationSummaryView
     '''
-    template_name = 'core/events_bymonth_viewregistration_list.html'
+    template_name = 'core/events_viewregistration_list.html'
     permission_required = 'core.view_registration_summary'
+    reverse_time_ordering = True
 
-    queryset = Event.objects.filter(
-        Q(startTime__gte=timezone.now() - timedelta(days=90)) & (
-            Q(series__isnull=False) | Q(publicevent__isnull=False)
+    def get_queryset(self):
+        return Event.objects.filter(
+            Q(startTime__gte=timezone.now() - timedelta(days=90)) & (
+                Q(series__isnull=False) | Q(publicevent__isnull=False)
+            )
+        ).annotate(count=Count('eventregistration')).annotate(**self.get_annotations()).exclude(
+            Q(count=0) & Q(status__in=[Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled])
         )
-    ).annotate(count=Count('eventregistration')).exclude(
-        Q(count=0) & Q(status__in=[Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled])
-    )
 
 
 class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):

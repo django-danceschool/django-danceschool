@@ -1,0 +1,32 @@
+{% load danceschool_tags cms_tags i18n %}
+
+<div class="event_list {{ instance.cssClasses }}">
+    {% if instance.title %}<h3>{{ instance.title }}</h3>{% endif %}
+
+    <ul class="list-unstyled">
+    {% regroup event_list|dictsort:"organizer.nameFirst" by organizer.nameFirst as group_list %}
+    {% for groupFirst in group_list %}
+        <li><h4>{{ groupFirst.grouper }} {% if instance.eventType == 'S' %}{% trans "Classes" %}{% else %}{% trans "Events" %}{% endif %}</h4></li>
+
+        {% regroup groupFirst.list|dictsort:"organizer.nameSecond" by organizer.nameSecond as groupSecond_list %}
+        {% for groupSecond in groupSecond_list %}
+            {% if groupSecond.grouper %}<h5>{{ groupSecond.grouper }}</h5>{% endif %}
+            <ul>            
+                {% for event in groupSecond.list %}
+                    <li><a href="{{ event.url }}">{{ event.name }}</a></li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    {% empty %}
+        <li>{% trans "Nothing posted yet. Check back soon!" %}</li>
+    {% endfor %}
+    </ul>
+
+	<p style="margin-top: 1em;">
+		{% page_url 'calendar' as calendar_url %}
+        {% url 'registration' as registration_url %}
+
+        {% if calendar_url %}<a href="{{ calendar_url }}"><i class="fa fa-calendar"></i>&nbsp;{% trans "View Calendar" %}</a>{% if registration_url %}&nbsp;/{% endif %}{% endif %}
+		{% if registration_url %}<a href="">{% trans "Register Now" %} &raquo;</a>{% endif %}
+	</p>
+</div>

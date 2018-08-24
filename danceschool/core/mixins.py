@@ -2,11 +2,13 @@ from django.contrib.auth.views import redirect_to_login
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
+from django.db.models import Case, When, F, Q, IntegerField, ExpressionWrapper
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template, render_to_string
 from django.template import Template, Context
 from django.template.exceptions import TemplateDoesNotExist
+
 
 from braces.views import GroupRequiredMixin
 from urllib.parse import quote
@@ -310,3 +312,141 @@ class PluginTemplateMixin(object):
 
         # No choices to report
         return []
+
+
+class EventOrderMixin(object):
+    '''
+    Various registration pages require that Event querysets be ordered based on the value
+    of the constant registration__orgRule (e.g. by session, by month, the combination of the two,
+    or by weekday).  Rather than placing this ordering logic in Python, this mixin produces a SQL
+    compliant order parameter that can be added as an annotation to any queryset of Events and then
+    used to order that queryset.  Since there may be multiple ordering parameters, the function returns
+    a tuple.  The first value of the tuple is an ordering parameter that ensures that NULL values
+    are always sorted last along both dimensions.  It should always be used in ascending order.
+    The second value of the tuple is the primary sort dimension, which can be used ascending or descending
+    in the view.  When there is only one ordering parameter needed, the third value of the tuple is None,
+    otherwise it passes the second parameter.
+    '''
+
+    def get_annotations(self):
+        '''
+        This method gets the annotations for the queryset.  Unlike get_ordering() below, it
+        passes the actual Case() and F() objects that will be evaluated with the queryset, returned
+        in a dictionary that is compatible with get_ordering().
+        '''
+        rule = getConstant('registration__orgRule')
+
+        # Initialize with null values that get filled in based on the logic below.
+        annotations = {
+            'nullParam': None,
+            'paramOne': None,
+            'paramTwo': None,
+        }
+
+        if rule == 'SessionFirst':
+            annotations.update({
+                'nullParam': Case(
+                    When(session__startTime__isnull=False, then=0),
+                    When(month__isnull=False, then=1),
+                    default_value=2,
+                    output_field=IntegerField()
+                ),
+                'paramOne': F('session__startTime'),
+                'paramTwo': ExpressionWrapper(12 * F('year') + F('month'), output_field=IntegerField()),
+            })
+        elif rule == 'SessionAlphaFirst':
+            annotations.update({
+                'nullParam': Case(
+                    When(session__name__isnull=False, then=0),
+                    When(month__isnull=False, then=1),
+                    default_value=2,
+                    output_field=IntegerField()
+                ),
+                'paramOne': F('session__name'),
+                'paramTwo': ExpressionWrapper(12 * F('year') + F('month'), output_field=IntegerField()),
+            })
+        elif rule == 'Month':
+            annotations.update({
+                'nullParam': Case(
+                    When(month__isnull=False, then=0),
+                    default_value=1,
+                    output_field=IntegerField()
+                ),
+                'paramOne': ExpressionWrapper(12*F('year') + F('month'), output_field=IntegerField()),
+            })
+        elif rule == 'Session':
+            annotations.update({
+                'nullParam': Case(
+                    When(session__startTime__isnull=False, then=0),
+                    default_value=1,
+                    output_field=IntegerField()
+                ),
+                'paramOne': F('session__startTime'),
+            })
+        elif rule == 'SessionAlpha':
+            annotations.update({
+                'nullParam': Case(
+                    When(session__name__isnull=False, then=0),
+                    default_value=1,
+                    output_field=IntegerField()
+                ),
+                'paramOne': F('session__name'),
+            })
+        elif rule == 'SessionMonth':
+            annotations.update({
+                'nullParam': Case(
+                    When(Q(session__startTime__isnull=False) & Q(month__isnull=False), then=0),
+                    When(Q(session__startTime__isnull=True) & Q(month__isnull=False), then=1),
+                    When(Q(session__startTime__isnull=False) & Q(month__isnull=True), then=2),
+                    default_value=3,
+                    output_field=IntegerField()
+                ),
+                'paramOne': ExpressionWrapper(12 * F('year') + F('month'), output_field=IntegerField()),
+                'paramTwo': F('session__startTime'),
+            })
+        elif rule == 'SessionAlphaMonth':
+            annotations.update({
+                'nullParam': Case(
+                    When(Q(session__name__isnull=False) & Q(month__isnull=False), then=0),
+                    When(Q(session__name__isnull=True) & Q(month__isnull=False), then=1),
+                    When(Q(session__name__isnull=False) & Q(month__isnull=True), then=2),
+                    default_value=3,
+                    output_field=IntegerField()
+                ),
+                'paramOne': ExpressionWrapper(12*F('year') + F('month'), output_field=IntegerField()),
+                'paramTwo': F('session__name'),
+            })
+        elif rule == 'Weekday':
+            annotations.update({
+                'nullParam': Case(
+                    When(weekday__isnull=False, then=0),
+                    default_value=1,
+                    output_field=IntegerField()
+                ),
+                'paramOne': F('weekday'),
+            })
+        elif rule == 'MonthWeekday':
+            annotations.update({
+                'nullParam': Case(
+                    When(Q(month__isnull=False) & Q(weekday__isnull=False), then=0),
+                    default_value=1,
+                    output_field=IntegerField()
+                ),
+                'paramOne': ExpressionWrapper(12*F('year') + F('month'), output_field=IntegerField()),
+                'paramTwo': F('weekday'),
+            })
+
+        return annotations
+
+    def get_ordering(self, reverseTime=False):
+        '''
+        This method provides the tuple for ordering of querysets.  However, this will only
+        work if the annotations generated by the get_annotations() method above have been
+        added to the queryset.  Otherwise, the use of this ordering tuple will fail because
+        the appropriate column names will not exist to sort with.
+        '''
+
+        # Reverse ordering can be optionally specified in the view class definition.
+        reverseTime = getattr(self,'reverse_time_ordering',reverseTime)
+        timeParameter = '-startTime' if reverseTime is True else 'startTime'
+        return ('nullParam', 'paramOne', 'paramTwo', timeParameter)

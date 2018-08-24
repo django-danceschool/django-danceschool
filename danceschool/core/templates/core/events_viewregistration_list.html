@@ -1,0 +1,24 @@
+{% extends "cms/admin_home.html" %}
+{% load danceschool_tags i18n %}
+
+{% block content %}
+<div class="selectclass">
+    <h2>{% trans "Select an Event to View Registrations" %}</h2>
+ 
+    {% regroup event_list|dictsort:"organizer.nameFirst" by organizer.nameFirst as group_list %}
+    {% for groupFirst in group_list %}
+        <h4>{{ groupFirst.grouper }}</h4>
+        {% regroup groupFirst.list|dictsort:"organizer.nameSecond" by organizer.nameSecond as groupSecond_list %}
+        {% for groupSecond in groupSecond_list %}
+            {% if groupSecond.grouper %}<h5>{{ groupSecond.grouper }}</h5>{% endif %}
+            <ul>            
+                {% for event in groupSecond.list %}
+                    <li><a href="{% url 'viewregistrations' event.id %}">{{ event.name }}</a>:&nbsp;&nbsp;{{ event.startTime|date:'l, h:i A' }}</li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    {% empty %}
+        <p>{% trans "No classes or events yet. Check back soon!" %}</p>
+    {% endfor %}
+</div>
+{% endblock %}

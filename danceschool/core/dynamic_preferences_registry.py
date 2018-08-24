@@ -292,11 +292,15 @@ class RegistrationOrgRule(ChoicePreference):
     section = registration
     name = 'orgRule'
     choices = [
-        ('SessionFirst', _('Session if available, otherwise month')),
+        ('SessionFirst', _('Session if available (ordered by start date), otherwise month')),
+        ('SessionAlphaFirst', _('Session if available (ordered alphabetically), otherwise month')),
         ('Month', _('Month')),
-        ('Session', _('Session (if no session, group as "Other")')),
-        ('SessionMonth',_('Session and Month')),
+        ('Session', _('Session ordered by start date (if no session, group as "Other")')),
+        ('SessionAlpha', _('Session ordered alphabetically (if no session, group as "Other")')),
+        ('SessionMonth',_('Session ordered by start date and Month')),
+        ('SessionAlphaMonth',_('Session ordered alphabetically and Month')),
         ('Weekday',_('Weekday')),
+        ('MonthWeekday',_('Month and Weekday')),
     ]
     verbose_name = _('Rule for Organizing Series and Events for Registration')
     default = 'SessionFirst'

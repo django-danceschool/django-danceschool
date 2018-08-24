@@ -628,7 +628,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         # Default grouping is "Other", in case session, month, or weekday are not specified.
         org = {
-            'name': 'Other',
+            'name': _('Other'),
+            'nameFirst': _('Other'),
+            'nameSecond': '',
             'id': None,
         }
 
@@ -636,7 +638,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             ''' Function to avoid repeated code '''
             if self.month:
                 org.update({
-                    'name': month_name[self.month],
+                    'name': _(month_name[self.month]),
+                    'nameFirst': _(month_name[self.month]),
                     'id': 'month_%s' % self.month,
                 })
             return org
@@ -646,22 +649,25 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.session:
                 org.update({
                     'name': self.session.name,
+                    'nameFirst': self.session.name,
                     'id': self.session.pk,
                 })
             return org
 
-        if rule == 'SessionFirst':
+        if rule in ['SessionFirst', 'SessionAlphaFirst']:
             org = updateForSession(self, org)
             if not org.get('id'):
                 org = updateForMonth(self, org)
         elif rule == 'Month':
             org = updateForMonth(self, org)
-        elif rule == 'Session':
+        elif rule in ['Session','SessionAlpha']:
             org = updateForSession(self, org)
-        elif rule == 'SessionMonth':
+        elif rule in ['SessionMonth','SessionAlphaMonth']:
             if self.session and self.month:
                 org.update({
-                    'name': '%s: %s' % (month_name[self.month], self.session.name),
+                    'name': _('%s: %s' % (month_name[self.month], self.session.name)),
+                    'nameFirst': _(month_name[self.month]),
+                    'nameSecond': _(self.session.name),
                     'id': 'month_%s_session_%s' % (self.month, self.session.pk),
                 })
             elif not self.month:
@@ -670,10 +676,24 @@ class Event(EmailRecipientMixin, PolymorphicModel):
                 org = updateForMonth(self, org)
         elif rule == 'Weekday':
             w = self.weekday
+            d = day_name[w]
             if w:
                 org.update({
-                    'name': day_name[w],
+                    'name': _(d),
+                    'nameFirst': _('%ss' % d),
                     'id': w,
+                })
+        elif rule == 'MonthWeekday':
+            w = self.weekday
+            d = day_name[w]
+            m = self.month
+            mn = month_name[m]
+            if w and m:
+                org.update({
+                    'name': _('%ss in %s' % (d, mn)),
+                    'nameFirst': _(mn),
+                    'nameSecond': _('%ss' % d),
+                    'id': 'month_%s_weekday_%s' % (m, w)
                 })
         return org
 
@@ -842,11 +862,20 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         return count
     numDropIns.fget.short_description = _('# Drop-ins')
 
-    def getNumRegistered(self, includeTemporaryRegs=False):
+    def getNumRegistered(self, includeTemporaryRegs=False, dateTime=None):
+        '''
+        Method allows the inclusion of temporary registrations, as well as exclusion of
+        temporary registrations that are too new (e.g. for discounts based on the first
+        X registrants, we don't want to include people who started tp register later
+        than the person in question.
+        '''
+
         count = self.eventregistration_set.filter(cancelled=False,dropIn=False).count()
         if includeTemporaryRegs:
-            count += self.temporaryeventregistration_set.filter(dropIn=False).exclude(
-                registration__expirationDate__lte=timezone.now()).count()
+            excludes = Q(registration__expirationDate__lte=timezone.now())
+            if isinstance(dateTime,datetime):
+                excludes = exclude | Q(registration__dateTime__gte=dateTime)
+            count += self.temporaryeventregistration_set.filter(dropIn=False).exclude(excludes).count()
         return count
 
     @property
@@ -1058,7 +1087,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     class Meta:
         verbose_name = _('Series/Event')
         verbose_name_plural = _('All Series/Events')
-        ordering = ('-year','-month','-startTime')
+        ordering = ('-startTime',)
 
 
 class EventOccurrence(models.Model):
@@ -1300,7 +1329,7 @@ class Series(Event):
     def __str__(self):
         if self.month and self.year and self.classDescription:
             # In case of unsaved series, month and year are not yet set.
-            return month_name[self.month or 0] + ' ' + str(self.year) + ": " + self.classDescription.title
+            return str(_('%s %s: %s' % (month_name[self.month or 0],str(self.year),self.classDescription.title)))
         elif self.classDescription:
             return str(_('Class Series: %s' % self.classDescription.title))
         else:
@@ -1383,7 +1412,7 @@ class SubstituteTeacher(EventStaffMember):
         replacements = {
             'name': self.staffMember.fullName,
             'subbed': _(' subbed: '),
-            'month': month_name[self.event.month or 0],
+            'month': _(month_name[self.event.month or 0]),
             'year': self.event.year,
         }
         if not self.replacedStaffMember:
@@ -2977,7 +3006,7 @@ class EventListPluginModel(CMSPlugin):
     limitToOpenRegistration = models.BooleanField(_('Limit to open for registration only'),default=False)
 
     location = models.ForeignKey(Location,verbose_name=_('Limit to location'),null=True,blank=True,on_delete=models.SET_NULL)
-    weekday = models.PositiveSmallIntegerField(_('Limit to weekday'),null=True,blank=True,choices=[(x,day_name[x]) for x in range(0,7)])
+    weekday = models.PositiveSmallIntegerField(_('Limit to weekday'),null=True,blank=True,choices=[(x,_(day_name[x])) for x in range(0,7)])
 
     cssClasses = models.CharField(_('Custom CSS classes'),max_length=250,null=True,blank=True,help_text=_('Classes are applied to surrounding &lt;div&gt;'))
     template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)

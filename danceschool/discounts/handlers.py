@@ -77,7 +77,7 @@ def getBestDiscount(sender,**kwargs):
     # Get the applicable discounts and sort them in ascending category order
     # so that the best discounts are always listed in the order that they will
     # be applied.
-    discountCodesApplicable = getApplicableDiscountCombos(eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=False)
+    discountCodesApplicable = getApplicableDiscountCombos(eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=False, dateTime=reg.dateTime)
     discountCodesApplicable.sort(key=lambda x: x.code.category.order)
 
     # Once we have a list of codes to try, calculate the discounted price for each possibility,
@@ -132,7 +132,7 @@ def getBestDiscount(sender,**kwargs):
     # compared against the base price, and there is no need to allocate across items since
     # only one code will potentially be applied.
     uncombinedCodesApplicable = getApplicableDiscountCombos(
-        eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=True
+        eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=True, dateTime=reg.dateTime
     )
 
     for discount in uncombinedCodesApplicable:
@@ -209,7 +209,7 @@ def getAddonItems(sender, **kwargs):
     # No need to get all objects, just the ones that could qualify one for an add-on
     cart_object_list = reg.temporaryeventregistration_set.filter(dropIn=False).filter(Q(event__series__pricingTier__isnull=False) | Q(event__publicevent__pricingTier__isnull=False))
 
-    availableAddons = getApplicableDiscountCombos(cart_object_list, newCustomer, reg.student, customer=customer, addOn=True)
+    availableAddons = getApplicableDiscountCombos(cart_object_list, newCustomer, reg.student, customer=customer, addOn=True, dateTime=reg.dateTime)
     return [x.code.name for x in availableAddons]
 
 

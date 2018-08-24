@@ -93,7 +93,7 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
     name = _('List of Events')
     cache = True
     module = _('Events')
-    render_template = 'core/events_bymonth_list.html'
+    render_template = 'core/events_grouped_list.html'
 
     fieldsets = (
         (None, {
@@ -204,5 +204,5 @@ class SingleLocationDirectionsTemplate(PluginTemplateBase):
 @plugin_templates_registry.register
 class EventListPluginTemplate(PluginTemplateBase):
     plugin = 'EventListPlugin'
-    template_name = 'core/events_bymonth_list.html'
-    description = _('Default List of Events By Month')
+    template_name = 'core/events_grouped_list.html'
+    description = _('Default Grouped List of Events')
