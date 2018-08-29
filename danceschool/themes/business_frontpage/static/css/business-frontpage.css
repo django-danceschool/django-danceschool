@@ -12,6 +12,19 @@ body {
   body {
     padding-top: 56px;
   }
+
+  /* Offset body positioning to ensure that navbar stays at the top */
+  .navbar-top {
+    position: relative;
+    top: -56px;
+  }
+
+}
+
+/* Offset body positioning to ensure that navbar stays at the top */
+.navbar-top {
+  position: relative;
+  top: -54px;
 }
 
 .business-header {

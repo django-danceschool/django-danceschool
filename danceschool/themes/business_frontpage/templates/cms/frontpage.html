@@ -3,11 +3,11 @@
 
 {% block content_header %}
     <!-- Header with Background Image -->
-    <header class="business-header" style="background: url('{% placeholder "splash_image" %}') top center no-repeat scroll;">
+    <header class="business-header" style="background: url('{% placeholder splash_image or %}https://via.placeholder.com/1920x400?text=+{% endplaceholder %}') top center no-repeat scroll;">
         <div class="container">
           <div class="row">
             <div class="col-lg-12">
-              <h1 class="display-3 text-center text-white mt-4">{% placeholder 'splash_title' %}</h1>
+              <h1 class="display-3 text-center text-white mt-4">{% placeholder "splash_title" or %}{% getSchoolName %}{% endplaceholder %}</h1>
               {% placeholder 'splash_caption' %}
             </div>
           </div>
