@@ -1,0 +1,61 @@
+{% extends "cms/site_base.html" %}
+{% load static sekizai_tags cms_tags menu_tags %}
+
+{% block extra_head %}
+
+	{% addtoblock "meta" %}
+		<meta name="robots" content="index, follow">
+	{% endaddtoblock %}
+
+	{# Fitvids code (to ensure Youtube videos always fit) #}
+	{% addtoblock "js" %}
+	<script type="text/javascript" src="{% static 'fitvids/jquery.fitvids.js' %}"></script>
+	{% endaddtoblock %}
+	{% addtoblock "js" %}
+	<script type="text/javascript">
+	    $(".content-col").fitVids();
+	</script>
+	{% endaddtoblock %}
+
+	{% addtoblock "css" %}
+    <!-- Custom styles for this template -->
+    <link href="{% static 'css/business-frontpage.css' %}" rel="stylesheet">
+    {% endaddtoblock %}
+
+
+{% endblock %}
+
+{% block body %}
+
+{% block navbar %}
+	{% show_menu 0 100 100 100 "cms/navbar.html" %}
+{% endblock %}
+
+{% block content_header %}{% endblock %}
+
+<div class="container" id="wrapper">
+
+	{% block main %}
+	  {% block content %}
+	  <div class="row">
+	  <div class="col-md-12 content-col">
+	  {% placeholder "content" %}
+	  </div>
+	  </div>
+	  {% endblock %}
+
+	{% endblock %}
+
+</div>
+
+{% block footer %}
+<footer class="py-5 bg-dark">
+  <div class="container">
+	  {% static_placeholder "footer" %}
+  </div>
+  <!-- /.container -->
+</footer>
+{% endblock %}
+
+{% endblock %}
+

@@ -6,6 +6,3 @@ from django.utils.translation import ugettext_lazy as _
 class ThemeAppConfig(AppConfig):
     name = 'danceschool.themes'
     verbose_name = _('Theme Functions')
-
-    def ready(self):
-        pass

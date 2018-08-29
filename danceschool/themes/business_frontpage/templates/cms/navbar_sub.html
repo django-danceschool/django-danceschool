@@ -1,0 +1,56 @@
+{% load menu_tags sekizai_tags %}
+
+{% for child in children %}
+	{% if child.children %}
+		<li class="dropdown-submenu"><a class="dropdown-item dropdown-toggle" href="#">{{ child.get_menu_title }}</a>
+		<ul class="dropdown-menu">
+			{% show_menu from_level to_level extra_inactive extra_active "cms/navbar_sub.html" "" "" child %}
+		</ul>
+		</li>
+	{% else %}
+		<li><a href="{{ child.attr.redirect_url|default:child.get_absolute_url }}" class="child{% if child.selected %} active selected{% endif %}{% if child.ancestor %} ancestor{% endif %}{% if child.sibling %} sibling{% endif %}{% if child.descendant %} descendant{% endif %} dropdown-item">{{ child.get_menu_title }}</a></li>
+	{% endif %}
+{% endfor %}
+
+{% addtoblock "css" %}
+<style type="text/css">
+	.dropdown-submenu {
+	  position: relative;
+	}
+
+	.dropdown-submenu a::after {
+	  transform: rotate(-90deg);
+	  position: absolute;
+	  right: 6px;
+	  top: .8em;
+	}
+
+	.dropdown-submenu .dropdown-menu {
+	  top: 0;
+	  left: 100%;
+	  margin-left: .1rem;
+	  margin-right: .1rem;
+	}
+</style>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+	$('.dropdown-menu a.dropdown-toggle').on('click', function(e) {
+	  if (!$(this).next().hasClass('show')) {
+	    $(this).parents('.dropdown-menu').first().find('.show').removeClass("show");
+	  }
+	  var $subMenu = $(this).next(".dropdown-menu");
+	  $subMenu.toggleClass('show');
+
+
+	  $(this).parents('li.nav-item.dropdown.show').on('hidden.bs.dropdown', function(e) {
+	    $('.dropdown-submenu .show').removeClass("show");
+	  });
+
+
+	  return false;
+	});	
+});
+</script>
+{% endaddtoblock %}

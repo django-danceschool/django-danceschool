@@ -8,7 +8,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-danceschool',
-    version='0.5.5',
+    version='0.6.0',
     packages=['danceschool'],
     include_package_data=True,
     license='BSD License',
@@ -43,7 +43,9 @@ setup(
         'django-polymorphic>=1.0.2',
         'django-sekizai>=0.10.0',
         'djangocms-admin-style>=1.2.6.2',
+        'djangocms-bootstrap4>=1.1.1',
         'djangocms-forms>=0.2.5',
+        'djangocms-icon>=1.0.0',
         'djangocms-link>=2.1.2',
         'djangocms-picture>=2.0.6',
         'djangocms-text-ckeditor>=3.5.3',

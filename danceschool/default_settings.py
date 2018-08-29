@@ -130,7 +130,8 @@ DJANGOCMS_FORMS_TEMPLATES = (
 )
 
 # For optional themes, these settings ensure that header image plugins have sensible
-# defaults, and that the
+# defaults, and that the PictureTemplatePlugin can't be used in places where it
+# wouldn't make sense to do so.
 CMS_PLACEHOLDER_CONF = {
     None: {
         'excluded_plugins': ['PictureTemplatePlugin',],
@@ -148,7 +149,15 @@ CMS_PLACEHOLDER_CONF = {
     },
     'splash_caption': {
         'name': 'Front Page Caption'
-    }
+    },
+    'splash_carousel': {
+        'name': 'Splash Carousel',
+        'plugins': ['Bootstrap4CarouselPlugin',],
+        'excluded_plugins': [],
+        'limits': {
+            'global': 1,
+        },
+    },
 }
 
 # DJANGOCMS_PICTURE_TEMPLATES = []
