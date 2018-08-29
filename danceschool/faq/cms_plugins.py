@@ -23,7 +23,7 @@ class FAQAllPlugin(CMSPluginBase):
     module = _('FAQs')
 
     def render(self, context, instance, placeholder):
-        listing = FAQ.objects.all()
+        listing = FAQ.objects.filter(draft=False)
 
         context.update({
             'faq_list': listing,
@@ -39,7 +39,7 @@ class FAQCategoryPlugin(CMSPluginBase):
     module = _('FAQs')
 
     def render(self, context, instance, placeholder):
-        listing = FAQ.objects.filter(category=instance.category)
+        listing = FAQ.objects.filter(category=instance.category,draft=False)
 
         context.update({
             'faq_list': listing,
@@ -55,8 +55,6 @@ class SingleQuestionPlugin(CMSPluginBase):
     module = _('FAQs')
 
     def render(self, context, instance, placeholder):
-        listing = FAQ.objects.all()
-
         context.update({
             'faq_list': [instance.question,],
         })
