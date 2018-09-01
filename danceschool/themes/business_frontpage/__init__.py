@@ -1,1 +1,1 @@
-default_app_config = 'newcolumbiaswing.apps.NewColumbiaAppConfig'
+default_app_config = 'danceschool.themes.business_frontpage.apps.BusinessFrontpageAppConfig'

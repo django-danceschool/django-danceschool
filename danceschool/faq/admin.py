@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.utils.translation import ugettext_lazy as _
+
 from adminsortable2.admin import SortableAdminMixin
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 
@@ -22,7 +24,7 @@ class FAQAdmin(SortableAdminMixin, FrontendEditableAdminMixin, admin.ModelAdmin)
         else:
             message_bit = "%s FAQs were" % rows_updated
         self.message_user(request, "%s successfully published." % message_bit)
-    disableRules.short_description = _('Publish selected FAQs')
+    publishFaq.short_description = _('Publish selected FAQs')
 
     def makeDraft(self, request, queryset):
         rows_updated = queryset.update(draft=True)
@@ -31,7 +33,7 @@ class FAQAdmin(SortableAdminMixin, FrontendEditableAdminMixin, admin.ModelAdmin)
         else:
             message_bit = "%s FAQs were" % rows_updated
         self.message_user(request, "%s successfully unpublished (made draft)." % message_bit)
-    enableRules.short_description = _('Unpublish selected FAQs')
+    makeDraft.short_description = _('Unpublish selected FAQs')
 
 
 admin.site.register(FAQCategory, FAQCategoryAdmin)

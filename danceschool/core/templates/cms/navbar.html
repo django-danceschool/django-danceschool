@@ -1,7 +1,7 @@
 {% load menu_tags danceschool_tags i18n %}
 
 <nav class="navbar navbar-expand-md navbar-light bg-light mb-4">
-  <a class="navbar-brand" href="#">{% getSchoolName %}</a>
+  <a class="navbar-brand" href="{{ site_root }}">{% getSchoolName %}</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="{% trans 'Toggle navigation' %}">
     <span class="navbar-toggler-icon"></span>
   </button>
