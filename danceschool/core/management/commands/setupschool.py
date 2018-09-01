@@ -422,7 +422,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 school_city, school_state, school_postal
             )
             email_string = '<a href="mailto:{}">{}</a>'.format(school_email, school_email)
-            initial_footer = '<hr />\n\n<p class="text-center"><strong>%s</strong><br />\n%s\n%s</p>' % (school_name, address_string, email_string)
+            initial_footer = '<p class="text-center"><strong>%s</strong><br />\n%s\n%s</p>' % (school_name, address_string, email_string)
             add_plugin(sp_draft, 'TextPlugin', initial_language, body=initial_footer)
             add_plugin(sp_public, 'TextPlugin', initial_language, body=initial_footer)
 

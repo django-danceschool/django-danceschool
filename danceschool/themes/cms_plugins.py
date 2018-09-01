@@ -6,13 +6,15 @@ from cms.plugin_pool import plugin_pool
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.registries import plugin_templates_registry, PluginTemplateBase
 
-class PictureTemplatePlugin(PicturePlugin):
+class PictureSplashTemplatePlugin(PicturePlugin):
     '''
     A subclass of the Django CMS PicturePlugin that can be used just to select
-    a photo for inclusion in a theme (the template only inserts the URL).
+    a photo for inclusion as the splash page in a theme.  Your theme will need
+    to override 'djangocms_picture/splash_image/picture.html' to place the
+    splash image appropriately in the template (e.g. using the <header> tag).
     '''
 
-    name = _('Template Image')
+    name = _('Template Splash Image')
 
     fieldsets = [
         (None, {
@@ -26,6 +28,6 @@ class PictureTemplatePlugin(PicturePlugin):
 
     def get_render_template(self, context, instance, placeholder):
         ''' Template cannot be chosen when using this plugin. '''
-        return 'djangocms_picture/link_only/picture.html'
+        return 'djangocms_picture/splash_image/picture.html'
 
-plugin_pool.register_plugin(PictureTemplatePlugin)
+plugin_pool.register_plugin(PictureSplashTemplatePlugin)

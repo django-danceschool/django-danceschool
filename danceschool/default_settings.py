@@ -134,11 +134,11 @@ DJANGOCMS_FORMS_TEMPLATES = (
 # wouldn't make sense to do so.
 CMS_PLACEHOLDER_CONF = {
     None: {
-        'excluded_plugins': ['PictureTemplatePlugin',],
+        'excluded_plugins': ['PictureSplashTemplatePlugin',],
     },
     'splash_image': {
         'name': 'Splash Background Image',
-        'plugins': ['PictureTemplatePlugin',],
+        'plugins': ['PictureSplashTemplatePlugin',],
         'excluded_plugins': [],
         'limits': {
             'global': 1,
@@ -162,5 +162,5 @@ CMS_PLACEHOLDER_CONF = {
 
 # DJANGOCMS_PICTURE_TEMPLATES = []
 DJANGOCMS_PICTURE_TEMPLATES = [
-    ('link_only', 'Picture URL Only'),
+    ('splash_image', 'Front Page Splash Image'),
 ]

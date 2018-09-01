@@ -19,6 +19,10 @@ body {
     top: -56px;
   }
 
+  .splash-header {
+    top: -56px;
+  }
+
 }
 
 /* Offset body positioning to ensure that navbar stays at the top */
@@ -27,15 +31,21 @@ body {
   top: -54px;
 }
 
-.business-header {
+.splash-header {
   height: 50vh;
   min-height: 300px;
   -webkit-background-size: cover;
   -moz-background-size: cover;
   background-size: cover;
   -o-background-size: cover;
+  position: relative;
+  top: -54px;
 }
 
 .card {
   height: 100%;
+}
+
+.footer {
+  color: #fff;
 }

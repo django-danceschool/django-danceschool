@@ -3,7 +3,9 @@
 
 {% block content_header %}
     <!-- Header with Background Image -->
-    <header class="business-header" style="background: url('{% placeholder splash_image or %}https://via.placeholder.com/1920x400?text=+{% endplaceholder %}') top center no-repeat scroll;">
+    {% placeholder splash_image or %}
+    <header class="splash-header" style="background: url('https://via.placeholder.com/1920x500?text=+') top center no-repeat scroll;">
+    {% endplaceholder %}
         <div class="container">
           <div class="row">
             <div class="col-lg-12">
