@@ -13,3 +13,7 @@
     -o-background-size: cover;
     background-size: cover;
 }
+
+footer.bg-dark {
+    color: #fff;
+}

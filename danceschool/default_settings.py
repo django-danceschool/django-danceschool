@@ -155,7 +155,7 @@ CMS_PLACEHOLDER_CONF = {
         'plugins': ['Bootstrap4CarouselPlugin',],
         'excluded_plugins': [],
         'limits': {
-            'global': 1,
+            'Bootstrap4CarouselPlugin': 1,
         },
     },
 }
