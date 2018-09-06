@@ -4,10 +4,13 @@
 <head>
 <title>{% block title %}{% endblock %}</title>
 <link rel="stylesheet" type="text/css" href="{% block stylesheet %}{% static "admin/css/base.css" %}{% endblock %}" />
-{# Fix for incorrect font issue #}
+{# Fix for incorrect font issue and scrollbar issue #}
 <style>
     .cms-icon-arrow:before {
         font: normal normal normal 10px/1 django-cms-iconfont;
+    }
+    #allow-scroll {
+        overflow: scroll!important;
     }
 </style>
 {% block extrastyle %}{% endblock %}
@@ -73,6 +76,17 @@
           <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|capfirst }}</li>
         {% endfor %}</ul>
         {% endif %}
+        {# Add Javascript to prevent missing scrollbar on sideframe admin pages #}
+        {% addtoblock "js" %}
+            <script type="text/javascript">
+                document.addEventListener("DOMContentLoaded", function(event) { 
+                    if (window.self !== window.top) {
+                        document.getElementsByTagName('html')[0].setAttribute('id','allow-scroll');
+                    }
+                });
+            </script>
+        {% endaddtoblock %}
+
     {% endblock messages %}
 
     <!-- Content -->
@@ -87,6 +101,7 @@
         <br class="clear" />
     </div>
     <!-- END Content -->
+
 
     {% block footer %}<div id="footer"></div>{% endblock %}
 </div>
