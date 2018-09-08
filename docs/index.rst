@@ -10,7 +10,11 @@ Welcome to Django-danceschool's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   installation
+   installation_production
+   installation_development
+   installation_manual
+   setup_payments.rst
+   setup_email.rst
    usage_basic
    usage_discounts
    usage_financial

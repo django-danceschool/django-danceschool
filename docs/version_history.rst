@@ -1,6 +1,31 @@
 Version History
 ===============
 
+0.6.0 - In Progress
+-------------------
+
+- **New:** Themes app for easier customization of your initial site
+  templates.  The project
+  now uses the djangocms-bootstrap4 app by default as well, for
+  much easier development of sophisticated layouts.
+- **New:** Event "sessions" that can be used to group events for
+  registration.  The registration page is also much more easily
+  reorganized without creating custom templates, by choosing the
+  default organization method in registration site settings.
+- **New:** Customer groups, to which customers can be easily assigned.
+  Both discounts and vouchers may be group-specific as well as customer-
+  specific.  And, through an admin action, it is easy to email a group
+  of customers all at once.
+- **New:** Discounts that apply based on the number of existing registrants,
+  including temporary registrants that are still in the registration process.
+  This makes it easy to employ popular "First X to register" special pricing.
+- Fixed issue with admin template that led many sideframe pages to have
+  scrolling disabled (#89)
+- Draft FAQs are now properly treated as drafts, and can be published and
+  unpublished by admin action (#96 and #95)
+- Removed vestiges of prior Python 2 support
+
+
 0.5.6 - August 8, 2018
 ----------------------
 
