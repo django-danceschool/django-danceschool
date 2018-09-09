@@ -27,7 +27,7 @@ If you have enabled the ``danceschool.private_lessons`` app, then you have acces
 The ``danceschool.private_lesson`` app is not installed by default, but installation is easy.  Just take the following two steps:
 
 1. In your project's ``settings.py`` file, uncomment the line that lists ``danceschool.private_lessons`` under ``INSTALLED_APPS``. If you do not see this line, then you may add the line yourself after the other danceschool apps that you have enabled are listed.
-2. At the command line for your project's environment, run ``python manage.py migrate`` to set up the database for private lesson scheduling.
+2. At the command line for your project's environment, run ``python3 manage.py migrate`` to set up the database for private lesson scheduling.
 
 If you enable private lesson scheduling, it is also strongly recommended that you enable the ``danceschool.private_events`` app, so that instructors have calendar access to see the lessons that are scheduled for them.
 
@@ -91,7 +91,7 @@ Remember, you can always edit the permissions given to each group (as well as cr
 Updating User Permissions on Upgrade
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If you have recently upgraded your version of the project to one that has new features, then your users will not automatically be given new permissions to manage those new object.  Fortunately, if you have used the default groups created by the setupschool script, it is easy to keep those permissions up to date.  From a command line in your project's environment, just type ``python manage.py setup_permissions``, and all of the default permissions, including any permissions associated with new features, can be granted to the "Board", "Instructors," and "Registration Desk" groups created by the script.  No permissions are removed by this procedure, so any custom permissions that you have set at the User or Group level will not be impacted by doing this.
+If you have recently upgraded your version of the project to one that has new features, then your users will not automatically be given new permissions to manage those new object.  Fortunately, if you have used the default groups created by the setupschool script, it is easy to keep those permissions up to date.  From a command line in your project's environment, just type ``python3 manage.py setup_permissions``, and all of the default permissions, including any permissions associated with new features, can be granted to the "Board", "Instructors," and "Registration Desk" groups created by the script.  No permissions are removed by this procedure, so any custom permissions that you have set at the User or Group level will not be impacted by doing this.
 
 Detailed List of Permissions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

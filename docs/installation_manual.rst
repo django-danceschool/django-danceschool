@@ -314,7 +314,7 @@ this separate process.
 If you followed the quick start instructions, then Huey is already installed
 and a default setup is enabled that will enable you to get going quickly.
 On a separate command line from your test server, simply type in 
-``python manage.py run_huey`` to run a Huey instance that will handle
+``python3 manage.py run_huey`` to run a Huey instance that will handle
 sending emails, etc., automatically.  Your site will continue to these
 features as well as recurring tasks for as long as this process continues
 to run.  
@@ -335,7 +335,7 @@ running on Windows may require a slightly different process, and
 configuring Huey to use a remote Redis installation will also involve
 modifying site settings.
 
-1.  Install the Redis client for Python: ``pip install redis``
+1.  Install the Redis client for Python: ``pip3 install redis``
 2.  Start the Redis server: ``sudo service redis-server start``
 3.  Add the following to ``settings.py`` (this basic setup can be customized,
     see the `Huey documentation <https://huey.readthedocs.io/en/latest/contrib.html#django>`_).
@@ -347,7 +347,7 @@ modifying site settings.
       pool = ConnectionPool(host='localhost', port=6379, max_connections=20)
       HUEY = RedisHuey('danceschool',connection_pool=pool)
 
-4.  As before, run Huey in its own command shell: `python manage.py run_huey`
+4.  As before, run Huey in its own command shell: `python3 manage.py run_huey`
 
 With these two steps, your installation should now be able to send
 emails programmatically, and your site should also run recurring tasks

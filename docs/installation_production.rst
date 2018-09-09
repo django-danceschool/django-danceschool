@@ -183,8 +183,8 @@ Button-Based Deployment
    "bash" to access a command line console for your app.
 3. At the command-line console, run the following, and follow the prompts at the
    command line to create a superuser and perform your school's initial setup:
-   - Create a superuser: ``python manage.py createsuperuser``
-   - Setup the school with initial pages and sensible defaults: ``python manage.py setupschool``
+   - Create a superuser: ``python3 manage.py createsuperuser``
+   - Setup the school with initial pages and sensible defaults: ``python3 manage.py setupschool``
 4. Type ``exit`` to close the command line process, close out of the console,
    navigate to https://<your-app>.herokuapp.com/ and enjoy!
 
@@ -221,8 +221,8 @@ You will need:
 
    ::
 
-       heroku run python manage.py migrate
-       heroku run python manage.py createsuperuser
+       heroku run python3 manage.py migrate
+       heroku run python3 manage.py createsuperuser
 
 6. **Optional, but strongly recommended:** Run the easy-installer setup
    script, and follow all prompts.  This script will guide you through
@@ -233,7 +233,7 @@ You will need:
 
    ::
 
-       heroku run python manage.py setupschool
+       heroku run python3 manage.py setupschool
 
 7. Go to your site and log in!
 

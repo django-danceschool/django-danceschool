@@ -19,7 +19,7 @@ What you need:
 -  Python 3.4+
 -  The ability to create a virtual environment (on Linux, install the
    ``python-virtualenv`` package)
--  pip - the Python package manager
+-  pip3 - the Python package manager
 -  A suitable database. For development and testing, SQLite is used by
    default, so you do not need to do anything to get started.  For production
    use, it is **strongly Recommended** to use PostgreSQL server 9.4+
