@@ -85,6 +85,7 @@
 		<tr>
 			<th>{% trans "Item ID" %}</th>
 			<th>{% trans "Item Name" %}</th>
+			<th>{% trans "Dates" %}</th>
 			<th>{% trans "Price (Gross)" %}</th>
 			<th>{% trans "Price (Net)" %}</th>
 			{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
@@ -99,6 +100,11 @@
 		<tr {%if item.revenueNotYetReceived %}class="warning"{% endif %}>
 			<td>{{ item.id }}</td>
 			<td>{{ item.name }}</td>
+			<td>
+				{% for occ in item.finalEventRegistration.event.eventoccurrence_set.all %}
+					{{ occ.startTime|date:"M. jS" }{% if not forloop.last %}, {% endif %}
+				{% endfor %}
+			</td>
 			<td id="item_price_{{ item.id }}">{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
 			<td id="item_netPrice_{{ item.id }}">{{ currencySymbol }}{{ item.total|floatformat:2 }}</td>
 			{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
