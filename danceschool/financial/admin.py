@@ -254,7 +254,7 @@ class RoomRentalInfoInline(admin.StackedInline):
 
 class StaffMemberWageInfoInline(admin.StackedInline):
     model = StaffMemberWageInfo
-    min_num = 1
+    min_num = 0
     extra = 0
     fields = (('category','rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','advanceDaysReference','priorDays','priorDaysReference'),'disabled')
     classes = ('collapse',)
