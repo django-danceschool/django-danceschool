@@ -14,7 +14,7 @@ import json
 import six
 from dal import autocomplete
 
-from .models import Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
+from .models import EventSession, Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
 from .forms import LocationWithDataWidget
 
@@ -521,6 +521,17 @@ class CustomerGroupAdmin(admin.ModelAdmin):
     actions = ['emailCustomers']
 
 
+@admin.register(EventSession)
+class EventSessionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'startTime', 'endTime')
+    ordering = ('startTime','name')
+    readonly_fields = ('startTime','endTime')
+    list_filter = ('startTime','endTime')
+    prepopulated_fields = {'slug': ('name',)}
+
+    fields = ('name', 'description', 'slug',('startTime','endTime'))
+
+
 class RoomInline(admin.StackedInline):
     model = Room
     extra = 0
@@ -726,6 +737,7 @@ class StaffMemberParentAdmin(PolymorphicParentModelAdmin):
 
 ######################################
 # Event and subclass admins
+
 
 class EventChildAdmin(PolymorphicChildModelAdmin):
     '''

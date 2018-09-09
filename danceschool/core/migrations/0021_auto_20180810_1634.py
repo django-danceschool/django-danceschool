@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('description', models.TextField(blank=True, help_text='Add an optional description.', null=True, verbose_name='Description')),
                 ('slug', models.SlugField(help_text='Events can be accessed by a URL based on this slug, as well as by a URL specified by month.', verbose_name='Slug')),
                 ('startTime', models.DateTimeField(blank=True, help_text='This value should be populated automatically based on the first start time of any event associated with this session.', null=True, verbose_name='Start Time')),
-                ('endTime', models.DateTimeField(blank=True, help_text='This value should be populated automatically based on the last end time of any event associated with this session.', null=True, verbose_name='Start Time')),
+                ('endTime', models.DateTimeField(blank=True, help_text='This value should be populated automatically based on the last end time of any event associated with this session.', null=True, verbose_name='End Time')),
             ],
             options={
                 'verbose_name': 'Event session',

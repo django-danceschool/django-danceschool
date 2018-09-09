@@ -3,6 +3,7 @@ from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.db.models import Case, When, F, Q, IntegerField, ExpressionWrapper
+from django.db.models.functions import ExtractWeekDay
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template, render_to_string
@@ -338,9 +339,9 @@ class EventOrderMixin(object):
 
         # Initialize with null values that get filled in based on the logic below.
         annotations = {
-            'nullParam': None,
-            'paramOne': None,
-            'paramTwo': None,
+            'nullParam': Case(default_value=None,output_field=IntegerField()),
+            'paramOne': Case(default_value=None,output_field=IntegerField()),
+            'paramTwo': Case(default_value=None,output_field=IntegerField()),
         }
 
         if rule == 'SessionFirst':
@@ -419,21 +420,21 @@ class EventOrderMixin(object):
         elif rule == 'Weekday':
             annotations.update({
                 'nullParam': Case(
-                    When(weekday__isnull=False, then=0),
+                    When(startTime__week_day__isnull=False, then=0),
                     default_value=1,
                     output_field=IntegerField()
                 ),
-                'paramOne': F('weekday'),
+                'paramOne': ExtractWeekDay('startTime'),
             })
         elif rule == 'MonthWeekday':
             annotations.update({
                 'nullParam': Case(
-                    When(Q(month__isnull=False) & Q(weekday__isnull=False), then=0),
+                    When(Q(month__isnull=False) & Q(startTime__week_day__isnull=False), then=0),
                     default_value=1,
                     output_field=IntegerField()
                 ),
                 'paramOne': ExpressionWrapper(12*F('year') + F('month'), output_field=IntegerField()),
-                'paramTwo': F('weekday'),
+                'paramTwo': ExtractWeekDay('startTime'),
             })
 
         return annotations

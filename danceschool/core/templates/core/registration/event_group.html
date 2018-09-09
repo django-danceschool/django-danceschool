@@ -10,8 +10,8 @@
     <div class="reg-event-group mt-4">
       {% regroup groupFirst.list|dictsort:"organizer.nameSecond" by organizer.nameSecond as groupSecond_list %}
       {% for groupSecond in groupSecond_list %}
-        {% if groupSecond.grouper %}
-            <h3 class="reg-groupsecond-header">{{ organizer.nameSecond }}</h3>
+        {% if groupSecond.grouper is not None %}
+            <h4 class="reg-groupsecond-header">{{ groupSecond.grouper }}</h4>
         {% endif %}
         <div class="card reg-groupsecond-group">
           {% for event in groupSecond.list %}

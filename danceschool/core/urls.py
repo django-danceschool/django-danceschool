@@ -45,6 +45,10 @@ urlpatterns = [
     # These are for individual class views and event views
     url(r'^classes/(?P<year>[0-9]+)/(?P<month>[\w]+)/(?P<slug>[\w\-_]+)/$', IndividualClassView.as_view(), name='classView'),
     url(r'^events/(?P<year>[0-9]+)/(?P<month>[\w]+)/(?P<slug>[\w\-_]+)/$', IndividualEventView.as_view(), name='eventView'),
+    url(r'^classes/(?P<session_slug>[\w\-_]+)/(?P<slug>[\w\-_]+)/$', IndividualClassView.as_view(), name='classViewSession'),
+    url(r'^events/(?P<session_slug>[\w\-_]+)/(?P<slug>[\w\-_]+)/$', IndividualEventView.as_view(), name='eventViewSession'),
+    url(r'^classes/(?P<session_slug>[\w\-_]+)/(?P<year>[0-9]+)/(?P<month>[\w]+)/(?P<slug>[\w\-_]+)/$', IndividualClassView.as_view(), name='classViewSessionMonth'),
+    url(r'^events/(?P<session_slug>[\w\-_]+)/(?P<year>[0-9]+)/(?P<month>[\w]+)/(?P<slug>[\w\-_]+)/$', IndividualEventView.as_view(), name='eventViewSessionMonth'),
 
     url(r'^accounts/profile/(?P<user_id>[0-9]+)/$', OtherAccountProfileView.as_view(), name='accountProfile'),
     url(r'^accounts/profile/$', AccountProfileView.as_view(), name='accountProfile'),

@@ -449,7 +449,7 @@ class EventSession(models.Model):
         null=True,blank=True,
     )
     endTime = models.DateTimeField(
-        _('Start Time'),
+        _('End Time'),
         help_text=_('This value should be populated automatically based on the last end time of any event associated with this session.'),
         null=True,blank=True,
     )
@@ -677,10 +677,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         elif rule == 'Weekday':
             w = self.weekday
             d = day_name[w]
-            if w:
+            if w is not None:
                 org.update({
                     'name': _(d),
-                    'nameFirst': _('%ss' % d),
+                    'nameFirst': _(d),
                     'id': w,
                 })
         elif rule == 'MonthWeekday':
@@ -688,7 +688,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             d = day_name[w]
             m = self.month
             mn = month_name[m]
-            if w and m:
+            if w is not None and m:
                 org.update({
                     'name': _('%ss in %s' % (d, mn)),
                     'nameFirst': _(mn),
@@ -1317,8 +1317,17 @@ class Series(Event):
 
     @property
     def url(self):
-        if self.status not in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
+        orgRule = getConstant('registration__orgRule')
+
+        if self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
+            return None
+        elif orgRule in ['SessionFirst', 'SessionAlphaFirst', 'SessionMonth','SessionAlphaMonth'] and self.session:
+            return reverse('classViewSessionMonth',args=[self.session.slug,self.year,month_name[self.month or 0] or None,self.classDescription.slug])
+        elif orgRule in ['Session','SessionAlpha'] and self.session:
+            return reverse('classViewSession',args=[self.session.slug,self.classDescription.slug])
+        else:        
             return reverse('classView',args=[self.year,month_name[self.month or 0] or None,self.classDescription.slug])
+
     url.fget.short_description = _('Class series URL')
 
     def clean(self):
@@ -1483,7 +1492,15 @@ class PublicEvent(Event):
 
     @property
     def url(self):
-        if self.status not in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
+        orgRule = getConstant('registration__orgRule')
+
+        if self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
+            return None
+        elif orgRule in ['SessionFirst', 'SessionAlphaFirst', 'SessionMonth','SessionAlphaMonth'] and self.session:
+            return reverse('eventViewSessionMonth',args=[self.session.slug,self.year,month_name[self.month or 0] or None,self.slug])
+        elif orgRule in ['Session','SessionAlpha'] and self.session:
+            return reverse('eventViewSession',args=[self.session.slug,self.slug])
+        else:        
             return reverse('eventView',args=[self.year,month_name[self.month or 0] or None,self.slug])
 
     def __str__(self):

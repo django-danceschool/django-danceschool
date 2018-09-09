@@ -739,14 +739,24 @@ class IndividualClassView(FinancialContextMixin, TemplateView):
         # These are passed via the URL
         year = self.kwargs.get('year')
         month = self.kwargs.get('month')
+        session_slug = self.kwargs.get('session_slug')
         slug = self.kwargs.get('slug','')
 
-        try:
-            month_number = list(month_name).index(month or 0)
-        except ValueError:
-            raise Http404(_('Invalid month.'))
+        if month:
+            try:
+                month_number = list(month_name).index(month or 0)
+            except ValueError:
+                raise Http404(_('Invalid month.'))
 
-        seriesset = get_list_or_404(Series,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year or None,month=month_number or None,classDescription__slug=slug)
+        filters = ~Q(status=Event.RegStatus.hidden) \
+            & ~Q(status=Event.RegStatus.linkOnly) \
+            & Q(classDescription__slug=slug)
+        if year and month:
+            filters = filters & Q(year=year or None) & Q(month=month_number or None)
+        if session_slug:
+            filters = filters & Q(session__slug=session_slug)
+
+        seriesset = get_list_or_404(Series,filters)
 
         # This will pass through to the context data by default
         kwargs.update({'seriesset': seriesset})
@@ -769,14 +779,24 @@ class IndividualEventView(FinancialContextMixin, TemplateView):
         # These are passed via the URL
         year = self.kwargs.get('year',timezone.now().year)
         month = self.kwargs.get('month',0)
+        session_slug = self.kwargs.get('session_slug')
         slug = self.kwargs.get('slug','')
 
-        try:
-            month_number = list(month_name).index(month)
-        except ValueError:
-            raise Http404(_('Invalid month.'))
+        if month:
+            try:
+                month_number = list(month_name).index(month or 0)
+            except ValueError:
+                raise Http404(_('Invalid month.'))
 
-        eventset = get_list_or_404(PublicEvent,~Q(status=Event.RegStatus.hidden),~Q(status=Event.RegStatus.linkOnly),year=year,month=month_number,slug=slug)
+        filters = ~Q(status=Event.RegStatus.hidden) \
+            & ~Q(status=Event.RegStatus.linkOnly) \
+            & Q(slug=slug)
+        if year and month:
+            filters = filters & Q(year=year or None) & Q(month=month_number or None)
+        if session_slug:
+            filters = filters & Q(session__slug=session_slug)
+
+        eventset = get_list_or_404(PublicEvent,filters)
 
         # If an alternative link is given by one or more of these events, then redirect to that.
         overrideLinks = [x.link for x in eventset if x.link]

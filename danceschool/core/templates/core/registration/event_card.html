@@ -23,7 +23,7 @@
 
           <div class="card-text reg-event-dates">
             <small>
-              {% readable_weekday weekday.grouper %}s {{ event.startTime|date:"g:i A" }}
+              {% readable_weekday event.weekday %}s {{ event.startTime|date:"g:i A" }}
               - {{ event.endTime|date:"g:i A" }} —
               {% for occurrence in event.eventoccurrence_set.all %}
                 {{ occurrence.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
