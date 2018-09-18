@@ -1,7 +1,7 @@
 Version History
 ===============
 
-0.6.0 - In Progress
+0.6.0 - September 9, 2018
 -------------------
 
 - **New:** Themes app for easier customization of your initial site
@@ -23,6 +23,8 @@ Version History
   scrolling disabled (#89)
 - Draft FAQs are now properly treated as drafts, and can be published and
   unpublished by admin action (#96 and #95)
+- Added dates to refund view for easier processing (#87)
+- Fixed discounts not showing up when viewing registrations (#88)
 - Removed vestiges of prior Python 2 support
 
 
