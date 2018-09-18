@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 
 from cms.models.pluginmodel import CMSPlugin
@@ -56,6 +57,8 @@ class SquarePaymentRecord(PaymentRecord):
 
     def getPayment(self):
         api_instance = TransactionsApi()
+        api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
+
         try:
             response = api_instance.retrieve_transaction(
                 location_id=self.locationId,
