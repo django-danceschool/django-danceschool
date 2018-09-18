@@ -1,6 +1,11 @@
 Version History
 ===============
 
+0.6.1 - September 18, 2018
+--------------------------
+
+- Updated use of Square API to reflect new method of loading access token.
+
 0.6.0 - September 9, 2018
 -------------------
 

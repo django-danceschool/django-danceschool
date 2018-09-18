@@ -8,7 +8,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-danceschool',
-    version='0.6.0',
+    version='0.6.1',
     packages=['danceschool'],
     include_package_data=True,
     license='BSD License',
@@ -62,7 +62,7 @@ setup(
         'redis>=2.10.6',
         'requests>=2.6.0',
         'six>=1.10.0',
-        'squareconnect>=2.2.1',
+        'squareconnect>=2.20180712.3',
         'stripe>=1.62.0',
         'unicodecsv>=0.14.1',
         'xhtml2pdf>=0.2.2',
