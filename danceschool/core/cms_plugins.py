@@ -105,7 +105,16 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
         (_('Limit End Date'), {
             'fields': ('limitTypeEnd','daysEnd','endDate'),
         }),
+        (_('Limit Number'), {
+            'classes': ('collapse',),
+            'fields': ('limitNumber','sortOrder'),
+        }),
+        (_('Limit Categories/Levels'), {
+            'classes': ('collapse',),
+            'fields': ('eventCategories','seriesCategories','levels'),
+        }),
         (_('Other Restrictions'), {
+            'classes': ('collapse',),
             'fields': ('limitToOpenRegistration','location','weekday'),
         })
     )
@@ -143,14 +152,24 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
         if instance.limitToOpenRegistration:
             filters['registrationOpen'] = True
 
-        if instance.location:
-            filters['location'] = instance.location
+        if instance.location.all():
+            filters['location__in'] = instance.location.all()
+
+        if instance.eventCategories.all():
+            filters['publicevent__category__in'] = instance.eventCategories.all()
+
+        if instance.seriesCategories.all():
+            filters['series__category__in'] = instance.seriesCategories.all()
+
+        if instance.levels.all():
+            filters['series__classDescription__danceTypeLevel__in'] = instance.levels.all()
 
         # Python calendar module indexes weekday differently from Django
         if instance.weekday is not None:
             filters['startTime__week_day'] = (instance.weekday + 2) % 7
 
-        listing = listing.filter(**filters)
+        order_by = '-startTime' if instance.sortOrder == 'D' else 'startTime'
+        listing = listing.filter(**filters).order_by(order_by)[:instance.limitNumber]
 
         context.update({
             'event_list': listing,

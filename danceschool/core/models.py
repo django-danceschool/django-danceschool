@@ -3007,10 +3007,20 @@ class EventListPluginModel(CMSPlugin):
         ('S',_('Event start date')),
         ('E',_('Event end date')),
     ]
+    EVENT_TYPE_CHOICES = [
+        ('S',_('Class Series')),
+        ('P',_('Public Events')),
+    ]
+    SORT_CHOICES = [
+        ('A',_('Ascending')),
+        ('D',_('Descending')),
+    ]
 
     title = models.CharField(_('Custom list title'),max_length=250,default=_('Upcoming Events'),blank=True)
 
-    eventType = models.CharField(_('Limit to event type'),max_length=1,choices=(('S',_('Class Series')),('P',_('Public Events'))),null=True,blank=True,help_text=_('Leave blank to include all Events.'))
+    eventType = models.CharField(_('Limit to event type'),max_length=1,choices=EVENT_TYPE_CHOICES,null=True,blank=True,help_text=_('Leave blank to include all Events.'))
+    limitNumber = models.PositiveSmallIntegerField(_('Limit number'),help_text=_('Leave blank for no restriction'),null=True,blank=True)
+    sortOrder = models.CharField(_('Sort by start time'),max_length=1,choices=SORT_CHOICES,default='A',help_text=_('This may be overridden by the particular template in use'))
 
     limitTypeStart = models.CharField(_('Limit interval start by'),max_length=1,choices=LIMIT_CHOICES,default='E')
     daysStart = models.SmallIntegerField(_('Interval limited to __ days from present'),null=True,blank=True,help_text=_('(E.g. enter -30 for an interval that starts with 30 days prior to today) Leave blank for no limit, or enter 0 to limit to future events'))
@@ -3021,9 +3031,26 @@ class EventListPluginModel(CMSPlugin):
     endDate = models.DateField(_('Exact interval end date '),null=True,blank=True,help_text=_('Leave blank for no limit (overrides relative interval limits)'))
 
     limitToOpenRegistration = models.BooleanField(_('Limit to open for registration only'),default=False)
-
-    location = models.ForeignKey(Location,verbose_name=_('Limit to location'),null=True,blank=True,on_delete=models.SET_NULL)
+    location = models.ManyToManyField(Location,verbose_name=_('Limit to locations'),help_text=_('Leave blank for no restriction'),blank=True)
     weekday = models.PositiveSmallIntegerField(_('Limit to weekday'),null=True,blank=True,choices=[(x,_(day_name[x])) for x in range(0,7)])
+
+    eventCategories = models.ManyToManyField(
+        PublicEventCategory,verbose_name=_('Limit to public event categories'),
+        help_text=_('Leave blank for no restriction'),
+        blank=True
+    )
+
+    seriesCategories = models.ManyToManyField(
+        SeriesCategory,verbose_name=_('Limit to series categories'),
+        help_text=_('Leave blank for no restriction'),
+        blank=True
+    )
+
+    levels = models.ManyToManyField(
+        DanceTypeLevel,verbose_name=_('Limit to type and levels'),
+        help_text=_('Leave blank for no restriction'),
+        blank=True
+    )
 
     cssClasses = models.CharField(_('Custom CSS classes'),max_length=250,null=True,blank=True,help_text=_('Classes are applied to surrounding &lt;div&gt;'))
     template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
