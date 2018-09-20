@@ -1,6 +1,14 @@
 Version History
 ===============
 
+0.6.2 - September 19, 2018
+--------------------------
+
+- **New:** Added short description to Event and submodels.
+- Improvements to Event List plugin for greater configurability and filtering.
+- Added DJs as a default event staff member category.
+- Fixed issues with category-specific templates
+
 0.6.1 - September 18, 2018
 --------------------------
 
