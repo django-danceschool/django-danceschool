@@ -127,6 +127,19 @@ class StaffCategorySubstitute(ModelChoicePreference):
 
 
 @global_preferences_registry.register
+class StaffCategoryDJ(ModelChoicePreference):
+    section = general
+    name = 'eventStaffCategoryDJ'
+    verbose_name = _('DJ Event Staff Category')
+    model = EventStaffCategory
+    queryset = EventStaffCategory.objects.all()
+
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+        return EventStaffCategory.objects.get_or_create(name=_('DJ'))[0]
+
+
+@global_preferences_registry.register
 class StaffCategoryOther(ModelChoicePreference):
     section = general
     name = 'eventStaffCategoryOther'

@@ -1,11 +1,11 @@
 {% load danceschool_tags i18n %}
 
+<a name="{{ event.slug }}-{{ event.id }}">
 <div class="card p-4">
   <div class="card-body reg-event"
        id="reg-event-{{ event.id }}">
     <div class="row">
       <div class="col-md-12">
-        <a name="{{ event.slug }}">
           <h3 class="card-title reg-event-title">{{ event.name }}</h3>
         </a>
         <div class="card-subtitle text-muted reg-event-details">

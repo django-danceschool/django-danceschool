@@ -818,7 +818,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     form = SeriesAdminForm
     show_in_index = True
 
-    inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline]
+    inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline,EventStaffMemberInline]
     list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','session','customers')
     list_editable = ('status','category','session')
     list_filter = ('location','status','registrationOpen','category','session','pricingTier')
@@ -911,7 +911,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         (_('Registration/Visibility'), {
             'fields': ('status',('pricingTier','capacity'),),
         }),
-        (_('Description/Link'), {'fields': ('descriptionField','link')})
+        (_('Description/Link'), {'fields': ('descriptionField','shortDescriptionField','link')})
     )
 
     # This allows us to save the obj reference in order to process related objects in an inline (substitute teachers)

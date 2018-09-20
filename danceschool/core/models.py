@@ -262,6 +262,7 @@ class ClassDescription(models.Model):
     '''
     title = models.CharField(_('Title'),max_length=200)
     description = HTMLField(_('Description'),blank=True)
+    shortDescription = models.TextField(_('Short description'),blank=True,help_text=_('May be used for tag lines and feeds.'))
     danceTypeLevel = models.ForeignKey(DanceTypeLevel,verbose_name=_('Dance Type & Level'),default=1,on_delete=models.SET_DEFAULT)
 
     slug = models.SlugField(_('Slug'),max_length=100,unique=True,blank='True',help_text=_('This is used in the URL for the individual class pages.  You can override the default'))
@@ -608,12 +609,24 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         Since other types of events (PublicEvents, class Series, etc.) are subclasses
         of this class, it is a good idea to override this method for those subclasses,
-        to provide a more intuitive name.  However, defining this property at the
-        event level ensures that <object>.name can always be used to access a description
-        for describing the event.
+        to provide a more intuitive description.  However, defining this property at the
+        event level ensures that <object>.description can always be used to access a description
+        of the event.
         '''
         return ''
     description.fget.short_description = _('Description')
+
+    @property
+    def shortDescription(self):
+        '''
+        Since other types of events (PublicEvents, class Series, etc.) are subclasses
+        of this class, it is a good idea to override this method for those subclasses,
+        to provide a more intuitive description.  However, defining this property at the
+        event level ensures that <object>.description can always be used to access a short
+        description of the event.
+        '''
+        return ''
+    shortDescription.fget.short_description = _('Short description')
 
     @property
     def organizer(self):
@@ -1203,6 +1216,12 @@ class EventStaffMember(models.Model):
     staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff Member'),on_delete=models.CASCADE)
     replacedStaffMember = models.ForeignKey('self',verbose_name=_('Replacement for'),related_name='replacementFor',null=True,blank=True,on_delete=models.SET_NULL)
 
+    specifiedHours = models.FloatField(
+        _('Number of hours (optional)'),
+        help_text=_('If unspecified, then the net number of hours is based on the duration of the applicable event occurrences.'),null=True,blank=True,
+        validators=[MinValueValidator(0)]
+    )
+
     # For keeping track of who submitted and when.
     submissionUser = models.ForeignKey(User,verbose_name=_('Submission User'),null=True,on_delete=models.SET_NULL)
     creationDate = models.DateTimeField(_('Creation date'),auto_now_add=True)
@@ -1214,7 +1233,9 @@ class EventStaffMember(models.Model):
         For regular event staff, this is the net hours worked for financial purposes.
         For Instructors, netHours is caclulated net of any substitutes.
         '''
-        if self.category in [getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')]:
+        if self.specifiedHours is not None:
+            return self.specifiedHours
+        elif self.category in [getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')]:
             return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
         else:
             return sum([x.duration for x in self.occurrences.filter(cancelled=False)])
@@ -1279,8 +1300,21 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        return getattr(getattr(self,'classDescription',None),'title','')
+        return getattr(getattr(self,'classDescription',None),'description','')
     description.fget.short_description = _('Description')
+
+    @property
+    def shortDescription(self):
+        '''
+        Overrides property from Event base class.
+        '''
+        cd = getattr(self,'classDescription',None)
+        if cd:
+            sd = getattr(cd,'shortDescription','')
+            d = getattr(cd,'description','')
+            return sd if sd else d
+        return ''
+    shortDescription.fget.short_description = _('Short description')
 
     @property
     def slug(self):
@@ -1381,6 +1415,8 @@ class SeriesTeacher(EventStaffMember):
         For regular event staff, this is the net hours worked for financial purposes.
         For Instructors, netHours is calculated net of any substitutes.
         '''
+        if self.specifiedHours is not None:
+            return self.specifiedHours
         return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
     netHours.fget.short_description = _('Net hours taught')
 
@@ -1444,6 +1480,49 @@ class SubstituteTeacher(EventStaffMember):
         verbose_name_plural = _('Substitute instructors')
 
 
+class EventDJManager(models.Manager):
+    '''
+    Limits Dj queries to only staff reported as DJs, and ensures that
+    these individuals are reported as DJs when created.
+    '''
+
+    def get_queryset(self):
+        return super(EventDJManager,self).get_queryset().filter(
+            category=getConstant('general__eventStaffCategoryDJ')
+        )
+
+    def create(self, **kwargs):
+        kwargs.update({
+            'category': getConstant('general__eventStaffCategoryDJ').id,
+        })
+        return super(EventDJManager,self).create(**kwargs)
+
+
+class EventDJ(EventStaffMember):
+    '''
+    A proxy model that provides staff member properties specific to
+    keeping track of series teachers.
+    '''
+    objects = EventDJManager()
+
+    @property
+    def netHours(self):
+        '''
+        For regular event staff, this is the net hours worked for financial purposes.
+        For Instructors, netHours is calculated net of any substitutes.
+        '''
+        return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
+    netHours.fget.short_description = _('Net hours taught')
+
+    def __str__(self):
+        return str(self.staffMember) + " - " + str(self.event)
+
+    class Meta:
+        proxy = True
+        verbose_name = _('Event DJ')
+        verbose_name_plural = _('Event DJs')
+
+
 class PublicEvent(Event):
     '''
     Special Events which may have their own display page.
@@ -1454,6 +1533,7 @@ class PublicEvent(Event):
 
     category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category (optional)'),help_text=_('Custom event categories may be used to display special types of events (e.g. practice sessions) separately on your registration page.  They may also be displayed in different colors on the public calendar.'),on_delete=models.SET_NULL)
     descriptionField = HTMLField(_('Description'),null=True,blank=True,help_text=_('Describe the event for the event page.'))
+    shortDescriptionField = models.TextField(_('Short description'),null=True,blank=True,help_text=_('Shorter description for \"taglines\" and feeds.'))
     link = models.URLField(_('External link to event (if applicable)'),blank=True,null=True,help_text=_('Optionally include the URL to a page for this Event.  If set, then the site\'s auto-generated Event page will instead redirect to this URL.'))
 
     # The pricing tier is optional, but registrations cannot be enabled unless a pricing tier is
@@ -1475,6 +1555,14 @@ class PublicEvent(Event):
     basePrice.fget.short_description = _('Base price for online registration')
 
     @property
+    def djs(self):
+        '''
+        Returns the list of DJs
+        '''
+        return EventDJ.objects.filter(event=self)
+    djs.fget.short_description = _('DJs')
+
+    @property
     def name(self):
         '''
         Overrides property from Event base class.
@@ -1489,6 +1577,16 @@ class PublicEvent(Event):
         '''
         return self.descriptionField
     description.fget.short_description = _('Description')
+
+    @property
+    def shortDescription(self):
+        '''
+        Overrides property from Event base class.
+        '''
+        if self.shortDescriptionField:
+            return self.shortDescriptionField
+        return self.descriptionField
+    shortDescription.fget.short_description = _('Short description')
 
     @property
     def url(self):

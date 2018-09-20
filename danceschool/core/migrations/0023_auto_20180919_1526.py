@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-
+from django.core.validators import MinValueValidator
 
 class Migration(migrations.Migration):
 
@@ -45,5 +45,32 @@ class Migration(migrations.Migration):
             model_name='eventlistpluginmodel',
             name='location',
             field=models.ManyToManyField(blank=True, help_text='Leave blank for no restriction', to='core.Location', verbose_name='Limit to locations'),
+        ),
+        migrations.CreateModel(
+            name='EventDJ',
+            fields=[
+            ],
+            options={
+                'verbose_name': 'Event DJ',
+                'verbose_name_plural': 'Event DJs',
+                'proxy': True,
+                'indexes': [],
+            },
+            bases=('core.eventstaffmember',),
+        ),
+        migrations.AddField(
+            model_name='eventstaffmember',
+            name='specifiedHours',
+            field=models.FloatField(blank=True, help_text='If unspecified, then the net number of hours is based on the duration of the applicable event occurrences.', null=True, validators=[MinValueValidator(0)], verbose_name='Number of hours (optional)'),
+        ),
+        migrations.AddField(
+            model_name='classdescription',
+            name='shortDescription',
+            field=models.TextField(blank=True, help_text='May be used for tag lines and feeds.', verbose_name='Short description'),
+        ),
+        migrations.AddField(
+            model_name='publicevent',
+            name='shortDescriptionField',
+            field=models.TextField(blank=True, help_text='Shorter description for "taglines" and feeds.', null=True, verbose_name='Short description'),
         ),
     ]

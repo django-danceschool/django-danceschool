@@ -31,7 +31,7 @@ class EventFeedItem(object):
         self.type = 'event'
         self.id_number = object.event.id
         self.title = object.event.name
-        self.description = object.event.description
+        self.description = object.event.shortDescription
         self.start = timezone.localtime(object.startTime,timeZone) \
             if timezone.is_aware(object.startTime) else object.startTime
         self.end = timezone.localtime(object.endTime,timeZone) \
