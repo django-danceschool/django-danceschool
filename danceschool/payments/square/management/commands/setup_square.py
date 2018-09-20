@@ -82,14 +82,14 @@ CHECKING SQUARE INTEGRATION
 
         if location_id and client_id and client_secret:
             try:
-                import squareconnect
                 from squareconnect.rest import ApiException
                 from squareconnect.apis.locations_api import LocationsApi
                 from squareconnect.apis.transactions_api import TransactionsApi
 
-                squareconnect.configuration.access_token = client_secret
                 locations_api_instance = LocationsApi()
+                locations_api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
                 transactions_api_instance = TransactionsApi()
+                transactions_api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
 
                 # Check that the location ID from settings actually identifies a location.
                 api_response = locations_api_instance.list_locations()

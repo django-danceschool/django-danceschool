@@ -134,6 +134,7 @@ def processSquarePayment(request):
     this_total = min(this_invoice.outstandingBalance, amount)
 
     api_instance = TransactionsApi()
+    api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
     idempotency_key = str(uuid.uuid1())
     location_id = getattr(settings,'SQUARE_LOCATION_ID','')
     amount = {'amount': int(100 * this_total), 'currency': this_currency}
