@@ -3153,6 +3153,12 @@ class EventListPluginModel(CMSPlugin):
     cssClasses = models.CharField(_('Custom CSS classes'),max_length=250,null=True,blank=True,help_text=_('Classes are applied to surrounding &lt;div&gt;'))
     template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
 
+    def copy_relations(self, oldinstance):
+        self.location = oldinstance.location.all()
+        self.eventCategories = oldinstance.eventCategories.all()
+        self.seriesCategories = oldinstance.seriesCategories.all()
+        self.levels = oldinstance.levels.all()
+
     def get_short_description(self):
         desc = self.title or ''
         choices = getattr(self.get_plugin_class(),'template_choices',[])
