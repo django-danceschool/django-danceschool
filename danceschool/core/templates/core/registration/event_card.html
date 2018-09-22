@@ -23,11 +23,15 @@
 
           <div class="card-text reg-event-dates">
             <small>
-              {% readable_weekday event.weekday %}s {{ event.startTime|date:"g:i A" }}
-              - {{ event.endTime|date:"g:i A" }} —
-              {% for occurrence in event.eventoccurrence_set.all %}
-                {{ occurrence.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
-              {% endfor %}
+              {% if event.numOccurrences > 1 %}
+                {% readable_weekday event.weekday %}s {{ event.startTime|date:"g:i A" }}
+                - {{ event.endTime|date:"g:i A" }} —
+                {% for occurrence in event.eventoccurrence_set.all %}
+                  {{ occurrence.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+              {% else %}
+                {{ event.startTime|date:"l, N jS, g:i A" }}
+              {% endif %}
             </small>
           </div>
 
@@ -61,7 +65,7 @@
           {% endif %}
         </div>
       </div>
-      <div class="col-auto ml-auto pull-right reg-event-register">
+      <div class="col-auto ml-md-auto mt-4 mt-md-0 reg-event-register">
         {% if event.registrationOpen %}
           {# if event registration is still open then show the registration form#}
           {% get_field_for_object 'event' event.id form as field %}

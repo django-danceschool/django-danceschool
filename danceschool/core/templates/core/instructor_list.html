@@ -18,10 +18,10 @@
 <div class="bio">
     <h3>
         {{ teacher.firstName }} {{ teacher.lastName }}
-        {% if teacher.availableForPrivates %}<small><a href="mailto:{{ teacher.publicEmail }}">{% trans "schedule a private" %}</a></small>{% endif %}
+        {% if teacher.availableForPrivates %}<small><a href="mailto:{{ teacher.publicEmail }}">{% trans "schedule a private lesson" %}</a></small>{% endif %}
     </h3>
 
-    <img class="float-left instructor-bio-photo" src="{% if teacher.image %}{% thumbnail teacher.image thumbnail_dimensions|default:'133x133' crop %}{% endif %}" width="{{ thumbnail.width|default:'133' }}" />
+    {% if teacher.image %}<img class="float-left mr-3 mb-3 instructor-bio-photo" src="{% thumbnail teacher.image thumbnail_dimensions|default:'133x133' crop %}" width="{{ thumbnail.width|default:'133' }}" />{% endif %}
     <div class="post-body">
         {% render_model teacher "bio" "" "" "safe" %}
     </div>
