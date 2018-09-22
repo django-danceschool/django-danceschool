@@ -1,6 +1,13 @@
 Version History
 ===============
 
+0.6.3 - September 19, 2018
+--------------------------
+
+- Fixed bug that led EventListPlugin instances to differ between draft and publication.
+- Fixed event registration card spacing on mobile.
+- Fixed margins on instructor images in Instructor list template.
+
 0.6.2 - September 19, 2018
 --------------------------
 
