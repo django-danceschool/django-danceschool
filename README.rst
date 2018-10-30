@@ -110,7 +110,7 @@ Basic instructions
 
    ::
 
-      django-admin startproject --template https://raw.githubusercontent.com/django-danceschool/django-danceschool/master/setup/default_setup.zip <your_project_name>
+      django-admin startproject --template https://github.com/django-danceschool/development-template/archive/master.zip <your_project_name>
 
 3. Perform initial database migrations
 
