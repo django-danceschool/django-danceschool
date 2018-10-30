@@ -61,7 +61,7 @@ as possible, with minimal knowledge of server configuration needed, but with
 standard production-level technologies in use.  The exact details of what you
 will need will depend on the method of hosting that you choose; learn more in
 the `documentation
-<https://django-danceschool.readthedocs.io/en/latest/installation.html#production-deployment>`__.
+<https://django-danceschool.readthedocs.io/en/latest/installation_production.html>`__.
 
 Using the installation instructions for `Docker <https://www.docker.com/>`__,
 it is also feasible to get a full project server stack running on any machine
@@ -78,70 +78,8 @@ If you just want to test out the project locally, work your way
 through the code, or develop your own custom templates and functionality using
 the Django development server, then this method of installation is for you.
 
-For more detailed instructions, and for a discussion of possible issues that
-may arise, see the `Documentation
-<https://django-danceschool.readthedocs.io/en/latest/installation.html#development-installation>`__.
-
-What you will need:
-===================
-
--  Python 3.4+
--  pip3 - the Python package manager
--  External library dependencies for Pillow, used for basic image
-   processing (see the `Pillow
-   Documentation <http://pillow.readthedocs.io/en/3.4.x/installation.html>`__).
--  **Strongly recommended:** The ability to create a virtual environment
-   (on Linux, install the ``python-virtualenv`` package)
-
-Basic instructions
-------------------
-
-1. In your Python environment, install the django-danceschool app and all its
-   necessary dependencies from `PyPi <https://pypi.python.org/pypi>`_:
-   
-   ::
-
-      pip install django-danceschool
-
-2. Start your Django project, using the ``django-admin`` command.  To avoid
-   having to set a large number of settings manually, we strongly recommend
-   that you use the preexisting installation template as follows.  Make sure
-   that you are in the folder where you would like your project to be located when you do this.
-
-   ::
-
-      django-admin startproject --template https://github.com/django-danceschool/development-template/archive/master.zip <your_project_name>
-
-3. Perform initial database migrations
-
-   ::
-       
-       cd <your_project_name>
-       python manage.py migrate
-
-4. Create a superuser so that you can log into the admin interface (you
-   will be prompted for username and password)
-
-   ::
-
-       python manage.py createsuperuser
-
-5. **Optional, but strongly recommended:** Run the easy-installer setup
-   script, and follow all prompts.  This script will guide you through
-   the process of setting initial values for many things, creating a few
-   initial pages that many school use, and setting up user groups and
-   permissions that will make it easier for you to get started running
-   your dance school right away.
-
-   ::
-
-       python manage.py setupschool
-
-6. Run the server and try to log in!
-
-   ::
-
-       python manage.py runserver
+For instructions, see the `Documentation
+<https://django-danceschool.readthedocs.io/en/latest/installation_development.html>`__.
 
 History
 -------
@@ -150,7 +88,7 @@ This project was originally created in Spring-Summer 2010 by Shawn
 Hershey, for New School Swing (the predecessor to `Boston Lindy
 Hop <https://bostonlindyhop.com/>`__). In March 2015, the project was
 taken over by Lee Tucker and Andrew Selzer. Significant contributions
-over the course of 7the project have also been made by Dan Rosenthal,
+over the course of the project have also been made by Dan Rosenthal,
 Jason Swihart, Kevin Sihlanick, and Adam Hitchcock.
 
 
