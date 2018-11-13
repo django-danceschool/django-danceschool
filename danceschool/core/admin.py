@@ -718,10 +718,10 @@ class InstructorInline(admin.StackedInline):
 
 @admin.register(StaffMember)
 class StaffMemberAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
-    list_display = ('fullName','privateEmail','instructor_status','instructor_availableForPrivates')
+    list_display = ('fullName','privateEmail','categories_list','instructor_status','instructor_availableForPrivates')
     list_display_links = ('fullName',)
     list_editable = ('privateEmail',)
-    list_filter = ('instructor__status','instructor__availableForPrivates')
+    list_filter = ('categories','instructor__status','instructor__availableForPrivates')
     search_fields = ('=firstName','=lastName','publicEmail','privateEmail')
     ordering = ('lastName','firstName')
     inlines = [InstructorInline,]
@@ -742,12 +742,16 @@ class StaffMemberAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
     )
 
     def instructor_status(self,obj):
-        return getattr(getattr(obj,'instructor'),'status')
+        return getattr(getattr(obj,'instructor'),'statusLabel')
     instructor_status.short_description = _('Instructor status')
 
     def instructor_availableForPrivates(self,obj):
         return getattr(getattr(obj,'instructor'),'availableForPrivates')
     instructor_availableForPrivates.short_description = _('Available for private lessons')
+
+    def categories_list(self,obj):
+        return ', '.join([x.name for x in obj.categories.all()])
+    categories_list.short_description = _('Staff categories')
 
     class Media:
         js = ('bootstrap/js/bootstrap.min.js',)

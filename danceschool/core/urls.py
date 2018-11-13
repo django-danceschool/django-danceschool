@@ -26,8 +26,8 @@ urlpatterns = [
     url(r'^staff/substitute/$', SubstituteReportingView.as_view(),name='substituteTeacherForm'),
 
     # These provide the ability to view one's own stats or another instructor's stats
-    url(r'^staff/instructor-stats/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$', OtherInstructorStatsView.as_view(), name='instructorStats'),
-    url(r'^staff/instructor-stats/$', InstructorStatsView.as_view(), name='instructorStats'),
+    url(r'^staff/instructor-stats/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$', OtherInstructorStatsView.as_view(), name='staffMemberStats'),
+    url(r'^staff/instructor-stats/$', InstructorStatsView.as_view(), name='staffMemberStats'),
 
     # This provides the ability to edit one's own bio
     url(r'^staff/bio/$', StaffMemberBioChangeView.as_view(), name='staffBioChange'),

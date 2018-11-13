@@ -1005,3 +1005,16 @@ class StaffDirectoryView(PermissionRequiredMixin, ListView):
         Instructor.InstructorStatus.retiredGuest,
         Instructor.InstructorStatus.hidden,
     ])
+
+    def get_context_data(self, **kwargs):
+        context = super(StaffDirectoryView,self).get_context_data(**kwargs)
+
+        staff = context.get('staffmember_list',StaffMember.objects.none())
+
+        context.update({
+            'active_instructors_list': staff.filter(instructor__status='R'),
+            'assistant_instructors_list': staff.filter(instructor__status__in=['T','A']),
+            'guest_instructors_list': staff.filter(instructor__status='G'),
+            'other_staff_list': staff.filter(instructor__isnull=True),
+        })
+        return context

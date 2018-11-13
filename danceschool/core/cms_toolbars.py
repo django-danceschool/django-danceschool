@@ -133,7 +133,7 @@ class StaffMemberToolbar(CMSToolbar):
     def populate(self):
         if hasattr(self.request.user,'staffmember') and hasattr(self.request.user.staffmember,'instructor') and self.request.user.has_perm('core.view_own_instructor_stats'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
-            menu.add_link_item(_('Your Stats'), url=reverse('instructorStats'))
+            menu.add_link_item(_('Your Stats'), url=reverse('staffMemberStats'))
         if hasattr(self.request.user,'staffmember') and self.request.user.has_perm('core.update_instructor_bio'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
             menu.add_link_item(_('Update Your Contact Info'), url=reverse('staffBioChange'))

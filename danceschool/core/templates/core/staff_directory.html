@@ -2,102 +2,168 @@
 {% load danceschool_tags thumbnail i18n %}
 
 {% block content %}
-<h2>{% trans "Active Instructors" %}</h2>
-<p><a class="btn btn-outline-secondary" href="mailto:{% for teacher in staffmember_list %}{% if not teacher.guest %}{% if teacher.privateEmail %}{{ teacher.privateEmail }}{% elif teacher.publicEmail %}{{ teacher.publicEmail }}{% endif %}{% if teacher.privateEmail or teacher.publicEmail %};{% endif %}{% endif %}{% endfor %}">{% trans "Email all active instructors" %}</a></p>
-<table class="table my-4">
-<thead>
+{% for staffmember in active_instructors_list %}
+	{% if forloop.first %}
+	<h2>{% trans "Active Instructors" %}</h2>
+	<p><a class="btn btn-outline-secondary" href="mailto:{% for teacher in staffmember_list %}{% if teacher.instructor and not teacher.instructor.guest %}{% if teacher.privateEmail %}{{ teacher.privateEmail }}{% elif teacher.publicEmail %}{{ teacher.publicEmail }}{% endif %}{% if teacher.privateEmail or teacher.publicEmail %};{% endif %}{% endif %}{% endfor %}">{% trans "Email all active instructors" %}</a></p>
+	<table class="table my-4">
+	<thead>
+		<tr>
+			<th>{% trans "Photo" %}</th>
+			<th>{% trans "Name" %}</th>
+			<th>{% trans "Private Email" %}</th>
+			<th>{% trans "Public Email" %}</th>
+			<th>{% trans "Phone" %}</th>
+			<th>{% trans "Staff categories" %}</th>
+			<th>{% trans "Available for Privates" %}</th>
+			{% if perms.core.view_other_instructor_stats %}
+				<th>{% trans "Instructor Stats/Payments" %}</th>
+			{% endif %}
+		</tr>
+	</thead>	
+	{% endif %}
 	<tr>
-		<th>{% trans "Photo" %}</th><th>{% trans "Name" %}</th><th>{% trans "Private Email" %}</th><th>{% trans "Public Email" %}</th><th>{% trans "Phone" %}</th><th>{% trans "Available for Privates" %}</th>
-		{% if perms.core.view_other_instructor_stats %}
-			<th>{% trans "Instructor Stats/Payments" %}</th>
-		{% endif %}
-	</tr>
-</thead>
-{% for teacher in staffmember_list %}
-	{% if teacher.status == 'R' %}
-	<tr>
-		<td><img class="float-left" src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" width="118" /></td>
-		<td>{{ teacher.firstName }} {{ teacher.lastName }}</td>
-		<td><a href="mailto:{{teacher.privateEmail}}">{{teacher.privateEmail}}</a></td>
-		<td><a href="mailto:{{teacher.publicEmail}}">{{teacher.publicEmail}}</a></td>
-		<td><a href="tel:{{teacher.phone}}">{{ teacher.phone }}</a></td>
-		<td>{{ teacher.availableForPrivates|yesno }}</td>
-		{% if perms.core.view_other_instructor_stats %}{% if teacher.firstName != 'TBD' %}
+		<td><img class="float-left" src="{% if staffmember.image %}{% thumbnail staffmember.image 118x118 crop %}{% endif %}" width="118" /></td>
+		<td>{{ staffmember.firstName }} {{ staffmember.lastName }}</td>
+		<td><a href="mailto:{{staffmember.privateEmail}}">{{staffmember.privateEmail}}</a></td>
+		<td><a href="mailto:{{staffmember.publicEmail}}">{{staffmember.publicEmail}}</a></td>
+		<td><a href="tel:{{staffmember.phone}}">{{ staffmember.phone }}</a></td>
+		<td>{{ staffmember.categories.all|join:", " }}</td>
+		<td>{{ staffmember.instructor.availableForPrivates|yesno }}</td>
+		{% if perms.core.view_other_instructor_stats %}{% if staffmember.firstName != 'TBD' %}
 			<td>
 			<div class="btn-group" role="group" aria-label="...">
-				<a class="btn btn-outline-secondary btn-sm" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Stats" %}</a>
-				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Payment History" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberStats' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberPayments' 'all' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Payment History" %}</a>
 			</div>
 			</td>
 		{% endif %}{% endif %}
 	</tr>
+	{% if forloop.last %}
+	</table>
 	{% endif %}
 {% endfor %}
-</table>
 
-<h2>{% trans "Assistant Instructors and Instructors In Training" %}</h2>
-<table class="table my-4">
-<thead>
+{% for staffmember in assistant_instructors_list %}
+	{% if forloop.first %}
+	<h2>{% trans "Assistant Instructors and Instructors In Training" %}</h2>
+	<table class="table my-4">
+	<thead>
+		<tr>
+			<th>{% trans "Photo" %}</th>
+			<th>{% trans "Name" %}</th>
+			<th>{% trans "Private Email" %}</th>
+			<th>{% trans "Public Email" %}</th>
+			<th>{% trans "Phone" %}</th>
+			<th>{% trans "Staff categories" %}</th>
+			<th>{% trans "Available for Privates" %}</th>
+			{% if perms.core.view_other_instructor_stats %}
+				<th>{% trans "Instructor Stats/Payments" %}</th>
+			{% endif %}
+		</tr>
+	</thead>	
+	{% endif %}
 	<tr>
-		<th>{% trans "Photo" %}</th><th>{% trans "Name" %}</th><th>{% trans "Private Email" %}</th><th>{% trans "Public Email" %}</th><th>{% trans "Phone" %}</th><th>{% trans "Available for Privates" %}</th>
-		{% if perms.core.view_other_instructor_stats %}
-			<th>{% trans "Instructor Stats/Payments" %}</th>
-		{% endif %}
-	</tr>
-</thead>
-{% for teacher in staffmember_list %}
-	{% if teacher.status == 'A' or teacher.status == 'T' %}
-	<tr>
-		<td><img class="float-left" src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" width="118" /></td>
-		<td>{{ teacher.firstName }} {{ teacher.lastName }}</td>
-		<td><a href="mailto:{{teacher.privateEmail}}">{{teacher.privateEmail}}</a></td>
-		<td><a href="mailto:{{teacher.publicEmail}}">{{teacher.publicEmail}}</a></td>
-		<td><a href="tel:{{teacher.phone}}">{{ teacher.phone }}</a></td>
-		<td>{{ teacher.availableForPrivates|yesno }}</td>
-		{% if perms.core.view_other_instructor_stats %}{% if teacher.firstName != 'TBD' %}
+		<td><img class="float-left" src="{% if staffmember.image %}{% thumbnail staffmember.image 118x118 crop %}{% endif %}" width="118" /></td>
+		<td>{{ staffmember.firstName }} {{ staffmember.lastName }}</td>
+		<td><a href="mailto:{{staffmember.privateEmail}}">{{staffmember.privateEmail}}</a></td>
+		<td><a href="mailto:{{staffmember.publicEmail}}">{{staffmember.publicEmail}}</a></td>
+		<td><a href="tel:{{staffmember.phone}}">{{ staffmember.phone }}</a></td>
+		<td>{{ staffmember.categories.all|join:", " }}</td>
+		<td>{{ staffmember.instructor.availableForPrivates|yesno }}</td>
+		{% if perms.core.view_other_instructor_stats %}{% if staffmember.firstName != 'TBD' %}
 			<td>
 			<div class="btn-group" role="group" aria-label="...">
-				<a class="btn btn-outline-secondary btn-sm" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Stats" %}</a>
-				<a class="btn btn-outline-secondary btn-sm" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Payment History" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberStats' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberPayments' 'all' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Payment History" %}</a>
 			</div>
 			</td>
 		{% endif %}{% endif %}
 	</tr>
+	{% if forloop.last %}
+	</table>
 	{% endif %}
 {% endfor %}
-</table>
 
-<h2>{% trans "Guest Instructors" %}</h2>
-<table class="table my-4">
-<thead>
+{% for staffmember in guest_instructors_list %}
+	{% if forloop.first %}
+	<h2>{% trans "Guest Instructors" %}</h2>
+	<table class="table my-4">
+	<thead>
+		<tr>
+			<th>{% trans "Photo" %}</th>
+			<th>{% trans "Name" %}</th>
+			<th>{% trans "Private Email" %}</th>
+			<th>{% trans "Public Email" %}</th>
+			<th>{% trans "Phone" %}</th>
+			<th>{% trans "Staff categories" %}</th>
+			<th>{% trans "Available for Privates" %}</th>
+			{% if perms.core.view_other_instructor_stats %}
+				<th>{% trans "Instructor Stats/Payments" %}</th>
+			{% endif %}
+		</tr>
+	</thead>	
+	{% endif %}
 	<tr>
-		<th>{% trans "Photo" %}</th><th>{% trans "Name" %}</th><th>{% trans "Private Email" %}</th><th>{% trans "Public Email" %}</th><th>{% trans "Phone" %}</th><th>{% trans "Available for Privates" %}</th>
-		{% if perms.core.view_other_instructor_stats %}
-			<th>{% trans "Instructor Stats/Payments" %}</th>
-		{% endif %}
-	</tr>
-</thead>
-{% for teacher in staffmember_list %}
-	{% if teacher.status == 'G' %}
-	<tr>
-		<td><img class="float-left" src="{% if teacher.image %}{% thumbnail teacher.image 118x118 crop %}{% endif %}" width="118" /></td>
-		<td>{{ teacher.firstName }} {{ teacher.lastName }}</td>
-		<td><a href="mailto:{{teacher.privateEmail}}">{{teacher.privateEmail}}</a></td>
-		<td><a href="mailto:{{teacher.publicEmail}}">{{teacher.publicEmail}}</a></td>
-		<td><a href="tel:{{teacher.phone}}">{{ teacher.phone }}</a></td>
-		<td>{{ teacher.availableForPrivates|yesno }}</td>
-		{% if perms.core.view_other_instructor_stats %}{% if teacher.firstName != 'TBD' %}
+		<td><img class="float-left" src="{% if staffmember.image %}{% thumbnail staffmember.image 118x118 crop %}{% endif %}" width="118" /></td>
+		<td>{{ staffmember.firstName }} {{ staffmember.lastName }}</td>
+		<td><a href="mailto:{{staffmember.privateEmail}}">{{staffmember.privateEmail}}</a></td>
+		<td><a href="mailto:{{staffmember.publicEmail}}">{{staffmember.publicEmail}}</a></td>
+		<td><a href="tel:{{staffmember.phone}}">{{ staffmember.phone }}</a></td>
+		<td>{{ staffmember.categories.all|join:", " }}</td>
+		<td>{{ staffmember.instructor.availableForPrivates|yesno }}</td>
+		{% if perms.core.view_other_instructor_stats %}{% if staffmember.firstName != 'TBD' %}
 			<td>
 			<div class="btn-group" role="group" aria-label="...">
-				<a class="btn btn-outline-secondary btn-sm" href="{% url 'instructorStats' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Stats" %}</a>
-				<a class="btn btn-outline-secondary btn-sm" href="{% url 'instructorPayments' 'all' teacher.firstName|urlencodename teacher.lastName|urlencodename %}">{% trans "Payment History" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberStats' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberPayments' 'all' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Payment History" %}</a>
 			</div>
 			</td>
 		{% endif %}{% endif %}
 	</tr>
+	{% if forloop.last %}
+	</table>
 	{% endif %}
 {% endfor %}
-</table>
+
+{% for staffmember in other_staff_list %}
+	{% if forloop.first %}
+	<h2>{% trans "Other Staff" %}</h2>
+	<table class="table my-4">
+	<thead>
+		<tr>
+			<th>{% trans "Photo" %}</th>
+			<th>{% trans "Name" %}</th>
+			<th>{% trans "Private Email" %}</th>
+			<th>{% trans "Public Email" %}</th>
+			<th>{% trans "Phone" %}</th>
+			<th>{% trans "Staff categories" %}</th>
+			{% if perms.core.view_other_instructor_stats %}
+				<th>{% trans "Staff Member Stats/Payments" %}</th>
+			{% endif %}
+		</tr>
+	</thead>
+	{% endif %}
+	<tr>
+		<td><img class="float-left" src="{% if staffmember.image %}{% thumbnail staffmember.image 118x118 crop %}{% endif %}" width="118" /></td>
+		<td>{{ staffmember.firstName }} {{ staffmember.lastName }}</td>
+		<td><a href="mailto:{{staffmember.privateEmail}}">{{staffmember.privateEmail}}</a></td>
+		<td><a href="mailto:{{staffmember.publicEmail}}">{{staffmember.publicEmail}}</a></td>
+		<td><a href="tel:{{staffmember.phone}}">{{ staffmember.phone }}</a></td>
+		<td>{{ staffmember.categories.all|join:", " }}</td>
+		{% if perms.core.view_other_instructor_stats %}{% if staffmember.firstName != 'TBD' %}
+			<td>
+			<div class="btn-group" role="group" aria-label="...">
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberStats' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Stats" %}</a>
+				<a class="btn btn-outline-secondary btn-sm" href="{% url 'staffMemberPayments' 'all' staffmember.firstName|urlencodename staffmember.lastName|urlencodename %}">{% trans "Payment History" %}</a>
+			</div>
+			</td>
+		{% endif %}{% endif %}
+	</tr>
+	{% if forloop.last %}
+	</table>
+	{% endif %}
+{% endfor %}
 
 {% endblock %}
 

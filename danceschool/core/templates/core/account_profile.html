@@ -17,12 +17,17 @@
 		{% endif %}
 		{% if perms.core.view_staff_directory %}
 			<a class="btn btn-outline-secondary" href="{% url 'staffDirectory' %}">{% trans "Staff Directory" %}</a>
-		{% endif %}		
-		{% if perms.core.view_own_instructor_stats %}
-			<a class="btn btn-outline-secondary" href="{% url 'instructorStats' %}">{% trans "Your Instructor Stats" %}</a>
 		{% endif %}
-		{% if perms.core.update_instructor_bio %}
-			<a class="btn btn-outline-secondary" href="{% url 'staffBioChange' %}">{% trans "Update Your Contact Info" %}</a>
+		{% if request.user.staffmember %}
+			{% if perms.core.view_own_instructor_stats %}
+				<a class="btn btn-outline-secondary" href="{% url 'staffMemberStats' %}">{% trans "Your Instructor Stats" %}</a>
+			{% endif %}
+			{% if core.view_own_instructor_finances %}
+				<a class="btn btn-outline-secondary" href="{% url 'staffMemberPayments' %}">{% trans "Your Payment History" %}</a>
+			{% endif %}
+			{% if perms.core.update_instructor_bio %}
+				<a class="btn btn-outline-secondary" href="{% url 'staffBioChange' %}">{% trans "Update Your Contact Info" %}</a>
+			{% endif %}
 		{% endif %}
 	{% endif %}
 </div>

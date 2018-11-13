@@ -896,6 +896,7 @@ class StaffMemberBioChangeForm(forms.ModelForm):
             self.fields['availableForPrivates'] = forms.BooleanField(
                 label=_('Available For private lessons'),
                 initial=True,
+                required=False,
                 help_text=_('Check this box if you would like to be listed as available for private lessons from students.')
             )
 
@@ -904,7 +905,7 @@ class StaffMemberBioChangeForm(forms.ModelForm):
         if getattr(self.instance,'instructor',None):
             self.instance.instructor.availableForPrivates = self.cleaned_data.pop('availableForPrivates',self.instance.instructor.availableForPrivates)
             self.instance.instructor.save(update_fields=['availableForPrivates',])
-        super(StaffMemberBioChangeForm,self).save(**kwargs)        
+        super(StaffMemberBioChangeForm,self).save(commit=True)
 
     class Meta:
         model = StaffMember

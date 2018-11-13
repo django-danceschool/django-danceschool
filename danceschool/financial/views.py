@@ -92,7 +92,7 @@ class StaffMemberPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, D
         if not hasattr(staff_member,'userAccount'):
             return super(DetailView, self).get_context_data(staff_member=staff_member)
 
-        all_payments = staff_member.userAccount.payToUser.filter(query_filter).order_by('-submissionDate')
+        all_payments = getattr(staff_member.userAccount,'payToUser',ExpenseItem.objects.none()).filter(query_filter).order_by('-submissionDate')
 
         paid_items = all_payments.filter(**{'paid':True,'reimbursement':False}).order_by('-paymentDate')
         unpaid_items = all_payments.filter(**{'paid':False}).order_by('-submissionDate')
