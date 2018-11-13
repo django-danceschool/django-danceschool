@@ -1,0 +1,506 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:48-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/prerequisites/admin.py:15
+#, fuzzy
+msgid "Requirement items (leave blank for requirement by audition only)"
+msgstr ""
+"Éléments d'exigence (laissez vide pour l'exigence par audition seulement)"
+
+#: danceschool/prerequisites/admin.py:27
+#, fuzzy
+msgid "Search for customer"
+msgstr "Rechercher un client"
+
+#: danceschool/prerequisites/admin.py:34
+#, fuzzy
+msgid "Enter a customer name"
+msgstr "Entrez un nom de client"
+
+#: danceschool/prerequisites/admin.py:61
+#, fuzzy
+msgid "Role Options"
+msgstr "Options de rôle"
+
+#: danceschool/prerequisites/admin.py:65
+#, fuzzy
+msgid "Customers Meeting Requirement"
+msgstr "Exigences de réunion des clients"
+
+#: danceschool/prerequisites/admin.py:69
+#, fuzzy
+msgid "Date and Time"
+msgstr "Date et heure"
+
+#: danceschool/prerequisites/admin.py:88
+#, fuzzy
+msgid "Requirement is met"
+msgstr "L'exigence est satisfaite"
+
+#: danceschool/prerequisites/admin.py:89
+#, fuzzy
+msgid "Requirement is not met"
+msgstr "L'exigence n'est pas satisfaite"
+
+#: danceschool/prerequisites/admin.py:92
+#, fuzzy
+msgid "Requirement status"
+msgstr "Statut de l'exigence"
+
+#: danceschool/prerequisites/ajax.py:37
+#, fuzzy
+msgid "Invalid request."
+msgstr "Requête invalide."
+
+#: danceschool/prerequisites/ajax.py:47
+#, fuzzy
+msgid "Role must be specified."
+msgstr "Le rôle doit être spécifié."
+
+#: danceschool/prerequisites/apps.py:8
+#, fuzzy
+msgid "Class Requirements/Prerequisites"
+msgstr "Exigences du cours / Conditions préalables"
+
+#: danceschool/prerequisites/cms_toolbars.py:16
+#, fuzzy
+msgid "Events"
+msgstr "Évènements"
+
+#: danceschool/prerequisites/cms_toolbars.py:17
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/prerequisites/cms_toolbars.py:18
+#, fuzzy
+msgid "Registration Requirements/Prerequisites"
+msgstr "Conditions d'inscription / Conditions préalables"
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:13
+#, fuzzy
+msgid "Class Requirements"
+msgstr "Conditions du cours"
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:23
+#, fuzzy
+msgid "Requirements Enabled"
+msgstr "Exigences activées"
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:24
+#, fuzzy
+msgid ""
+"If this box is unchecked, then all requirement checks during registration "
+"will be disabled."
+msgstr ""
+"Si cette case n'est pas cochée, toutes les vérifications d'exigences lors de "
+"l'inscription seront désactivées."
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:32
+#, fuzzy
+msgid "Error message for unmet requirements"
+msgstr "Message d'erreur pour les exigences non satisfaites"
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:33
+#, fuzzy
+msgid ""
+"This message will be appended to any error message with a list of "
+"requirements not met.  Individual requirements may be set to produce either "
+"errors or warnings."
+msgstr ""
+"Ce message sera ajouté à tout message d'erreur avec une liste d'exigences "
+"non satisfaites.” “Les exigences individuelles peuvent être définies pour "
+"produire des erreurs ou des” “avertissements."
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:46
+#, fuzzy
+msgid "Warning message for unmet requirements"
+msgstr "Message d'avertissement pour les exigences non satisfaites"
+
+#: danceschool/prerequisites/dynamic_preferences_registry.py:47
+#, fuzzy
+msgid ""
+"This message will be appended to any warning message with a list of "
+"requirements not met.  Individual requirements may be set to produce either "
+"errors or warnings."
+msgstr ""
+"Ce message sera ajouté à tout message d'avertissement avec une liste "
+"d'exigences non” “satisfaites. Les exigences individuelles peuvent être "
+"définies pour produire des erreurs ou des” “avertissements."
+
+#: danceschool/prerequisites/handlers.py:63
+#, fuzzy
+msgid ""
+"Unfortunately, you do not meet the following requirements/prerequisites for "
+"the items you have chosen:\n"
+msgstr ""
+"Malheureusement, vous ne remplissez pas les conditions / prérequis suivants "
+"pour les” “éléments que vous avez choisis: \\ n"
+
+#: danceschool/prerequisites/handlers.py:71
+#, fuzzy
+msgid ""
+"<strong>Please Note:</strong> It appears that you do not meet the following "
+"requirements/prerequisites for the items you have chosen:\n"
+msgstr ""
+"<strong> Veuillez noter: </ strong> Il semble que vous ne rencontriez pas "
+"les critères suivantsconditions / prérequis pour les éléments que vous avez "
+"choisis: \\ n"
+
+#: danceschool/prerequisites/models.py:18
+#, fuzzy
+msgid "Must meet all requirement items"
+msgstr "Doit répondre à tous les éléments d'exigence"
+
+#: danceschool/prerequisites/models.py:19
+#, fuzzy
+msgid "Must meet one or more requirement items"
+msgstr "Doit correspondre à un ou plusieurs éléments d'exigence"
+
+#: danceschool/prerequisites/models.py:20
+#, fuzzy
+msgid "Must not meet any requirement items"
+msgstr "Ne doit pas répondre aux exigences"
+
+#: danceschool/prerequisites/models.py:23
+#, fuzzy
+msgid "Enforcement disabled"
+msgstr "Application désactivée"
+
+#: danceschool/prerequisites/models.py:24
+#, fuzzy
+msgid "Allow registration with warning"
+msgstr "Autoriser l'inscription avec avertissement"
+
+#: danceschool/prerequisites/models.py:25
+#, fuzzy
+msgid "Raise error and do not allow registration"
+msgstr "Trouver l'erreur et ne pas autoriser l'enregistrement"
+
+#: danceschool/prerequisites/models.py:27
+#, fuzzy
+msgid "Requirement name/description"
+msgstr "Nom de l'exigence / description"
+
+#: danceschool/prerequisites/models.py:27
+#, fuzzy
+msgid ""
+"If a customer does not meet the requirement for a series, then this "
+"description will be used to explain the issue (e.g. 'Must have taken Lindy 1 "
+"to take Lindy 2')."
+msgstr ""
+"Si un client ne répond pas à l'exigence d'une série, cette description sera "
+"utilisée pour” “expliquer le problème (par exemple\" Doit avoir pris Lindy 1 "
+"pour prendre Lindy 2 \")."
+
+#: danceschool/prerequisites/models.py:29
+#, fuzzy
+msgid "Applies to class"
+msgstr "S'applique au cours"
+
+#: danceschool/prerequisites/models.py:30
+#, fuzzy
+msgid "Applies to dance type/level"
+msgstr "S'applique au type / niveau de danse"
+
+#: danceschool/prerequisites/models.py:34
+#, fuzzy
+msgid "How many items of this requirement must be met"
+msgstr "Combien d'articles de cette exigence doivent être remplis"
+
+#: danceschool/prerequisites/models.py:35
+#, fuzzy
+msgid ""
+"If you select an option other than 'Must meet all requirements', then you "
+"can still enforce multiple requirements by adding another Requirement item."
+msgstr ""
+"Si vous sélectionnez une option autre que\" Doit répondre à toutes les "
+"exigences \", vous” “pouvez toujours appliquer plusieurs exigences en "
+"ajoutant un autre élément d'exigence."
+
+#: danceschool/prerequisites/models.py:36
+#, fuzzy
+msgid "Enforcement method"
+msgstr "Méthode d'application"
+
+#: danceschool/prerequisites/models.py:38
+#, fuzzy
+msgid "Applies only to role (optional)"
+msgstr "S'applique uniquement au rôle (facultatif)"
+
+#: danceschool/prerequisites/models.py:38
+msgid ""
+"Most requirements apply identically to all dance roles.  If this requirement "
+"does not, then specify the role to which it applies here."
+msgstr ""
+
+#: danceschool/prerequisites/models.py:39
+#, fuzzy
+msgid "Same dance role enforced"
+msgstr "Le même rôle de danse est appliqué"
+
+#: danceschool/prerequisites/models.py:39
+msgid ""
+"If checked, then in order to meet the requirement, the customer must have "
+"met all individual requirements in the same dance role, and that must be the "
+"dance role for which they are registering."
+msgstr ""
+
+#: danceschool/prerequisites/models.py:41
+#: danceschool/prerequisites/models.py:188
+#, fuzzy
+msgid "Submission date"
+msgstr "Date de soumission"
+
+#: danceschool/prerequisites/models.py:42
+#: danceschool/prerequisites/models.py:189
+#, fuzzy
+msgid "Last modified date"
+msgstr "Date de dernière modification"
+
+#: danceschool/prerequisites/models.py:47
+#, fuzzy
+msgid "Enabled"
+msgstr "Activé"
+
+#: danceschool/prerequisites/models.py:133
+#, fuzzy
+msgid ""
+"Requirement must be for a specific class or for a dance level; it cannot be "
+"for both."
+msgstr ""
+"L'exigence doit s'appliquer à un cours spécifique ou à un niveau de danse."
+
+#: danceschool/prerequisites/models.py:135
+#, fuzzy
+msgid "Requirement must apply to either a specific class or to a dance level."
+msgstr ""
+"L'exigence doit s'appliquer à un cours spécifique ou à un niveau de danse."
+
+#: danceschool/prerequisites/models.py:141
+#, fuzzy
+msgid "Class requirement"
+msgstr "Exigence du cours"
+
+#: danceschool/prerequisites/models.py:142
+#, fuzzy
+msgid "Class requirements"
+msgstr "Exigences du cours"
+
+#: danceschool/prerequisites/models.py:144
+msgid ""
+"Can register users for series regardless of any prerequisites or requirements"
+msgstr ""
+
+#: danceschool/prerequisites/models.py:151
+#: danceschool/prerequisites/models.py:182
+#, fuzzy
+msgid "Requirement"
+msgstr "Exigence"
+
+#: danceschool/prerequisites/models.py:154
+#, fuzzy
+msgid "Must have previously taken"
+msgstr "Doit déjà avoir pris"
+
+#: danceschool/prerequisites/models.py:155
+#, fuzzy
+msgid "May register/begin with one class remaining"
+msgstr "Peut s'inscrire / commencer avec une classe restante"
+
+#: danceschool/prerequisites/models.py:156
+#, fuzzy
+msgid "May register/begin with two classes remaining"
+msgstr "Peut s'inscrire / commencer avec deux classes restantes"
+
+#: danceschool/prerequisites/models.py:157
+#, fuzzy
+msgid "Concurrent registration allowed"
+msgstr "Inscription simultanée autorisée"
+
+#: danceschool/prerequisites/models.py:158
+#, fuzzy
+msgid "Concurrent registration required"
+msgstr "Inscription simultanée requise"
+
+#: danceschool/prerequisites/models.py:160
+#, fuzzy
+msgid "Quantity"
+msgstr "Quantité"
+
+#: danceschool/prerequisites/models.py:161
+#, fuzzy
+msgid "Required Dance type/level"
+msgstr "Type / niveau de danse requis"
+
+#: danceschool/prerequisites/models.py:162
+#, fuzzy
+msgid "Required class"
+msgstr "Cours requis"
+
+#: danceschool/prerequisites/models.py:164
+#, fuzzy
+msgid "Concurrency Rule"
+msgstr "Règle de la concurrence"
+
+#: danceschool/prerequisites/models.py:168
+#, fuzzy
+msgid "Requirement item cannot specify both a level and a class."
+msgstr ""
+"L'élément d'exigence ne peut pas spécifier à la fois un niveau et un cours"
+
+#: danceschool/prerequisites/models.py:170
+#, fuzzy
+msgid "Either a level or a class must be required."
+msgstr "Un niveau ou un cours doit être requis."
+
+#: danceschool/prerequisites/models.py:173
+#, fuzzy
+msgid "Requirement item"
+msgstr "Élément exigé"
+
+#: danceschool/prerequisites/models.py:174
+#, fuzzy
+msgid "Requirement items"
+msgstr "Éléments exigés"
+
+#: danceschool/prerequisites/models.py:181
+#, fuzzy
+msgid "Customer"
+msgstr "Client"
+
+#: danceschool/prerequisites/models.py:183
+#, fuzzy
+msgid "Dance role"
+msgstr "Rôle de danse"
+
+#: danceschool/prerequisites/models.py:183
+#, fuzzy
+msgid ""
+"Role must be specified only for requirements for which roles are enforced."
+msgstr ""
+"Le rôle doit être spécifié uniquement pour les exigences pour lesquelles les "
+"rôles sont” “appliqués."
+
+#: danceschool/prerequisites/models.py:185
+#, fuzzy
+msgid "Meets Requirement"
+msgstr "Répond aux exigences"
+
+#: danceschool/prerequisites/models.py:185
+#, fuzzy
+msgid ""
+"If unchecked, then the customer explicitly does not meet the requirement, "
+"regardless of whether they meet its parameters."
+msgstr ""
+"Si cette option n'est pas cochée, le client ne répond pas explicitement à "
+"l'exigence, qu'il respecte ou non ses paramètres."
+
+#: danceschool/prerequisites/models.py:186
+#, fuzzy
+msgid "Comments/Notes"
+msgstr "Commentaires/Notes"
+
+#: danceschool/prerequisites/models.py:193
+#, fuzzy
+msgid ""
+"Since roles are enforced for this requirement, you must specify the "
+"customer's dance role."
+msgstr ""
+"Puisque les rôles sont appliqués pour cette exigence, vous devez spécifier "
+"le rôle de danse du” “client."
+
+#: danceschool/prerequisites/models.py:197
+#, fuzzy
+msgid "Customer-level requirement record"
+msgstr "Enregistrement des exigences au niveau du client"
+
+#: danceschool/prerequisites/models.py:198
+#, fuzzy
+msgid "Customer-level requirement records"
+msgstr "Enregistrements des exigences au niveau du client"
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:7
+msgid ""
+"You must save this requirement before checking if customers satisfy the "
+"requirement."
+msgstr ""
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:8
+#, fuzzy
+msgid ""
+"An unknown error has occurred.  Please try searching for the customer in the "
+"Customer admin view."
+msgstr ""
+"Une erreur inconnue s'est produite. Veuillez rechercher le client dans la "
+"vue de l'administrateur” “du client."
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:48
+#, fuzzy
+msgid ""
+"Please enter a customer to see whether they meet the conditions of this "
+"requirement."
+msgstr ""
+"S'il vous plaît entrer un client pour voir si elles répondent aux conditions "
+"de cette exigence."
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:69
+#, fuzzy
+msgid "No customer specified. "
+msgstr "Aucun client spécifié"
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:88
+#, fuzzy
+msgid "This customer meets the requirements."
+msgstr "Ce client répond aux exigences."
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:91
+#, fuzzy
+msgid "This customer does not meet the requirements."
+msgstr "Ce client ne répond pas aux exigences."
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:94
+msgid ""
+"Here is the information on the roles for which the customer meets the "
+"requirements:"
+msgstr ""
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:99
+#, fuzzy
+msgid "Select a Role to Change Requirement Status"
+msgstr "Sélectionnez un rôle pour modifier l'état des exigences"
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:145
+#, fuzzy
+msgid ""
+"The record for this customer has been updated to indicate that they meet "
+"this requirement."
+msgstr ""
+"L'enregistrement de ce client a été mis à jour pour indiquer qu'il répond à "
+"cette exigence."
+
+#: danceschool/prerequisites/templates/admin/prerequisites/requirement/change_form.html:150
+#, fuzzy
+msgid ""
+"The record for this customer has been updated to indicate that they do not "
+"meet this requirement."
+msgstr ""
+"L'enregistrement de ce client a été mis à jour pour indiquer qu'il ne répond "
+"pas à cette” “exigence."

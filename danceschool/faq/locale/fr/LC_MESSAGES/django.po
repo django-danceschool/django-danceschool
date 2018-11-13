@@ -1,0 +1,165 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:44-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/faq/admin.py:27
+msgid "Publish selected FAQs"
+msgstr "Publier FAQ sélectionné"
+
+#: danceschool/faq/admin.py:36
+msgid "Unpublish selected FAQs"
+msgstr "Annuler la publication des FAQ selectionées"
+
+#: danceschool/faq/apps.py:7 danceschool/faq/cms_plugins.py:15
+#: danceschool/faq/cms_plugins.py:23 danceschool/faq/cms_plugins.py:39
+#: danceschool/faq/cms_plugins.py:55 danceschool/faq/models.py:45
+#, fuzzy
+msgid "FAQs"
+msgstr "FAQ"
+
+#: danceschool/faq/cms_plugins.py:12
+#, fuzzy
+msgid "FAQ Table of Contents (auto-generated from FAQs on page)"
+msgstr ""
+"FAQ Table des matières (générée automatiquement à partir des FAQ sur la page)"
+
+#: danceschool/faq/cms_plugins.py:20
+#, fuzzy
+msgid "List of All FAQs"
+msgstr "Liste de toutes les FAQs"
+
+#: danceschool/faq/cms_plugins.py:36
+#, fuzzy
+msgid "List of FAQs by Category"
+msgstr "Liste des FAQ par catégorie"
+
+#: danceschool/faq/cms_plugins.py:52
+#, fuzzy
+msgid "Individual FAQ Item"
+msgstr "FAQ individuelle"
+
+#: danceschool/faq/cms_toolbars.py:14
+#, fuzzy
+msgid "Content"
+msgstr "Contenu"
+
+#: danceschool/faq/cms_toolbars.py:15
+#, fuzzy
+msgid "Manage FAQs"
+msgstr "Gérer les FAQ"
+
+#: danceschool/faq/models.py:11
+#, fuzzy
+msgid "Name"
+msgstr "Nom"
+
+#: danceschool/faq/models.py:14 danceschool/faq/models.py:33
+#, fuzzy
+msgid "Order number"
+msgstr "Numéro de commande"
+
+#: danceschool/faq/models.py:14
+#, fuzzy
+msgid "This number specifies the order in which categories will be shown."
+msgstr ""
+"Ce numéro spécifie l'ordre dans lequel les catégories seront affichées."
+
+#: danceschool/faq/models.py:17
+#, fuzzy
+msgid "FAQ Category"
+msgstr "Catégorie FAQ"
+
+#: danceschool/faq/models.py:21
+#, fuzzy
+msgid "FAQ category"
+msgstr "Catégorie FAQ"
+
+#: danceschool/faq/models.py:22
+#, fuzzy
+msgid "FAQ categories"
+msgstr "Catégories FAQ"
+
+#: danceschool/faq/models.py:27 danceschool/faq/models.py:50
+#, fuzzy
+msgid "Category"
+msgstr "Catégorie"
+
+#: danceschool/faq/models.py:29 danceschool/faq/models.py:58
+#, fuzzy
+msgid "Question"
+msgstr "Question"
+
+#: danceschool/faq/models.py:30
+#, fuzzy
+msgid "Answer"
+msgstr "Réponse"
+
+#: danceschool/faq/models.py:30
+#, fuzzy
+msgid "Answer the question."
+msgstr "Répondre à la question."
+
+#: danceschool/faq/models.py:33
+#, fuzzy
+msgid ""
+"This number specifies the order in which the questions will be shown on the "
+"FAQ page."
+msgstr ""
+"Ce numéro spécifie l'ordre dans lequel les questions seront affichées sur la "
+"page FAQ."
+
+#: danceschool/faq/models.py:35
+#, fuzzy
+msgid "Draft status"
+msgstr "état de projet"
+
+#: danceschool/faq/models.py:35
+#, fuzzy
+msgid "Check this box to prevent publication."
+msgstr "Cochez cette case pour empêcher la publication."
+
+#: danceschool/faq/models.py:37
+#, fuzzy
+msgid "Creation date"
+msgstr "Date de création"
+
+#: danceschool/faq/models.py:38
+#, fuzzy
+msgid "Last modified date"
+msgstr "Date de dernière modification"
+
+#: danceschool/faq/models.py:41 danceschool/faq/models.py:44
+#, fuzzy
+msgid "FAQ"
+msgstr "FAQ"
+
+#: danceschool/faq/models.py:51
+#, fuzzy
+msgid "Show Category Title"
+msgstr "Afficher le titre de la catégorie"
+
+#: danceschool/faq/templates/faq/FAQ_TOC.html:4
+#, fuzzy
+msgid "Table of Contents"
+msgstr "Table des matières"
+
+#: danceschool/faq/templates/faq/FAQs.html:4
+#, fuzzy
+msgid "Add/Edit FAQs"
+msgstr "Ajouter / modifier des FAQ"

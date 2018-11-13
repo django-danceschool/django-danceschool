@@ -1,0 +1,5362 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:40-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/core/admin.py:32
+msgid "Duplicate selected events"
+msgstr "Dupliquer les événements sélectionnés"
+
+#: danceschool/core/admin.py:44
+msgid "Event-specific dance role"
+msgstr "Rôle de danse spécifique à l'événement"
+
+#: danceschool/core/admin.py:45
+msgid "Event-specific dance roles (override default)"
+msgstr "Rôle de danse spécifique à l'événement (annuler par défaut)"
+
+#: danceschool/core/admin.py:53 danceschool/core/admin.py:89
+#: danceschool/core/models.py:248
+msgid "Instructor"
+msgstr "Instructeur"
+
+#: danceschool/core/admin.py:180
+msgid "Start Date/Time"
+msgstr "Date/Heure Début"
+
+#: danceschool/core/admin.py:181
+msgid "End Date/Time"
+msgstr "Date/Heure Fin"
+
+#: danceschool/core/admin.py:237
+msgid "Send email notifications for selected invoices"
+msgstr "Envoyer des notifications par courriel pour les factures sélectionnées"
+
+#: danceschool/core/admin.py:246
+#: danceschool/core/templates/core/invoice.html:13
+#: danceschool/core/templates/core/invoice_notification.html:20
+msgid "Recipient"
+msgstr "Destinataire"
+
+#: danceschool/core/admin.py:253 danceschool/core/models.py:2856
+#: danceschool/core/models.py:2877 danceschool/core/models.py:2928
+#: danceschool/core/templates/core/view_eventregistrations.html:127
+msgid "Invoice"
+msgstr "Facture"
+
+#: danceschool/core/admin.py:260
+msgid "Invoice notification"
+msgstr "Avis de facture"
+
+#: danceschool/core/admin.py:267
+msgid "Final registration"
+msgstr "Inscription définitive"
+
+#: danceschool/core/admin.py:274 danceschool/core/models.py:1991
+#: danceschool/core/models.py:2438
+msgid "Temporary registration"
+msgstr "Inscription temporaire"
+
+#: danceschool/core/admin.py:284
+#: danceschool/core/templates/core/invoice.html:77
+#: danceschool/core/templates/core/invoice_notification.html:23
+#: danceschool/core/templates/core/invoice_notification.html:63
+#: danceschool/core/templates/core/view_eventregistrations.html:33
+msgid "Links"
+msgstr "Liens"
+
+#: danceschool/core/admin.py:312
+msgid "Financial Details"
+msgstr "Détails Financiers"
+
+#: danceschool/core/admin.py:316
+#: danceschool/core/templates/core/process_refund.html:88
+msgid "Dates"
+msgstr "Dates"
+
+#: danceschool/core/admin.py:320 danceschool/core/admin.py:330
+#: danceschool/core/models.py:1661 danceschool/core/models.py:1796
+#: danceschool/core/models.py:2019 danceschool/core/models.py:2240
+#: danceschool/core/models.py:2335 danceschool/core/models.py:2464
+msgid "Additional data"
+msgstr "Données additionelles"
+
+#: danceschool/core/admin.py:352 danceschool/core/models.py:1769
+#: danceschool/core/models.py:2002 danceschool/core/models.py:2229
+#: danceschool/core/templates/core/account_profile.html:73
+msgid "Customer"
+msgstr "Client"
+
+#: danceschool/core/admin.py:412
+#: danceschool/core/dynamic_preferences_registry.py:22
+#: danceschool/core/models.py:2202 danceschool/core/models.py:2204
+#: danceschool/core/models.py:2208 danceschool/core/models.py:2227
+#: danceschool/core/models.py:2441
+#, fuzzy
+msgid "Registration"
+msgstr "Inscription"
+
+#: danceschool/core/admin.py:424
+msgid "CANCELLED:"
+msgstr "ANNULÉ"
+
+#: danceschool/core/admin.py:426
+msgid "DROP-IN:"
+msgstr "OUVERT À TOUS"
+
+#: danceschool/core/admin.py:433
+msgid "Event Registrations"
+msgstr "Inscriptions Événements"
+
+#: danceschool/core/admin.py:455
+msgid "Groups"
+msgstr "Groupes"
+
+#: danceschool/core/admin.py:458
+msgid "Additional Customer Data"
+msgstr "Données Supplémentaires sur Clients"
+
+#: danceschool/core/admin.py:468
+msgid "Email selected customers"
+msgstr "Envoyer courriel aux clients sélectionnés"
+
+#: danceschool/core/admin.py:482
+#, fuzzy
+msgid "Enter a customer name"
+msgstr "Entrez un nom de client"
+
+#: danceschool/core/admin.py:519
+#, fuzzy
+msgid "Email selected customer groups"
+msgstr "Envoyer courriel aux clients sélectionnés"
+
+#: danceschool/core/admin.py:667
+#, fuzzy
+msgid "Plain text content"
+msgstr "Contenu en texte brut"
+
+#: danceschool/core/admin.py:670
+#, fuzzy
+msgid "Rich text HTML content"
+msgstr "Contenu HTML enrichi"
+
+#: danceschool/core/admin.py:692
+#, fuzzy
+msgid "Contact"
+msgstr "Contact"
+
+#: danceschool/core/admin.py:695
+#, fuzzy
+msgid "Bio/Photo"
+msgstr "Bio/Photo"
+
+#: danceschool/core/admin.py:755
+#, fuzzy
+msgid "Direct Registration Link"
+msgstr "Lien d'inscription directe"
+
+#: danceschool/core/admin.py:828
+#, fuzzy
+msgid "# Registered Students"
+msgstr "# d’Étudiants Inscrits"
+
+#: danceschool/core/admin.py:840
+#, fuzzy
+msgid "Override Display/Registration/Capacity"
+msgstr "Remplacer Affichage / Inscription / Capacité"
+
+#: danceschool/core/admin.py:911
+#, fuzzy
+msgid "Registration/Visibility"
+msgstr "Inscription / Visibilité"
+
+#: danceschool/core/admin.py:914
+#, fuzzy
+msgid "Description/Link"
+msgstr "Description / Lien"
+
+#: danceschool/core/ajax.py:91
+#, fuzzy
+msgid "Error at start."
+msgstr "Erreur au démarrage"
+
+#: danceschool/core/ajax.py:111
+#, fuzzy
+msgid "Error, no POST data."
+msgstr "Erreur, pas de données POST."
+
+#: danceschool/core/ajax.py:114
+#, fuzzy
+msgid "Error, not authenticated."
+msgstr "Erreur, non authentifié."
+
+#: danceschool/core/ajax.py:119
+#, fuzzy
+msgid "Error, no template ID provided."
+msgstr "Erreur, aucun modèle d'Identification fourni."
+
+#: danceschool/core/ajax.py:124
+#, fuzzy
+msgid "Error getting template."
+msgstr "Erreur lors de l'obtention du modèle."
+
+#: danceschool/core/ajax.py:127 danceschool/core/ajax.py:129
+#, fuzzy
+msgid "Error, no permission to access this template."
+msgstr "Erreur, aucune autorisation pour accéder à ce modèle."
+
+#: danceschool/core/apps.py:9
+#, fuzzy
+msgid "Core School Functions"
+msgstr "Fonctions de base de l'école"
+
+#: danceschool/core/classreg.py:115
+#, fuzzy
+msgid "Invalid event information passed."
+msgstr "Information d'événement non valide transmise."
+
+#: danceschool/core/classreg.py:154
+#, fuzzy, python-format
+msgid ""
+"Registration for '%s' is sold out. Based on your user permission level, "
+msgstr ""
+"L'inscription pour '% s' est épuisé, en fonction de votre niveau "
+"d'autorisation d'utilisateur"
+
+#: danceschool/core/classreg.py:161
+#, fuzzy, python-format
+msgid ""
+"Registration for \"%s\" is tentatively sold out while others complete their "
+"registration.  Please try again later."
+msgstr ""
+"Enregistrement pour \\”% s\\” est provisoirement épuisé tandis que d'autres "
+"complètent leurinscription. Veuillez réessayer plus tard."
+
+#: danceschool/core/classreg.py:304
+#, fuzzy
+msgid "Invalid registration identifier passed to summary view."
+msgstr ""
+"Identificateur d'inscription invalide transmis à la vue récapitulative."
+
+#: danceschool/core/classreg.py:311 danceschool/core/classreg.py:549
+#, fuzzy
+msgid "Your registration session has expired. Please try again."
+msgstr "Votre séance d'inscription est expirée. Veuillez réessayer."
+
+#: danceschool/core/classreg.py:542
+#, fuzzy
+msgid "Invalid registration identifier passed to sign-up form."
+msgstr ""
+"Identificateur d'inscription invalide transmis au formulaire d'inscription."
+
+#: danceschool/core/cms_apps.py:7
+#, fuzzy
+msgid "Registration Apphook"
+msgstr "Inscription Apphook"
+
+#: danceschool/core/cms_plugins.py:17
+#, fuzzy
+msgid "Set of Instructor Images or Bios"
+msgstr "Ensemble d'images d'instructeur ou bios"
+
+#: danceschool/core/cms_plugins.py:20 danceschool/core/cms_toolbars.py:135
+#: danceschool/core/cms_toolbars.py:138 danceschool/core/cms_toolbars.py:142
+#: danceschool/core/cms_toolbars.py:149 danceschool/core/cms_toolbars.py:154
+#: danceschool/core/cms_toolbars.py:162
+#, fuzzy
+msgid "Staff"
+msgstr "Personnel"
+
+#: danceschool/core/cms_plugins.py:66
+#, fuzzy
+msgid "Information on All Public Locations"
+msgstr "Informations sur tous les emplacements publics"
+
+#: danceschool/core/cms_plugins.py:68 danceschool/core/cms_plugins.py:82
+#: danceschool/core/cms_toolbars.py:118 danceschool/core/models.py:356
+#, fuzzy
+msgid "Locations"
+msgstr "Emplacements"
+
+#: danceschool/core/cms_plugins.py:79
+#, fuzzy
+msgid "Individual Location Information"
+msgstr "Informations sur l'emplacement individuel"
+
+#: danceschool/core/cms_plugins.py:93
+#, fuzzy
+msgid "List of Events"
+msgstr "Liste des événements"
+
+#: danceschool/core/cms_plugins.py:95 danceschool/core/cms_plugins.py:185
+#: danceschool/core/cms_toolbars.py:62
+#: danceschool/core/templates/core/events_grouped_list.html:9
+#, fuzzy
+msgid "Events"
+msgstr "Évènements"
+
+#: danceschool/core/cms_plugins.py:102
+#, fuzzy
+msgid "Limit Start Date"
+msgstr "Date de début de la limite"
+
+#: danceschool/core/cms_plugins.py:105
+#, fuzzy
+msgid "Limit End Date"
+msgstr "Date de fin de la limite"
+
+#: danceschool/core/cms_plugins.py:108
+#, fuzzy
+msgid "Limit Number"
+msgstr ""
+"Il s'agit généralement d'un paramètre spécifique à l'emplacement ou d'un "
+"paramètre spécifique à l'événement.Cependant, si une limite n'est pas "
+"fournie autrement, cela limitera lenombre d'inscriptions autorisées."
+
+#: danceschool/core/cms_plugins.py:112
+#, fuzzy
+msgid "Limit Categories/Levels"
+msgstr "Niveaux du type de danse"
+
+#: danceschool/core/cms_plugins.py:116
+#, fuzzy
+msgid "Other Restrictions"
+msgstr "Restrictions"
+
+#: danceschool/core/cms_plugins.py:182
+#, fuzzy
+msgid "Public Calendar"
+msgstr "Autres restrictions"
+
+#: danceschool/core/cms_plugins.py:199
+#, fuzzy
+msgid "Instructor Images"
+msgstr "Images de l'instructeur"
+
+#: danceschool/core/cms_plugins.py:206
+#, fuzzy
+msgid "Instructor Bios with Images"
+msgstr "Bios d'instructeur avec images"
+
+#: danceschool/core/cms_plugins.py:213
+#, fuzzy
+msgid "Directions for Each Location"
+msgstr "Directions pour chaque emplacement"
+
+#: danceschool/core/cms_plugins.py:220
+#, fuzzy
+msgid "Directions for This Location"
+msgstr "Directions pour cet emplacement"
+
+#: danceschool/core/cms_plugins.py:227
+#, fuzzy
+msgid "Default Grouped List of Events"
+msgstr "Liste par défaut des événements par mois"
+
+#: danceschool/core/cms_toolbars.py:25
+#, fuzzy
+msgid "Apps"
+msgstr "Apps"
+
+#: danceschool/core/cms_toolbars.py:28 danceschool/core/cms_toolbars.py:52
+#, fuzzy
+msgid "Global Settings"
+msgstr "Paramètres globaux"
+
+#: danceschool/core/cms_toolbars.py:65 danceschool/core/cms_toolbars.py:67
+#: danceschool/core/templates/core/account_profile.html:16
+#: danceschool/core/templates/core/base/base_individual_class.html:62
+#: danceschool/core/templates/core/base/base_individual_event.html:42
+#: danceschool/core/templates/core/registration/single_event_registration.html:29
+#, fuzzy
+msgid "View Registrations"
+msgstr "Voir les inscriptions"
+
+#: danceschool/core/cms_toolbars.py:69
+#, fuzzy
+msgid "Registration Page"
+msgstr "Page d'inscription"
+
+#: danceschool/core/cms_toolbars.py:78
+#, fuzzy
+msgid "Add a Class Series"
+msgstr "Ajouter une série de cours"
+
+#: danceschool/core/cms_toolbars.py:80
+#, fuzzy
+msgid "Add a Public Event"
+msgstr "Ajouter un événement public"
+
+#: danceschool/core/cms_toolbars.py:82
+#, fuzzy
+msgid "Edit Existing Series"
+msgstr "Modifier une série existante"
+
+#: danceschool/core/cms_toolbars.py:84
+#, fuzzy
+msgid "Edit Existing Events"
+msgstr "Modifier les événements existants"
+
+#: danceschool/core/cms_toolbars.py:93 danceschool/core/cms_toolbars.py:97
+#: danceschool/core/cms_toolbars.py:101 danceschool/core/cms_toolbars.py:105
+#: danceschool/core/cms_toolbars.py:109 danceschool/core/cms_toolbars.py:113
+#: danceschool/core/cms_toolbars.py:117 danceschool/core/cms_toolbars.py:121
+#: danceschool/core/cms_toolbars.py:125 danceschool/core/cms_toolbars.py:211
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/core/cms_toolbars.py:94
+#, fuzzy
+msgid "Class Descriptions"
+msgstr "Descriptions des cours"
+
+#: danceschool/core/cms_toolbars.py:98 danceschool/core/models.py:1770
+#, fuzzy
+msgid "Customers"
+msgstr "Clients"
+
+#: danceschool/core/cms_toolbars.py:102
+#, fuzzy
+msgid "Customer Groups"
+msgstr "Client"
+
+#: danceschool/core/cms_toolbars.py:106
+#, fuzzy
+msgid "Dance Roles"
+msgstr "Rôles de danse"
+
+#: danceschool/core/cms_toolbars.py:110
+#, fuzzy
+msgid "Dance Types/Levels"
+msgstr "Types de danse / niveaux"
+
+#: danceschool/core/cms_toolbars.py:114
+#, fuzzy
+msgid "Event Staff Categories"
+msgstr "Catégories de personnel de l'événement"
+
+#: danceschool/core/cms_toolbars.py:122
+#, fuzzy
+msgid "Pricing Tiers"
+msgstr "Niveaux de tarification"
+
+#: danceschool/core/cms_toolbars.py:126
+#, fuzzy
+msgid "Public Event Categories"
+msgstr "Catégories d'événements publics"
+
+#: danceschool/core/cms_toolbars.py:136
+#, fuzzy
+msgid "Your Stats"
+msgstr "Vos statistiques"
+
+#: danceschool/core/cms_toolbars.py:139
+#: danceschool/core/templates/core/account_profile.html:25
+#, fuzzy
+msgid "Update Your Contact Info"
+msgstr "Mettez à jour vos informations de contact"
+
+#: danceschool/core/cms_toolbars.py:143
+#, fuzzy
+msgid "Instructor/Staff Directory"
+msgstr "Répertoire d'instructeur / personnel"
+
+#: danceschool/core/cms_toolbars.py:150 danceschool/core/views.py:608
+#, fuzzy
+msgid "Email Students"
+msgstr "Courriel des étudiants"
+
+#: danceschool/core/cms_toolbars.py:155 danceschool/core/views.py:961
+#, fuzzy
+msgid "Report Substitute Teaching"
+msgstr "Signaler un remplacement d'enseignement"
+
+#: danceschool/core/cms_toolbars.py:163
+#, fuzzy
+msgid "Manage Instructors"
+msgstr "Gérer les instructeurs"
+
+#: danceschool/core/cms_toolbars.py:175
+#, fuzzy
+msgid "Content"
+msgstr "Contenu"
+
+#: danceschool/core/cms_toolbars.py:178
+#, fuzzy
+msgid "Manage Uploaded Files"
+msgstr "Gérer les fichiers téléchargés"
+
+#: danceschool/core/cms_toolbars.py:181
+#, fuzzy
+msgid "Manage Email Templates"
+msgstr "Gérer les modèles de courriel"
+
+#: danceschool/core/cms_toolbars.py:184
+#, fuzzy
+msgid "View/Export Survey Responses"
+msgstr "Afficher / exporter les réponses à l'enquête"
+
+#: danceschool/core/cms_toolbars.py:195
+#, fuzzy
+msgid "Finances"
+msgstr "Finances"
+
+#: danceschool/core/cms_toolbars.py:198
+#, fuzzy
+msgid "Create an Invoice"
+msgstr "Créer une facture"
+
+#: danceschool/core/cms_toolbars.py:212 danceschool/core/models.py:2857
+#, fuzzy
+msgid "Invoices"
+msgstr "Factures"
+
+#: danceschool/core/constants.py:55
+#, fuzzy
+msgid "I've Taken Classes Before"
+msgstr "J'ai pris des cours avant"
+
+#: danceschool/core/constants.py:56
+#, fuzzy
+msgid "Facebook"
+msgstr "Facebook"
+
+#: danceschool/core/constants.py:57
+#, fuzzy
+msgid "Flyers/Cards"
+msgstr "Dépliants / Cartes"
+
+#: danceschool/core/constants.py:58
+#, fuzzy
+msgid "Another Student"
+msgstr "Un autre étudiant"
+
+#: danceschool/core/constants.py:59 danceschool/core/models.py:644
+#: danceschool/core/models.py:645
+#, fuzzy
+msgid "Other"
+msgstr "Autre"
+
+#: danceschool/core/dynamic_preferences_registry.py:20
+#, fuzzy
+msgid "General Settings"
+msgstr "Réglages Généraux"
+
+#: danceschool/core/dynamic_preferences_registry.py:21
+#, fuzzy
+msgid "Contact Info"
+msgstr "Informations de contact"
+
+#: danceschool/core/dynamic_preferences_registry.py:23
+#, fuzzy
+msgid "Email"
+msgstr "Courriel"
+
+#: danceschool/core/dynamic_preferences_registry.py:24
+#, fuzzy
+msgid "Calendar"
+msgstr "Calendrier"
+
+#: danceschool/core/dynamic_preferences_registry.py:34
+#, fuzzy
+msgid "Currency Code"
+msgstr "Code de devise"
+
+#: danceschool/core/dynamic_preferences_registry.py:35
+#, fuzzy
+msgid "Use a three-letter currency code for compatibility with payment systems"
+msgstr ""
+"Utilisez un code de devise à trois lettres pour la compatibilité avec les "
+"systèmes de paiement"
+
+#: danceschool/core/dynamic_preferences_registry.py:43
+#, fuzzy
+msgid "Currency Symbol"
+msgstr "Symbole de devise"
+
+#: danceschool/core/dynamic_preferences_registry.py:44
+#, fuzzy
+msgid ""
+"Enter a symbol to use on the website representing the currency used (e.g. $)"
+msgstr ""
+"Entrez un symbole à utiliser sur le site Web représentant la devise utilisée "
+"(par exemple $)"
+
+#: danceschool/core/dynamic_preferences_registry.py:54
+#, fuzzy
+msgid "Staff Photos Folder"
+msgstr "Dossier photos du personnel"
+
+#: danceschool/core/dynamic_preferences_registry.py:56
+#, fuzzy
+msgid ""
+"The folder used to store profile photos of staff members. Note that if this "
+"is changed, existing profile photos linked to staff members will not be "
+"moved."
+msgstr ""
+"Le dossier utilisé pour stocker les photos de profil des membres du "
+"personnel. Notez que s'ilest changé, les photos de profil existantes liées "
+"aux membres du personnel ne seront pasdéplacé."
+
+#: danceschool/core/dynamic_preferences_registry.py:66
+#, fuzzy
+msgid "Default Admin Form Success Page"
+msgstr "Page Succès du formulaire d'administration par défaut"
+
+#: danceschool/core/dynamic_preferences_registry.py:67
+#, fuzzy
+msgid ""
+"The page to which a staff user is redirected after successfully submitting "
+"an admin form."
+msgstr ""
+"La page vers laquelle un membre du personnel est redirigé après l'envoi "
+"réussid’un formulaire d'admin."
+
+#: danceschool/core/dynamic_preferences_registry.py:81
+#, fuzzy
+msgid "Enable Periodic (Cron) Tasks"
+msgstr "Activer les tâches périodiques (Cron)"
+
+#: danceschool/core/dynamic_preferences_registry.py:83
+#, fuzzy
+msgid ""
+"Uncheck this if you will be using crontab, a scheduling service such as "
+"Heroku, or if you otherwise do not wish to permit automatic generation of "
+"expenses, closing of class registration, etc."
+msgstr ""
+"Décochez cette case si vous utilisez crontab, un service de planification "
+"tel queHeroku, ou si vous ne voulez pas autoriser la génération automatique "
+"dedépenses, fermeture de l'inscription de cours, etc."
+
+#: danceschool/core/dynamic_preferences_registry.py:94
+#, fuzzy
+msgid "Instructor Event Staff Category"
+msgstr "Catégorie du personnel de l'évènement de l'instructeur"
+
+#: danceschool/core/dynamic_preferences_registry.py:100
+#, fuzzy
+msgid "Class Instruction"
+msgstr "Instruction de classe"
+
+#: danceschool/core/dynamic_preferences_registry.py:107
+#, fuzzy
+msgid "Assistant Instructor Event Staff Category"
+msgstr "Catégorie du personnel de l'évènement de l'assistant instructeur"
+
+#: danceschool/core/dynamic_preferences_registry.py:113
+#, fuzzy
+msgid "Assistant Class Instruction"
+msgstr "Instruction de cours Assistant"
+
+#: danceschool/core/dynamic_preferences_registry.py:120
+#, fuzzy
+msgid "Substitute Teacher Event Staff Category"
+msgstr "Catégorie du personnel de l'évènement du remplaçant instructeur"
+
+#: danceschool/core/dynamic_preferences_registry.py:126
+#, fuzzy
+msgid "Substitute Teaching"
+msgstr "Enseignement Suppléant"
+
+#: danceschool/core/dynamic_preferences_registry.py:133
+#, fuzzy
+msgid "DJ Event Staff Category"
+msgstr "Catégorie du personnel de l'évènement de l'instructeur"
+
+#: danceschool/core/dynamic_preferences_registry.py:139
+msgid "DJ"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:146
+#, fuzzy
+msgid "Other Staff Event Staff Category"
+msgstr "Catégorie du personnel de l'évènement autre"
+
+#: danceschool/core/dynamic_preferences_registry.py:152
+#: danceschool/core/templates/core/account_profile.html:41
+#, fuzzy
+msgid "Other Staff"
+msgstr "Personnel autre"
+
+#: danceschool/core/dynamic_preferences_registry.py:162
+#, fuzzy
+msgid "Business Name"
+msgstr "Nom de l'entreprise"
+
+#: danceschool/core/dynamic_preferences_registry.py:163
+#, fuzzy
+msgid "For invoices and template use"
+msgstr "Pour les factures et l'utilisation du modèle"
+
+#: danceschool/core/dynamic_preferences_registry.py:171
+#, fuzzy
+msgid "Business phone number"
+msgstr "Numéro de téléphone de l’entreprise"
+
+#: danceschool/core/dynamic_preferences_registry.py:184
+#, fuzzy
+msgid "Business email address"
+msgstr "Adresse courriel professionnelle"
+
+#: danceschool/core/dynamic_preferences_registry.py:193
+#, fuzzy
+msgid "Business street/mailing address (Line 1)"
+msgstr "Rue / adresse postale de l’entreprise (ligne 1)"
+
+#: danceschool/core/dynamic_preferences_registry.py:206
+#, fuzzy
+msgid "Business Address Line 2"
+msgstr "Adresse de l’entreprise Ligne 2"
+
+#: danceschool/core/dynamic_preferences_registry.py:220
+#: danceschool/core/models.py:325
+#, fuzzy
+msgid "City"
+msgstr "Ville"
+
+#: danceschool/core/dynamic_preferences_registry.py:233
+#, fuzzy
+msgid "State"
+msgstr "État / Province"
+
+#: danceschool/core/dynamic_preferences_registry.py:246
+#, fuzzy
+msgid "ZIP/Postal Code"
+msgstr "Zip / code postal"
+
+#: danceschool/core/dynamic_preferences_registry.py:259
+#, fuzzy
+msgid "Country code"
+msgstr "Code du pays"
+
+#: danceschool/core/dynamic_preferences_registry.py:260
+#, fuzzy
+msgid "Use a two-letter country code for compatibility with payment systems"
+msgstr ""
+"Utilisez un code de pays à deux lettres pour la compatibilité avec les "
+"systèmes de paiement"
+
+#: danceschool/core/dynamic_preferences_registry.py:271
+#, fuzzy
+msgid "Registration Enabled"
+msgstr "Inscription Activé"
+
+#: danceschool/core/dynamic_preferences_registry.py:272
+msgid ""
+"Uncheck this to disable registration entirely.  Useful when performing "
+"upgrades or testing."
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:280
+#, fuzzy
+msgid "Default Registration Capacity"
+msgstr "Capacité d'inscription par défaut"
+
+#: danceschool/core/dynamic_preferences_registry.py:281
+#, fuzzy
+msgid ""
+"This is usually a location-specific setting or an event-specific setting.  "
+"However, if a limit is not otherwise provided, then this will limit the "
+"number of registrations allowed."
+msgstr ""
+"Il s'agit généralement d'un paramètre spécifique à l'emplacement ou d'un "
+"paramètre spécifique à l'événement.Cependant, si une limite n'est pas "
+"fournie autrement, cela limitera lenombre d'inscriptions autorisées."
+
+#: danceschool/core/dynamic_preferences_registry.py:289
+#, fuzzy
+msgid "Close Registration Days After Beginning"
+msgstr "Fermer les jours d'inscription après le début"
+
+#: danceschool/core/dynamic_preferences_registry.py:290
+#, fuzzy
+msgid ""
+"By default, online registration closes automatically this many days from the "
+"beginning of an Event or Series (e.g. Enter 2 to close two days after "
+"beginning, or enter -3 to close three days before beginning).  This value "
+"can be overridden for individual Events."
+msgstr ""
+"Par défaut, l'inscription en ligne se ferme automatiquement après tant de "
+"joursdu début d'un événement ou d'une série (par exemple, entrez 2 pour "
+"fermer deux jours aprèsLe début, ou entrez -3 pour fermer trois jours avant "
+"de commencer. Cette valeur peut être outrepassé pour des événements "
+"individuels."
+
+#: danceschool/core/dynamic_preferences_registry.py:298
+#, fuzzy
+msgid ""
+"Do Not Show Registration for Events that Begin More Than __ Days in the "
+"Future"
+msgstr ""
+"Ne pas afficher l'inscription pour les événements qui commencent plus de __ "
+"jours dans” “l'avenir"
+
+#: danceschool/core/dynamic_preferences_registry.py:299
+#, fuzzy
+msgid ""
+"By default, events are shown on the registration page as soon as they are "
+"created.  If you list events far into the future, set this value, and events "
+"that begin more than this many days in the future will not be shown in the "
+"registration page.  Enter 0 for no restriction."
+msgstr ""
+"Par défaut, les événements sont affichés sur la page d'inscription dès "
+"qu'ils sontcréés. Si vous listez des événements loin dans le futur, "
+"définissez cette valeur et les” “événementsqui commence plus que ce nombre "
+"de jours dans le futur ne sera pas montré dans lapage d'inscription, entrez "
+"0 pour aucune restriction."
+
+#: danceschool/core/dynamic_preferences_registry.py:308
+msgid "Session if available (ordered by start date), otherwise month"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:309
+msgid "Session if available (ordered alphabetically), otherwise month"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:310
+#: danceschool/core/models.py:568 danceschool/core/models.py:590
+#: danceschool/core/templates/core/account_profile.html:41
+#: danceschool/core/templates/core/account_profile.html:102
+#: danceschool/core/templates/core/account_profile.html:153
+#: danceschool/core/templates/core/account_profile.html:202
+#: danceschool/core/templates/core/instructor_stats.html:38
+#: danceschool/core/templates/core/instructor_stats.html:66
+#, fuzzy
+msgid "Month"
+msgstr "Mois"
+
+#: danceschool/core/dynamic_preferences_registry.py:311
+msgid "Session ordered by start date (if no session, group as \"Other\")"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:312
+msgid "Session ordered alphabetically (if no session, group as \"Other\")"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:313
+msgid "Session ordered by start date and Month"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:314
+msgid "Session ordered alphabetically and Month"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:315
+#, fuzzy
+msgid "Weekday"
+msgstr "Jour de la semaine"
+
+#: danceschool/core/dynamic_preferences_registry.py:316
+#, fuzzy
+msgid "Month and Weekday"
+msgstr "Jour de la semaine"
+
+#: danceschool/core/dynamic_preferences_registry.py:318
+msgid "Rule for Organizing Series and Events for Registration"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:321
+msgid ""
+"In registration, events may be grouped by defined sessions, by month, the "
+"combination of both session and month, or by weekday."
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:331
+#, fuzzy
+msgid "Month of first occurrence"
+msgstr "Première occurence"
+
+#: danceschool/core/dynamic_preferences_registry.py:332
+#, fuzzy
+msgid "Month of second occurrence"
+msgstr "Première occurence"
+
+#: danceschool/core/dynamic_preferences_registry.py:333
+#, fuzzy
+msgid "Month of last occurrence"
+msgstr "Le mois dernier"
+
+#: danceschool/core/dynamic_preferences_registry.py:334
+msgid "First month with more than one occurrence (or first)"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:335
+#, fuzzy
+msgid "Month with the most occurrences"
+msgstr "# d’occurences"
+
+#: danceschool/core/dynamic_preferences_registry.py:337
+msgid "Rule for Assigning Events to Months"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:340
+msgid ""
+"When events are listed by month in various views, this rule determines the "
+"month to which each event is assigned."
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:350
+#, fuzzy
+msgid "No description"
+msgstr "Description"
+
+#: danceschool/core/dynamic_preferences_registry.py:351
+#, fuzzy
+msgid "First 10 words"
+msgstr "Prénom"
+
+#: danceschool/core/dynamic_preferences_registry.py:352
+#, fuzzy
+msgid "First 20 words"
+msgstr "Première occurence"
+
+#: danceschool/core/dynamic_preferences_registry.py:353
+#, fuzzy
+msgid "First 50 words"
+msgstr "Première occurence"
+
+#: danceschool/core/dynamic_preferences_registry.py:354
+#, fuzzy
+msgid "Full description"
+msgstr "Nom complet"
+
+#: danceschool/core/dynamic_preferences_registry.py:356
+msgid "Rule for showing class descriptions on the regisration page"
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:358
+msgid ""
+"This option determines how much of each event's description is shown on the "
+"class registration page. Users can always select the 'more info' link to "
+"access the full description."
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:368
+#, fuzzy
+msgid "Sales tax percentage rate to be applied registrations"
+msgstr "Taux de pourcentage de taxe sur les ventes à appliquer"
+
+#: danceschool/core/dynamic_preferences_registry.py:369
+#, fuzzy
+msgid ""
+"Enter, e.g. '10' for a 10% tax rate to be applied to all class and event "
+"registrations."
+msgstr ""
+"Entrez, par exemple ‘10’ pour un taux d'imposition de 10% à appliquer à tous "
+"les inscriptions” “aux cours et événements"
+
+#: danceschool/core/dynamic_preferences_registry.py:377
+#, fuzzy
+msgid "Buyer pays sales tax (added to total price)"
+msgstr "L'acheteur paie la taxe de vente (ajoutée au prix total)"
+
+#: danceschool/core/dynamic_preferences_registry.py:378
+#, fuzzy
+msgid ""
+"If unchecked, then the buyer will not be charged sales tax directly, but the "
+"amount of tax collected by the business will be reported."
+msgstr ""
+"Si non cochée, alors l'acheteur ne sera pas facturé directement la taxe de "
+"vente, mais lemontant de la taxe collectée par l'entreprise sera signalé."
+
+#: danceschool/core/dynamic_preferences_registry.py:386
+#, fuzzy
+msgid "Allow users to login/signup during registration"
+msgstr ""
+"Autoriser les utilisateurs à se connecter / s'inscrire lors de l'inscription"
+
+#: danceschool/core/dynamic_preferences_registry.py:387
+msgid ""
+"If you don't allow customers to see their history or do automatic checks for "
+"prerequisites, then you may not need customers to create user accounts or "
+"authenticate themselves. If this box is unchecked, then users will not be "
+"able to log in or create a new account during the registration process."
+msgstr ""
+
+#: danceschool/core/dynamic_preferences_registry.py:395
+#, fuzzy
+msgid "Temporary registration data expires after __ minutes"
+msgstr "Les données d'inscriptions temporaires expirent après __ minutes"
+
+#: danceschool/core/dynamic_preferences_registry.py:396
+#, fuzzy
+msgid ""
+"In each step of the registration process, customers have this many minutes "
+"to proceed before they are no longer guaranteed a spot and are required to "
+"begin again."
+msgstr ""
+"A chaque étape du processus d'inscription, les clients ont autant de "
+"minutespour procéder avant qu'ils ne sont plus garantis une place et sont "
+"tenus derecommencer."
+
+#: danceschool/core/dynamic_preferences_registry.py:404
+#, fuzzy
+msgid "Automatically delete expired temporary registration and session data"
+msgstr "Supprimer automatiquement les données d'inscription et de sessions"
+
+#: danceschool/core/dynamic_preferences_registry.py:405
+#, fuzzy
+msgid ""
+"If this box is checked, then an hourly script will automatically expired "
+"temporary registration and session data.  Disabling this feature is only "
+"recommended for testing."
+msgstr ""
+"Si cette case est cochée, un script horaire expirera "
+"automatiquementenregistrement temporaire et données de session. Désactiver "
+"cette fonctionnalité est” “seulementrecommandé pour les tests."
+
+#: danceschool/core/dynamic_preferences_registry.py:416
+#, fuzzy
+msgid "Disable Sending of Emails"
+msgstr "Désactiver l'envoi de courriels"
+
+#: danceschool/core/dynamic_preferences_registry.py:417
+#, fuzzy
+msgid "Check to disable all standard emails from being sent."
+msgstr ""
+"Cochez cette case pour désactiver l'envoi de tous les courriels standard."
+
+#: danceschool/core/dynamic_preferences_registry.py:425
+#, fuzzy
+msgid "Email address that general site emails are sent from"
+msgstr "Adresse courriel d'où les courriels du site général sont envoyés"
+
+#: danceschool/core/dynamic_preferences_registry.py:426
+#, fuzzy
+msgid "This email address may be overridden by specific email templates"
+msgstr ""
+"Cette adresse courriel peut être remplacée par des modèles de courriel "
+"spécifiques"
+
+#: danceschool/core/dynamic_preferences_registry.py:439
+#, fuzzy
+msgid "Name that is used for general site emails"
+msgstr "Nom utilisé pour les courriels généraux du site"
+
+#: danceschool/core/dynamic_preferences_registry.py:440
+#, fuzzy
+msgid "This name may be overridden by specific email templates"
+msgstr "Ce nom peut être remplacé par des modèles de courriel spécifiques"
+
+#: danceschool/core/dynamic_preferences_registry.py:453
+#, fuzzy
+msgid "Send Error Emails"
+msgstr "Courriels d'erreur d'envoi"
+
+#: danceschool/core/dynamic_preferences_registry.py:461
+#, fuzzy
+msgid "Email address that error emails are sent from"
+msgstr ""
+"Adresse courriel à partir de laquelle les courriels d'erreur sont envoyés"
+
+#: danceschool/core/dynamic_preferences_registry.py:474
+#, fuzzy
+msgid "Email address that error emails are sent to"
+msgstr "Adresse courriel à laquelle les courriels d'erreur sont envoyés"
+
+#: danceschool/core/dynamic_preferences_registry.py:491
+#, fuzzy
+msgid "Protocol for URLs in email templates"
+msgstr "Protocole pour les URL dans les modèles de courriels"
+
+#: danceschool/core/dynamic_preferences_registry.py:494
+#, fuzzy
+msgid ""
+"Invoice emails and other emails sometimes include links that require a "
+"protocol to be specified via the \"protocol\" context variable.  If your "
+"site uses solely HTTPS, you may need to change this value to avoid broken "
+"links."
+msgstr ""
+"Les courriels de facture et autres courriels incluant parfois des liens qui "
+"nécessitent un"
+
+#: danceschool/core/dynamic_preferences_registry.py:505
+#, fuzzy
+msgid "Email template used for successful email registrations"
+msgstr ""
+"Modèle de courriel utilisé pour les inscriptions réussies par courriels."
+
+#: danceschool/core/dynamic_preferences_registry.py:518
+#, fuzzy
+msgid "Registration Confirmation Email"
+msgstr "Courriel de Confirmation d'inscription"
+
+#: danceschool/core/dynamic_preferences_registry.py:520
+#, fuzzy
+msgid "Registration Confirmation"
+msgstr "Confirmation d'inscription"
+
+#: danceschool/core/dynamic_preferences_registry.py:534
+#, fuzzy
+msgid "Email template used for invoice email creation"
+msgstr "Modèle de courriel utilisé pour la création de courriel de facturation"
+
+#: danceschool/core/dynamic_preferences_registry.py:547
+#, fuzzy
+msgid "Registration Invoice Email"
+msgstr "Courriel de Facture d'inscription"
+
+#: danceschool/core/dynamic_preferences_registry.py:549
+#, fuzzy
+msgid "Registration Invoice"
+msgstr "Facture d'inscription"
+
+#: danceschool/core/dynamic_preferences_registry.py:566
+#, fuzzy
+msgid "Enable public calendar feed"
+msgstr "Activer le flux du calendrier public"
+
+#: danceschool/core/dynamic_preferences_registry.py:567
+#, fuzzy
+msgid "Uncheck to disable the automatic creation of a public calendar feed."
+msgstr ""
+"Décochez pour désactiver la création automatique d'un flux du calendrier "
+"public."
+
+#: danceschool/core/dynamic_preferences_registry.py:575
+#, fuzzy
+msgid "Enable private calendar feed"
+msgstr "Activer le flux du calendrier privé"
+
+#: danceschool/core/dynamic_preferences_registry.py:576
+#, fuzzy
+msgid ""
+"Uncheck to disable the automatic creation of private (per-instructor) "
+"calendar feeds."
+msgstr ""
+"Décochez pour désactiver la création automatique de flux (par-instructeur)du "
+"calendrier privé."
+
+#: danceschool/core/dynamic_preferences_registry.py:584
+#, fuzzy
+msgid "Default color used for classes on the calendar"
+msgstr "Couleur par défaut utilisée pour les classes du calendrier"
+
+#: danceschool/core/dynamic_preferences_registry.py:585
+#: danceschool/core/dynamic_preferences_registry.py:594
+#, fuzzy
+msgid "Enter a CSS compatible color"
+msgstr "Entrer une couleur compatible CSS"
+
+#: danceschool/core/dynamic_preferences_registry.py:593
+#, fuzzy
+msgid "Default color used for events on the calendar"
+msgstr "Couleur par défaut utilisée pour les événements du calendrier"
+
+#: danceschool/core/feeds.py:63
+#, fuzzy, python-format
+msgid "%s Events Calendar"
+msgstr "%s Calendrier des événements"
+
+#: danceschool/core/feeds.py:66
+#, fuzzy, python-format
+msgid "%s Instructor Calendar for %s %s"
+msgstr "%s Calendrier de l'instructeur pour %s %s"
+
+#: danceschool/core/feeds.py:69
+#, fuzzy, python-format
+msgid "Calendar for %s"
+msgstr "Calendrier pour %s"
+
+#: danceschool/core/forms.py:134
+#, fuzzy
+msgid "Additional Choices"
+msgstr "Choix supplémentaires"
+
+#: danceschool/core/forms.py:158
+#: danceschool/core/templates/core/registration/base_event_registration.html:131
+#: danceschool/core/templates/core/registration/event_category__default.html:4
+#: danceschool/core/templates/core/registration/series_category__default.html:4
+#, fuzzy
+msgid "Register now"
+msgstr "Inscrire maintenant"
+
+#: danceschool/core/forms.py:188
+#, fuzzy
+msgid "Door/Invoice Registration"
+msgstr "Facture / Inscription à la porte"
+
+#: danceschool/core/forms.py:219
+#, fuzzy, python-format
+msgid "%s sold out!"
+msgstr "%s épuisé!"
+
+#: danceschool/core/forms.py:231
+#, fuzzy, python-format
+msgid "Register (%s registered)"
+msgstr "Inscription (%s inscrit)"
+
+#: danceschool/core/forms.py:233
+#: danceschool/core/templates/core/base/base_individual_class.html:51
+#, fuzzy
+msgid "Sold out!"
+msgstr "Épuisé!"
+
+#: danceschool/core/forms.py:250 danceschool/core/forms.py:254
+#, fuzzy
+msgid "Drop-in: "
+msgstr "Ouvert à tous"
+
+#: danceschool/core/forms.py:285
+#, fuzzy
+msgid "Must select only one role."
+msgstr "Doit sélectionner un seul rôle."
+
+#: danceschool/core/forms.py:287
+#, fuzzy
+msgid "Cannot register for drop-in classes and also for the entire series."
+msgstr ""
+"Vous ne pouvez pas vous inscrire à des cours ouverts à tous et à toute la "
+"série."
+
+#: danceschool/core/forms.py:289
+#, fuzzy
+msgid "Must register for at least one class or series."
+msgstr "Doit s'inscrire pour au moins un cours ou une série."
+
+#: danceschool/core/forms.py:297 danceschool/core/models.py:3025
+#, fuzzy
+msgid "First Name"
+msgstr "Prénom"
+
+#: danceschool/core/forms.py:298 danceschool/core/models.py:3026
+#, fuzzy
+msgid "Last Name"
+msgstr "Nom"
+
+#: danceschool/core/forms.py:300
+#, fuzzy
+msgid "Telephone (optional)"
+msgstr "Téléphone (facultatifl)"
+
+#: danceschool/core/forms.py:300
+#, fuzzy
+msgid "We may use this to notify you in event of a cancellation."
+msgstr "Nous pourrions utiliser ceci pour vous informer en cas d'annulation."
+
+#: danceschool/core/forms.py:301
+#, fuzzy
+msgid "I am a student"
+msgstr "Je suis étudiant"
+
+#: danceschool/core/forms.py:301
+#, fuzzy
+msgid "Photo ID is required at the door"
+msgstr "Une pièce d'identité avec photo est requise à la porte"
+
+#: danceschool/core/forms.py:302
+#, fuzzy
+msgid "Add me to the mailing list"
+msgstr "Ajoutez-moi à la liste d’envoi"
+
+#: danceschool/core/forms.py:303
+#, fuzzy
+msgid "<strong>I agree to all policies (required)</strong>"
+msgstr "<strong>J'accepte toutes les politiques (requis)</strong>"
+
+#: danceschool/core/forms.py:303
+#, fuzzy
+msgid "By checking, you agree to abide by all policies."
+msgstr "En cochant, vous acceptez de respecter toutes les politiques."
+
+#: danceschool/core/forms.py:304
+#, fuzzy
+msgid "Voucher ID"
+msgstr "Identification du bon"
+
+#: danceschool/core/forms.py:305
+#, fuzzy
+msgid "How did you hear about us?"
+msgstr "Comment avez-vous entendu parler de nous?"
+
+#: danceschool/core/forms.py:305
+#, fuzzy
+msgid "Optional"
+msgstr "Facultatif"
+
+#: danceschool/core/forms.py:306 danceschool/core/models.py:1785
+#: danceschool/core/models.py:2009 danceschool/core/models.py:2461
+#, fuzzy
+msgid "Comments"
+msgstr "Commentaires"
+
+#: danceschool/core/forms.py:306
+#, fuzzy
+msgid "Add anything else you'd like to tell us."
+msgstr "Ajoutez tout ce que vous aimeriez nous dire."
+
+#: danceschool/core/forms.py:365
+#, fuzzy
+msgid "Complete Registration"
+msgstr "Inscription complète"
+
+#: danceschool/core/forms.py:438
+#, fuzzy
+msgid "Payment Received"
+msgstr "Paiement reçu"
+
+#: danceschool/core/forms.py:441
+#, fuzzy
+msgid "Payment received by:"
+msgstr "Paiement reçu d'ici le :"
+
+#: danceschool/core/forms.py:447
+#, fuzzy
+msgid "Enter a user name"
+msgstr "Entrer un nom d'utilisateur"
+
+#: danceschool/core/forms.py:456
+#: danceschool/core/templates/core/invoice.html:23
+#, fuzzy
+msgid "Amount Paid"
+msgstr "Montant payé"
+
+#: danceschool/core/forms.py:458 danceschool/core/forms.py:503
+#, fuzzy
+msgid "Send Invoice"
+msgstr "Envoyer une facture"
+
+#: danceschool/core/forms.py:459 danceschool/core/forms.py:460
+#, fuzzy
+msgid "Payer Email Address"
+msgstr "Adresse courriel du payeur"
+
+#: danceschool/core/forms.py:481
+#, fuzzy
+msgid "Cash Payment"
+msgstr "Paiement en espèces"
+
+#: danceschool/core/forms.py:544
+#, fuzzy
+msgid "submissionUser not found."
+msgstr "soumission Utilisateur non trouvé."
+
+#: danceschool/core/forms.py:547
+#, fuzzy
+msgid "Invalid user submitted door payment."
+msgstr "Paiement à la porte soumis par l’utilisateur n'est pas valide."
+
+#: danceschool/core/forms.py:549
+#, fuzzy
+msgid "Invalid user submitted invoice."
+msgstr "Facture soumise par l'utilisateur non valide."
+
+#: danceschool/core/forms.py:561
+#, fuzzy
+msgid "Must choose either cash payment or invoice submission, not both."
+msgstr ""
+"Doit choisir le paiement en espèces ou la soumission de facture, pas les "
+"deux."
+
+#: danceschool/core/forms.py:564
+#, fuzzy
+msgid "Must select either cash payment or invoice submission."
+msgstr "Doit sélectionner le paiement en espèces ou la soumission de facture."
+
+#: danceschool/core/forms.py:569 danceschool/core/forms.py:577
+#, fuzzy
+msgid "Submission user is required."
+msgstr "L'utilisateur de soumission est requis."
+
+#: danceschool/core/forms.py:571
+#, fuzzy
+msgid "Must specify recipient of the money."
+msgstr "Doit spécifier le destinataire de l'argent."
+
+#: danceschool/core/forms.py:573
+#, fuzzy
+msgid "Must specify the amount of the payment."
+msgstr "Doit spécifier le montant du paiement."
+
+#: danceschool/core/forms.py:579
+#, fuzzy
+msgid "Must specify the email address of the invoice recipient."
+msgstr "Vous devez spécifier l'adresse courriel du destinataire de la facture."
+
+#: danceschool/core/forms.py:605 danceschool/core/models.py:1116
+#: danceschool/core/models.py:2236 danceschool/core/models.py:2421
+#: danceschool/core/templates/core/process_refund.html:94
+#, fuzzy
+msgid "Cancelled"
+msgstr "Annulé"
+
+#: danceschool/core/forms.py:607
+#, fuzzy
+msgid "Refund Amount"
+msgstr "Montant du remboursement"
+
+#: danceschool/core/forms.py:610
+#, fuzzy
+msgid "Explanation/Comments (optional)"
+msgstr "Explication / Commentaires (facultatif)"
+
+#: danceschool/core/forms.py:611
+#, fuzzy
+msgid ""
+"This information will be added to the comments on the invoice associated "
+"with this refund."
+msgstr ""
+"Cette information sera ajoutée aux commentaires sur la facture associéeavec "
+"ce remboursement."
+
+#: danceschool/core/forms.py:612
+#, fuzzy
+msgid "Enter explanation/comments..."
+msgstr "Entrer les explications / commentaires ..."
+
+#: danceschool/core/forms.py:635
+#, fuzzy
+msgid "Passed value does not match sum of allocated refunds."
+msgstr ""
+"La valeur transmise ne correspond pas à la somme des remboursements alloués."
+
+#: danceschool/core/forms.py:637
+#, fuzzy
+msgid "Total refunds allocated exceed revenue received."
+msgstr "Le total des remboursements alloués dépasse le revenu reçu."
+
+#: danceschool/core/forms.py:639
+#, fuzzy
+msgid "Cannot reduce the total amount of the refund."
+msgstr "Impossible de réduire le montant total du remboursement."
+
+#: danceschool/core/forms.py:645
+#, fuzzy
+msgid "All students in one or more series"
+msgstr "Tous les étudiants dans une ou plusieurs séries"
+
+#: danceschool/core/forms.py:645
+#, fuzzy
+msgid "All Students in a given month"
+msgstr "Tous les étudiants dans un mois donné"
+
+#: danceschool/core/forms.py:646 danceschool/core/models.py:2370
+#, fuzzy
+msgid "Plain text email"
+msgstr "Courriel en texte brut"
+
+#: danceschool/core/forms.py:646 danceschool/core/models.py:2370
+#, fuzzy
+msgid "HTML rich text email"
+msgstr "Contenu HTML enrichi"
+
+#: danceschool/core/forms.py:648
+#, fuzzy
+msgid "This email is for:"
+msgstr "Ce courriel est pour : "
+
+#: danceschool/core/forms.py:650
+#, fuzzy
+msgid "(Optional) Select a template"
+msgstr "(Facultatif) Choisir un modèle"
+
+#: danceschool/core/forms.py:652 danceschool/core/models.py:2372
+#, fuzzy
+msgid "Send this email as"
+msgstr "Envoyer ce courriel comme"
+
+#: danceschool/core/forms.py:661
+#, fuzzy
+msgid "CC Myself:"
+msgstr "CC Moi-même"
+
+#: danceschool/core/forms.py:662
+#, fuzzy
+msgid "Email all students registered in month:"
+msgstr "Envoyer par courriel à tous les étudiants inscrits ce mois-ci:"
+
+#: danceschool/core/forms.py:663
+#, fuzzy
+msgid "Email all students registered in a current/recent series:"
+msgstr ""
+"Envoyer par courriel à tous les étudiants inscrits dans une série actuelle / "
+"récente :"
+
+#: danceschool/core/forms.py:664
+#, fuzzy
+msgid "Test email:"
+msgstr "Courriel test :"
+
+#: danceschool/core/forms.py:664
+#, fuzzy
+msgid "Send a test email to myself only."
+msgstr "Envoyer un courriel test à moi-même uniquement."
+
+#: danceschool/core/forms.py:677
+#, fuzzy
+msgid "Selected customers"
+msgstr "Clients sélectionnés"
+
+#: danceschool/core/forms.py:716 danceschool/core/forms.py:720
+#, fuzzy
+msgid "Message is required."
+msgstr "Le message est requis."
+
+#: danceschool/core/forms.py:842
+#, fuzzy
+msgid ""
+"One or more classes you have selected already has a substitute teacher for "
+"that class."
+msgstr ""
+"Un ou plusieurs cours que vous avez sélectionnées ont déjà un enseignant "
+"suppléant pource cours."
+
+#: danceschool/core/forms.py:846
+#, fuzzy
+msgid ""
+"You cannot substitute teach for a class in which you were an instructor."
+msgstr ""
+"Vous ne pouvez pas être suppléant pour un cours dans lequelle vous étiez "
+"instructeur."
+
+#: danceschool/core/forms.py:894
+#, fuzzy
+msgid "First event occurs on"
+msgstr "Le premier événement se produit le"
+
+#: danceschool/core/forms.py:895
+#, fuzzy
+msgid "Repeat every"
+msgstr "Répéter chaque"
+
+#: danceschool/core/forms.py:896
+#, fuzzy
+msgid "Period"
+msgstr "Période"
+
+#: danceschool/core/forms.py:896
+#, fuzzy
+msgid "Days"
+msgstr "Jours"
+
+#: danceschool/core/forms.py:896
+#, fuzzy
+msgid "Weeks"
+msgstr "Semaines"
+
+#: danceschool/core/forms.py:896
+#, fuzzy
+msgid "Months"
+msgstr "Mois"
+
+#: danceschool/core/forms.py:897
+#, fuzzy
+msgid "Repeat this many times"
+msgstr "Répéter cela plusieurs fois"
+
+#: danceschool/core/forms.py:898
+#, fuzzy
+msgid "Repeat until this date"
+msgstr "Répéter jusqu'à cette date"
+
+#: danceschool/core/forms.py:906
+#, fuzzy
+msgid "End date must be after start date."
+msgstr "La date de fin doit être après la date de début."
+
+#: danceschool/core/forms.py:909
+#, fuzzy
+msgid "Please specify either a number of repeats or an end date, not both."
+msgstr ""
+"Veuillez spécifier un nombre de répétitions ou une date de fin, pas les deux."
+
+#: danceschool/core/mixins.py:66
+#, fuzzy
+msgid "Email must have a recipient."
+msgstr "Le courriel doit avoir un destinataire"
+
+#: danceschool/core/mixins.py:248
+#, fuzzy, python-format
+msgid "%s is not a valid template."
+msgstr "%s n'est pas un modèle valide."
+
+#: danceschool/core/models.py:79 danceschool/core/models.py:106
+#: danceschool/core/models.py:124 danceschool/core/models.py:170
+#: danceschool/core/models.py:322 danceschool/core/models.py:364
+#: danceschool/core/models.py:439 danceschool/core/models.py:485
+#: danceschool/core/models.py:605 danceschool/core/models.py:1193
+#: danceschool/core/models.py:1296 danceschool/core/models.py:1571
+#: danceschool/core/models.py:1666 danceschool/core/models.py:1810
+#: danceschool/core/models.py:2058 danceschool/core/models.py:2909
+#: danceschool/core/templates/core/invoice.html:70
+#: danceschool/core/templates/core/staff_directory.html:10
+#: danceschool/core/templates/core/staff_directory.html:42
+#: danceschool/core/templates/core/staff_directory.html:74
+#: danceschool/core/templates/core/view_eventregistrations.html:25
+#, fuzzy
+msgid "Name"
+msgstr "Nom"
+
+#: danceschool/core/models.py:80
+#, fuzzy
+msgid "Plural of name"
+msgstr "Nom au pluriel"
+
+#: danceschool/core/models.py:80
+#, fuzzy
+msgid "For the registration form."
+msgstr "Pour le formulaire d'inscription"
+
+#: danceschool/core/models.py:81 danceschool/core/models.py:107
+#: danceschool/core/models.py:125 danceschool/core/models.py:335
+#, fuzzy
+msgid "Order number"
+msgstr "Numéro de commande"
+
+#: danceschool/core/models.py:81
+#, fuzzy
+msgid "Lower numbers show up first when registering."
+msgstr "Les nombres inférieurs apparaissent en premier lors de l'inscription."
+
+#: danceschool/core/models.py:95 danceschool/core/models.py:2230
+#: danceschool/core/models.py:2326
+#, fuzzy
+msgid "Dance role"
+msgstr "Rôle de danse"
+
+#: danceschool/core/models.py:96 danceschool/core/models.py:109
+#, fuzzy
+msgid "Dance roles"
+msgstr "Rôle de danse"
+
+#: danceschool/core/models.py:107
+#, fuzzy
+msgid ""
+"Lower numbers show up first when choosing class types in the admin.  By "
+"default, this does not affect ordering on public-facing registration pages."
+msgstr ""
+"Les nombres inférieurs apparaissent en premier lors du choix des types de "
+"cours dans l'admin.par défaut, cela n'affecte pas la commande sur les pages "
+"d'inscriptions publiques."
+
+#: danceschool/core/models.py:109
+#, fuzzy
+msgid ""
+"Select default roles used for registrations of this dance type (can be "
+"overriden for specific events)."
+msgstr ""
+"Sélectionnez les rôles par défaut utilisés pour les enregistrements de ce "
+"type de danse (peut êtreécrasé pour des événements spécifiques\". "
+
+#: danceschool/core/models.py:115 danceschool/core/models.py:275
+#, fuzzy
+msgid "Dance type"
+msgstr "Type de danse"
+
+#: danceschool/core/models.py:116
+#, fuzzy
+msgid "Dance types"
+msgstr "Types de danses"
+
+#: danceschool/core/models.py:125
+#, fuzzy
+msgid "This is used to order and look up dance types."
+msgstr "Ceci est utilisé pour commander et rechercher des types de danse."
+
+#: danceschool/core/models.py:126
+#, fuzzy
+msgid "Dance Type"
+msgstr "Type de danse"
+
+#: danceschool/core/models.py:128
+#, fuzzy
+msgid "Display Color"
+msgstr "Couleur d'affichage"
+
+#: danceschool/core/models.py:128
+#, fuzzy
+msgid "Choose a color for the calendar display."
+msgstr "Choisissez une couleur pour l'affichage du calendrier."
+
+#: danceschool/core/models.py:134
+#, fuzzy
+msgid "Level of dance type"
+msgstr "Niveau du type de danse"
+
+#: danceschool/core/models.py:135
+#, fuzzy
+msgid "Levels of dance type"
+msgstr "Niveaux du type de danse"
+
+#: danceschool/core/models.py:147 danceschool/core/models.py:1648
+#: danceschool/core/models.py:1774 danceschool/core/models.py:2000
+#, fuzzy
+msgid "First name"
+msgstr "Prénom"
+
+#: danceschool/core/models.py:148 danceschool/core/models.py:1649
+#: danceschool/core/models.py:1775 danceschool/core/models.py:2001
+#, fuzzy
+msgid "Last name"
+msgstr "Nom"
+
+#: danceschool/core/models.py:152 danceschool/core/models.py:1646
+#, fuzzy
+msgid "User account"
+msgstr "Compte d’utilisateur"
+
+#: danceschool/core/models.py:156
+#, fuzzy
+msgid "Public Email Address"
+msgstr "Adresse courriel publique"
+
+#: danceschool/core/models.py:156
+#, fuzzy
+msgid ""
+"This is the email address used on the site if the instructor is available "
+"for private lessons."
+msgstr ""
+"Ceci est l'adresse courriel utilisée sur le site si l'instructeur est "
+"disponiblepour des leçons privées."
+
+#: danceschool/core/models.py:157
+#, fuzzy
+msgid "Private Email Address"
+msgstr "Adresse courriel privée"
+
+#: danceschool/core/models.py:157
+#, fuzzy
+msgid ""
+"This is the personal email address of the instructor for the instructor "
+"directory."
+msgstr ""
+"Ceci est l'adresse courriel personnelle de l'instructeur pour l'annuaire des "
+"instructeurs"
+
+#: danceschool/core/models.py:158 danceschool/core/models.py:1651
+#: danceschool/core/models.py:1777
+#, fuzzy
+msgid "Telephone"
+msgstr "Téléphone"
+
+#: danceschool/core/models.py:158
+#, fuzzy
+msgid ""
+"Instructor phone numbers are for the instructor directory only, and should "
+"not be given to students."
+msgstr ""
+"Les numéros de téléphone des instructeurs sont pour le répertoire des "
+"instructeurs seulement, et ne devraientpas être donné aux étudiants."
+
+#: danceschool/core/models.py:160
+#, fuzzy
+msgid "Staff photo"
+msgstr "Photo du personnel"
+
+#: danceschool/core/models.py:161
+#, fuzzy
+msgid "Bio text"
+msgstr "Texte bio"
+
+#: danceschool/core/models.py:161
+#, fuzzy
+msgid ""
+"Insert the instructor's bio here.  Use HTML to include videos, formatting, "
+"etc."
+msgstr ""
+"Insérez la biographie de l'instructeur ici. Utilisez le HTML pour inclure "
+"des vidéos, le formatageetc."
+
+#: danceschool/core/models.py:165
+#, fuzzy
+msgid "Calendar/RSS feed key"
+msgstr "Calendrier / clé de flux RSS"
+
+#: danceschool/core/models.py:175
+#, fuzzy
+msgid "Staffed this month"
+msgstr "Personnel ce mois-ci"
+
+#: danceschool/core/models.py:180
+#, fuzzy
+msgid "Staffed for upcoming events"
+msgstr "Personnel pour les événements à venir"
+
+#: danceschool/core/models.py:188 danceschool/core/models.py:3012
+#, fuzzy
+msgid "Staff member"
+msgstr "Membre du personnel"
+
+#: danceschool/core/models.py:189
+#, fuzzy
+msgid "Staff members"
+msgstr "Membres du personnel"
+
+#: danceschool/core/models.py:193
+#, fuzzy
+msgid "Can access the staff directory view"
+msgstr "Peut accéder à l'affichage de l'annuaire du personnel"
+
+#: danceschool/core/models.py:194
+#, fuzzy
+msgid "Can view statistics about the school's performance."
+msgstr "Peut voir des statistiques sur la performance de l'école."
+
+#: danceschool/core/models.py:203
+#, fuzzy
+msgid "Regular Instructor"
+msgstr "Instructeur régulier"
+
+#: danceschool/core/models.py:204
+#, fuzzy
+msgid "Assistant Instructor"
+msgstr "Assistant Instructeur"
+
+#: danceschool/core/models.py:205
+#, fuzzy
+msgid "Instructor-in-training"
+msgstr "Instructeur en formation"
+
+#: danceschool/core/models.py:206
+#, fuzzy
+msgid "Guest Instructor"
+msgstr "Instructeur invité"
+
+#: danceschool/core/models.py:207
+#, fuzzy
+msgid "Former Guest Instructor"
+msgstr "Ancien instructeur invité"
+
+#: danceschool/core/models.py:208
+#, fuzzy
+msgid "Former/Retired Instructor"
+msgstr "Instructeur Ancien / Retraité"
+
+#: danceschool/core/models.py:209
+#, fuzzy
+msgid "Publicly Hidden"
+msgstr "Publiquement caché"
+
+#: danceschool/core/models.py:211
+#, fuzzy
+msgid "Instructor status"
+msgstr "Statut d'instructeur"
+
+#: danceschool/core/models.py:211
+#, fuzzy
+msgid ""
+"Instructor status affects the visibility of the instructor on the site and "
+"may also impact the pay rate of the instructor."
+msgstr ""
+"Le statut d'instructeur affecte la visibilité de l'instructeur sur le site "
+"etpeut également avoir un impact sur le taux de rémunération de "
+"l'instructeur."
+
+#: danceschool/core/models.py:212
+#, fuzzy
+msgid "Available For private lessons"
+msgstr "Disponible pour des leçons privées"
+
+#: danceschool/core/models.py:212
+#, fuzzy
+msgid ""
+"Check this box if you would like to be listed as available for private "
+"lessons from students."
+msgstr ""
+"Cochez cette case si vous souhaitez être listé comme disponible pour donner "
+"desleçons privées des étudiants."
+
+#: danceschool/core/models.py:217
+#, fuzzy
+msgid "Is assistant"
+msgstr "Est assistant"
+
+#: danceschool/core/models.py:222
+#, fuzzy
+msgid "Is guest"
+msgstr "Est invité"
+
+#: danceschool/core/models.py:227
+#, fuzzy
+msgid "Is retired"
+msgstr "Est retraité"
+
+#: danceschool/core/models.py:232
+#, fuzzy
+msgid "Is hidden"
+msgstr "Est caché"
+
+#: danceschool/core/models.py:240
+#, fuzzy
+msgid "Is upcoming guest"
+msgstr "Est invité à venir"
+
+#: danceschool/core/models.py:245 danceschool/core/models.py:333
+#: danceschool/core/models.py:2627
+#, fuzzy
+msgid "Status"
+msgstr "Statut"
+
+#: danceschool/core/models.py:249 danceschool/core/models.py:1286
+#: danceschool/core/templates/core/account_profile.html:102
+#: danceschool/core/templates/core/account_profile.html:153
+#: danceschool/core/templates/core/account_profile.html:202
+#: danceschool/core/templates/core/instructor_image_set.html:3
+#: danceschool/core/templates/core/instructor_list.html:3
+#, fuzzy
+msgid "Instructors"
+msgstr "Instructeurs"
+
+#: danceschool/core/models.py:251
+#, fuzzy
+msgid "Can update instructors' bio information"
+msgstr "Peut mettre à jour les informations biographiques des instructeurs"
+
+#: danceschool/core/models.py:252
+#, fuzzy
+msgid "Can view one's own statistics (if an instructor)"
+msgstr "Peut voir ses propres statistiques (si est un instructeur)"
+
+#: danceschool/core/models.py:253
+#, fuzzy
+msgid "Can view other instructors' statistics"
+msgstr "Peut voir les statistiques d'autres instructeurs"
+
+#: danceschool/core/models.py:254
+#, fuzzy
+msgid "Can view one's own financial/payment data (if an instructor)"
+msgstr ""
+"Peut voir ses propres données financières / de paiement (si est un "
+"instructeur)"
+
+#: danceschool/core/models.py:255
+#, fuzzy
+msgid "Can view other instructors' financial/payment data"
+msgstr ""
+"Peut voir les données financières / de paiement des autres instructeurs"
+
+#: danceschool/core/models.py:263 danceschool/core/models.py:1531
+#, fuzzy
+msgid "Title"
+msgstr "Titre"
+
+#: danceschool/core/models.py:264 danceschool/core/models.py:369
+#: danceschool/core/models.py:440 danceschool/core/models.py:486
+#: danceschool/core/models.py:617 danceschool/core/models.py:1304
+#: danceschool/core/models.py:1535 danceschool/core/models.py:1579
+#: danceschool/core/models.py:2878
+#, fuzzy
+msgid "Description"
+msgstr "Description"
+
+#: danceschool/core/models.py:265 danceschool/core/models.py:629
+#: danceschool/core/models.py:1317 danceschool/core/models.py:1536
+#: danceschool/core/models.py:1589
+#, fuzzy
+msgid "Short description"
+msgstr "Description"
+
+#: danceschool/core/models.py:265
+msgid "May be used for tag lines and feeds."
+msgstr ""
+
+#: danceschool/core/models.py:266
+#, fuzzy
+msgid "Dance Type & Level"
+msgstr "Type et niveau de danse"
+
+#: danceschool/core/models.py:268 danceschool/core/models.py:442
+#: danceschool/core/models.py:502 danceschool/core/models.py:514
+#: danceschool/core/models.py:1326 danceschool/core/models.py:1532
+#, fuzzy
+msgid "Slug"
+msgstr "Coup"
+
+#: danceschool/core/models.py:268
+#, fuzzy
+msgid ""
+"This is used in the URL for the individual class pages.  You can override "
+"the default"
+msgstr ""
+"Ceci est utilisé dans l'URL pour les pages de cours individuelles. Vous "
+"pouvez remplacerle défaut"
+
+#: danceschool/core/models.py:270
+#, fuzzy
+msgid "One Time Series"
+msgstr "Une série unique"
+
+#: danceschool/core/models.py:270
+#, fuzzy
+msgid ""
+"If checked, this class description will not show up in the dropdown menu "
+"when creating a new series."
+msgstr ""
+"Si cochée, cette description du cours n'apparaîtra pas dans le menu "
+"déroulantlors de la création d'une nouvelle série."
+
+#: danceschool/core/models.py:280
+#, fuzzy
+msgid "Level"
+msgstr "Niveau"
+
+#: danceschool/core/models.py:288 danceschool/core/models.py:299
+#, fuzzy
+msgid "Last offered"
+msgstr "Offert la fois précédente"
+
+#: danceschool/core/models.py:309
+#, fuzzy
+msgid "Class series description"
+msgstr "Description de la série de cours"
+
+#: danceschool/core/models.py:310
+#, fuzzy
+msgid "Class series descriptions"
+msgstr "Descriptions des séries de cours"
+
+#: danceschool/core/models.py:318
+#, fuzzy
+msgid "Active Location"
+msgstr "Emplacement actif"
+
+#: danceschool/core/models.py:319
+#, fuzzy
+msgid "Former Location"
+msgstr "Ancien emplacement"
+
+#: danceschool/core/models.py:320
+#, fuzzy
+msgid "Special Event Location (not shown by default)"
+msgstr "Emplacement de l'événement spécial (non affiché par défaut)"
+
+#: danceschool/core/models.py:322
+#, fuzzy
+msgid "Give this location a name."
+msgstr "Donnez un nom à cet emplacement."
+
+#: danceschool/core/models.py:324
+#, fuzzy
+msgid "Enter the location's street address."
+msgstr "Entrez l'adresse de l'emplacement."
+
+#: danceschool/core/models.py:326
+#, fuzzy
+msgid "2-digit state code"
+msgstr "Code d'état à 2 chiffres"
+
+#: danceschool/core/models.py:327
+#, fuzzy
+msgid "ZIP/postal code"
+msgstr "Zip / code postal"
+
+#: danceschool/core/models.py:329
+#, fuzzy
+msgid "Directions"
+msgstr "Directions"
+
+#: danceschool/core/models.py:329
+#, fuzzy
+msgid ""
+"Insert any detailed directions that you would like here.  Use HTML to "
+"include videos, formatting, etc."
+msgstr ""
+"Insérer les instructions détaillées que vous souhaitez ici. Utiliser HTML "
+"pour"
+
+#: danceschool/core/models.py:333
+#, fuzzy
+msgid ""
+"Is this location used regularly, used for special events, or no longer used?"
+msgstr ""
+"Cet emplacement est-il utilisé régulièrement, utilisé pour des événements "
+"spéciaux, ou n'est plus utilisé?"
+
+#: danceschool/core/models.py:335
+msgid ""
+"This determines the order that the locations show up on the Locations page."
+msgstr ""
+
+#: danceschool/core/models.py:337 danceschool/core/models.py:367
+#, fuzzy
+msgid "Default Venue Capacity"
+msgstr "Capacité du lieu par défaut"
+
+#: danceschool/core/models.py:337
+#, fuzzy
+msgid ""
+"If set, this will be used to determine capacity for class series in this "
+"venue."
+msgstr ""
+"Si défini, cela sera utilisé pour déterminer la capacité pour les séries de "
+"cours dans celieu."
+
+#: danceschool/core/models.py:342
+#, fuzzy
+msgid "Address"
+msgstr "Adresse"
+
+#: danceschool/core/models.py:355 danceschool/core/models.py:365
+#: danceschool/core/models.py:556 danceschool/core/models.py:3079
+#: danceschool/core/templates/core/account_profile.html:41
+#: danceschool/core/templates/core/account_profile.html:102
+#: danceschool/core/templates/core/account_profile.html:153
+#: danceschool/core/templates/core/account_profile.html:202
+#: danceschool/core/templates/core/instructor_stats.html:38
+#: danceschool/core/templates/core/instructor_stats.html:66
+#: danceschool/core/templates/core/view_eventregistrations.html:10
+#, fuzzy
+msgid "Location"
+msgstr "Emplacement"
+
+#: danceschool/core/models.py:364
+#, fuzzy
+msgid "Give this room a name."
+msgstr "Donner un nom à cette pièce."
+
+#: danceschool/core/models.py:367
+#, fuzzy
+msgid ""
+"If set, this will be used to determine capacity for class series in this "
+"room."
+msgstr ""
+"Si défini, cela sera utilisé pour déterminer la capacité pour les séries de "
+"cours dans cettePièce."
+
+#: danceschool/core/models.py:369
+#, fuzzy
+msgid ""
+"By default, only room names are listed publicly.  However, you may insert "
+"any descriptive information that you would like about this room here."
+msgstr ""
+"Par défaut, seuls les noms de salles sont répertoriés publiquement, mais "
+"vous pouvez insérerToute information descriptive que vous souhaitez sur "
+"cette pièce ici."
+
+#: danceschool/core/models.py:383 danceschool/core/models.py:557
+#, fuzzy
+msgid "Room"
+msgstr "Pièce"
+
+#: danceschool/core/models.py:384
+#, fuzzy
+msgid "Rooms"
+msgstr "Pièces"
+
+#: danceschool/core/models.py:389
+#, fuzzy
+msgid "Give this pricing tier a name (e.g. 'Default 4-week series')"
+msgstr ""
+"Attribuez un nom à ce niveau de tarification (par exemple, \"Série par "
+"défaut de 4 semaines\")"
+
+#: danceschool/core/models.py:394
+#, fuzzy
+msgid "Online price"
+msgstr "Prix en ligne"
+
+#: danceschool/core/models.py:395
+#, fuzzy
+msgid "At-the-door price"
+msgstr "Prix à la porte"
+
+#: danceschool/core/models.py:397
+#, fuzzy
+msgid "Single class drop-in price"
+msgstr "Prix d'entrée du cours ouvert à tous"
+
+#: danceschool/core/models.py:397
+#, fuzzy
+msgid ""
+"If students are allowed to drop in, then this price will be applied per "
+"class."
+msgstr ""
+"Si les étudiants sont autorisés à entrer, ce prix sera appliqué parcours."
+
+#: danceschool/core/models.py:399
+#, fuzzy
+msgid "Expired"
+msgstr "Expiré"
+
+#: danceschool/core/models.py:399
+#, fuzzy
+msgid ""
+"If this box is checked, then this pricing tier will not show up as an option "
+"when creating new series.  Use this for old prices or custom pricing that "
+"will not be repeated."
+msgstr ""
+"Si cette case est cochée, ce niveau de tarification n'apparaîtra pas en tant "
+"qu'optionlors de la création de nouvelles séries.Utilisez ceci pour les "
+"anciens prix ou personnalisés les prix qui ne seront pas répété."
+
+#: danceschool/core/models.py:420
+#, fuzzy
+msgid "Base price"
+msgstr "Tarif de base"
+
+#: danceschool/core/models.py:427 danceschool/core/models.py:1288
+#, fuzzy
+msgid "Pricing tier"
+msgstr "Niveau de tarification"
+
+#: danceschool/core/models.py:428
+#, fuzzy
+msgid "Pricing tiers"
+msgstr "Niveaux de tarification"
+
+#: danceschool/core/models.py:439
+#, fuzzy
+msgid "Session name will be displayed."
+msgstr "Le nom de la catégorie sera affiché."
+
+#: danceschool/core/models.py:440 danceschool/core/models.py:486
+#, fuzzy
+msgid "Add an optional description."
+msgstr "Ajoutez une description facultative."
+
+#: danceschool/core/models.py:444
+msgid ""
+"Events can be accessed by a URL based on this slug, as well as by a URL "
+"specified by month."
+msgstr ""
+
+#: danceschool/core/models.py:448 danceschool/core/models.py:1113
+#: danceschool/core/templates/core/account_profile.html:41
+#, fuzzy
+msgid "Start Time"
+msgstr "Heure de début"
+
+#: danceschool/core/models.py:449
+msgid ""
+"This value should be populated automatically based on the first start time "
+"of any event associated with this session."
+msgstr ""
+
+#: danceschool/core/models.py:453 danceschool/core/models.py:1114
+#, fuzzy
+msgid "End Time"
+msgstr "Heure de fin"
+
+#: danceschool/core/models.py:454
+msgid ""
+"This value should be populated automatically based on the last end time of "
+"any event associated with this session."
+msgstr ""
+
+#: danceschool/core/models.py:474
+#, fuzzy
+msgid "Event session"
+msgstr "Données de Session et des Formulaires"
+
+#: danceschool/core/models.py:475
+#, fuzzy
+msgid "Event sessions"
+msgstr "Décrivez l'événement pour la page de l'événement."
+
+#: danceschool/core/models.py:485
+#, fuzzy
+msgid "Category name will be displayed."
+msgstr "Le nom de la catégorie sera affiché."
+
+#: danceschool/core/models.py:493
+#, fuzzy
+msgid "Event category"
+msgstr "Catégorie d'événement"
+
+#: danceschool/core/models.py:494
+#, fuzzy
+msgid "Event categories"
+msgstr "Catégories d'événements"
+
+#: danceschool/core/models.py:502 danceschool/core/models.py:514
+msgid ""
+"This slug is used primarily for custom templates in registration, if the "
+"category is shown separately on the registration page.  You can override the "
+"default."
+msgstr ""
+
+#: danceschool/core/models.py:503 danceschool/core/models.py:515
+#, fuzzy
+msgid "Show category separately on registration page"
+msgstr "Afficher la catégorie séparément sur la page d'inscription"
+
+#: danceschool/core/models.py:506
+#, fuzzy
+msgid "Series category"
+msgstr "Catégorie de série"
+
+#: danceschool/core/models.py:507
+#, fuzzy
+msgid "Series categories"
+msgstr "Catégories des séries"
+
+#: danceschool/core/models.py:516 danceschool/core/models.py:1336
+#, fuzzy
+msgid "Calendar display color"
+msgstr "Couleur d'affichage du calendrier"
+
+#: danceschool/core/models.py:519
+#, fuzzy
+msgid "Public event category"
+msgstr "Catégorie d'événement public"
+
+#: danceschool/core/models.py:520
+#, fuzzy
+msgid "Public event categories"
+msgstr "Catégories d'événements publics"
+
+#: danceschool/core/models.py:528
+#, fuzzy
+msgid "Registration disabled"
+msgstr "Inscription désactivée"
+
+#: danceschool/core/models.py:529 danceschool/core/models.py:867
+#, fuzzy
+msgid "Registration enabled"
+msgstr "Inscription activée"
+
+#: danceschool/core/models.py:530
+#, fuzzy
+msgid "Registration held closed (override default behavior)"
+msgstr "Enregistrement tenu fermé (remplacement du comportement par défaut)"
+
+#: danceschool/core/models.py:531
+#, fuzzy
+msgid "Registration held open (override default)"
+msgstr "Enregistrement maintenu ouvert (override default)"
+
+#: danceschool/core/models.py:532
+#, fuzzy
+msgid ""
+"Registration open, but hidden from registration page and calendar (link "
+"required to register)"
+msgstr ""
+"Inscription ouverte, mais cachée de la page d'inscription et du calendrier "
+"(lienrequis pour s'inscrire"
+
+#: danceschool/core/models.py:533
+#, fuzzy
+msgid ""
+"Hidden from registration page and registration closed, but visible on "
+"calendar."
+msgstr ""
+"Caché de la page d'inscription et de l'inscription fermée, mais visible "
+"surcalendrier."
+
+#: danceschool/core/models.py:534
+#, fuzzy
+msgid "Event hidden and registration closed"
+msgstr "Événement caché et inscription fermée"
+
+#: danceschool/core/models.py:536
+#, fuzzy
+msgid "Registration status"
+msgstr "Statut d'inscription"
+
+#: danceschool/core/models.py:536
+#, fuzzy
+msgid "Set the registration status and visibility status of this event."
+msgstr ""
+"Définissez l'état d'inscription et le statut de visibilité de cet événement."
+
+#: danceschool/core/models.py:537
+#, fuzzy
+msgid "Session"
+msgstr "Supprimer automatiquement les données d'inscription et de sessions"
+
+#: danceschool/core/models.py:537
+msgid "Optional event sessions can be used to order events for registration."
+msgstr ""
+
+#: danceschool/core/models.py:540
+#, fuzzy
+msgid "Unique link ID"
+msgstr "ID de lien unique"
+
+#: danceschool/core/models.py:544
+#, fuzzy
+msgid "Registration is open"
+msgstr "L'inscription est ouverte"
+
+#: danceschool/core/models.py:546
+#, fuzzy
+msgid "Registration closes days from first occurrence"
+msgstr "L'inscription ferme les jours suivant la première occurrence"
+
+#: danceschool/core/models.py:550
+msgid ""
+"Enter positive values to close after first event occurrence, and negative "
+"values to close before first event occurrence.  Leave blank to keep "
+"registration open until the event has ended entirely."
+msgstr ""
+
+#: danceschool/core/models.py:552 danceschool/core/models.py:1227
+#, fuzzy
+msgid "Creation date"
+msgstr "Date de création"
+
+#: danceschool/core/models.py:553 danceschool/core/models.py:1228
+#, fuzzy
+msgid "Last modified date"
+msgstr "Date de dernière modification"
+
+#: danceschool/core/models.py:554
+#, fuzzy
+msgid "Submitted by user"
+msgstr "Soumis par l'utilisateur"
+
+#: danceschool/core/models.py:559
+#, fuzzy
+msgid "Event capacity"
+msgstr "Capacité de l'événement"
+
+#: danceschool/core/models.py:569
+#, fuzzy
+msgid "Year"
+msgstr "Année"
+
+#: danceschool/core/models.py:570
+#, fuzzy
+msgid "Start time (first occurrence)"
+msgstr "Heure de début (première occurrence)"
+
+#: danceschool/core/models.py:571
+#, fuzzy
+msgid "End time (last occurrence)"
+msgstr "Heure de fin (dernière occurrence)"
+
+#: danceschool/core/models.py:572
+#, fuzzy
+msgid "Duration in hours"
+msgstr "Durée en heures"
+
+#: danceschool/core/models.py:602
+#, fuzzy, python-format
+msgid "Event, begins %s"
+msgstr "Événement, commence %s"
+
+#: danceschool/core/models.py:604
+#, fuzzy, python-format
+msgid "Event #%s"
+msgstr "Événement #%s"
+
+#: danceschool/core/models.py:681
+#, fuzzy, python-format
+msgid "%s: %s"
+msgstr "%s: %s"
+
+#: danceschool/core/models.py:706
+#, fuzzy, python-format
+msgid "%ss in %s"
+msgstr ""
+"\n"
+"\t\t\t\t\t%(jour de semaine)ss, %(startTime)s at %(endroit)s, Début "
+"%(startDate)s\n"
+"\t\t\t\t"
+
+#: danceschool/core/models.py:708
+#, fuzzy, python-format
+msgid "%ss"
+msgstr ""
+"\n"
+"\t\t\t\t\t%(jour de semaine)ss, %(startTime)s at %(endroit)s, Début "
+"%(startDate)s\n"
+"\t\t\t\t"
+
+#: danceschool/core/models.py:721
+#, fuzzy
+msgid "Display color"
+msgstr "Couleur d'affichage"
+
+#: danceschool/core/models.py:727
+#, fuzzy
+msgid "Duration in minutes"
+msgstr "Durée en minutes"
+
+#: danceschool/core/models.py:756 danceschool/core/models.py:1350
+#: danceschool/core/models.py:1555
+#, fuzzy
+msgid "Base price for online registration"
+msgstr "Prix de base pour l'inscription en ligne"
+
+#: danceschool/core/models.py:800
+#, fuzzy
+msgid "# Occurrences"
+msgstr "# d’occurences"
+
+#: danceschool/core/models.py:805
+#, fuzzy
+msgid "First occurrence"
+msgstr "Première occurence"
+
+#: danceschool/core/models.py:812
+#: danceschool/core/templates/core/registration/event_category__default.html:12
+#: danceschool/core/templates/core/registration/series_category__default.html:12
+#, fuzzy
+msgid "Begins"
+msgstr "Commence"
+
+#: danceschool/core/models.py:817
+#, fuzzy
+msgid "Next occurrence"
+msgstr "Prochaine occurrence"
+
+#: danceschool/core/models.py:824
+#, fuzzy
+msgid "Next occurs"
+msgstr "Le prochain est"
+
+#: danceschool/core/models.py:829
+#, fuzzy
+msgid "Last occurrence"
+msgstr "Dernière occurrence"
+
+#: danceschool/core/models.py:836
+#, fuzzy
+msgid "Ends"
+msgstr "Fini"
+
+#: danceschool/core/models.py:841
+#, fuzzy
+msgid "Day of week"
+msgstr "Jour de la semaine"
+
+#: danceschool/core/models.py:846
+#, fuzzy
+msgid "Hour"
+msgstr "Heure"
+
+#: danceschool/core/models.py:851
+#, fuzzy
+msgid "Minute"
+msgstr "Minute"
+
+#: danceschool/core/models.py:856
+#, fuzzy
+msgid "Has begun"
+msgstr "A commencé"
+
+#: danceschool/core/models.py:861
+#, fuzzy
+msgid "Has ended"
+msgstr "Est terminé"
+
+#: danceschool/core/models.py:876
+#, fuzzy
+msgid "# Drop-ins"
+msgstr "# Ouvert à tous"
+
+#: danceschool/core/models.py:897
+#, fuzzy
+msgid "# Registered"
+msgstr "# Inscrits"
+
+#: danceschool/core/models.py:913
+#, fuzzy
+msgid "Applicable dance roles"
+msgstr "Rôles de danse applicables"
+
+#: danceschool/core/models.py:932
+#, fuzzy
+msgid "# Registered by role"
+msgstr "# Inscrits par rôle"
+
+#: danceschool/core/models.py:983
+#, fuzzy
+msgid "Sold Out"
+msgstr "Épuisé"
+
+#: danceschool/core/models.py:991
+#, fuzzy
+msgid "Event URL"
+msgstr "URL de l'événement"
+
+#: danceschool/core/models.py:1060
+#, fuzzy
+msgid "If registration is enabled then a capacity must be set."
+msgstr "Si l'inscription est activé, une capacité doit être définie."
+
+#: danceschool/core/models.py:1062
+#, fuzzy
+msgid "Selected room is not part of selected location."
+msgstr ""
+"La chambre sélectionnée ne fait pas partie de l'emplacement sélectionné."
+
+#: danceschool/core/models.py:1098
+#, fuzzy, python-format
+msgid "Event: %s"
+msgstr "Événement : %s"
+
+#: danceschool/core/models.py:1101 danceschool/core/models.py:1111
+#, fuzzy
+msgid "Series/Event"
+msgstr "Série / Événement"
+
+#: danceschool/core/models.py:1102
+#, fuzzy
+msgid "All Series/Events"
+msgstr "Toutes les séries / événements"
+
+#: danceschool/core/models.py:1116
+#, fuzzy
+msgid "Check this box to mark that the class or event was cancelled."
+msgstr ""
+"Cochez cette case pour indiquer que le cours ou l'événement a été annulé."
+
+#: danceschool/core/models.py:1124
+#, fuzzy
+msgid "Duration"
+msgstr "Durée"
+
+#: danceschool/core/models.py:1155
+#, fuzzy, python-format
+msgid "On %s"
+msgstr "Sur %s"
+
+#: danceschool/core/models.py:1168
+#, fuzzy
+msgid "From "
+msgstr "De"
+
+#: danceschool/core/models.py:1168
+msgid " to "
+msgstr ""
+
+#: danceschool/core/models.py:1169
+#, fuzzy
+msgid "Occurs"
+msgstr "Se produit"
+
+#: danceschool/core/models.py:1175
+#, fuzzy
+msgid "Event occurrence"
+msgstr "Occurrence d'événement"
+
+#: danceschool/core/models.py:1176
+#, fuzzy
+msgid "Event occurrences"
+msgstr "Occurences d’événement"
+
+#: danceschool/core/models.py:1188
+#, fuzzy
+msgid "Event dance role"
+msgstr "Rôle de danse de l’événement"
+
+#: danceschool/core/models.py:1189
+#, fuzzy
+msgid "Event dance roles"
+msgstr "Rôles de danse de l’événement"
+
+#: danceschool/core/models.py:1200
+#, fuzzy
+msgid "Event staff category"
+msgstr "Catégorie du personnel de l'événement"
+
+#: danceschool/core/models.py:1201
+#, fuzzy
+msgid "Event staff categories"
+msgstr "Catégories du personnel de l'événement"
+
+#: danceschool/core/models.py:1211
+#, fuzzy
+msgid "Category"
+msgstr "Catégorie"
+
+#: danceschool/core/models.py:1213 danceschool/core/models.py:2228
+#: danceschool/core/models.py:2325
+#, fuzzy
+msgid "Event"
+msgstr "Événement"
+
+#: danceschool/core/models.py:1214
+#, fuzzy
+msgid "Applicable event occurrences"
+msgstr "Occurrences d'événement applicables"
+
+#: danceschool/core/models.py:1216
+#, fuzzy
+msgid "Staff Member"
+msgstr "Membre du personnel"
+
+#: danceschool/core/models.py:1217
+#, fuzzy
+msgid "Replacement for"
+msgstr "Remplacement pour"
+
+#: danceschool/core/models.py:1220
+#, fuzzy
+msgid "Number of hours (optional)"
+msgstr "Veuillez indiquer le nombre d'heures à payer."
+
+#: danceschool/core/models.py:1221
+msgid ""
+"If unspecified, then the net number of hours is based on the duration of the "
+"applicable event occurrences."
+msgstr ""
+
+#: danceschool/core/models.py:1226
+#, fuzzy
+msgid "Submission User"
+msgstr "Utilisateur de soumission"
+
+#: danceschool/core/models.py:1242
+#, fuzzy
+msgid "Net hours"
+msgstr "Heures nettes"
+
+#: danceschool/core/models.py:1246
+#, fuzzy
+msgid "Event Staff"
+msgstr "Personnel d'événement"
+
+#: danceschool/core/models.py:1248
+msgid "as"
+msgstr ""
+
+#: danceschool/core/models.py:1250
+msgid "for"
+msgstr ""
+
+#: danceschool/core/models.py:1258
+#, fuzzy
+msgid "Event staff member"
+msgstr "Membre du personnel de l'événement"
+
+#: danceschool/core/models.py:1259
+#, fuzzy
+msgid "Event staff members"
+msgstr "Membres du personnel de l'événement"
+
+#: danceschool/core/models.py:1269
+#, fuzzy
+msgid "Class description"
+msgstr "Description du cours"
+
+#: danceschool/core/models.py:1270
+#, fuzzy
+msgid "Series category (optional)"
+msgstr "Catégorie de série (facultatif)"
+
+#: danceschool/core/models.py:1270
+msgid ""
+"Custom series categories may be used to display special series (e.g. one-"
+"offs, visiting instructors) separately on your registration page."
+msgstr ""
+
+#: danceschool/core/models.py:1271
+#, fuzzy
+msgid "Allow class drop-ins"
+msgstr "Autoriser l'ouverture des cours"
+
+#: danceschool/core/models.py:1271
+#, fuzzy
+msgid ""
+"If checked, then all staff will be able to register students as drop-ins."
+msgstr ""
+"\"Si cochée, tout le personnel pourra inscrire les étudiants en tant que "
+"\"visiteurs\"."
+
+#: danceschool/core/models.py:1365
+#, fuzzy
+msgid "Class series URL"
+msgstr "URL de la Série de cours"
+
+#: danceschool/core/models.py:1369
+#, fuzzy
+msgid ""
+"If drop-ins are allowed then drop-in price must be specified by the Pricing "
+"Tier."
+msgstr ""
+"Si les drop-ins sont autorisés, le prix de revient doit être spécifié par le "
+"niveau de tarification."
+
+#: danceschool/core/models.py:1375
+#, fuzzy, python-format
+msgid "%s %s: %s"
+msgstr "Leçon privée:% s% s% s% s"
+
+#: danceschool/core/models.py:1377
+#, fuzzy, python-format
+msgid "Class Series: %s"
+msgstr "Série de cours : %s"
+
+#: danceschool/core/models.py:1379 danceschool/core/models.py:3109
+#, fuzzy
+msgid "Class Series"
+msgstr "Série de cours"
+
+#: danceschool/core/models.py:1382 danceschool/core/models.py:1383
+#, fuzzy
+msgid "Class series"
+msgstr "Série de cours"
+
+#: danceschool/core/models.py:1421 danceschool/core/models.py:1515
+#, fuzzy
+msgid "Net hours taught"
+msgstr "Heures nettes enseignées"
+
+#: danceschool/core/models.py:1428
+#, fuzzy
+msgid "Series instructor"
+msgstr "Instructeur de la série"
+
+#: danceschool/core/models.py:1429
+#, fuzzy
+msgid "Series instructors"
+msgstr "Instructeurs de la série"
+
+#: danceschool/core/models.py:1459
+#, fuzzy
+msgid " subbed: "
+msgstr "remplacé : "
+
+#: danceschool/core/models.py:1466
+#, fuzzy
+msgid " subbed for "
+msgstr "remplacé pour"
+
+#: danceschool/core/models.py:1472
+#, fuzzy
+msgid "Must indicate which Instructor was replaced."
+msgstr "Doit indiquer quel instructeur a été remplacé."
+
+#: danceschool/core/models.py:1477
+#, fuzzy
+msgid "Can access the substitute teaching reporting form"
+msgstr "Peut accéder au formulaire de rapport d'enseignement de remplacement"
+
+#: danceschool/core/models.py:1479
+#, fuzzy
+msgid "Substitute instructor"
+msgstr "Instructeur suppléant"
+
+#: danceschool/core/models.py:1480
+#, fuzzy
+msgid "Substitute instructors"
+msgstr "Instructeurs suppléants"
+
+#: danceschool/core/models.py:1522
+#, fuzzy
+msgid "Event DJ"
+msgstr "Événement"
+
+#: danceschool/core/models.py:1523
+#, fuzzy
+msgid "Event DJs"
+msgstr "Événement"
+
+#: danceschool/core/models.py:1531
+#, fuzzy
+msgid "Give the event a title"
+msgstr "Donner un titre à l'événement"
+
+#: danceschool/core/models.py:1532
+#, fuzzy
+msgid "This is for the event page URL, you can override the default."
+msgstr ""
+"Ceci est pour l'URL de la page de l'événement, vous pouvez remplacer la "
+"valeur par défaut."
+
+#: danceschool/core/models.py:1534
+#, fuzzy
+msgid "Category (optional)"
+msgstr "Catégorie (facultatif)"
+
+#: danceschool/core/models.py:1534
+msgid ""
+"Custom event categories may be used to display special types of events (e.g. "
+"practice sessions) separately on your registration page.  They may also be "
+"displayed in different colors on the public calendar."
+msgstr ""
+
+#: danceschool/core/models.py:1535
+#, fuzzy
+msgid "Describe the event for the event page."
+msgstr "Décrivez l'événement pour la page de l'événement."
+
+#: danceschool/core/models.py:1536
+msgid "Shorter description for \"taglines\" and feeds."
+msgstr ""
+
+#: danceschool/core/models.py:1537
+#, fuzzy
+msgid "External link to event (if applicable)"
+msgstr "Lien externe vers l'événement (le cas échéant)"
+
+#: danceschool/core/models.py:1537
+msgid ""
+"Optionally include the URL to a page for this Event.  If set, then the "
+"site's auto-generated Event page will instead redirect to this URL."
+msgstr ""
+
+#: danceschool/core/models.py:1541
+#, fuzzy
+msgid "Pricing Tier"
+msgstr "Niveau de prix"
+
+#: danceschool/core/models.py:1563
+msgid "DJs"
+msgstr ""
+
+#: danceschool/core/models.py:1612
+#, fuzzy
+msgid "Public event"
+msgstr "Événement public"
+
+#: danceschool/core/models.py:1613
+#, fuzzy
+msgid "Public events"
+msgstr "Événements publics"
+
+#: danceschool/core/models.py:1621
+#, fuzzy
+msgid "Group name"
+msgstr ""
+"Attribuez un nom à ce groupe de points de niveau de prix (par exemple,\" "
+"Heures de cours en série standard \")"
+
+#: danceschool/core/models.py:1635
+#, fuzzy
+msgid "Customer group"
+msgstr "Groupe de points"
+
+#: danceschool/core/models.py:1636 danceschool/core/models.py:1655
+#, fuzzy
+msgid "Customer groups"
+msgstr "Client"
+
+#: danceschool/core/models.py:1650 danceschool/core/models.py:1776
+#: danceschool/core/models.py:2068
+#, fuzzy
+msgid "Email address"
+msgstr "Adresse Courriel"
+
+#: danceschool/core/models.py:1656
+msgid ""
+"Customer groups may be used for group-specific discounts and vouchers, as "
+"well as for email purposes."
+msgstr ""
+
+#: danceschool/core/models.py:1671
+#, fuzzy
+msgid "# Events/series registered"
+msgstr "# Événements / séries inscrits"
+
+#: danceschool/core/models.py:1676
+#, fuzzy
+msgid "# Series registered"
+msgstr "# séries inscrites"
+
+#: danceschool/core/models.py:1681
+#, fuzzy
+msgid "# Public events registered"
+msgstr "# Événements publics inscrits"
+
+#: danceschool/core/models.py:1687
+#, fuzzy
+msgid "Customer's first series"
+msgstr "Première série du client"
+
+#: danceschool/core/models.py:1693
+#, fuzzy
+msgid "Customer's first series date"
+msgstr "Date de la première série du client"
+
+#: danceschool/core/models.py:1699
+#, fuzzy
+msgid "Customer's most recent series"
+msgstr "La série la plus récente du client"
+
+#: danceschool/core/models.py:1705
+#, fuzzy
+msgid "Customer's most recent series date"
+msgstr "Date de la série la plus récente du client"
+
+#: danceschool/core/models.py:1766
+msgid ""
+"Able to use customer and User autocomplete features (in various admin forms)"
+msgstr ""
+
+#: danceschool/core/models.py:1767
+#, fuzzy
+msgid "Able to view other Customer and User profile pages"
+msgstr "Capable d'afficher d'autres pages de profil client et d’utilisateur"
+
+#: danceschool/core/models.py:1779 danceschool/core/models.py:2004
+#, fuzzy
+msgid "How they heard about us"
+msgstr "Comment ils ont entendu parler de nous"
+
+#: danceschool/core/models.py:1780 danceschool/core/models.py:2005
+#, fuzzy
+msgid "Eligible for student discount"
+msgstr "Admissible au rabais étudiant"
+
+#: danceschool/core/models.py:1781 danceschool/core/models.py:2006
+#, fuzzy
+msgid "At-the-door registration"
+msgstr "Inscription à la porte"
+
+#: danceschool/core/models.py:1783
+#, fuzzy
+msgid "registered by user"
+msgstr "Inscrit par l'utilisateur"
+
+#: danceschool/core/models.py:1786 danceschool/core/models.py:2015
+#, fuzzy
+msgid "Registration date/time"
+msgstr "Date / Heure d'inscription"
+
+#: danceschool/core/models.py:1787 danceschool/core/models.py:2008
+#, fuzzy
+msgid "Price net of discounts"
+msgstr "Prix net des réductions"
+
+#: danceschool/core/models.py:1799
+#, fuzzy
+msgid "Expiration date"
+msgstr "Date d'Expiration"
+
+#: danceschool/core/models.py:1801
+msgid ""
+"When a customer attempts to begin the registration process, the system looks "
+"for temporary registrations that are still in progress (with a future "
+"expiration date) to determine if there is space for them to register."
+msgstr ""
+
+#: danceschool/core/models.py:1815 danceschool/core/models.py:2073
+#, fuzzy
+msgid "Price of class series"
+msgstr "Prix de la série de cours"
+
+#: danceschool/core/models.py:1820 danceschool/core/models.py:2078
+#, fuzzy
+msgid "Price of public events"
+msgstr "Prix des événements publics"
+
+#: danceschool/core/models.py:1825 danceschool/core/models.py:2083
+#, fuzzy
+msgid "Total price before discounts"
+msgstr "Prix total avant les réductions"
+
+#: danceschool/core/models.py:1850
+#, fuzzy
+msgid "Total discounts"
+msgstr "Total des réductions"
+
+#: danceschool/core/models.py:1855 danceschool/core/models.py:2137
+#, fuzzy
+msgid "First event starts"
+msgstr "Le premier événement commence"
+
+#: danceschool/core/models.py:1860 danceschool/core/models.py:2142
+#, fuzzy
+msgid "First class series starts"
+msgstr "La première série de cours commence"
+
+#: danceschool/core/models.py:1865 danceschool/core/models.py:2147
+#, fuzzy
+msgid "Last event ends"
+msgstr "Dernier événement termine"
+
+#: danceschool/core/models.py:1870 danceschool/core/models.py:2152
+#, fuzzy
+msgid "Last class series ends"
+msgstr "La dernière série de cours termine"
+
+#: danceschool/core/models.py:1985 danceschool/core/models.py:1987
+#, fuzzy
+msgid "Temporary Registration"
+msgstr "Inscription temporaire"
+
+#: danceschool/core/models.py:1992
+#, fuzzy
+msgid "Temporary registrations"
+msgstr "Inscriptions temporaires"
+
+#: danceschool/core/models.py:2013 danceschool/core/models.py:2330
+#, fuzzy
+msgid "Associated temporary registration"
+msgstr "Inscription temporaire associé"
+
+#: danceschool/core/models.py:2042 danceschool/core/models.py:2280
+#, fuzzy
+msgid "Issue with event registration"
+msgstr "Problème avec l'inscription à l'événement"
+
+#: danceschool/core/models.py:2053 danceschool/core/models.py:2291
+#, fuzzy
+msgid "Transaction was partially refunded"
+msgstr "La transaction a été partiellement remboursée"
+
+#: danceschool/core/models.py:2089 danceschool/core/models.py:2247
+#, fuzzy
+msgid "Net price"
+msgstr "Prix net"
+
+#: danceschool/core/models.py:2114 danceschool/core/models.py:2252
+#: danceschool/core/models.py:2617
+#, fuzzy
+msgid "Is discounted"
+msgstr "Est réduit"
+
+#: danceschool/core/models.py:2125
+#, fuzzy
+msgid "Net price of class series"
+msgstr "Prix net de la série de cours"
+
+#: danceschool/core/models.py:2132
+#, fuzzy
+msgid "Net price of public events"
+msgstr "Prix net des événements publics"
+
+#: danceschool/core/models.py:2209
+#, fuzzy
+msgid "Registrations"
+msgstr "Inscriptions"
+
+#: danceschool/core/models.py:2212
+#, fuzzy
+msgid "Can access the series-level registration summary view"
+msgstr "Peut accéder à la vue récapitulative de l'inscription au niveau série"
+
+#: danceschool/core/models.py:2213
+#, fuzzy
+msgid "Can check-in customers using the summary view"
+msgstr "Peut enregistrer les clients en utilisant la vue récapitulative"
+
+#: danceschool/core/models.py:2214
+#, fuzzy
+msgid "Can process door payments in the registration system"
+msgstr "Peut traiter les paiements à la porte dans le système d'inscription"
+
+#: danceschool/core/models.py:2215
+#, fuzzy
+msgid "Can register students for drop-ins."
+msgstr "Peut inscrire des étudiants comme visiteurs."
+
+#: danceschool/core/models.py:2216
+#, fuzzy
+msgid ""
+"Can register students for series/events that are closed for registration by "
+"the public"
+msgstr ""
+"Peut enregistrer des étudiants pour des séries / événements qui sont fermés "
+"à l'inscription par” “le public"
+
+#: danceschool/core/models.py:2217
+#, fuzzy
+msgid "Can register students for series/events that are officially sold out"
+msgstr ""
+"Peut inscrire des étudiants pour des séries / événements qui sont "
+"officiellement épuisés"
+
+#: danceschool/core/models.py:2218
+#, fuzzy
+msgid ""
+"Can register students for drop-ins even if the series does not allow drop-in "
+"registration."
+msgstr ""
+"Peut enregistrer des étudiants pour des cours ouverts même si la série ne "
+"permet pas” “d'iscriptions visite."
+
+#: danceschool/core/models.py:2231 danceschool/core/models.py:2324
+#, fuzzy
+msgid "Price before discounts"
+msgstr "Prix avant les réductions"
+
+#: danceschool/core/models.py:2233
+#, fuzzy
+msgid "Checked In"
+msgstr "Enregistré"
+
+#: danceschool/core/models.py:2233
+#, fuzzy
+msgid "Check to mark the individual as checked in."
+msgstr "Cochez pour marquer l'individu comme enregistré."
+
+#: danceschool/core/models.py:2235 danceschool/core/models.py:2327
+#, fuzzy
+msgid "Drop-in registration"
+msgstr "Inscription cours ouvert"
+
+#: danceschool/core/models.py:2235 danceschool/core/models.py:2327
+#, fuzzy
+msgid "If true, this is a drop-in registration."
+msgstr "Si vrai, ceci est l’inscription au cours ouvert"
+
+#: danceschool/core/models.py:2236
+#, fuzzy
+msgid ""
+"Mark as cancelled so that this registration is not counted in student/"
+"attendee counts."
+msgstr ""
+"Marquer comme annulé afin que cette inscription ne soit pas comptabilisée "
+"dans le nombre” “d'étudiants / participants."
+
+#: danceschool/core/models.py:2257
+#, fuzzy
+msgid "Matching temporary registration"
+msgstr "Correspondance d'inscription temporaire"
+
+#: danceschool/core/models.py:2319 danceschool/core/models.py:2884
+#, fuzzy
+msgid "Event registration"
+msgstr "Inscription d'événement"
+
+#: danceschool/core/models.py:2320
+#, fuzzy
+msgid "Event registrations"
+msgstr "Inscriptions d'événements"
+
+#: danceschool/core/models.py:2362 danceschool/core/models.py:2881
+#, fuzzy
+msgid "Temporary event registration"
+msgstr "Inscription d'événement temporaire"
+
+#: danceschool/core/models.py:2363
+#, fuzzy
+msgid "Temporary event registrations"
+msgstr "Inscriptions d'événements temporaires"
+
+#: danceschool/core/models.py:2367
+#, fuzzy
+msgid "Template name"
+msgstr "Nom du modèle"
+
+#: danceschool/core/models.py:2368
+#, fuzzy
+msgid "Subject line"
+msgstr "Ligne d'objet"
+
+#: danceschool/core/models.py:2374
+#, fuzzy
+msgid "Plain text Content"
+msgstr "Contenu en texte brut"
+
+#: danceschool/core/models.py:2374
+#, fuzzy
+msgid ""
+"See the list of available variables for details on what information can be "
+"included with template tags."
+msgstr ""
+"Voir la liste des variables disponibles pour plus de détails sur les "
+"informations qui peuvent” “être incluses avec les balises de gabarit."
+
+#: danceschool/core/models.py:2375
+#, fuzzy
+msgid "HTML rich text content"
+msgstr "Contenu HTML enrichi"
+
+#: danceschool/core/models.py:2375
+#, fuzzy
+msgid ""
+"Emails are sent as plain text by default.  To send an HTML email instead, "
+"enter your desired content in this field."
+msgstr ""
+"Les courriels sont envoyés en texte brut par défaut. Pour envoyer un "
+"courriel HTML,entrez votre contenu souhaité dans ce champ."
+
+#: danceschool/core/models.py:2377
+#, fuzzy
+msgid "From name (default)"
+msgstr "De nom (par défaut)"
+
+#: danceschool/core/models.py:2378
+#, fuzzy
+msgid "From address (default)"
+msgstr "De l'adresse (par défaut)"
+
+#: danceschool/core/models.py:2379
+#, fuzzy
+msgid "CC (default)"
+msgstr "CC (par défaut)"
+
+#: danceschool/core/models.py:2381
+#, fuzzy
+msgid "Group permissions required to use."
+msgstr "Autorisations de groupe requises pour utiliser."
+
+#: danceschool/core/models.py:2381
+#, fuzzy
+msgid "Some templates should only be visible to some users."
+msgstr ""
+"Certains modèles ne doivent être visibles que par certains utilisateurs."
+
+#: danceschool/core/models.py:2382
+#, fuzzy
+msgid "Hide from 'Email Students' form"
+msgstr "Masquer le formulaire \"Etudiants\" "
+
+#: danceschool/core/models.py:2382
+#, fuzzy
+msgid "Check this box for templates that are used for automated emails."
+msgstr ""
+"Cochez cette case pour les modèles utilisés pour les courriels automatisés."
+
+#: danceschool/core/models.py:2387
+#, fuzzy
+msgid "HTML Email Template"
+msgstr "Modèle de courriel HTML"
+
+#: danceschool/core/models.py:2406
+#, fuzzy
+msgid "Email template"
+msgstr "Modèle de courriel"
+
+#: danceschool/core/models.py:2407
+#, fuzzy
+msgid "Email templates"
+msgstr "Modèles de courriels"
+
+#: danceschool/core/models.py:2409
+#, fuzzy
+msgid "Can send emails using the SendEmailView"
+msgstr "Peut envoyer des courriels en utilisant le mode SendEmailView"
+
+#: danceschool/core/models.py:2416 danceschool/core/models.py:2581
+#, fuzzy
+msgid "Unpaid"
+msgstr "Non payé"
+
+#: danceschool/core/models.py:2417
+#, fuzzy
+msgid "Authorized using payment processor"
+msgstr "Autorisé en utilisant un processeur de paiement"
+
+#: danceschool/core/models.py:2418
+#, fuzzy
+msgid "Paid"
+msgstr "Payé"
+
+#: danceschool/core/models.py:2419
+#, fuzzy
+msgid "Cash payment recorded"
+msgstr "Paiement en espèces enregistré"
+
+#: danceschool/core/models.py:2420 danceschool/core/models.py:2986
+#, fuzzy
+msgid "Refunded in full"
+msgstr "Remboursé en totalité"
+
+#: danceschool/core/models.py:2422
+#, fuzzy
+msgid "Rejected in processing"
+msgstr "Rejeté en cours de traitement"
+
+#: danceschool/core/models.py:2423
+#, fuzzy
+msgid "Error in processing"
+msgstr "Erreur dans le traitement"
+
+#: danceschool/core/models.py:2428
+#, fuzzy
+msgid "Invoice number"
+msgstr "Numéro de facture"
+
+#: danceschool/core/models.py:2429
+#, fuzzy
+msgid "Validation string"
+msgstr "Chaîne de validation"
+
+#: danceschool/core/models.py:2433
+#, fuzzy
+msgid "Recipient first name"
+msgstr "Prénom du destinataire"
+
+#: danceschool/core/models.py:2434
+#, fuzzy
+msgid "Recipient last name"
+msgstr "Nom du destinataire"
+
+#: danceschool/core/models.py:2435
+#, fuzzy
+msgid "Recipient email address"
+msgstr "Adresse courriel du destinataire"
+
+#: danceschool/core/models.py:2443
+#, fuzzy
+msgid "Invoice created"
+msgstr "Facture créée"
+
+#: danceschool/core/models.py:2444
+#, fuzzy
+msgid "Last modified"
+msgstr "Dernière modification"
+
+#: danceschool/core/models.py:2446 danceschool/core/models.py:2991
+#, fuzzy
+msgid "Payment status"
+msgstr "Statut de paiement"
+
+#: danceschool/core/models.py:2448
+#: danceschool/core/templates/core/process_refund.html:18
+#, fuzzy
+msgid "Paid Online"
+msgstr "Payé en ligne"
+
+#: danceschool/core/models.py:2449
+#, fuzzy
+msgid "Registered by user"
+msgstr "Enregistré par l'utilisateur"
+
+#: danceschool/core/models.py:2450 danceschool/core/models.py:2992
+#, fuzzy
+msgid "Collected by user"
+msgstr "Recueilli par l'utilisateur"
+
+#: danceschool/core/models.py:2452 danceschool/core/models.py:2886
+#, fuzzy
+msgid "Total before discounts"
+msgstr "Total avant rabais"
+
+#: danceschool/core/models.py:2453 danceschool/core/models.py:2887
+#, fuzzy
+msgid "Total billed amount"
+msgstr "Montant total facturé"
+
+#: danceschool/core/models.py:2454 danceschool/core/models.py:2888
+#, fuzzy
+msgid "Refunds/adjustments"
+msgstr "Remboursements / ajustements"
+
+#: danceschool/core/models.py:2455 danceschool/core/models.py:2889
+#: danceschool/core/templates/core/base/base_registration_summary.html:81
+#: danceschool/core/templates/core/invoice.html:43
+#: danceschool/core/templates/core/invoice.html:73
+#: danceschool/core/templates/core/process_refund.html:92
+#, fuzzy
+msgid "Taxes"
+msgstr "Taxes"
+
+#: danceschool/core/models.py:2456 danceschool/core/models.py:2890
+#, fuzzy
+msgid "Processing fees"
+msgstr "Frais de traitement"
+
+#: danceschool/core/models.py:2457
+#, fuzzy
+msgid "Buyer pays sales tax"
+msgstr "L'acheteur paie la taxe de vente"
+
+#: danceschool/core/models.py:2459
+#: danceschool/core/templates/core/process_refund.html:16
+#, fuzzy
+msgid "Net Amount Paid"
+msgstr "Montant net payé"
+
+#: danceschool/core/models.py:2589
+#: danceschool/core/templates/core/invoice_notification.html:22
+#: danceschool/core/templates/core/invoice_notification.html:62
+#, fuzzy
+msgid "Outstanding balance"
+msgstr "solde restant dû"
+
+#: danceschool/core/models.py:2594
+#, fuzzy
+msgid "Amount refunded"
+msgstr "Montant remboursé"
+
+#: danceschool/core/models.py:2599
+#, fuzzy
+msgid "Unallocated adjustments"
+msgstr "Ajustements non alloués"
+
+#: danceschool/core/models.py:2604
+#, fuzzy
+msgid "All refunds are allocated"
+msgstr "Tous les remboursements sont alloués"
+
+#: danceschool/core/models.py:2612 danceschool/core/models.py:2898
+#, fuzzy
+msgid "Net revenue"
+msgstr "Revenu net"
+
+#: danceschool/core/models.py:2622
+#, fuzzy
+msgid "Discount percentage"
+msgstr "Pourcentage de remise"
+
+#: danceschool/core/models.py:2642
+#, fuzzy
+msgid "Invoice URL"
+msgstr "URL de la facture"
+
+#: danceschool/core/models.py:2795
+#, fuzzy
+msgid ""
+"Invoice item totals do not match invoice total.  Unable to allocate fees."
+msgstr ""
+"Les ajustements d'articles de facture ne correspondent pas aux ajustements "
+"de facture.” “Impossible d'allouer des frais."
+
+#: danceschool/core/models.py:2799
+#, fuzzy
+msgid ""
+"Invoice item adjustments do not match invoice adjustments.  Unable to "
+"allocate fees."
+msgstr ""
+"Les ajustements d'articles de facture ne correspondent pas aux ajustements "
+"de facture.” “Impossible d'allouer des frais."
+
+#: danceschool/core/models.py:2836
+#, fuzzy
+msgid "Cannot send notification email because no recipient has been specified."
+msgstr ""
+"Impossible d'envoyer un courriel de notification car aucun destinataire n'a "
+"été spécifié."
+
+#: danceschool/core/models.py:2859
+#, fuzzy
+msgid "Can view invoices without passing the validation string."
+msgstr "Peut visualiser les factures sans passer la chaîne de validation."
+
+#: danceschool/core/models.py:2860
+#, fuzzy
+msgid "Can send invoices to students requesting payment"
+msgstr "Peut envoyer des factures aux étudiants demandant le paiement"
+
+#: danceschool/core/models.py:2861
+#, fuzzy
+msgid "Can refund customers for registrations and other invoice payments."
+msgstr ""
+"Peut rembourser les clients pour les inscriptions et autres paiements de "
+"factures."
+
+#: danceschool/core/models.py:2876
+#, fuzzy
+msgid "Invoice item number"
+msgstr "Numéro d'article de la facture"
+
+#: danceschool/core/models.py:2904
+#, fuzzy, python-format
+msgid "Drop-in Registration: %s"
+msgstr "Inscription au cours ouvert : %s"
+
+#: danceschool/core/models.py:2906
+#, fuzzy, python-format
+msgid "Registration: %s"
+msgstr "Inscription : %s"
+
+#: danceschool/core/models.py:2908
+#, fuzzy
+msgid "Other items"
+msgstr "Autres éléments"
+
+#: danceschool/core/models.py:2915
+#, fuzzy
+msgid "Invoice item"
+msgstr "Élément de facture"
+
+#: danceschool/core/models.py:2916
+#, fuzzy
+msgid "Invoice items"
+msgstr "Éléments de facture"
+
+#: danceschool/core/models.py:2930
+#, fuzzy
+msgid "Created"
+msgstr "Créé"
+
+#: danceschool/core/models.py:2931
+#, fuzzy
+msgid "Last updated"
+msgstr "Dernière mise à jour"
+
+#: danceschool/core/models.py:2933
+#, fuzzy
+msgid "Submission user"
+msgstr "Utilisateur de soumission"
+
+#: danceschool/core/models.py:2977
+#, fuzzy
+msgid "Payment record"
+msgstr "Registre de paiement"
+
+#: danceschool/core/models.py:2978
+#, fuzzy
+msgid "Payment records"
+msgstr "Registres de paiements"
+
+#: danceschool/core/models.py:2984
+#, fuzzy
+msgid "Cash payment recorded, needs collection"
+msgstr "Paiement en espèces enregistré, besoin de collecte"
+
+#: danceschool/core/models.py:2985
+#, fuzzy
+msgid "Cash payment collected"
+msgstr "Paiement en espèces collecté"
+
+#: danceschool/core/models.py:2988
+#, fuzzy
+msgid "Amount paid"
+msgstr "Le montant payé"
+
+#: danceschool/core/models.py:2989
+#, fuzzy
+msgid "Payer email"
+msgstr "Courriel du Payeur"
+
+#: danceschool/core/models.py:3006
+#, fuzzy
+msgid "Cash payment record"
+msgstr "Registre de paiement en espèces"
+
+#: danceschool/core/models.py:3007
+#, fuzzy
+msgid "Cash payment records"
+msgstr "Registres de paiements en espèces"
+
+#: danceschool/core/models.py:3013 danceschool/core/models.py:3064
+#: danceschool/core/models.py:3080 danceschool/core/models.py:3154
+#, fuzzy
+msgid "Plugin template"
+msgstr "Modèle de module d'extension"
+
+#: danceschool/core/models.py:3027
+#, fuzzy
+msgid "Instructor Status"
+msgstr "Statut d'instructeur"
+
+#: danceschool/core/models.py:3028
+#, fuzzy
+msgid "Randomly Ordered"
+msgstr "Commandé au hasard"
+
+#: danceschool/core/models.py:3031
+#, fuzzy
+msgid "Limit to Instructor Status"
+msgstr "Limiter au statut d'instructeur"
+
+#: danceschool/core/models.py:3035
+#, fuzzy
+msgid "Order By"
+msgstr "Commandé par"
+
+#: danceschool/core/models.py:3036
+#, fuzzy
+msgid "Image thumbnail option"
+msgstr "Option de vignette d'image"
+
+#: danceschool/core/models.py:3038
+#, fuzzy
+msgid "Exclude instructors with no bio"
+msgstr "Exclure les instructeurs sans bio"
+
+#: danceschool/core/models.py:3039
+#, fuzzy
+msgid "Exclude instructors with no photo"
+msgstr "Exclure les instructeurs sans photo"
+
+#: danceschool/core/models.py:3040
+#, fuzzy
+msgid "Include only instructors with upcoming classes"
+msgstr "Inclure seulement les instructeurs avec les cours à venir"
+
+#: danceschool/core/models.py:3042
+#, fuzzy
+msgid "Listing Title"
+msgstr "Titre de l'annonce"
+
+#: danceschool/core/models.py:3043
+#, fuzzy
+msgid "Template"
+msgstr "Modèle"
+
+#: danceschool/core/models.py:3105
+#, fuzzy
+msgid "Event start date"
+msgstr "Date de début de l'événement"
+
+#: danceschool/core/models.py:3106
+#, fuzzy
+msgid "Event end date"
+msgstr "Date de fin de l'événement"
+
+#: danceschool/core/models.py:3110
+#, fuzzy
+msgid "Public Events"
+msgstr "Événements publics"
+
+#: danceschool/core/models.py:3113
+msgid "Ascending"
+msgstr ""
+
+#: danceschool/core/models.py:3114
+msgid "Descending"
+msgstr ""
+
+#: danceschool/core/models.py:3117
+#, fuzzy
+msgid "Custom list title"
+msgstr "Titre de la liste personnalisée"
+
+#: danceschool/core/models.py:3117
+#, fuzzy
+msgid "Upcoming Events"
+msgstr "Évènements à venir"
+
+#: danceschool/core/models.py:3119
+#, fuzzy
+msgid "Limit to event type"
+msgstr "Limiter au type d'événement"
+
+#: danceschool/core/models.py:3119
+#, fuzzy
+msgid "Leave blank to include all Events."
+msgstr "Laisser vide pour inclure tous les événements."
+
+#: danceschool/core/models.py:3120
+#, fuzzy
+msgid "Limit number"
+msgstr ""
+"Il s'agit généralement d'un paramètre spécifique à l'emplacement ou d'un "
+"paramètre spécifique à l'événement.Cependant, si une limite n'est pas "
+"fournie autrement, cela limitera lenombre d'inscriptions autorisées."
+
+#: danceschool/core/models.py:3120 danceschool/core/models.py:3132
+#: danceschool/core/models.py:3137 danceschool/core/models.py:3143
+#: danceschool/core/models.py:3149
+#, fuzzy
+msgid "Leave blank for no restriction"
+msgstr "Laissez ce champ vide pour aucune restriction les jours de la semaine"
+
+#: danceschool/core/models.py:3121
+#, fuzzy
+msgid "Sort by start time"
+msgstr "Date/Heure Début"
+
+#: danceschool/core/models.py:3121
+msgid "This may be overridden by the particular template in use"
+msgstr ""
+
+#: danceschool/core/models.py:3123
+#, fuzzy
+msgid "Limit interval start by"
+msgstr "L'intervalle de limite commence par"
+
+#: danceschool/core/models.py:3124 danceschool/core/models.py:3128
+#, fuzzy
+msgid "Interval limited to __ days from present"
+msgstr "Intervalle limité à __ jours du présent"
+
+#: danceschool/core/models.py:3124
+#, fuzzy
+msgid ""
+"(E.g. enter -30 for an interval that starts with 30 days prior to today) "
+"Leave blank for no limit, or enter 0 to limit to future events"
+msgstr ""
+"(Par exemple entrez -30 pour un intervalle qui commence avec 30 jours avant "
+"aujourd'hui)Laissez vide pour aucune limite, ou entrez 0 pour limiter à des "
+"événements futurs"
+
+#: danceschool/core/models.py:3125
+#, fuzzy
+msgid "Exact interval start date"
+msgstr "Date de début de l'intervalle exact"
+
+#: danceschool/core/models.py:3125 danceschool/core/models.py:3129
+#, fuzzy
+msgid "Leave blank for no limit (overrides relative interval limits)"
+msgstr ""
+"Laissez vide pour aucune limite (remplace les limites d'intervalle relatif)"
+
+#: danceschool/core/models.py:3127
+#, fuzzy
+msgid "Limit interval end by"
+msgstr "Limiter la fin de l'Intervalle par"
+
+#: danceschool/core/models.py:3128
+#, fuzzy
+msgid ""
+"(E.g. enter 30 for an interval that ends 30 days from today) Leave blank for "
+"no limit, or enter 0 to limit to past events"
+msgstr ""
+"(Par exemple, entrez 30 pour un intervalle qui se termine 30 jours à partir "
+"d'aujourd'hui) Laissez vide pourAucune limite, ou entrez 0 pour limiter aux "
+"événements passés"
+
+#: danceschool/core/models.py:3129
+#, fuzzy
+msgid "Exact interval end date "
+msgstr "Date de fin exacte de l'intervalle"
+
+#: danceschool/core/models.py:3131
+#, fuzzy
+msgid "Limit to open for registration only"
+msgstr "Limité à ouverture pour inscription seulement"
+
+#: danceschool/core/models.py:3132
+#, fuzzy
+msgid "Limit to locations"
+msgstr "Emplacements"
+
+#: danceschool/core/models.py:3133
+#, fuzzy
+msgid "Limit to weekday"
+msgstr "Limiter au jour de la semaine"
+
+#: danceschool/core/models.py:3136
+#, fuzzy
+msgid "Limit to public event categories"
+msgstr "Catégories d'événements publics"
+
+#: danceschool/core/models.py:3142
+#, fuzzy
+msgid "Limit to series categories"
+msgstr "Catégories des séries"
+
+#: danceschool/core/models.py:3148
+#, fuzzy
+msgid "Limit to type and levels"
+msgstr "Niveaux du type de danse"
+
+#: danceschool/core/models.py:3153
+#, fuzzy
+msgid "Custom CSS classes"
+msgstr "Cours CSS personnalisés"
+
+#: danceschool/core/models.py:3153
+#, fuzzy
+msgid "Classes are applied to surrounding &lt;div&gt;"
+msgstr "Les cours sont appliquées aux environs & lt; div & gt;"
+
+#: danceschool/core/models.py:3174
+msgid ""
+"Can enter a custom plugin template for plugins with selectable template."
+msgstr ""
+
+#: danceschool/core/templates/account/ajax_login.html:6
+#, fuzzy
+msgid "Returning Customers"
+msgstr "Clients Existants"
+
+#: danceschool/core/templates/account/ajax_login.html:11
+#: danceschool/core/templates/account/ajax_login.html:43
+#, fuzzy
+msgid "Sign In"
+msgstr "Se connecter"
+
+#: danceschool/core/templates/account/ajax_login.html:12
+#: danceschool/core/templates/account/ajax_login.html:54
+#, fuzzy
+msgid "Create An Account"
+msgstr "Créer un compte"
+
+#: danceschool/core/templates/account/ajax_login.html:18
+#, fuzzy, python-format
+msgid ""
+"Please sign in with one\n"
+"    of your existing third party accounts. Or, <a href=\"#ajax_login_choice"
+"\" id=\"signup_switch\">sign up</a>\n"
+"    for a %(site_name)s account and sign in below:"
+msgstr ""
+"Veuillez vous connecter avec un \\ n de vos comptes tiers existants. Ou, <a” "
+"“href=\"#ajax_login_choice\" id=\"signup_switch\">sign up</a>\n"
+
+#: danceschool/core/templates/account/ajax_login.html:28
+msgid "or"
+msgstr ""
+
+#: danceschool/core/templates/account/ajax_login.html:35
+msgid ""
+"If you have not created an account yet, then please\n"
+"    <a href=\"#ajax_login_choice\" id=\"signup_switch\">sign up</a> first."
+msgstr ""
+
+#: danceschool/core/templates/account/ajax_login.html:42
+#, fuzzy
+msgid "Forgot Password?"
+msgstr "Mot de passe oublié?"
+
+#: danceschool/core/templates/account/ajax_login.html:49
+#, fuzzy
+msgid ""
+"Already have an account? Then please <a href=\"#ajax_login_choice\" id="
+"\"signin_switch\">sign in</a>."
+msgstr ""
+"Vous avez déjà un compte? Alors s'il vous plait <a href = \" # "
+"ajax_login_choice \\ \"id =\" signin_switch \\ \"> connectez-vous </a>."
+
+#: danceschool/core/templates/admin/base.html:41
+#, fuzzy
+msgid "Welcome,"
+msgstr "Bienvenue,"
+
+#: danceschool/core/templates/admin/base.html:46
+#, fuzzy
+msgid "View site"
+msgstr "Voir le site"
+
+#: danceschool/core/templates/admin/base.html:51
+#, fuzzy
+msgid "Documentation"
+msgstr "Documentation"
+
+#: danceschool/core/templates/admin/base.html:55
+#, fuzzy
+msgid "Change password"
+msgstr "Changer le mot de passe"
+
+#: danceschool/core/templates/admin/base.html:57
+#, fuzzy
+msgid "Log out"
+msgstr "Se déconnecter"
+
+#: danceschool/core/templates/admin/base.html:67
+#, fuzzy
+msgid "Home"
+msgstr "Accueil"
+
+#: danceschool/core/templates/cms/forms/display_form_classbased.html:10
+#: danceschool/core/templates/cms/forms/display_form_classbased_admin.html:10
+#: danceschool/core/templates/core/repeat_events.html:38
+#: danceschool/core/templates/dynamic_preferences/form_danceschool.html:56
+#, fuzzy
+msgid "Submit"
+msgstr "Envoyer"
+
+#: danceschool/core/templates/cms/forms/submission_redirect.html:20
+#, fuzzy, python-format
+msgid ""
+"You will be redirected automatically in %(seconds)s seconds.  If for some "
+"reason you are not redirected, please <a href=\"%(redirect_url)s\">click "
+"here</a>."
+msgstr ""
+"Vous serez redirigé automatiquement dans% (secondes) s secondes. Si pour une "
+"raisonvous n'êtes pas redirigé, veuillez <a href=\"%(redirect_url)s\"> "
+"cliquer ici </a>."
+
+#: danceschool/core/templates/cms/navbar.html:5
+#, fuzzy
+msgid "Toggle navigation"
+msgstr "Activer la navigation"
+
+#: danceschool/core/templates/core/account_profile.html:7
+#, fuzzy
+msgid "Welcome Back"
+msgstr "Bienvenue"
+
+#: danceschool/core/templates/core/account_profile.html:9
+#, fuzzy, python-format
+msgid "Account Profile for %(name)s"
+msgstr "Profil du compte pour% (nom) s"
+
+#: danceschool/core/templates/core/account_profile.html:13
+#, fuzzy
+msgid "Register for Classes"
+msgstr "S'inscrire aux cours"
+
+#: danceschool/core/templates/core/account_profile.html:19
+#, fuzzy
+msgid "Staff Directory"
+msgstr "Répertoire du personnel"
+
+#: danceschool/core/templates/core/account_profile.html:22
+#, fuzzy
+msgid "Your Instructor Stats"
+msgstr "Vos statistiques d'instructeur"
+
+#: danceschool/core/templates/core/account_profile.html:36
+#, fuzzy
+msgid "Current and Upcoming Series"
+msgstr "Série en cours et à venir"
+
+#: danceschool/core/templates/core/account_profile.html:41
+#, fuzzy
+msgid "Series/Event Name"
+msgstr "Nom de la série / de l'événement"
+
+#: danceschool/core/templates/core/account_profile.html:41
+#: danceschool/core/templates/core/instructor_stats.html:38
+#: danceschool/core/templates/core/instructor_stats.html:66
+#, fuzzy
+msgid "Teaching Partner"
+msgstr "Partenaire d'enseignement"
+
+#: danceschool/core/templates/core/account_profile.html:41
+#: danceschool/core/templates/core/instructor_stats.html:38
+#: danceschool/core/templates/core/instructor_stats.html:66
+#, fuzzy
+msgid "Students Registered"
+msgstr "Étudiants inscrits"
+
+#: danceschool/core/templates/core/account_profile.html:73
+#, fuzzy, python-format
+msgid "Summary Statistics for %(name)s"
+msgstr "Statistiques récapitulatives pour% (nom) s"
+
+#: danceschool/core/templates/core/account_profile.html:78
+#, fuzzy
+msgid "Basic Customer Information"
+msgstr "Informations de base sur le client"
+
+#: danceschool/core/templates/core/account_profile.html:80
+#, fuzzy
+msgid "Basic Information"
+msgstr "Informations de base"
+
+#: danceschool/core/templates/core/account_profile.html:85
+#, fuzzy
+msgid "Customer Since"
+msgstr "Client depuis"
+
+#: danceschool/core/templates/core/account_profile.html:87
+#, fuzzy
+msgid "Number of Series Taken"
+msgstr "Nombre de séries prises"
+
+#: danceschool/core/templates/core/account_profile.html:90
+#, fuzzy
+msgid "Customer Referral ID"
+msgstr "ID de référence client"
+
+#: danceschool/core/templates/core/account_profile.html:92
+#, fuzzy
+msgid "Available Referral Credits"
+msgstr "Crédits de référence disponibles"
+
+#: danceschool/core/templates/core/account_profile.html:97
+#, fuzzy
+msgid "Class Series Taken"
+msgstr "Nombre de séries prises"
+
+#: danceschool/core/templates/core/account_profile.html:102
+#: danceschool/core/templates/core/account_profile.html:153
+#: danceschool/core/templates/core/account_profile.html:202
+#: danceschool/core/templates/core/instructor_stats.html:38
+#: danceschool/core/templates/core/instructor_stats.html:66
+#, fuzzy
+msgid "Series Name"
+msgstr "Nom de la série"
+
+#: danceschool/core/templates/core/account_profile.html:102
+#: danceschool/core/templates/core/account_profile.html:153
+#: danceschool/core/templates/core/account_profile.html:202
+#: danceschool/core/templates/core/instructor_stats.html:38
+#: danceschool/core/templates/core/instructor_stats.html:66
+#, fuzzy
+msgid "Class Time"
+msgstr "Heure du cours"
+
+#: danceschool/core/templates/core/account_profile.html:122
+#: danceschool/core/templates/core/account_profile.html:173
+#: danceschool/core/templates/core/account_profile.html:223
+#, fuzzy
+msgid "Show all"
+msgstr "Afficher tous"
+
+#: danceschool/core/templates/core/account_profile.html:141
+#, fuzzy, python-format
+msgid ""
+"It looks like you are not yet a customer.  Perhaps you would like to <a href="
+"\"%(registration_url)s\">register for some classes</a>?"
+msgstr ""
+"On dirait que vous n'êtes pas encore un client. Peut-être que vous aimeriez "
+"<a href =\"% (registration_url) s \\ \"> vous inscrire pour certaines cours "
+"</a>?"
+
+#: danceschool/core/templates/core/account_profile.html:148
+#, fuzzy
+msgid "Series Registered From Other Email Addresses"
+msgstr "Série enregistrée à partir d'autres adresses électroniques"
+
+#: danceschool/core/templates/core/account_profile.html:197
+#, fuzzy
+msgid "Other Series Registered By You"
+msgstr "D'autres séries enregistrées par vous"
+
+#: danceschool/core/templates/core/account_profile.html:202
+#, fuzzy
+msgid "Registered As"
+msgstr "Inscrit en tant que"
+
+#: danceschool/core/templates/core/admin/location_popup_response.html:3
+#, fuzzy
+msgid "Popup closing..."
+msgstr "la fermeture des popups ..."
+
+#: danceschool/core/templates/core/base/base_individual_class.html:5
+#: danceschool/core/templates/core/base/base_individual_class.html:11
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t%(month)s %(year)s Class Series - %(title)s\n"
+"\t"
+msgstr "\\ n\\ t% (mois) s% (année) s Séries Cours -% (titre) s \\ n\\ t"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:17
+#: danceschool/core/templates/core/base/base_individual_class.html:23
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\tLearn more through our %(month)s %(year)s class, %(title)s. Classes begin "
+"%(startDate)s at %(location)s.\n"
+"\t"
+msgstr ""
+"\\ n\\ tEn savoir plus par le biais de notre classe% (month) s% (year) s,% "
+"(title) s Les cours commencent% (startDate) s à% (emplacement) s. \\ n\\ t"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:32
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t\t%(month)s %(year)s: %(title)s\n"
+"\t\t"
+msgstr ""
+"\n"
+"\t\t%(mois)s %(année)s: %(titre)s\n"
+"\t\t"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:49
+#, fuzzy
+msgid "Register for this class!"
+msgstr "Inscrivez-vous à ce cours!"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:53
+#, fuzzy
+msgid "Registration closed!"
+msgstr "Inscription fermée"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:59
+#: danceschool/core/templates/core/registration/single_event_registration.html:26
+#: danceschool/core/views.py:767
+#, fuzzy
+msgid "Edit Class Details"
+msgstr "Modifier les détails de la classe"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:70
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t\t\t\t\t%(weekday)ss, %(startTime)s at %(location)s, Beginning "
+"%(startDate)s\n"
+"\t\t\t\t"
+msgstr ""
+"\n"
+"\t\t\t\t\t%(jour de semaine)ss, %(startTime)s at %(endroit)s, Début "
+"%(startDate)s\n"
+"\t\t\t\t"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:76
+#: danceschool/core/templates/core/registration/event_card.html:13
+#: danceschool/core/templates/core/registration/event_category__default.html:27
+#: danceschool/core/templates/core/registration/series_category__default.html:27
+msgid "with"
+msgstr ""
+
+#: danceschool/core/templates/core/base/base_individual_class.html:78
+#: danceschool/core/templates/core/registration/single_event_registration.html:13
+msgid "and"
+msgstr ""
+
+#: danceschool/core/templates/core/base/base_individual_class.html:84
+#: danceschool/core/templates/core/registration/single_event_registration.html:33
+#, fuzzy
+msgid "Class Schedule"
+msgstr "Horaire de cours"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:94
+#: danceschool/core/templates/core/registration/single_event_registration.html:44
+#, fuzzy
+msgid "More Info"
+msgstr "Plus d'info"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:99
+#, fuzzy
+msgid "Pricing"
+msgstr "Tarification"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:100
+#: danceschool/core/templates/core/registration/event_card.html:55
+#: danceschool/core/templates/core/registration/event_category__default.html:43
+#: danceschool/core/templates/core/registration/series_category__default.html:43
+#, fuzzy
+msgid "Pre-Registered"
+msgstr "Pré-inscription"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:100
+#: danceschool/core/templates/core/registration/event_card.html:58
+#: danceschool/core/templates/core/registration/event_category__default.html:43
+#: danceschool/core/templates/core/registration/series_category__default.html:43
+#, fuzzy
+msgid "At the Door"
+msgstr "À la porte"
+
+#: danceschool/core/templates/core/base/base_individual_class.html:112
+#, fuzzy
+msgid "Class Description"
+msgstr "Description du cours"
+
+#: danceschool/core/templates/core/base/base_individual_event.html:13
+#: danceschool/core/templates/core/base/base_individual_event.html:19
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\tJoin us for our event, %(name)s, held %(startTime)s - %(endTime)s at "
+"%(location)s.\n"
+"\t"
+msgstr ""
+"\\ n\\ tJoignez-vous à nous à notre événement,% (nom) s, le% (startTime) s -"
+"% (endTime) s à% (emplacement) s. \\ n\\ t"
+
+#: danceschool/core/templates/core/base/base_individual_event.html:34
+#, fuzzy
+msgid "Register for this event!"
+msgstr "Inscrivez-vous à cet événement!"
+
+#: danceschool/core/templates/core/base/base_individual_event.html:39
+#: danceschool/core/views.py:812
+#, fuzzy
+msgid "Edit Event Details"
+msgstr "Modifier les détails de l'événement"
+
+#: danceschool/core/templates/core/base/base_individual_event.html:52
+#, fuzzy
+msgid "Map this"
+msgstr "Plan"
+
+#: danceschool/core/templates/core/base/base_individual_event.html:55
+#, fuzzy
+msgid "Registration for this event is not required."
+msgstr "L'inscription à cet événement n'est pas requise."
+
+#: danceschool/core/templates/core/base/base_individual_event.html:67
+#, fuzzy
+msgid "About this Event"
+msgstr "À propos de cet événement"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:4
+#, fuzzy
+msgid "Complete Your Registration"
+msgstr "Complétez votre inscription"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:19
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t    \tHi %(name)s!\n"
+"\t    \t"
+msgstr "\\ n\\ t \\ tBonjour% (nom) s! \\ n\\ t \\ t"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:24
+#, fuzzy
+msgid "You are about to register for the following"
+msgstr "Vous êtes sur le point de vous inscrire pour le suivant"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:28
+#, fuzzy
+msgid "Class/Event Name"
+msgstr "Nom du cours / de l'événement"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:29
+#, fuzzy
+msgid "Date(s)"
+msgstr "Date(s)"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:30
+#: danceschool/core/templates/core/view_eventregistrations.html:11
+#, fuzzy
+msgid "Time"
+msgstr "Heure"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:31
+#: danceschool/core/templates/core/view_eventregistrations.html:28
+#, fuzzy
+msgid "Role"
+msgstr "Rôle"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:32
+#, fuzzy
+msgid "Price"
+msgstr "Prix"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:37
+#: danceschool/core/templates/core/student_info_form.html:17
+#, fuzzy
+msgid "DROP IN"
+msgstr "OUVERT À TOUS"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:40
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t\t        \t%(weekday)ss in %(month)s, starting %(startTime)s\n"
+"\t\t        \t"
+msgstr ""
+"\\ n\\ t \\ t \\ t% (jour de la semaine) ss en% (mois) s, commençant% "
+"(startTime) s \\ n\\ t \\ t \\ t"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:59
+#: danceschool/core/templates/core/student_info_form.html:26
+#, fuzzy
+msgid "Free Add-On"
+msgstr "Module complémentaire gratuit"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:67
+#: danceschool/core/templates/core/student_info_form.html:35
+#, fuzzy
+msgid "Discount Code Applied"
+msgstr "Code de réduction appliqué"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:72
+#, fuzzy
+msgid "Vouchers Applied"
+msgstr "Coupons appliqués"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:75
+#, fuzzy
+msgid "Total Discounts Applied"
+msgstr "Total des remises appliquées"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:80
+#: danceschool/core/templates/core/student_info_form.html:43
+#, fuzzy
+msgid "Subtotal"
+msgstr "Sous-total"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:84
+#, fuzzy
+msgid "Total"
+msgstr "Total"
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:93
+#, fuzzy
+msgid "Thanks! You're all set."
+msgstr "Merci! Tout est réglé."
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:95
+#, fuzzy
+msgid ""
+"In order to complete your registration you must click on the button below to "
+"make a payment."
+msgstr ""
+"Pour compléter votre inscription, vous devez cliquer sur le bouton ci-"
+"dessouspour effectuer un paiement."
+
+#: danceschool/core/templates/core/base/base_registration_summary.html:105
+#, fuzzy
+msgid "Immediate Payment"
+msgstr "Paiement immédiat"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:6
+#, fuzzy
+msgid "Email Students: Confirmation"
+msgstr "Courriel aux étudiants: Confirmation"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:8
+#: danceschool/core/templates/core/refund_confirmation.html:8
+#, fuzzy
+msgid "Please confirm the following before sending"
+msgstr "Veuillez confirmer les éléments suivants avant d'envoyer"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:12
+#, fuzzy
+msgid "Test Email (No Recipients)"
+msgstr "Courriel test (aucun destinataire)"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:13
+#, fuzzy
+msgid "From"
+msgstr "De"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:14
+#, fuzzy
+msgid "Subject"
+msgstr "Sujet"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:19
+#, fuzzy
+msgid "Message"
+msgstr "Message"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:33
+#, fuzzy
+msgid "Recipients"
+msgstr "Destinataires"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:41
+#, fuzzy, python-format
+msgid "Events in %(month)s"
+msgstr "Événements en% (mois) s"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:43
+#, fuzzy
+msgid "Students Registered for Events"
+msgstr "Étudiants inscrits pour des événements"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:45
+#, fuzzy
+msgid "Specific Customers"
+msgstr "Clients spécifiques"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:63
+#, fuzzy
+msgid "Detailed Recipients"
+msgstr "Destinataires détaillés"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:104
+#: danceschool/core/templates/core/invoice_notification.html:42
+#, fuzzy
+msgid "Send Emails"
+msgstr "Envoyer courriels"
+
+#: danceschool/core/templates/core/email_confirmation_page.html:105
+#: danceschool/core/templates/core/refund_confirmation.html:43
+#, fuzzy
+msgid "Return To Form"
+msgstr "Retourner au formulaire"
+
+#: danceschool/core/templates/core/events_grouped_list.html:9
+#: danceschool/core/templates/core/student_info_form.html:4
+#, fuzzy
+msgid "Classes"
+msgstr "Cours"
+
+#: danceschool/core/templates/core/events_grouped_list.html:21
+#, fuzzy
+msgid "Nothing posted yet. Check back soon!"
+msgstr "Rien de publié pour le moment. Revenez bientôt!"
+
+#: danceschool/core/templates/core/events_grouped_list.html:29
+#, fuzzy
+msgid "View Calendar"
+msgstr "Voir le calendrier"
+
+#: danceschool/core/templates/core/events_grouped_list.html:30
+#, fuzzy
+msgid "Register Now"
+msgstr "Inscrivez-vous maintenant"
+
+#: danceschool/core/templates/core/events_viewregistration_list.html:6
+#, fuzzy
+msgid "Select an Event to View Registrations"
+msgstr "Sélectionnez un événement pour voir les inscriptions"
+
+#: danceschool/core/templates/core/events_viewregistration_list.html:21
+#, fuzzy
+msgid "No classes or events yet. Check back soon!"
+msgstr "Aucun cours ou événement pour le moment. Revenez bientôt!"
+
+#: danceschool/core/templates/core/instructor_list.html:5
+#, fuzzy
+msgid "Edit Instructor Bios"
+msgstr "Modifier les bios des instructeurs"
+
+#: danceschool/core/templates/core/instructor_list.html:21
+#, fuzzy
+msgid "schedule a private"
+msgstr "planifier un privé"
+
+#: danceschool/core/templates/core/instructor_stats.html:7
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\tInstructor Teaching Stats for %(name)s\n"
+"\t"
+msgstr "\\ n\\ tInstructeur Stats d'Enseignement pour% (nom) s \\ n\\ t"
+
+#: danceschool/core/templates/core/instructor_stats.html:13
+#, fuzzy
+msgid "Basic Info"
+msgstr "Informations de base"
+
+#: danceschool/core/templates/core/instructor_stats.html:19
+#, fuzzy
+msgid "Teaching Since"
+msgstr "Enseigne depuis"
+
+#: danceschool/core/templates/core/instructor_stats.html:20
+#, fuzzy
+msgid "Classes Taught"
+msgstr "Cours enseignés"
+
+#: danceschool/core/templates/core/instructor_stats.html:21
+#, fuzzy
+msgid "Total Students Taught"
+msgstr "Total des étudiants enseignés"
+
+#: danceschool/core/templates/core/instructor_stats.html:23
+#, fuzzy
+msgid "Link To Your Calendar Feeds"
+msgstr "Lien vers les flux de votre calendrier"
+
+#: danceschool/core/templates/core/instructor_stats.html:25
+#, fuzzy
+msgid "Your Classes"
+msgstr "Vos cours"
+
+#: danceschool/core/templates/core/instructor_stats.html:26
+#, fuzzy
+msgid "Private Events &amp; Reminders"
+msgstr "Événements privés & amp; Rappels"
+
+#: danceschool/core/templates/core/instructor_stats.html:26
+#, fuzzy
+msgid "copy and paste these URLs to add them to Google Calendar, etc."
+msgstr "copiez et collez ces URL pour les ajouter à Google Calendar, etc."
+
+#: danceschool/core/templates/core/instructor_stats.html:33
+#, fuzzy
+msgid "Upcoming Series"
+msgstr "Série à venir"
+
+#: danceschool/core/templates/core/instructor_stats.html:61
+#, fuzzy
+msgid "Prior Series"
+msgstr "Série antérieure"
+
+#: danceschool/core/templates/core/invoice.html:6
+#, fuzzy, python-format
+msgid "Invoice for %(businessName)s"
+msgstr "Facture pour% (Nom entreprise) s"
+
+#: danceschool/core/templates/core/invoice.html:9
+#: danceschool/core/templates/core/invoice_notification.html:19
+#: danceschool/core/templates/core/invoice_notification.html:60
+#, fuzzy
+msgid "Invoice Number"
+msgstr "Numéro de facture"
+
+#: danceschool/core/templates/core/invoice.html:15
+#, fuzzy
+msgid "Notify Recipient"
+msgstr "Notifier le destinataire"
+
+#: danceschool/core/templates/core/invoice.html:19
+#: danceschool/core/templates/core/invoice_notification.html:21
+#: danceschool/core/templates/core/invoice_notification.html:61
+#: danceschool/core/templates/core/view_eventregistrations.html:98
+#, fuzzy
+msgid "Invoice Status"
+msgstr "Statut de la facture"
+
+#: danceschool/core/templates/core/invoice.html:28
+#: danceschool/core/templates/core/view_eventregistrations.html:99
+#, fuzzy
+msgid "Outstanding Balance"
+msgstr "Solde impayé"
+
+#: danceschool/core/templates/core/invoice.html:35
+#, fuzzy
+msgid "Initial Price"
+msgstr "Prix initial"
+
+#: danceschool/core/templates/core/invoice.html:39
+#: danceschool/core/templates/core/view_eventregistrations.html:76
+#: danceschool/core/templates/core/view_eventregistrations.html:104
+#, fuzzy
+msgid "Net Price"
+msgstr "Prix net"
+
+#: danceschool/core/templates/core/invoice.html:47
+#: danceschool/core/templates/core/invoice.html:74
+#, fuzzy
+msgid "Fees"
+msgstr "Honoraires"
+
+#: danceschool/core/templates/core/invoice.html:51
+#: danceschool/core/templates/core/view_eventregistrations.html:57
+#: danceschool/core/templates/core/view_eventregistrations.html:95
+#, fuzzy
+msgid "Adjustments/Refunds"
+msgstr "Ajustements / remboursements"
+
+#: danceschool/core/templates/core/invoice.html:59
+#: danceschool/core/templates/core/process_refund.html:82
+#, fuzzy
+msgid "Item Details"
+msgstr "Détails de l'article"
+
+#: danceschool/core/templates/core/invoice.html:62
+#, fuzzy
+msgid "View Registration"
+msgstr "Voir l'inscription"
+
+#: danceschool/core/templates/core/invoice.html:64
+#, fuzzy
+msgid "View Temporary Registration"
+msgstr "Voir l'inscription temporaire"
+
+#: danceschool/core/templates/core/invoice.html:71
+#, fuzzy
+msgid "Inital Price"
+msgstr "Prix initial"
+
+#: danceschool/core/templates/core/invoice.html:72
+#: danceschool/core/templates/core/process_refund.html:17
+#, fuzzy
+msgid "Price with Discounts"
+msgstr "Prix avec rabais"
+
+#: danceschool/core/templates/core/invoice.html:75
+#, fuzzy
+msgid "Adjustments"
+msgstr "Ajustements"
+
+#: danceschool/core/templates/core/invoice.html:93
+#: danceschool/core/templates/core/view_eventregistrations.html:136
+#, fuzzy
+msgid "Rev. Item"
+msgstr "Article Rev."
+
+#: danceschool/core/templates/core/invoice.html:105
+#: danceschool/core/templates/core/process_refund.html:24
+#: danceschool/core/templates/core/refund_confirmation.html:29
+#, fuzzy
+msgid "Payment Details"
+msgstr "Détails du paiement"
+
+#: danceschool/core/templates/core/invoice.html:108
+#: danceschool/core/templates/core/view_eventregistrations.html:133
+#, fuzzy
+msgid "Refund"
+msgstr "Remboursement"
+
+#: danceschool/core/templates/core/invoice.html:114
+#, fuzzy
+msgid "Payment Method"
+msgstr "Mode de paiement"
+
+#: danceschool/core/templates/core/invoice.html:115
+#, fuzzy
+msgid "Transaction ID"
+msgstr "identifiant de transaction"
+
+#: danceschool/core/templates/core/invoice.html:116
+#, fuzzy
+msgid "Amount"
+msgstr "Montant"
+
+#: danceschool/core/templates/core/invoice.html:130
+#, fuzzy
+msgid "Comments/Notes"
+msgstr "Commentaires/Notes"
+
+#: danceschool/core/templates/core/invoice.html:138
+#, fuzzy
+msgid "Pay Invoice"
+msgstr "Payer la facture"
+
+#: danceschool/core/templates/core/invoice_notification.html:6
+#, fuzzy
+msgid "Send Invoice Notifications: Confirmation"
+msgstr "Envoyer des notifications de facture: confirmation"
+
+#: danceschool/core/templates/core/invoice_notification.html:10
+#, fuzzy
+msgid "Notification List"
+msgstr "Liste de notification"
+
+#: danceschool/core/templates/core/invoice_notification.html:12
+#, fuzzy
+msgid "Recipients associated with the following invoices will be notified"
+msgstr "Les destinataires associés aux factures suivantes seront avisés"
+
+#: danceschool/core/templates/core/invoice_notification.html:18
+#, fuzzy
+msgid "Selected"
+msgstr "Sélectionné"
+
+#: danceschool/core/templates/core/invoice_notification.html:36
+#: danceschool/core/templates/core/invoice_notification.html:73
+#, fuzzy
+msgid "View"
+msgstr "Voir"
+
+#: danceschool/core/templates/core/invoice_notification.html:36
+#: danceschool/core/templates/core/invoice_notification.html:73
+#, fuzzy
+msgid "Edit"
+msgstr "Modifier"
+
+#: danceschool/core/templates/core/invoice_notification.html:43
+#, fuzzy
+msgid "Return To Invoices"
+msgstr "Retour aux factures"
+
+#: danceschool/core/templates/core/invoice_notification.html:50
+#, fuzzy
+msgid "Unable to Notify"
+msgstr "Impossible de notifier"
+
+#: danceschool/core/templates/core/invoice_notification.html:52
+#, fuzzy
+msgid ""
+"\n"
+"\t\tThe following invoices have no recipient associated with them, so no "
+"notification emails will be sent.\n"
+"\t\tTo send notifications for these invoices, please click to edit the "
+"invoices and specify a recipient email address.\n"
+"\t\t"
+msgstr ""
+"\\ n\\ t \\ tLes factures suivantes n'ont aucun destinataire associé, donc "
+"aucuns courriels de notification seront envoyés. \\ n\\ t \\ tPour envoyer "
+"des notifications pour ces factures, cliquez ici pour modifierles factures "
+"et spécifiez une adresse courriel du destinataire. \\ n\\ t \\ t"
+
+#: danceschool/core/templates/core/process_refund.html:6
+#, fuzzy
+msgid "Invoice #"
+msgstr "Facture #"
+
+#: danceschool/core/templates/core/process_refund.html:8
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\tfor %(name)s\n"
+"\t"
+msgstr ""
+"\n"
+"\t pour %(nom)s\n"
+"\t"
+
+#: danceschool/core/templates/core/process_refund.html:15
+#, fuzzy
+msgid "Date &amp; Time"
+msgstr "Date & amp; Heure"
+
+#: danceschool/core/templates/core/process_refund.html:19
+#: danceschool/core/templates/core/view_eventregistrations.html:30
+#, fuzzy
+msgid "Student"
+msgstr "Étudiant"
+
+#: danceschool/core/templates/core/process_refund.html:29
+#: danceschool/core/templates/core/refund_confirmation.html:34
+#, fuzzy
+msgctxt "alert"
+msgid "Note"
+msgstr "Note"
+
+#: danceschool/core/templates/core/process_refund.html:29
+#: danceschool/core/templates/core/refund_confirmation.html:34
+#, fuzzy
+msgid ""
+"This payment does not appear to be automatically refundable.  Please "
+"manually refund the money to this student after filling out this form."
+msgstr ""
+"Ce paiement ne semble pas automatiquement remboursable.Rembourser "
+"manuellement l'argent à cet étudiant après avoir rempli ce formulaire."
+
+#: danceschool/core/templates/core/process_refund.html:41
+#: danceschool/core/templates/core/refund_confirmation.html:42
+#, fuzzy
+msgid "Process Refund"
+msgstr "Procéder au remboursement"
+
+#: danceschool/core/templates/core/process_refund.html:42
+#, fuzzy
+msgid "Total Refund Amount"
+msgstr "Montant total du remboursement"
+
+#: danceschool/core/templates/core/process_refund.html:46
+msgid ""
+"Revenue has been recorded for this registration that has not yet been marked "
+"as received.  In determining any refund amount, please account for revenue "
+"that has not yet been received.  Items with revenue not yet marked as "
+"received are highlighted below."
+msgstr ""
+
+#: danceschool/core/templates/core/process_refund.html:49
+#, fuzzy
+msgid ""
+"This invoice is not yet marked as paid.  In determining any refund amount, "
+"please account for revenue that has not yet been received."
+msgstr ""
+"Cette facture n'est pas encore payée. Pour déterminer le montant du "
+"remboursement,veuillez comptabiliser les revenus qui n'ont pas encore été "
+"reçus."
+
+#: danceschool/core/templates/core/process_refund.html:59
+#, fuzzy
+msgid "Error with ID"
+msgstr "Erreur avec l'ID"
+
+#: danceschool/core/templates/core/process_refund.html:66
+#, fuzzy
+msgid "Error with Total Refund Amount"
+msgstr "Erreur avec le montant du remboursement total"
+
+#: danceschool/core/templates/core/process_refund.html:73
+#, fuzzy
+msgid "Error with Initial Refund Amount"
+msgstr "Erreur avec le montant de remboursement initial"
+
+#: danceschool/core/templates/core/process_refund.html:86
+#, fuzzy
+msgid "Item ID"
+msgstr "ID de l'article"
+
+#: danceschool/core/templates/core/process_refund.html:87
+#, fuzzy
+msgid "Item Name"
+msgstr "Nom de l'article"
+
+#: danceschool/core/templates/core/process_refund.html:89
+#, fuzzy
+msgid "Price (Gross)"
+msgstr "Prix (brut)"
+
+#: danceschool/core/templates/core/process_refund.html:90
+#, fuzzy
+msgid "Price (Net)"
+msgstr "Prix (net)"
+
+#: danceschool/core/templates/core/process_refund.html:95
+#, fuzzy
+msgid "Refunds/Adjustments"
+msgstr "Remboursements / ajustements"
+
+#: danceschool/core/templates/core/process_refund.html:132
+#: danceschool/core/templates/core/view_eventregistrations.html:157
+#, fuzzy
+msgid "Class Registration Page"
+msgstr "Page d'inscription du cours"
+
+#: danceschool/core/templates/core/process_refund.html:133
+#, fuzzy
+msgid "Select Another Event"
+msgstr "Sélectionnez un autre événement"
+
+#: danceschool/core/templates/core/process_refund.html:199
+#, fuzzy
+msgid "Cancelled classes are not fully refunded. Confirm that this is desired?"
+msgstr ""
+"Les cours annulés ne sont pas entièrement remboursés. Assurez-vous que cela "
+"est souhaité?"
+
+#: danceschool/core/templates/core/public_calendar.html:7
+#, fuzzy
+msgid "Event Details"
+msgstr "Détails de l'évènement"
+
+#: danceschool/core/templates/core/public_calendar.html:11
+#: danceschool/core/templates/core/public_calendar.html:24
+#, fuzzy
+msgid "Close"
+msgstr "Fermer"
+
+#: danceschool/core/templates/core/public_calendar.html:17
+#, fuzzy
+msgid "Start"
+msgstr "Début"
+
+#: danceschool/core/templates/core/public_calendar.html:19
+#, fuzzy
+msgid "End"
+msgstr "Fin"
+
+#: danceschool/core/templates/core/public_calendar.html:24
+#, fuzzy
+msgid "Read More"
+msgstr "Lire la suite"
+
+#: danceschool/core/templates/core/refund_confirmation.html:6
+#, fuzzy
+msgid "Process Refund: Confirmation"
+msgstr "Processus de remboursement: confirmation"
+
+#: danceschool/core/templates/core/refund_confirmation.html:12
+#, fuzzy
+msgid "Refund This Amount"
+msgstr "Rembourser ce montant"
+
+#: danceschool/core/templates/core/refund_confirmation.html:17
+#, fuzzy
+msgid "Prior Refunds to Invoice"
+msgstr "Remboursements antérieurs à la facture"
+
+#: danceschool/core/templates/core/refund_confirmation.html:21
+#, fuzzy
+msgid "Total Refunds to Invoice"
+msgstr "Remboursements totaux à la facture"
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:28
+#, fuzzy
+msgid "More Classes and Events Coming Soon!"
+msgstr "Plus de cours et d'événements à venir!"
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:29
+#: danceschool/core/templates/core/registration/base_event_registration.html:36
+#, fuzzy
+msgid ""
+"Our upcoming classes have not yet been posted, but don't worry, they will be "
+"posted here\n"
+"            soon!  Check back soon for more information."
+msgstr ""
+"Nos cours à venir n'ont pas encore été publiés, mais ne vous inquiétez pas, "
+"ils serontpubliés ici \\ n"
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:32
+#: danceschool/core/templates/core/registration/base_event_registration.html:39
+#, python-format
+msgid ""
+"In the meantime, check out our <a href=\"%(calendar_url)s\">calendar</a> for "
+"more\n"
+"              information about our past and current classes.</p>"
+msgstr ""
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:35
+#, fuzzy
+msgid "More Classes Coming Soon!"
+msgstr "Plus de cours à venir!"
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:58
+#, fuzzy
+msgid "Is this a door/invoice registration?"
+msgstr "Est-ce une inscription à la porte / facture?"
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:59
+#, fuzzy
+msgid "to be filled out only by school staff"
+msgstr "à remplir uniquement par le personnel de l'école"
+
+#: danceschool/core/templates/core/registration/base_event_registration.html:61
+#, fuzzy
+msgid "This is a door/invoice registration"
+msgstr "Ceci est une inscription à la porte / facture"
+
+#: danceschool/core/templates/core/registration/event_card.html:35
+#: danceschool/core/templates/core/registration/event_category__default.html:38
+#: danceschool/core/templates/core/registration/series_category__default.html:38
+#, fuzzy
+msgid "more info"
+msgstr "Plus d’information"
+
+#: danceschool/core/templates/core/registration/event_card.html:78
+#: danceschool/core/templates/core/registration/event_card.html:80
+#, fuzzy
+msgid "registered"
+msgstr "Inscrits"
+
+#: danceschool/core/templates/core/registration/event_card.html:87
+#: danceschool/core/templates/core/registration/event_category__default.html:76
+#: danceschool/core/templates/core/registration/series_category__default.html:74
+#, fuzzy
+msgid "Sold Out!"
+msgstr "Épuisé!"
+
+#: danceschool/core/templates/core/registration/event_card.html:88
+#, fuzzy
+msgid "Please join us for another class, or schedule a private lesson!"
+msgstr ""
+"S'il vous plaît joignez-vous à nous pour un autre cours, un autre mois, ou "
+"planifier une leçon” “privée!"
+
+#: danceschool/core/templates/core/registration/event_category__default.html:77
+#, fuzzy
+msgid "Please join us at our next event!"
+msgstr ""
+"S'il vous plaît venez vous joindre à nous lors de notre prochain événement!"
+
+#: danceschool/core/templates/core/registration/registration_offline.html:6
+#, fuzzy
+msgid "Registration Offline"
+msgstr "Inscription hors ligne"
+
+#: danceschool/core/templates/core/registration/registration_offline.html:8
+#, fuzzy
+msgid "Registration is currently offline.  Please check back later!"
+msgstr ""
+"L'inscription est actuellement hors ligne. S'il vous plaît revenez plus tard!"
+
+#: danceschool/core/templates/core/registration/series_category__default.html:75
+#, fuzzy
+msgid ""
+"Please join us for another class, another month, or schedule a private "
+"lesson!"
+msgstr ""
+"S'il vous plaît joignez-vous à nous pour un autre cours, un autre mois, ou "
+"planifier une leçon” “privée!"
+
+#: danceschool/core/templates/core/registration/single_event_registration.html:11
+msgid "With"
+msgstr ""
+
+#: danceschool/core/templates/core/repeat_events.html:6
+#, fuzzy
+msgid "Duplicate Selected Events"
+msgstr "Dupliquer les événements sélectionnés"
+
+#: danceschool/core/templates/core/repeat_events.html:10
+#, fuzzy
+msgid "You have selected the following events to repeat:"
+msgstr "Vous avez sélectionné les événements suivants à répéter:"
+
+#: danceschool/core/templates/core/repeat_events.html:19
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t\t\t\t%(count)s occurrence%(pluralize)s from %(first_time)s to "
+"%(last_time)s\n"
+"\t\t\t\t"
+msgstr ""
+"\\ n\\ t \\ t \\ t \\ t% (count) s occurrence% (pluralize) s de% "
+"(first_time) s à% (last_time) s \\ n\\ t \\ t \\ t \\ t"
+
+#: danceschool/core/templates/core/repeat_events.html:30
+#, fuzzy
+msgid ""
+"\n"
+"Please select the start date, interval, and end date/number of repeat events "
+"that you would like to create.  All event data, including occurrences and "
+"event-specific roles, will be preserved.  However, event staff (such as "
+"instructors and substitute teachers) will not be assigned to any newly-"
+"created events.\n"
+msgstr "\\ n"
+
+#: danceschool/core/templates/core/staff_directory.html:5
+#, fuzzy
+msgid "Active Instructors"
+msgstr "Instructeurs actifs"
+
+#: danceschool/core/templates/core/staff_directory.html:6
+#, fuzzy
+msgid "Email all active instructors"
+msgstr "Envoyer un courriel à tous les instructeurs actifs"
+
+#: danceschool/core/templates/core/staff_directory.html:10
+#: danceschool/core/templates/core/staff_directory.html:42
+#: danceschool/core/templates/core/staff_directory.html:74
+#, fuzzy
+msgid "Photo"
+msgstr "Photo"
+
+#: danceschool/core/templates/core/staff_directory.html:10
+#: danceschool/core/templates/core/staff_directory.html:42
+#: danceschool/core/templates/core/staff_directory.html:74
+#, fuzzy
+msgid "Private Email"
+msgstr "Courriel privé"
+
+#: danceschool/core/templates/core/staff_directory.html:10
+#: danceschool/core/templates/core/staff_directory.html:42
+#: danceschool/core/templates/core/staff_directory.html:74
+#, fuzzy
+msgid "Public Email"
+msgstr "Courriel publique"
+
+#: danceschool/core/templates/core/staff_directory.html:10
+#: danceschool/core/templates/core/staff_directory.html:42
+#: danceschool/core/templates/core/staff_directory.html:74
+#, fuzzy
+msgid "Phone"
+msgstr "Téléphone"
+
+#: danceschool/core/templates/core/staff_directory.html:10
+#: danceschool/core/templates/core/staff_directory.html:42
+#: danceschool/core/templates/core/staff_directory.html:74
+#, fuzzy
+msgid "Available for Privates"
+msgstr "Disponible pour des privés"
+
+#: danceschool/core/templates/core/staff_directory.html:12
+#: danceschool/core/templates/core/staff_directory.html:44
+#: danceschool/core/templates/core/staff_directory.html:76
+#, fuzzy
+msgid "Instructor Stats/Payments"
+msgstr "Statistiques / Paiements de l'instructeur"
+
+#: danceschool/core/templates/core/staff_directory.html:28
+#: danceschool/core/templates/core/staff_directory.html:60
+#: danceschool/core/templates/core/staff_directory.html:92
+#, fuzzy
+msgid "Stats"
+msgstr "Statistiques"
+
+#: danceschool/core/templates/core/staff_directory.html:29
+#: danceschool/core/templates/core/staff_directory.html:61
+#: danceschool/core/templates/core/staff_directory.html:93
+#, fuzzy
+msgid "Payment History"
+msgstr "historique de paiement"
+
+#: danceschool/core/templates/core/staff_directory.html:38
+#, fuzzy
+msgid "Assistant Instructors and Instructors In Training"
+msgstr "Instructeurs adjoints et instructeurs en formation"
+
+#: danceschool/core/templates/core/staff_directory.html:70
+#, fuzzy
+msgid "Guest Instructors"
+msgstr "Instructeurs invités"
+
+#: danceschool/core/templates/core/student_info_form.html:11
+#, fuzzy
+msgid "You've selected:"
+msgstr "Vous avez sélectionné:"
+
+#: danceschool/core/templates/core/student_info_form.html:61
+#, fuzzy
+msgid "Step 2: Provide Your Student Information"
+msgstr "Étape 2: Fournissez les informations sur vos étudiants"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:9
+#, fuzzy
+msgid "Total Students"
+msgstr "Nombre total d'étudiants"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:12
+#, fuzzy
+msgid "Drop-Ins Permitted"
+msgstr "Ouverture permise"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:23
+#, fuzzy
+msgid "Check In"
+msgstr "Enregistrement"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:26
+#, fuzzy
+msgid "This Series Price"
+msgstr "Le prix de cette série"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:27
+#, fuzzy
+msgid "Total Payment"
+msgstr "Paiement total"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:29
+#, fuzzy
+msgid "Drop-In"
+msgstr "OUVERT À TOUS"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:31
+#, fuzzy
+msgid "Customer Email"
+msgstr "Courriel du client"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:32
+#, fuzzy
+msgid "All-Time Classes"
+msgstr "Cours en tout temps"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:46
+#, fuzzy
+msgid "Customer Name"
+msgstr "Nom du client"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:46
+#, fuzzy
+msgid "Most recent reg. from this email address"
+msgstr "Inscription la plus récente à partir de cette adresse courriel"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:54
+#, fuzzy
+msgid "Gross"
+msgstr "Brut"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:55
+#, fuzzy
+msgid "Net"
+msgstr "Net"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:60
+#, fuzzy
+msgid "Recorded Revenue"
+msgstr "Revenu enregistré"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:61
+#, fuzzy
+msgid "Received Revenue"
+msgstr "Revenu reçu"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:75
+#: danceschool/core/templates/core/view_eventregistrations.html:103
+#, fuzzy
+msgid "Gross Price"
+msgstr "Prix brut"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:78
+#: danceschool/core/templates/core/view_eventregistrations.html:105
+#, fuzzy
+msgid "Gross vs. Net Price"
+msgstr "Prix brut vs. Prix net"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:79
+#: danceschool/core/templates/core/view_eventregistrations.html:106
+#, fuzzy
+msgid "Discount Code"
+msgstr "Code de réduction"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:82
+#, fuzzy
+msgid "Discount"
+msgstr "réductions"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:87
+#: danceschool/core/templates/core/view_eventregistrations.html:109
+#, fuzzy
+msgid "Voucher"
+msgstr "Coupon"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:130
+#, fuzzy
+msgctxt "registration"
+msgid "Reg."
+msgstr "Inscription"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:147
+#, fuzzy
+msgid "Submit Checkins"
+msgstr "Soumettre les enregistrements"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:150
+#, fuzzy
+msgid "Check-ins submitted successfully!"
+msgstr "Enregistrement soumis avec succès!"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:151
+#, fuzzy
+msgid "Error submitting class check-in data."
+msgstr ""
+"Erreur lors de la soumission des données d'enregistrement pour le cours"
+
+#: danceschool/core/templates/core/view_eventregistrations.html:158
+#, fuzzy
+msgid "Select Another Class"
+msgstr "Sélectionner un autre cours"
+
+#: danceschool/core/templates/dynamic_preferences/form_danceschool.html:39
+#, fuzzy
+msgid "Site Settings"
+msgstr "Paramètres du site"
+
+#: danceschool/core/templates/forms/djangocms_forms_crispy.html:33
+#, fuzzy
+msgid "Submission successful"
+msgstr "Soumission réussie"
+
+#: danceschool/core/templates/forms/djangocms_forms_crispy.html:34
+#, fuzzy
+msgid "Thank You! Your form has been successfully submitted!"
+msgstr "Merci! Votre formulaire a été envoyé avec succès!"
+
+#: danceschool/core/views.py:137
+#, fuzzy
+msgid "Invoice notifications successfully sent."
+msgstr "Notifications de facture envoyées avec succès."
+
+#: danceschool/core/views.py:170
+#, fuzzy
+msgid "Invalid invoice identifiers specified."
+msgstr "Identifiants spécifiés de facture incorrects."
+
+#: danceschool/core/views.py:173
+#, fuzzy
+msgid "No invoice identifiers specified."
+msgstr "Aucun identificateur de facture spécifié."
+
+#: danceschool/core/views.py:208
+#, fuzzy
+msgid "Refund successfully processed."
+msgstr "Le remboursement a été traité avec succès."
+
+#: danceschool/core/views.py:281
+#, fuzzy
+msgid ""
+"Error: No response from payment processing app. Check payment processor "
+"records for refund status."
+msgstr ""
+"Erreur: Aucune réponse de l'application de traitement des paiements Vérifiez "
+"les” “enregistrements du processeur de paiement pour connaître l'état du "
+"remboursement."
+
+#: danceschool/core/views.py:304
+#, fuzzy
+msgid ""
+"An unkown error has occurred. Check payment processor records for refund "
+"status."
+msgstr ""
+"Une erreur inconnue s'est produite Vérifiez les enregistrements du "
+"processeur de paiement” “pour connaître l'état du remboursement."
+
+#: danceschool/core/views.py:331
+msgid ""
+"Error, not all of the requested refund was applied. Check invoice and "
+"payment processor records for details."
+msgstr ""
+
+#: danceschool/core/views.py:403
+#, fuzzy
+msgid "Email sent successfully."
+msgstr "Courriel envoyé avec succès."
+
+#: danceschool/core/views.py:464
+#, fuzzy, python-format
+msgid "Test email from %s to be sent to: "
+msgstr "Tester le courriel de% s à envoyer à:"
+
+#: danceschool/core/views.py:466
+#, fuzzy
+msgid "Email body:"
+msgstr "Corps du courriel:"
+
+#: danceschool/core/views.py:551
+#, fuzzy
+msgid "Invalid customer ids passed"
+msgstr "Les ID client incorrects sont passés"
+
+#: danceschool/core/views.py:569
+#, fuzzy
+msgid "None"
+msgstr "Aucun"
+
+#: danceschool/core/views.py:609
+#, fuzzy
+msgid "Use this form to contact current or recent students."
+msgstr ""
+"Utilisez ce formulaire pour contacter les étudiants actuels ou récents."
+
+#: danceschool/core/views.py:749 danceschool/core/views.py:789
+#, fuzzy
+msgid "Invalid month."
+msgstr "Mois invalide."
+
+#: danceschool/core/views.py:829
+#, fuzzy
+msgid "Repeated events created successfully."
+msgstr "Événements répétés créés avec succès."
+
+#: danceschool/core/views.py:839 danceschool/core/views.py:843
+#, fuzzy
+msgid "Invalid content type passed."
+msgstr "type de contenu non valide passé."
+
+#: danceschool/core/views.py:848
+#, fuzzy
+msgid "Invalid ids passed"
+msgstr "ID Invalides passés"
+
+#: danceschool/core/views.py:955
+#, fuzzy
+msgid "Substitute teaching reported successfully."
+msgstr "Enseignement substitutif rapporté avec succès."
+
+#: danceschool/core/views.py:962
+#, fuzzy
+msgid "Use this form to report substitute teaching."
+msgstr "Utilisez ce formulaire pour signaler un remplacement."
+
+#: danceschool/core/views.py:980
+#, fuzzy
+msgid "Instructor information updated successfully."
+msgstr "Informations sur l'instructeur mises à jour avec succès."
+
+#: danceschool/core/views.py:986
+#, fuzzy
+msgid "Update Contact Information"
+msgstr "Mettre à jour les coordonnées"
+
+#: danceschool/core/views.py:987
+#, fuzzy
+msgid "Use this form to update your contact information."
+msgstr "Utilisez ce formulaire pour mettre à jour vos informations de contact."

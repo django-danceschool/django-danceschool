@@ -1,0 +1,690 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:48-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/private_lessons/admin.py:40
+#: danceschool/private_lessons/forms.py:49
+#: danceschool/private_lessons/models.py:217
+#, fuzzy
+msgid "Instructor"
+msgstr "Instructeur"
+
+#: danceschool/private_lessons/admin.py:110
+#, fuzzy
+msgid "Instructors"
+msgstr "Instructeurs"
+
+#: danceschool/private_lessons/admin.py:114
+#: danceschool/private_lessons/models.py:131
+#, fuzzy
+msgid "Customers"
+msgstr "Clients"
+
+#: danceschool/private_lessons/apps.py:8
+#, fuzzy
+msgid "Private Lessons Functions"
+msgstr "Fonctions de leçons privées"
+
+#: danceschool/private_lessons/cms_toolbars.py:14
+#, fuzzy
+msgid "Staff"
+msgstr "Personnel"
+
+#: danceschool/private_lessons/cms_toolbars.py:15
+#, fuzzy
+msgid "Your Stats"
+msgstr "Vos statistiques"
+
+#: danceschool/private_lessons/cms_toolbars.py:17
+#: danceschool/private_lessons/templates/private_lessons/get_student_info.html:4
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:13
+#, fuzzy
+msgid "Schedule a Private Lesson"
+msgstr "Programmer une leçon privée"
+
+#: danceschool/private_lessons/cms_toolbars.py:23
+#, fuzzy
+msgid "Private Lesson Availability"
+msgstr "Disponibilité de la leçon privée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:16
+#, fuzzy
+msgid "Private Lessons"
+msgstr "Leçons privées"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:26
+#, fuzzy
+msgid "Allow non-staff to book private lessons for themselves."
+msgstr ""
+"Permettre aux non-membres du personnel de réserver des leçons privées pour” "
+"“eux-mêmes."
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:27
+#, fuzzy
+msgid ""
+"The private lesson booking functions will only be available to individuals "
+"with permissions unless this box is checked."
+msgstr ""
+"Les fonctions de réservation de leçons privées ne seront disponibles que "
+"pour les personnes” “ayant des permissions, sauf si cette case est cochée."
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:35
+#, fuzzy
+msgid "Allow payment for private lessons through the registration system."
+msgstr ""
+"Autoriser le paiement pour les leçons privées à travers le système "
+"d'inscription."
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:36
+msgid ""
+"If the studio handles payment for private lessons, then checking this box "
+"allows users to process payment through the regular online registration "
+"system.  If the studio only handles booking for private lessons, but not "
+"payment, then this box should not be checked."
+msgstr ""
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:44
+#, fuzzy
+msgid "Notify instructor when a private lesson is booked"
+msgstr "Avertir l'instructeur lorsqu'une leçon privée est réservée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:45
+#, fuzzy
+msgid ""
+"If checked, then instructors will receive a notification email whenever a "
+"private lesson is scheduled with them."
+msgstr ""
+"Si cochée, les instructeurs recevront un e-mail de notification chaque fois "
+"qu'une leçon privée” “est programmée avec eux."
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:53
+#, fuzzy
+msgid "Open private lesson booking days in advance"
+msgstr "Ouvrir des jours de réservation de leçons privées à l'avance"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:54
+msgid ""
+"If instructor availability has been configured, permitted users will be able "
+"to book private lessons beginning this many days in advance.  Enter 0 for no "
+"restiction."
+msgstr ""
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:62
+#, fuzzy
+msgid "Close private lesson booking days in advance"
+msgstr "Fermer les leçons privées de réservation à l'avance"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:63
+#, fuzzy
+msgid "Enter 0 to allow booking up to the start time of the lesson."
+msgstr ""
+"Entrez 0 pour autoriser la réservation jusqu'à l'heure de début de la leçon."
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:71
+#, fuzzy
+msgid "Default lesson booking length (minutes)"
+msgstr "Durée de réservation de leçon par défaut (minutes)"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:79
+#, fuzzy
+msgid "Interval in which lesson lengths can be changed (minutes)"
+msgstr ""
+"Intervalle dans lequel la durée des leçons peuvent être modifiées (minutes)"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:87
+#, fuzzy
+msgid "Minimum lesson booking length (minutes)"
+msgstr "Durée minimale de réservation de leçon (minutes)"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:88
+#: danceschool/private_lessons/dynamic_preferences_registry.py:97
+#, fuzzy
+msgid "Enter 0 for no limit"
+msgstr "Entrez 0 pour aucune limite"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:96
+#, fuzzy
+msgid "Maximum lesson booking length (minutes)"
+msgstr "Durée maximale de réservation de leçon (minutes)"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:105
+#, fuzzy
+msgid "Private Lesson Event Staff Category"
+msgstr "Catégorie de personnel de l'événement de leçon privée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:110
+#, fuzzy
+msgid "Private Lesson Instruction"
+msgstr "Instruction de leçon privée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:117
+#, fuzzy
+msgid "Email template used to notify customers that their lesson is scheduled"
+msgstr ""
+"Modèle de courriel utilisé pour informer les clients que leur leçon est "
+"planifiée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:118
+#, fuzzy
+msgid ""
+"This email template will only be used for lesson bookings that do not go "
+"through the full online registration and payment system."
+msgstr ""
+"Ce modèle d'e-mail ne sera utilisé que pour les réservations de cours qui ne "
+"passent pas par” “le système complet d'inscription et de paiement en ligne."
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:130
+#, fuzzy
+msgid "Private Lesson Booking Confirmation Email"
+msgstr "Courriel de Confirmation de la réservation de leçon privée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:132
+#, fuzzy
+msgid "Confirmation of Scheduled Private Lesson"
+msgstr "Confirmation de la leçon privée planifiée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:146
+#, fuzzy
+msgid ""
+"Email template used to notify instructors that a lesson has been scheduled"
+msgstr ""
+"Modèle de courriel utilisé pour informer les instructeurs qu'une leçon a été "
+"programmée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:158
+#, fuzzy
+msgid "Private Lesson Booking Instructor Notification"
+msgstr "Notification à l'instructeur de réservation de leçon privée"
+
+#: danceschool/private_lessons/dynamic_preferences_registry.py:160
+#, fuzzy
+msgid "Notification of Private Lesson Scheduling"
+msgstr "Notification de la planification de leçons privées"
+
+#: danceschool/private_lessons/forms.py:32
+#, fuzzy
+msgid "Duration"
+msgstr "Durée"
+
+#: danceschool/private_lessons/forms.py:33
+#, fuzzy
+msgid "Dance role"
+msgstr "Rôle de danse"
+
+#: danceschool/private_lessons/forms.py:34
+#, fuzzy
+msgid "Expected # Participants"
+msgstr "Nombre attendu de participants"
+
+#: danceschool/private_lessons/forms.py:34
+#, fuzzy
+msgid "Be advised that group lessons may be charged a different rate."
+msgstr ""
+"Sachez que les leçons de groupe peuvent être facturées à un taux différent."
+
+#: danceschool/private_lessons/forms.py:35
+#: danceschool/private_lessons/models.py:45
+#, fuzzy
+msgid "Comments/Notes"
+msgstr "Commentaires/Notes"
+
+#: danceschool/private_lessons/forms.py:35
+#, fuzzy
+msgid ""
+"Please enter any comments or notes that you would like to be provided to the "
+"instructor before the lesson, such as the topics on which you may want to "
+"focus."
+msgstr ""
+"Veuillez entrer les commentaires ou les notes que vous aimeriez recevoir "
+"avant la leçon, par” “exemple les sujets sur lesquels vous souhaitez vous "
+"concentrer."
+
+#: danceschool/private_lessons/forms.py:45
+#, fuzzy
+msgid "Door/Invoice Registration"
+msgstr "Facture / Inscription à la porte"
+
+#: danceschool/private_lessons/forms.py:51
+#, fuzzy
+msgid "Start date"
+msgstr "Date de début"
+
+#: danceschool/private_lessons/forms.py:52
+#, fuzzy
+msgid "End date"
+msgstr "Date de fin"
+
+#: danceschool/private_lessons/forms.py:54
+#: danceschool/private_lessons/models.py:221
+#, fuzzy
+msgid "Start time"
+msgstr "Heure de début"
+
+#: danceschool/private_lessons/forms.py:58
+#, fuzzy
+msgid "End time"
+msgstr "Heure de fin"
+
+#: danceschool/private_lessons/forms.py:62
+#: danceschool/private_lessons/models.py:224
+#, fuzzy
+msgid "Location"
+msgstr "Emplacement"
+
+#: danceschool/private_lessons/forms.py:63
+#: danceschool/private_lessons/forms.py:102
+#: danceschool/private_lessons/models.py:227
+#, fuzzy
+msgid "Room"
+msgstr "Pièce"
+
+#: danceschool/private_lessons/forms.py:65
+#: danceschool/private_lessons/models.py:42
+#: danceschool/private_lessons/models.py:219
+#, fuzzy
+msgid "Pricing Tier"
+msgstr "Niveau de prix"
+
+#: danceschool/private_lessons/forms.py:66
+#: danceschool/private_lessons/forms.py:105
+msgid ""
+"A pricing tier is required for online registration and payment. If your "
+"school handles scheduling, but not payment for lessons, then leave this "
+"blank."
+msgstr ""
+
+#: danceschool/private_lessons/forms.py:68
+#, fuzzy
+msgid "Initial Status"
+msgstr "Statut initial"
+
+#: danceschool/private_lessons/forms.py:94
+#, fuzzy
+msgid "Newly created slots cannot overlap existing slots for this instructor."
+msgstr ""
+"Les emplacements nouvellement créés ne peuvent pas chevaucher les "
+"emplacements” “existants pour cet instructeur."
+
+#: danceschool/private_lessons/forms.py:100
+#, fuzzy
+msgid "Update Status"
+msgstr "Mettre à jour le statut"
+
+#: danceschool/private_lessons/forms.py:101
+#, fuzzy
+msgid "Update Location"
+msgstr "Mettre à jour l'emplacement"
+
+#: danceschool/private_lessons/forms.py:104
+#, fuzzy
+msgid "Update pricing"
+msgstr "Mettre à jour le prix"
+
+#: danceschool/private_lessons/forms.py:107
+#, fuzzy
+msgid "Delete slot"
+msgstr "Supprimer l’emplacement"
+
+#: danceschool/private_lessons/forms.py:107
+#, fuzzy
+msgid ""
+"Note that only slots with no current bookings may be deleted at this time."
+msgstr ""
+"Notez que seuls les emplacements sans réservation en cours peuvent être "
+"supprimés pour le” “moment."
+
+#: danceschool/private_lessons/forms.py:116
+#, fuzzy
+msgid "First Name"
+msgstr "Prénom"
+
+#: danceschool/private_lessons/forms.py:117
+#, fuzzy
+msgid "Last Name"
+msgstr "Nom"
+
+#: danceschool/private_lessons/forms.py:119
+#, fuzzy
+msgid "Telephone (optional)"
+msgstr "Téléphone (facultatifl)"
+
+#: danceschool/private_lessons/forms.py:119
+#, fuzzy
+msgid "We may use this to notify you in event of a cancellation."
+msgstr "Nous pourrions utiliser ceci pour vous informer en cas d'annulation."
+
+#: danceschool/private_lessons/forms.py:120
+#, fuzzy
+msgid "<strong>I agree to all policies (required)</strong>"
+msgstr "<strong>J'accepte toutes les politiques (requis)</strong>"
+
+#: danceschool/private_lessons/forms.py:120
+#, fuzzy
+msgid "By checking, you agree to abide by all policies."
+msgstr "En cochant, vous acceptez de respecter toutes les politiques."
+
+#: danceschool/private_lessons/forms.py:144
+#, fuzzy
+msgid "Complete Registration"
+msgstr "Inscription complète"
+
+#: danceschool/private_lessons/models.py:19
+#, fuzzy
+msgid "Default Pricing Tier"
+msgstr "Niveau de tarification par défaut"
+
+#: danceschool/private_lessons/models.py:23
+#, fuzzy
+msgid "Private lessons for couples"
+msgstr "Cours privés pour les couples"
+
+#: danceschool/private_lessons/models.py:24
+#, fuzzy
+msgid "Private lessons for small groups"
+msgstr "Cours privés pour petits groupes"
+
+#: danceschool/private_lessons/models.py:27
+#, fuzzy, python-format
+msgid "Instructor Private lesson details for %s"
+msgstr "Détails de la leçon privée de l'instructeur pour% s"
+
+#: danceschool/private_lessons/models.py:31
+#, fuzzy
+msgid "Instructor private lesson details"
+msgstr "Détails de la leçon privée de l'instructeur"
+
+#: danceschool/private_lessons/models.py:32
+#, fuzzy
+msgid "Instructors' private lesson details"
+msgstr "Détails de la leçon privée de l'instructeur"
+
+#: danceschool/private_lessons/models.py:43
+#, fuzzy
+msgid "Expected # of Participants"
+msgstr "Nombre prévu de participants"
+
+#: danceschool/private_lessons/models.py:45
+#, fuzzy
+msgid "For internal use and recordkeeping."
+msgstr "Pour usage interne et archivage."
+
+#: danceschool/private_lessons/models.py:159
+#, fuzzy
+msgid "Private Lesson"
+msgstr "Leçon privée"
+
+#: danceschool/private_lessons/models.py:163
+msgid " for "
+msgstr ""
+
+#: danceschool/private_lessons/models.py:161
+#, fuzzy, python-format
+msgid "Private Lesson: %s%s%s%s"
+msgstr "Leçon privée:% s% s% s% s"
+
+#: danceschool/private_lessons/models.py:183
+#, fuzzy
+msgid "Can view scheduled private lessons for all instructors"
+msgstr ""
+"Peut afficher des leçons privées programmées pour tous les instructeurs"
+
+#: danceschool/private_lessons/models.py:186
+#, fuzzy
+msgid "Private lesson"
+msgstr "Leçon privée"
+
+#: danceschool/private_lessons/models.py:187
+#, fuzzy
+msgid "Private lessons"
+msgstr "Leçons privées"
+
+#: danceschool/private_lessons/models.py:197
+#, fuzzy
+msgid "Customer"
+msgstr "Client"
+
+#: danceschool/private_lessons/models.py:198
+#, fuzzy
+msgid "Lesson"
+msgstr "Leçon"
+
+#: danceschool/private_lessons/models.py:201
+#, fuzzy, python-format
+msgid "Private lesson customer: %s for lesson #%s"
+msgstr "Client de cours privé:% s pour la leçon #% s"
+
+#: danceschool/private_lessons/models.py:205
+#, fuzzy
+msgid "Private lesson customer"
+msgstr "Client du Cours privé"
+
+#: danceschool/private_lessons/models.py:206
+#, fuzzy
+msgid "Private lesson customers"
+msgstr "Clients du Cours privé"
+
+#: danceschool/private_lessons/models.py:212
+#: danceschool/private_lessons/models.py:316
+#, fuzzy
+msgid "Available"
+msgstr "Disponible"
+
+#: danceschool/private_lessons/models.py:213
+#, fuzzy
+msgid "Booked"
+msgstr "Réservé"
+
+#: danceschool/private_lessons/models.py:214
+#, fuzzy
+msgid "Tentative Booking"
+msgstr "Réservation provisoire"
+
+#: danceschool/private_lessons/models.py:215
+#, fuzzy
+msgid "Unavailable"
+msgstr "Indisponible"
+
+#: danceschool/private_lessons/models.py:222
+#, fuzzy
+msgid "Slot duration (minutes)"
+msgstr "Durée de l'emplacement (minutes)"
+
+#: danceschool/private_lessons/models.py:236
+#, fuzzy
+msgid "Scheduled lesson"
+msgstr "Cours prévu"
+
+#: danceschool/private_lessons/models.py:240
+#, fuzzy
+msgid "Temporary event registration"
+msgstr "Inscription d'événement temporaire"
+
+#: danceschool/private_lessons/models.py:244
+#, fuzzy
+msgid "Final event registration"
+msgstr "Inscription final de l'événement"
+
+#: danceschool/private_lessons/models.py:320
+#, fuzzy, python-format
+msgid "%s: %s at %s"
+msgstr "%s: %s à %s"
+
+#: danceschool/private_lessons/models.py:327
+#, fuzzy
+msgid "Private lesson availability slot"
+msgstr "Emplacement de disponibilité de leçon privée"
+
+#: danceschool/private_lessons/models.py:328
+#, fuzzy
+msgid "Private lesson availability slots"
+msgstr "Emplacements de disponibilité de leçon privée"
+
+#: danceschool/private_lessons/models.py:331
+#, fuzzy
+msgid "Can edit one's own private lesson availability."
+msgstr "Peut modifier sa propre disponibilité de cours privés."
+
+#: danceschool/private_lessons/models.py:332
+#, fuzzy
+msgid "Can edit other instructors' private lesson availability."
+msgstr ""
+"Peut modifier la disponibilité des leçons privées d'autres instructeurs."
+
+#: danceschool/private_lessons/templates/private_lessons/get_student_info.html:15
+#, fuzzy
+msgid "You've selected:"
+msgstr "Vous avez sélectionné:"
+
+#: danceschool/private_lessons/templates/private_lessons/get_student_info.html:21
+#, fuzzy, python-format
+msgid "Private lesson with %(lesson_teachers)s at %(location)s"
+msgstr "Cours privé avec% (leçon_instructeurs) s à% (emplacement) s"
+
+#: danceschool/private_lessons/templates/private_lessons/get_student_info.html:38
+#, fuzzy
+msgid "Step 2: Provide Your Student Information"
+msgstr "Étape 2: Fournissez les informations sur vos étudiants"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:11
+#, fuzzy
+msgid "Manage Private Lesson Availability"
+msgstr "Gérer la disponibilité des cours privés"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:16
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:23
+#, fuzzy
+msgid "Choose an Instructor"
+msgstr "Choisissez un instructeur"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:23
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:30
+#, fuzzy
+msgid "Select instructor"
+msgstr "Sélectionner un instructeur"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:51
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:72
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:71
+#, fuzzy
+msgid "Cancel"
+msgstr "Annuler"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:52
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:73
+#, fuzzy
+msgid "Update Availability"
+msgstr "Mettre à jour la Disponibilité"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:64
+#, fuzzy
+msgid "Add Private Lesson Availability Slots"
+msgstr "Ajouter des emplacements de disponibilité de cours privés"
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:83
+#, fuzzy
+msgid ""
+"<strong>Note:</strong> Click and drag to add multiple slots at one time.  "
+"<em>Ctrl+click</em> to select and update/delete multiple slots at one time."
+msgstr ""
+"<strong> Remarque: </ strong> Cliquez et faites glisser pour ajouter "
+"plusieurs emplacements “à la fois.<em> Ctrl + clic </ em> pour sélectionner "
+"et mettre à jour / supprimer plusieurs emplacements” “à la fois."
+
+#: danceschool/private_lessons/templates/private_lessons/instructor_availability_fullcalendar.html:345
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:200
+#, fuzzy
+msgid "<strong>ERROR:</strong> Instructor availability did not load.</div>"
+msgstr ""
+"<strong> ERREUR: </ strong> la disponibilité de l'instructeur n'a pas été "
+"chargée. </ div>"
+
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:16
+#, fuzzy
+msgid "<strong>ERROR:</strong> Booking was unsuccessful."
+msgstr "<strong> ERREUR: </ strong> La réservation a échoué."
+
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:46
+#, fuzzy
+msgid "For students in roles"
+msgstr "Pour les étudiants dans les rôles"
+
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:47
+#, fuzzy
+msgid "Lessons for couples"
+msgstr "Leçons pour les couples"
+
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:48
+#, fuzzy
+msgid "Lessons for small groups"
+msgstr "Leçons pour petits groupes"
+
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:72
+#, fuzzy
+msgid "Schedule This Lesson"
+msgstr "Programmer cette leçon"
+
+#: danceschool/private_lessons/templates/private_lessons/private_lesson_fullcalendar.html:134
+#, fuzzy
+msgid ""
+"Online payment is not enabled for this lesson slot. Your lesson will be "
+"scheduled, but you will not be able to pay online in advance."
+msgstr ""
+"Le paiement en ligne n'est pas activé pour ce cours, votre cours sera "
+"programmé, mais vous” “ne pourrez pas payer en ligne à l'avance."
+
+#: danceschool/private_lessons/views.py:154
+#, fuzzy
+msgid "Invalid duration."
+msgstr "Durée non valide"
+
+#: danceschool/private_lessons/views.py:166
+#, fuzzy
+msgid "Invalid slot ID."
+msgstr "ID d'emplacement incorrecte."
+
+#: danceschool/private_lessons/views.py:175
+#, fuzzy
+msgid "Invalid dance role."
+msgstr "Rôle de danse invalide."
+
+#: danceschool/private_lessons/views.py:205
+#, fuzzy
+msgid ""
+"Some or all of your requested lesson time is currently in the process of "
+"registration. Please select a new slot or try again later."
+msgstr ""
+"Une partie ou la totalité de votre temps de cours demandé est actuellement "
+"en cours” “d'enregistrement. Veuillez sélectionner un nouvel emplacement ou "
+"réessayer plus tard."
+
+#: danceschool/private_lessons/views.py:318
+#, fuzzy
+msgid "Invalid lesson identifier passed to sign-up form."
+msgstr ""
+"Identificateur de leçon non valide transmis au formulaire d'inscription."
+
+#: danceschool/private_lessons/views.py:323
+#, fuzzy
+msgid "Your registration session has expired. Please try again."
+msgstr "Votre séance d'inscription est expirée. Veuillez réessayer."
+
+#: danceschool/private_lessons/views.py:360
+#, fuzzy
+msgid "Your private lesson has been scheduled successfully."
+msgstr "Votre cours privé a été planifié avec succès."

@@ -1,0 +1,776 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:49-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/vouchers/admin.py:20
+#, fuzzy
+msgid "Enter a customer name"
+msgstr "Entrez un nom de client"
+
+#: danceschool/vouchers/admin.py:135
+#, fuzzy
+msgid "Voucher Restrictions"
+msgstr "Restrictions du coupon"
+
+#: danceschool/vouchers/admin.py:138
+#, fuzzy
+msgid "Other Info"
+msgstr "Autre info"
+
+#: danceschool/vouchers/admin.py:146
+#, fuzzy
+msgid "Enabled"
+msgstr "Activé"
+
+#: danceschool/vouchers/admin.py:152
+#, fuzzy
+msgid "Single use"
+msgstr "Usage unique"
+
+#: danceschool/vouchers/admin.py:154
+#, fuzzy
+msgid "First-time customer"
+msgstr "nouveau client"
+
+#: danceschool/vouchers/admin.py:156
+#, fuzzy
+msgid "Previous customer"
+msgstr "Client précédent"
+
+#: danceschool/vouchers/admin.py:158
+#, fuzzy
+msgid "Specific customer"
+msgstr "Client spécifique"
+
+#: danceschool/vouchers/admin.py:160
+#, fuzzy
+msgid "Specific class"
+msgstr "Cours spécifique"
+
+#: danceschool/vouchers/admin.py:162
+#, fuzzy
+msgid "Specific dance type/level"
+msgstr "Type de danse spécifique / niveau"
+
+#: danceschool/vouchers/admin.py:164
+#, fuzzy
+msgid "Restrictions"
+msgstr "Restrictions"
+
+#: danceschool/vouchers/admin.py:173
+#, fuzzy
+msgid "Disable selected Vouchers"
+msgstr "Désactiver les coupons sélectionnés"
+
+#: danceschool/vouchers/admin.py:182
+#, fuzzy
+msgid "Enable selected Vouchers"
+msgstr "Activer les coupons sélectionnés"
+
+#: danceschool/vouchers/cms_plugins.py:10
+#, fuzzy
+msgid "Statistics on Usage of Vouchers"
+msgstr "Statistiques sur l'utilisation des coupons"
+
+#: danceschool/vouchers/cms_toolbars.py:18
+#, fuzzy
+msgid "Finances"
+msgstr "Finances"
+
+#: danceschool/vouchers/cms_toolbars.py:32
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/vouchers/cms_toolbars.py:35
+#, fuzzy
+msgid "Voucher Categories"
+msgstr "Catégories de coupons"
+
+#: danceschool/vouchers/cms_toolbars.py:37 danceschool/vouchers/models.py:179
+#, fuzzy
+msgid "Vouchers"
+msgstr "Coupons"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:19
+#, fuzzy
+msgid "Vouchers/Gift Certificates"
+msgstr "Coupons / Chèques-cadeaux"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:20
+#, fuzzy
+msgid "Referral Program"
+msgstr "Programme de référence"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:30
+#, fuzzy
+msgid "Enable Vouchers"
+msgstr "Activer les coupons"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:31
+#, fuzzy
+msgid "If checked, then voucher functionality will be enabled."
+msgstr "Si cette case est cochée, la fonctionnalité du coupon sera activée."
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:39
+#, fuzzy
+msgid "Enable Gift Certificates"
+msgstr "Activer les chèques-cadeaux"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:40
+#, fuzzy
+msgid "If checked, then gift certificate functionality will be enabled."
+msgstr ""
+"Si cette case est cochée, la fonctionnalité de chèque cadeau sera activée."
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:48
+#, fuzzy
+msgid "Enable Gift Certificate PDF Attachments"
+msgstr "Activer les pièces jointes au PDF du chèque-cadeau"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:49
+msgid ""
+"If checked, then gift certificate emails will come with an attached PDF that "
+"can be printed and presented as a gift, based on the special EmailTemplate."
+msgstr ""
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:57
+#, fuzzy
+msgid "Voucher Category for email promotions"
+msgstr "Catégorie de coupon pour les promotions par courriel"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:63
+#, fuzzy
+msgid "Email Promotion"
+msgstr "Envoyer Courriel Promotion"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:70
+#, fuzzy
+msgid "Voucher Category for Purchased Gift Certificates"
+msgstr "Catégorie de coupon pour les chèques-cadeaux achetés"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:76
+#, fuzzy
+msgid "Purchased Gift Certificate"
+msgstr "Chèque-cadeau acheté"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:83
+#, fuzzy
+msgid "Voucher Category for Non-Purchased (Promotional) Gift Certificates"
+msgstr ""
+"Catégorie de coupon pour les chèques-cadeaux non-achetés (promotionnels)"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:89
+#, fuzzy
+msgid "Non-Purchased Gift Certificate"
+msgstr "Chèque-cadeau non acheté"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:96
+#, fuzzy
+msgid "Email Template for Gift Certificates"
+msgstr "Modèle de courriel pour les chèques-cadeaux"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:109
+#, fuzzy
+msgid "Gift Certificate Purchase Confirmation Email"
+msgstr "Confirmation d'achat d'un chèque-cadeau"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:111
+#, fuzzy
+msgid "Gift Certificate Purchase Confirmation"
+msgstr "Confirmation d'achat de chèque-cadeau"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:125
+#, fuzzy
+msgid "Email Template for Gift Certificate PDF Attachments"
+msgstr "Modèle de courriel pour les pièces jointes au PDF chèque cadeau"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:138
+#, fuzzy
+msgid "Gift Certificate Purchase PDF Text"
+msgstr "Chèque-cadeau Acheter texte PDF"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:140
+#, fuzzy
+msgid "You've Been Given the Gift of Dance!"
+msgstr "Vous avez reçu le cadeau de la danse!"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:157
+#, fuzzy
+msgid "Enable Referral Program"
+msgstr "Activer le programme de référence"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:158
+#, fuzzy
+msgid ""
+"If checked, then each customer will automatically have a referral code "
+"generated that they can use to get friends discounts."
+msgstr ""
+"Si cochée, chaque client aura automatiquement un code de référence qu'il "
+"pourra utiliser pour” “obtenir des réductions pour ses amis."
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:166
+#, fuzzy
+msgid "Discount to Referees"
+msgstr "Remise aux arbitres"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:167
+msgid ""
+"Discount given to individuals who provide a referral code.  In default "
+"currency."
+msgstr ""
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:175
+#, fuzzy
+msgid "Discount to Referrers"
+msgstr "Remise aux arbitres"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:176
+msgid ""
+"Discount given to students who refer other students via referral code.  In "
+"default currency."
+msgstr ""
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:184
+#, fuzzy
+msgid "Prefix applied to all referral voucher codes."
+msgstr "Préfixe appliqué à tous les codes de coupons de référence."
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:192
+#, fuzzy
+msgid "The Voucher Category for referrer vouchers"
+msgstr "La catégorie de coupons pour les coupons de référence"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:198
+#, fuzzy
+msgid "Referral Vouchers"
+msgstr "Coupons de référence"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:205
+#, fuzzy
+msgid "The Voucher Category for referee vouchers"
+msgstr "La catégorie de Coupon pour les coupons d'arbitrage"
+
+#: danceschool/vouchers/dynamic_preferences_registry.py:211
+#, fuzzy
+msgid "Referee Vouchers"
+msgstr "Coupons d'arbitrage"
+
+#: danceschool/vouchers/forms.py:7
+#, fuzzy
+msgid "Email gift certificate to"
+msgstr "Envoyer un chèque-cadeau à"
+
+#: danceschool/vouchers/forms.py:9
+#, fuzzy
+msgid "This email belongs to"
+msgstr "Ce courriel appartient à"
+
+#: danceschool/vouchers/forms.py:12
+#, fuzzy
+msgid "The recipient"
+msgstr "Le récipient"
+
+#: danceschool/vouchers/forms.py:12
+#, fuzzy
+msgid "The purchaser"
+msgstr "L'acheteur"
+
+#: danceschool/vouchers/forms.py:13
+msgid ""
+"If emailing directly to the recipient, a gift message will be sent. If "
+"emailing to the purchaser, the gift message will only be included as a PDF "
+"attachment."
+msgstr ""
+
+#: danceschool/vouchers/forms.py:16
+#, fuzzy
+msgid "Recipient name (optional)"
+msgstr "Nom du destinataire (facultatif)"
+
+#: danceschool/vouchers/forms.py:16
+#, fuzzy
+msgid "If provided, this will be used to customize the gift message."
+msgstr "Si fourni, cela sera utilisé pour personnaliser le message cadeau."
+
+#: danceschool/vouchers/forms.py:17
+#, fuzzy
+msgid "From name (optional)"
+msgstr "De nom (facultatif)"
+
+#: danceschool/vouchers/forms.py:19
+#, fuzzy
+msgid "Enter a message to the recipient (optional)"
+msgstr "Entrez un message au destinataire (facultatif)"
+
+#: danceschool/vouchers/handlers.py:45
+#, fuzzy
+msgid "Vouchers are disabled."
+msgstr "Les coupons sont désactivés."
+
+#: danceschool/vouchers/handlers.py:48
+#, fuzzy
+msgid "Can't have more than one voucher"
+msgstr "Ne peut pas avoir plus d'un coupon"
+
+#: danceschool/vouchers/handlers.py:55
+#, fuzzy
+msgid "Invalid Voucher Id"
+msgstr "Identifiant du coupon invalide"
+
+#: danceschool/vouchers/helpers.py:62
+#, fuzzy, python-format
+msgid "Referral Bonus for %s, %s"
+msgstr "Bonus de référence pour% s,% s"
+
+#: danceschool/vouchers/helpers.py:104
+#, fuzzy, python-format
+msgid "Referral: %s"
+msgstr "Référence:% s"
+
+#: danceschool/vouchers/helpers.py:129
+#, fuzzy
+msgid "Referral from "
+msgstr "Référence de"
+
+#: danceschool/vouchers/models.py:13 danceschool/vouchers/models.py:29
+#, fuzzy
+msgid "Name"
+msgstr "Nom"
+
+#: danceschool/vouchers/models.py:14 danceschool/vouchers/models.py:243
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:32
+#, fuzzy
+msgid "Description"
+msgstr "Description"
+
+#: danceschool/vouchers/models.py:20
+#, fuzzy
+msgid "Voucher category"
+msgstr "Catégorie de coupon"
+
+#: danceschool/vouchers/models.py:21
+#, fuzzy
+msgid "Voucher categories"
+msgstr "Catégories de coupons"
+
+#: danceschool/vouchers/models.py:26
+#, fuzzy
+msgid "Voucher Code"
+msgstr "Code du coupon"
+
+#: danceschool/vouchers/models.py:29
+#, fuzzy
+msgid ""
+"Give a descriptive name that will be used when a customer applies the "
+"voucher."
+msgstr ""
+"Donnez un nom descriptif qui sera utilisé lorsqu'un client applique le "
+"coupon."
+
+#: danceschool/vouchers/models.py:32
+#, fuzzy
+msgid "Category"
+msgstr "Catégorie"
+
+#: danceschool/vouchers/models.py:35
+#, fuzzy
+msgid "Description (optional)"
+msgstr "description (facultatif)"
+
+#: danceschool/vouchers/models.py:35
+#, fuzzy
+msgid "For internal use only"
+msgstr "Pour usage interne uniquement"
+
+#: danceschool/vouchers/models.py:38
+#, fuzzy
+msgid "Original Amount"
+msgstr "Montant original"
+
+#: danceschool/vouchers/models.py:38
+#, fuzzy
+msgid "Enter the original amount of the voucher here."
+msgstr "Entrez le montant original du coupon ici."
+
+#: danceschool/vouchers/models.py:39
+#, fuzzy
+msgid "Refunded Amount"
+msgstr "Montant remboursé"
+
+#: danceschool/vouchers/models.py:39
+#, fuzzy
+msgid ""
+"When a refund is processed through Paypal, this should automatically "
+"update.  Otherwise it should not need to be changed."
+msgstr ""
+"Lorsqu'un remboursement est traité via Paypal, il doit automatiquement être "
+"mis à jour, sinon” “il ne devrait pas être modifié."
+
+#: danceschool/vouchers/models.py:43
+#, fuzzy
+msgid "Max. Amount Per Use"
+msgstr "Montant Max. par utilisation"
+
+#: danceschool/vouchers/models.py:43
+#, fuzzy
+msgid ""
+"If specified, this will limit the size of a repeated-use voucher.  If "
+"unspecified, there is no limit.  Be sure to specify this for publicly "
+"advertised voucher codes."
+msgstr ""
+"Si spécifié, cela limitera la taille d'un coupon d'achat à usage répété.S'il "
+"n'est pas spécifié, il” “n'y a pas de limite.Veuillez vous assurer de le "
+"spécifier pour les codes promotionnels” “publicisés."
+
+#: danceschool/vouchers/models.py:46
+#, fuzzy
+msgid "Single Use"
+msgstr "Usage unique"
+
+#: danceschool/vouchers/models.py:50
+#, fuzzy
+msgid "For First-Time Customers Only"
+msgstr "Pour les nouveaux clients seulement"
+
+#: danceschool/vouchers/models.py:54
+#, fuzzy
+msgid "For Previous Customers Only"
+msgstr "Pour les clients précédents seulement"
+
+#: danceschool/vouchers/models.py:57
+#, fuzzy
+msgid "Creation Date"
+msgstr "Date de création"
+
+#: danceschool/vouchers/models.py:60
+#, fuzzy
+msgid "Expiration Date"
+msgstr "Date d'expiration"
+
+#: danceschool/vouchers/models.py:63
+#, fuzzy
+msgid "Voucher Disabled"
+msgstr "Coupon désactivé"
+
+#: danceschool/vouchers/models.py:63
+#, fuzzy
+msgid "Check this box to disable the voucher entirely."
+msgstr "Cochez cette case pour désactiver complètement le coupon."
+
+#: danceschool/vouchers/models.py:88
+#, fuzzy
+msgid "Has Expired"
+msgstr "A expiré"
+
+#: danceschool/vouchers/models.py:98
+#, fuzzy
+msgid "Voucher is valid for any customer"
+msgstr "Le coupon est valable pour tout client"
+
+#: danceschool/vouchers/models.py:106
+#, fuzzy
+msgid "Voucher is valid for any class"
+msgstr "Le bon est valable pour n'importe quel cours"
+
+#: danceschool/vouchers/models.py:122
+#, fuzzy
+msgid "Amount remaining"
+msgstr "Quantité restante"
+
+#: danceschool/vouchers/models.py:128
+#, fuzzy
+msgid "Voucher has expired."
+msgstr "Le coupon a expiré."
+
+#: danceschool/vouchers/models.py:132
+#, fuzzy
+msgid "Voucher has already been used."
+msgstr "Le coupon a déjà été utilisé."
+
+#: danceschool/vouchers/models.py:136
+#, fuzzy
+msgid "There is no money left on this voucher."
+msgstr "Il n'y a plus d'argent sur ce coupon."
+
+#: danceschool/vouchers/models.py:142
+#, fuzzy
+msgid "This voucher can be only used for specific classes."
+msgstr "Ce coupon ne peut être utilisé que pour des cours spécifiques."
+
+#: danceschool/vouchers/models.py:146
+#, fuzzy, python-format
+msgid "This voucher can only be used for %(level)s classes"
+msgstr "Ce coupon ne peut être utilisé que pour les cours% (niveau) s"
+
+#: danceschool/vouchers/models.py:150
+#, fuzzy
+msgid "This voucher has been disabled."
+msgstr "Ce coupon a été désactivé."
+
+#: danceschool/vouchers/models.py:155
+#, fuzzy
+msgid "This voucher is associated with a specific customer or customer group."
+msgstr "Ce coupon est associé à un client spécifique."
+
+#: danceschool/vouchers/models.py:161
+#, fuzzy
+msgid "This voucher is associated with a specific customer."
+msgstr "Ce coupon est associé à un client spécifique."
+
+#: danceschool/vouchers/models.py:163
+#, fuzzy
+msgid "This voucher is associated with a specific customer group."
+msgstr "Ce coupon est associé à un client spécifique."
+
+#: danceschool/vouchers/models.py:166
+#, fuzzy
+msgid "This voucher can only be used by first time customers."
+msgstr "Ce coupon ne peut être utilisé que par des clients débutants."
+
+#: danceschool/vouchers/models.py:169
+#, fuzzy
+msgid ""
+"This voucher can only be used by existing customers.  If you are an existing "
+"customer, be sure to register with the same email address that you have used "
+"previously."
+msgstr ""
+"Ce coupon ne peut être utilisé que par des clients existants Si vous êtes un "
+"client existant,” “assurez-vous de vous enregistrer avec la même adresse "
+"courriel que vous avez déjà utilisée."
+
+#: danceschool/vouchers/models.py:178 danceschool/vouchers/models.py:193
+#: danceschool/vouchers/models.py:206 danceschool/vouchers/models.py:215
+#: danceschool/vouchers/models.py:224 danceschool/vouchers/models.py:233
+#: danceschool/vouchers/models.py:241 danceschool/vouchers/models.py:253
+#, fuzzy
+msgid "Voucher"
+msgstr "Coupon"
+
+#: danceschool/vouchers/models.py:183
+#, fuzzy
+msgid "Referrer voucher"
+msgstr "Coupon de référence"
+
+#: danceschool/vouchers/models.py:184
+#, fuzzy
+msgid "Referree voucher"
+msgstr "Coupon d'arbitre"
+
+#: danceschool/vouchers/models.py:185
+#, fuzzy
+msgid "Amount awarded to referrer"
+msgstr "Montant accordé à referrer"
+
+#: danceschool/vouchers/models.py:188 danceschool/vouchers/models.py:263
+#, fuzzy
+msgid "Voucher referral discount"
+msgstr "Coupon Rabais de recommandation"
+
+#: danceschool/vouchers/models.py:189
+#, fuzzy
+msgid "Voucher referral discounts"
+msgstr "Coupons Rabais de recommandation"
+
+#: danceschool/vouchers/models.py:194 danceschool/vouchers/models.py:252
+#, fuzzy
+msgid "Registration"
+msgstr "Inscription"
+
+#: danceschool/vouchers/models.py:195 danceschool/vouchers/models.py:242
+#: danceschool/vouchers/models.py:254
+#, fuzzy
+msgid "Amount"
+msgstr "Montant"
+
+#: danceschool/vouchers/models.py:196
+#, fuzzy
+msgid "Notes"
+msgstr "Notes"
+
+#: danceschool/vouchers/models.py:197 danceschool/vouchers/models.py:255
+#: danceschool/vouchers/models.py:266
+#, fuzzy
+msgid "Date of use"
+msgstr "Date d'utilisation"
+
+#: danceschool/vouchers/models.py:200 danceschool/vouchers/models.py:264
+#, fuzzy
+msgid "Voucher use"
+msgstr "Utilisation du coupon"
+
+#: danceschool/vouchers/models.py:201
+#, fuzzy
+msgid "Voucher uses"
+msgstr "Utilisations du coupon"
+
+#: danceschool/vouchers/models.py:205
+#, fuzzy
+msgid "Dance Type/Level"
+msgstr "Type de danse / niveau"
+
+#: danceschool/vouchers/models.py:209
+#, fuzzy
+msgid "Dance type/level voucher restriction"
+msgstr "Restriction du Coupon pour Type de danse / niveau"
+
+#: danceschool/vouchers/models.py:210
+#, fuzzy
+msgid "Dance type/level voucher restrictions"
+msgstr "Restrictions du Coupon pour Type de danse / niveau"
+
+#: danceschool/vouchers/models.py:214
+#, fuzzy
+msgid "Class Type (Description)"
+msgstr "Type de cours (description)"
+
+#: danceschool/vouchers/models.py:218
+#, fuzzy
+msgid "Class-specific voucher restriction"
+msgstr "Restriction du coupon spécifique au cours"
+
+#: danceschool/vouchers/models.py:219
+#, fuzzy
+msgid "Class-specific voucher restrictions"
+msgstr "Restrictions du coupon spécifique au cours"
+
+#: danceschool/vouchers/models.py:223
+#, fuzzy
+msgid "Customer group"
+msgstr "Groupe de points"
+
+#: danceschool/vouchers/models.py:227
+#, fuzzy
+msgid "Group-specific voucher restriction"
+msgstr "Restriction du coupon spécifique au cours"
+
+#: danceschool/vouchers/models.py:228
+#, fuzzy
+msgid "Group-specific voucher restrictions"
+msgstr "Restrictions du coupon spécifique au cours"
+
+#: danceschool/vouchers/models.py:232
+#, fuzzy
+msgid "Customer"
+msgstr "Client"
+
+#: danceschool/vouchers/models.py:236
+#, fuzzy
+msgid "Customer-specific voucher restriction"
+msgstr "Restriction de coupon au client spécifique"
+
+#: danceschool/vouchers/models.py:237
+#, fuzzy
+msgid "Customer-specific voucher restrictions"
+msgstr "Restrictions de coupons au client spécifique"
+
+#: danceschool/vouchers/models.py:244
+#, fuzzy
+msgid "Date of credit"
+msgstr "Date du crédit"
+
+#: danceschool/vouchers/models.py:247 danceschool/vouchers/models.py:265
+#, fuzzy
+msgid "Voucher credit"
+msgstr "Coupon pour crédit"
+
+#: danceschool/vouchers/models.py:248
+#, fuzzy
+msgid "Voucher credits"
+msgstr "Coupons pour crédits"
+
+#: danceschool/vouchers/models.py:258
+#, fuzzy
+msgid "Tentative voucher use"
+msgstr "Utilisation du coupon provisoire"
+
+#: danceschool/vouchers/models.py:259
+#, fuzzy
+msgid "Tentative voucher uses"
+msgstr "Utilisations des coupons provisoires "
+
+#: danceschool/vouchers/models.py:269
+#, fuzzy
+msgid "Use of voucher referral discount"
+msgstr "Utilisation de la remise du coupon de recommandation"
+
+#: danceschool/vouchers/models.py:270
+#, fuzzy
+msgid "Uses of voucher referral discounts"
+msgstr "Utilisations des remises des coupons de recommandation"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:7
+#, fuzzy
+msgid "Statistics on Voucher Usage"
+msgstr "Statistiques sur l'utilisation du coupon"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:13
+#, fuzzy
+msgid "Last 12 Months"
+msgstr "12 derniers mois"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:16
+#, fuzzy
+msgid "Last Month"
+msgstr "Le mois dernier"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:19
+#, fuzzy
+msgid "All Time"
+msgstr "Tout le temps"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:26
+#, fuzzy
+msgid "Percentage of Registration Using Vouchers"
+msgstr "Pourcentage d'inscription utilisant des coupons"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:30
+#, fuzzy
+msgid "Most Popular Vouchers"
+msgstr "Les coupons les plus populaires"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:32
+#, fuzzy
+msgid "Code"
+msgstr "Code"
+
+#: danceschool/vouchers/templates/stats/schoolstats_voucherusage.html:32
+#, fuzzy
+msgid "Uses"
+msgstr "Les usages"
+
+#: danceschool/vouchers/views.py:45
+#, fuzzy
+msgid "Invalid invoice information passed."
+msgstr "Informations de facturation incorrectes transmises."
+
+#: danceschool/vouchers/views.py:48
+#, fuzzy
+msgid "Passed invoice is not paid."
+msgstr "La facture validée n'est pas payée."
+
+#: danceschool/vouchers/views.py:68
+#, fuzzy, python-format
+msgid "Gift certificate: %s%s for %s"
+msgstr "Chèque cadeau:% s% s pour% s"
+
+#: danceschool/vouchers/views.py:77
+#, fuzzy
+msgid "Gift certificate transaction not completed"
+msgstr "La transaction du chèque-cadeau n'est pas terminée"

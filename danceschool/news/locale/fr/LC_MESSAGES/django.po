@@ -1,0 +1,240 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:46-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/news/admin.py:17
+#, fuzzy
+msgid "Dates"
+msgstr "Dates"
+
+#: danceschool/news/cms_apps.py:7
+#, fuzzy
+msgid "News Apphook"
+msgstr "Nouvelles Apphook"
+
+#: danceschool/news/cms_plugins.py:17
+#, fuzzy
+msgid "Show Latest News Items"
+msgstr "Afficher les dernières nouvelles"
+
+#: danceschool/news/cms_plugins.py:20
+#, fuzzy
+msgid "News"
+msgstr "Nouvelles"
+
+#: danceschool/news/cms_plugins.py:47
+#, fuzzy
+msgid "Default Template"
+msgstr "Modèle par défaut"
+
+#: danceschool/news/cms_toolbars.py:14 danceschool/news/models.py:19
+#, fuzzy
+msgid "Content"
+msgstr "Contenu"
+
+#: danceschool/news/cms_toolbars.py:15
+#, fuzzy
+msgid "Add News Item"
+msgstr "Ajouter un élément de Nouvelles"
+
+#: danceschool/news/cms_toolbars.py:17
+#, fuzzy
+msgid "Manage News Items"
+msgstr "Gérer les éléments de nouvelles"
+
+#: danceschool/news/feeds.py:13
+#, fuzzy, python-format
+msgid "%s Latest News"
+msgstr "% s Dernières nouvelles"
+
+#: danceschool/news/feeds.py:16
+#, fuzzy, python-format
+msgid "Updates and news items from %s"
+msgstr "Mises à jour et nouvelles de% s"
+
+#: danceschool/news/models.py:17
+#, fuzzy
+msgid "Title"
+msgstr "Titre"
+
+#: danceschool/news/models.py:17
+#, fuzzy
+msgid "Title the news item. Make sure this is descriptive."
+msgstr "Titre de l'article de nouvelles. Assurez-vous que c'est descriptif."
+
+#: danceschool/news/models.py:19
+#, fuzzy
+msgid "Insert news content here."
+msgstr "Insérer le contenu des nouvelles ici."
+
+#: danceschool/news/models.py:21
+#, fuzzy
+msgid "Alert"
+msgstr "Alerte"
+
+#: danceschool/news/models.py:21
+#, fuzzy
+msgid ""
+"Alerts (such as cancellations) may be displayed in an emphasized fashion."
+msgstr ""
+"Les alertes (telles que les annulations) peuvent être affichées de manière "
+"accentuée."
+
+#: danceschool/news/models.py:23
+#, fuzzy
+msgid "Pinned"
+msgstr "Épinglé"
+
+#: danceschool/news/models.py:23
+#, fuzzy
+msgid ""
+"If this field is set, then the news item will continue to show up on the "
+"main page until someone unpins it."
+msgstr ""
+"Si ce champ est défini, alors l'élément de nouvelles continuera à apparaître "
+"sur la page” “principale jusqu'à ce que quelqu'un le débloque."
+
+#: danceschool/news/models.py:25
+#, fuzzy
+msgid "Draft status"
+msgstr "état de projet"
+
+#: danceschool/news/models.py:25
+#, fuzzy
+msgid "Check to hide from publication"
+msgstr "Cochez pour masquer la publication"
+
+#: danceschool/news/models.py:26
+#, fuzzy
+msgid "Hidden"
+msgstr "Caché"
+
+#: danceschool/news/models.py:26
+#, fuzzy
+msgid ""
+"If for some reason you need to make a news item invisible, this will do that."
+msgstr ""
+"Si pour une raison quelconque, vous devez rendre un élément de nouvelles "
+"invisible, cela fera” “l'affaire."
+
+#: danceschool/news/models.py:28
+#, fuzzy
+msgid "Creation date"
+msgstr "Date de création"
+
+#: danceschool/news/models.py:29
+#, fuzzy
+msgid "Last modified date"
+msgstr "Date de dernière modification"
+
+#: danceschool/news/models.py:29
+#, fuzzy
+msgid "Time of most recent edit"
+msgstr "Heure de la dernière modification"
+
+#: danceschool/news/models.py:30
+#, fuzzy
+msgid "Publication date"
+msgstr "Date de publication"
+
+#: danceschool/news/models.py:36
+#, fuzzy
+msgid "News item"
+msgstr "Information"
+
+#: danceschool/news/models.py:37
+#, fuzzy
+msgid "News items"
+msgstr "Informations"
+
+#: danceschool/news/models.py:42
+#, fuzzy
+msgid "Maximum number of items to show"
+msgstr "Nombre maximum d'éléments à afficher"
+
+#: danceschool/news/models.py:43
+#, fuzzy
+msgid "Published since (days ago)"
+msgstr "Publié depuis (jours)"
+
+#: danceschool/news/models.py:43
+#, fuzzy
+msgid "Leave blank for no limit."
+msgstr "Laissez vide pour aucune limite."
+
+#: danceschool/news/models.py:44
+#, fuzzy
+msgid "Show Alerts Only"
+msgstr "Afficher les alertes uniquement"
+
+#: danceschool/news/models.py:45
+#, fuzzy
+msgid "Ignore Pinned Item Precedence"
+msgstr "Ignorer la priorité des éléments épinglés"
+
+#: danceschool/news/models.py:45
+#, fuzzy
+msgid ""
+"By default, pinned items are shown first, regardless of publication date. "
+"Checking this box overrides that behavior."
+msgstr ""
+"Par défaut, les éléments épinglés sont affichés en premier, quelle que soit "
+"la date de publication.Cocher cette case remplace ce comportement."
+
+#: danceschool/news/models.py:46
+#, fuzzy
+msgid "Template"
+msgstr "Modèle"
+
+#: danceschool/news/templates/news/latest_news.html:4
+#, fuzzy
+msgid "Latest News"
+msgstr "Dernières nouvelles"
+
+#: danceschool/news/templates/news/latest_news.html:7
+#: danceschool/news/templates/news/news_listing.html:6
+#, fuzzy
+msgid "Post News Item"
+msgstr "Publier un article"
+
+#: danceschool/news/templates/news/latest_news.html:11
+#, fuzzy
+msgid "See More News"
+msgstr "Voir plus de nouvelles"
+
+#: danceschool/news/templates/news/news_listing.html:23
+#, fuzzy
+msgid "previous"
+msgstr "précédent"
+
+#: danceschool/news/templates/news/news_listing.html:26
+#, fuzzy, python-format
+msgid ""
+"\n"
+"                    Page %(thisPage)s of %(numPages)s.\n"
+"                    "
+msgstr ""
+"\n"
+"                    Page %(cettePage)s of %(numPages)s.\n"
+"                    "
+
+#: danceschool/news/templates/news/news_listing.html:31
+#, fuzzy
+msgid "next"
+msgstr "prochain"

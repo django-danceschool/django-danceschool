@@ -1,0 +1,1914 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:44-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/financial/admin.py:25
+#, fuzzy
+msgid "Pay to this user"
+msgstr "Payer à cet utilisateur"
+
+#: danceschool/financial/admin.py:31 danceschool/financial/admin.py:117
+#: danceschool/financial/forms.py:230
+#, fuzzy
+msgid "Enter a user name"
+msgstr "Entrer un nom d'utilisateur"
+
+#: danceschool/financial/admin.py:66 danceschool/financial/admin.py:149
+#, fuzzy
+msgid "Basic Info"
+msgstr "Informations de base"
+
+#: danceschool/financial/admin.py:69 danceschool/financial/admin.py:155
+#, fuzzy
+msgid "File Attachment (optional)"
+msgstr "Fichier joint (facultatif)"
+
+#: danceschool/financial/admin.py:72 danceschool/financial/admin.py:158
+#, fuzzy
+msgid "Approval/Payment Status"
+msgstr "Approbation / État de paiement"
+
+#: danceschool/financial/admin.py:85
+#, fuzzy
+msgid "Mark Expense Items as approved"
+msgstr "Marquer les dépenses comme approuvées"
+
+#: danceschool/financial/admin.py:94
+#, fuzzy
+msgid "Mark Expense Items as not approved"
+msgstr "Marquer les dépenses comme non approuvées"
+
+#: danceschool/financial/admin.py:111 danceschool/financial/forms.py:224
+#: danceschool/financial/models.py:738
+#, fuzzy
+msgid "Cash currently in possession of"
+msgstr "Espèces actuellement en possession de"
+
+#: danceschool/financial/admin.py:152 danceschool/financial/cms_toolbars.py:86
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/financial/admin.py:181 danceschool/financial/cms_toolbars.py:97
+#, fuzzy
+msgid "Revenue Items"
+msgstr "Articles de revenus"
+
+#: danceschool/financial/admin.py:191
+#, fuzzy
+msgid "Series/Event"
+msgstr "Série / Événement"
+
+#: danceschool/financial/admin.py:196 danceschool/financial/admin.py:198
+#, fuzzy
+msgid "Invoice"
+msgstr "Facture"
+
+#: danceschool/financial/admin.py:210
+#, fuzzy
+msgid "Submitted"
+msgstr "Soumis"
+
+#: danceschool/financial/admin.py:219
+#, fuzzy
+msgid "Mark Revenue Items as received"
+msgstr "Marquer les revenus comme reçus"
+
+#: danceschool/financial/admin.py:228
+#, fuzzy
+msgid "Mark Revenue Items as not received"
+msgstr "Marquer les éléments de revenus comme non reçus"
+
+#: danceschool/financial/admin.py:273
+#, fuzzy
+msgid "Update compensation rules"
+msgstr "Actualiser les règles de compensation"
+
+#: danceschool/financial/admin.py:287 danceschool/financial/admin.py:356
+#, fuzzy
+msgid "Generation rules"
+msgstr "Règles de génération"
+
+#: danceschool/financial/admin.py:290 danceschool/financial/admin.py:362
+#, fuzzy
+msgid "Start and End Date (optional)"
+msgstr "Date de début et de fin (facultatif)"
+
+#: danceschool/financial/admin.py:343
+#, fuzzy
+msgid "Per day"
+msgstr "Par jour"
+
+#: danceschool/financial/admin.py:359
+#, fuzzy
+msgid "Expense item parameters"
+msgstr "Paramètres d'élément de dépense"
+
+#: danceschool/financial/admin.py:366
+#, fuzzy
+msgid "Automated approval"
+msgstr "Approbation automatisée"
+
+#: danceschool/financial/admin.py:387
+#, fuzzy
+msgid "Enabled"
+msgstr "Activé"
+
+#: danceschool/financial/admin.py:397
+#, fuzzy
+msgid "Disable selected repeated expense rules"
+msgstr "Désactiver les règles de dépenses répétées sélectionnées"
+
+#: danceschool/financial/admin.py:406
+#, fuzzy
+msgid "Enable selected repeated expense rules"
+msgstr "Activer les règles de dépenses répétées sélectionnées"
+
+#: danceschool/financial/admin.py:417
+#, fuzzy
+msgid "Generate expenses for selected repeated expense rules"
+msgstr ""
+"Générer des dépenses pour des règles de dépenses répétées sélectionnées"
+
+#: danceschool/financial/apps.py:8
+#, fuzzy
+msgid "Financial Functions"
+msgstr "Fonctions financières"
+
+#: danceschool/financial/apps.py:118
+#, fuzzy
+msgid ""
+"Staff members for this series have already been paid.  If you need to adjust "
+"hours worked, you will need to request money from them directly."
+msgstr ""
+"Les membres du personnel de cette série ont déjà été payés. Si vous avez "
+"besoin d'ajuster les” “heures travaillées, vous devrez demander de l'argent "
+"directement auprès d'eux."
+
+#: danceschool/financial/autocomplete_light_registry.py:12
+#, fuzzy
+msgid "Cash"
+msgstr "En espèces"
+
+#: danceschool/financial/autocomplete_light_registry.py:12
+#, fuzzy
+msgid "Check"
+msgstr "Chèque"
+
+#: danceschool/financial/autocomplete_light_registry.py:12
+#, fuzzy
+msgid "Bank/Debit Card"
+msgstr "Carte bancaire / débit"
+
+#: danceschool/financial/autocomplete_light_registry.py:12
+#: danceschool/financial/templates/financial/finances_bymonth.html:67
+#, fuzzy
+msgid "Other"
+msgstr "Autre"
+
+#: danceschool/financial/cms_toolbars.py:20
+#, fuzzy
+msgid "Finances"
+msgstr "Finances"
+
+#: danceschool/financial/cms_toolbars.py:41
+#, fuzzy
+msgid "Submit Expenses"
+msgstr "Soumettre des dépenses"
+
+#: danceschool/financial/cms_toolbars.py:45
+#, fuzzy
+msgid "Submit Revenues"
+msgstr "Soumettre des revenus"
+
+#: danceschool/financial/cms_toolbars.py:49
+#, fuzzy
+msgid "Your Payment History"
+msgstr "Votre historique de paiement"
+
+#: danceschool/financial/cms_toolbars.py:56
+#, fuzzy
+msgid "View Monthly Financial Summary"
+msgstr "Voir le résumé financier mensuel"
+
+#: danceschool/financial/cms_toolbars.py:59
+#, fuzzy
+msgid "View Financial Summary By Event"
+msgstr "Afficher le récapitulatif financier par événement"
+
+#: danceschool/financial/cms_toolbars.py:63
+#, fuzzy
+msgid "Detailed Breakdown"
+msgstr "Répartition détaillée"
+
+#: danceschool/financial/cms_toolbars.py:71
+#, fuzzy
+msgid "Year To Date"
+msgstr "Année à ce jour"
+
+#: danceschool/financial/cms_toolbars.py:72
+#, fuzzy, python-format
+msgid "%s"
+msgstr "%s"
+
+#: danceschool/financial/cms_toolbars.py:76
+#, fuzzy
+msgid "Month To Date"
+msgstr "Mois à ce jour"
+
+#: danceschool/financial/cms_toolbars.py:77
+#: danceschool/financial/cms_toolbars.py:78
+#: danceschool/financial/cms_toolbars.py:79
+#, fuzzy, python-format
+msgid "%s %s"
+msgstr "%s %s"
+
+#: danceschool/financial/cms_toolbars.py:89
+#, fuzzy
+msgid "Expense Categories"
+msgstr "Catégories de dépenses"
+
+#: danceschool/financial/cms_toolbars.py:91
+#, fuzzy
+msgid "Expense Items"
+msgstr "Articles de dépense"
+
+#: danceschool/financial/cms_toolbars.py:93
+#, fuzzy
+msgid "Repeated Expense Rules"
+msgstr "Règles de dépenses répétées"
+
+#: danceschool/financial/cms_toolbars.py:95
+#, fuzzy
+msgid "Revenue Categories"
+msgstr "Catégories de revenus"
+
+#: danceschool/financial/constants.py:7
+#, fuzzy
+msgid "Date of Accrual (e.g. Series end date)"
+msgstr "Date d'accumulation (par exemple, date de fin de la série)"
+
+#: danceschool/financial/constants.py:8
+#, fuzzy
+msgid "Date of Submission"
+msgstr "Date de soumission"
+
+#: danceschool/financial/constants.py:9
+#, fuzzy
+msgid "Date of Payment/Receipt"
+msgstr "Date de paiement / réception"
+
+#: danceschool/financial/constants.py:10
+#, fuzzy
+msgid "Date of Approval/Receipt"
+msgstr "Date d'approbation / de réception"
+
+#: danceschool/financial/dynamic_preferences_registry.py:14
+#, fuzzy
+msgid "Financial App"
+msgstr "Application financière"
+
+#: danceschool/financial/dynamic_preferences_registry.py:24
+#, fuzzy
+msgid "Auto-generate ExpenseItems for completed events"
+msgstr "Générer automatiquement des ExpenseItems pour les événements terminés"
+
+#: danceschool/financial/dynamic_preferences_registry.py:25
+#, fuzzy
+msgid ""
+"Uncheck to disable the automatic generation of ExpenseItems for class series "
+"instructors in the financial app."
+msgstr ""
+"Désactivez la case à cocher pour désactiver la génération automatique des "
+"ExpenseItems pour les instructeurs de la classe dans l'application "
+"financière."
+
+#: danceschool/financial/dynamic_preferences_registry.py:33
+#, fuzzy
+msgid "Auto-generate ExpenseItems for venue rental"
+msgstr "Générer automatiquement des ExpenseItems pour la location de salles"
+
+#: danceschool/financial/dynamic_preferences_registry.py:34
+#, fuzzy
+msgid ""
+"Uncheck to disable the automatic generation of ExpenseItems for venue rental "
+"in the financial app."
+msgstr ""
+"Désactivez la désactivation de la génération automatique de ExpenseItems "
+"pour la location de” “sites dans l'application financière."
+
+#: danceschool/financial/dynamic_preferences_registry.py:42
+#, fuzzy
+msgid "Auto-generate RevenueItems for registrations"
+msgstr "Générer automatiquement des RevenueItems pour les enregistrements"
+
+#: danceschool/financial/dynamic_preferences_registry.py:43
+#, fuzzy
+msgid ""
+"Uncheck to disable the automatic generation of RevenueItems for old "
+"Registrations in the financial app (useful when migrating old DBs)."
+msgstr ""
+"Désactivez la case à cocher pour désactiver la génération automatique de "
+"RevenueItems pour” “les anciennes inscriptions dans l'application financière "
+"(utile lors de la migration d'anciennes” “bases de données)."
+
+#: danceschool/financial/dynamic_preferences_registry.py:51
+#, fuzzy
+msgid "Registration revenue autogeneration window (months)"
+msgstr "Fenêtre d'autogénération de revenus d'enregistrement (mois)"
+
+#: danceschool/financial/dynamic_preferences_registry.py:52
+#, fuzzy
+msgid ""
+"Set how many months back back from the date of execution to autogenerate "
+"RevenueItems for old Registrations in the financial app, or set to 0 to "
+"autogenerate with no time restriction."
+msgstr ""
+"Définir le délai depuis la date d'exécution pour générer automatiquement des "
+"éléments de” “revenus pour les anciennes inscriptions dans l'application "
+"financière, ou définir sur 0 pour” “générer automatiquement sans restriction "
+"de temps."
+
+#: danceschool/financial/dynamic_preferences_registry.py:60
+#, fuzzy
+msgid "Expense Category for Class Instruction items"
+msgstr ""
+"Catégorie de dépenses pour les articles d'instruction de classe assistante"
+
+#: danceschool/financial/dynamic_preferences_registry.py:66
+#, fuzzy
+msgid "Class Instruction"
+msgstr "Instruction de classe"
+
+#: danceschool/financial/dynamic_preferences_registry.py:73
+#, fuzzy
+msgid "Expense Category for Assistant Class Instruction items"
+msgstr ""
+"Catégorie de dépenses pour les articles d'instruction de classe assistante"
+
+#: danceschool/financial/dynamic_preferences_registry.py:79
+#, fuzzy
+msgid "Assistant Class Instruction"
+msgstr "Instruction de cours Assistant"
+
+#: danceschool/financial/dynamic_preferences_registry.py:86
+#, fuzzy
+msgid "Expense Category for other Event-Related Staff Expenses"
+msgstr ""
+"Catégorie de dépenses pour les autres dépenses de personnel liées à des "
+"événements"
+
+#: danceschool/financial/dynamic_preferences_registry.py:92
+#, fuzzy
+msgid "Other Event-Related Staff Expenses"
+msgstr "Autres dépenses de personnel liées à des événements"
+
+#: danceschool/financial/dynamic_preferences_registry.py:99
+#, fuzzy
+msgid "Expense Category for Venue Rental"
+msgstr "Catégorie de dépenses pour la location de salles"
+
+#: danceschool/financial/dynamic_preferences_registry.py:105
+#: danceschool/financial/templates/financial/finances_byevent.html:46
+#: danceschool/financial/templates/financial/finances_bymonth.html:67
+#: danceschool/financial/templates/financial/finances_detail.html:168
+#, fuzzy
+msgid "Venue Rental"
+msgstr "Location de lieu"
+
+#: danceschool/financial/dynamic_preferences_registry.py:112
+#, fuzzy
+msgid "Revenue Category for Registrations"
+msgstr "Catégorie de revenus pour les inscriptions"
+
+#: danceschool/financial/dynamic_preferences_registry.py:118
+#: danceschool/financial/templates/financial/finances_bymonth.html:50
+#: danceschool/financial/views.py:365
+#, fuzzy
+msgid "Registrations"
+msgstr "Inscriptions"
+
+#: danceschool/financial/dynamic_preferences_registry.py:125
+#, fuzzy
+msgid "Revenue Category for Purchased Vouchers and Gift Certificates"
+msgstr "Catégorie de revenu pour les bons achetés et les chèques-cadeaux"
+
+#: danceschool/financial/dynamic_preferences_registry.py:131
+#, fuzzy
+msgid "Purchased Vouchers/Gift Certificates"
+msgstr "Chèques achetés / Chèques-cadeaux"
+
+#: danceschool/financial/dynamic_preferences_registry.py:138
+#, fuzzy
+msgid "Revenue Category for Unknown and Otherwise Unallocated Online Payments"
+msgstr ""
+"Catégorie de revenu pour les paiements en ligne inconnus et autrement non "
+"alloués"
+
+#: danceschool/financial/dynamic_preferences_registry.py:144
+#, fuzzy
+msgid "Unallocated Online Payments"
+msgstr "Paiements en ligne non alloués"
+
+#: danceschool/financial/forms.py:31
+#, fuzzy
+msgid "Me"
+msgstr "Moi"
+
+#: danceschool/financial/forms.py:32
+#, fuzzy
+msgid "A Location (e.g. a rental payment)"
+msgstr "Un lieu (par exemple un paiement de location)"
+
+#: danceschool/financial/forms.py:33
+#, fuzzy
+msgid "Someone else"
+msgstr "Quelqu'un d'autre"
+
+#: danceschool/financial/forms.py:36
+#, fuzzy
+msgid "Hours of Work/Rental (paid at default rate)"
+msgstr "Heures de travail / location (payé au taux par défaut)"
+
+#: danceschool/financial/forms.py:37
+#, fuzzy
+msgid "Flat Payment"
+msgstr "Paiement forfaitaire"
+
+#: danceschool/financial/forms.py:40
+#, fuzzy
+msgid "A Class Series or Event"
+msgstr "Une série de cours ou un événement"
+
+#: danceschool/financial/forms.py:41
+#, fuzzy
+msgid "Neither"
+msgstr "Ni l’un ni l’autre"
+
+#: danceschool/financial/forms.py:77
+#, fuzzy
+msgid "This expense to be paid to:"
+msgstr "Cette dépense doit être payée à:"
+
+#: danceschool/financial/forms.py:78
+#, fuzzy
+msgid "Report this expense as:"
+msgstr "Déclarez cette dépense comme:"
+
+#: danceschool/financial/forms.py:83 danceschool/financial/forms.py:243
+#: danceschool/financial/models.py:447 danceschool/financial/models.py:514
+#: danceschool/financial/models.py:726
+#, fuzzy
+msgid "Payment method"
+msgstr "Mode de paiement"
+
+#: danceschool/financial/forms.py:97
+#, fuzzy
+msgid "Mark as Approved/Paid"
+msgstr "Marquer comme approuvé / payé"
+
+#: danceschool/financial/forms.py:97
+#, fuzzy
+msgid "click to expand"
+msgstr "Cliquez pour agrandir"
+
+#: danceschool/financial/forms.py:111
+#, fuzzy
+msgid "Note:"
+msgstr "Note:"
+
+#: danceschool/financial/forms.py:111
+#, fuzzy
+msgid ""
+"For accounting purposes, please do not mark expenses as paid unless they "
+"have already been paid to the recipient."
+msgstr ""
+"Pour les besoins de la comptabilité, ne marquez pas les dépenses comme "
+"payées, sauf si” “elles ont déjà été payées au destinataire."
+
+#: danceschool/financial/forms.py:124
+#, fuzzy
+msgid "Add Another"
+msgstr "Ajouter un autre"
+
+#: danceschool/financial/forms.py:148 danceschool/financial/forms.py:248
+#: danceschool/financial/templates/financial/update_staff_compensation_rules.html:38
+#, fuzzy
+msgid "Submit"
+msgstr "Envoyer"
+
+#: danceschool/financial/forms.py:221
+#, fuzzy
+msgid "This revenue is associated with:"
+msgstr "Ce revenu est associé à:"
+
+#: danceschool/financial/forms.py:270
+#, fuzzy
+msgid "Form Submitted Revenue"
+msgstr "Formulaire de revenus soumis"
+
+#: danceschool/financial/handlers.py:121
+#, fuzzy, python-format
+msgid "Registration invoice %s"
+msgstr "Facture d'inscription% s"
+
+#: danceschool/financial/helpers.py:33 danceschool/financial/helpers.py:88
+#: danceschool/financial/models.py:494 danceschool/financial/models.py:718
+#: danceschool/financial/templates/financial/finances_detail.html:67
+#: danceschool/financial/templates/financial/finances_detail.html:102
+#: danceschool/financial/templates/financial/finances_detail.html:147
+#: danceschool/financial/templates/financial/finances_detail.html:185
+#: danceschool/financial/templates/financial/finances_detail.html:222
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#, fuzzy
+msgid "Description"
+msgstr "Description"
+
+#: danceschool/financial/helpers.py:34
+#, fuzzy
+msgid "Expense Category"
+msgstr "Catégorie de dépenses"
+
+#: danceschool/financial/helpers.py:35 danceschool/financial/models.py:497
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#, fuzzy
+msgid "Hours"
+msgstr "Heures"
+
+#: danceschool/financial/helpers.py:36
+#, fuzzy
+msgid "Wage Rate"
+msgstr "Taux de salaire"
+
+#: danceschool/financial/helpers.py:37
+#, fuzzy
+msgid "Total Payment"
+msgstr "Paiement total"
+
+#: danceschool/financial/helpers.py:38
+#, fuzzy
+msgid "Is Reimbursement"
+msgstr "Est le remboursement"
+
+#: danceschool/financial/helpers.py:39
+#: danceschool/financial/templates/financial/finances_bymonth.html:12
+#: danceschool/financial/templates/financial/finances_detail.html:18
+#: danceschool/financial/templates/financial/instructor_payments.html:32
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#, fuzzy
+msgid "Submission Date"
+msgstr "Date de soumission"
+
+#: danceschool/financial/helpers.py:40 danceschool/financial/helpers.py:94
+#: danceschool/financial/models.py:526 danceschool/financial/models.py:735
+#: danceschool/financial/views.py:240
+#, fuzzy
+msgid "Event"
+msgstr "Événement"
+
+#: danceschool/financial/helpers.py:41 danceschool/financial/models.py:556
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#, fuzzy
+msgid "Approved"
+msgstr "Approuvé"
+
+#: danceschool/financial/helpers.py:42 danceschool/financial/models.py:560
+#, fuzzy
+msgid "Paid"
+msgstr "Payé"
+
+#: danceschool/financial/helpers.py:43
+#: danceschool/financial/templates/financial/instructor_payments.html:31
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#, fuzzy
+msgid "Payment Date"
+msgstr "Date de paiement"
+
+#: danceschool/financial/helpers.py:47
+#, fuzzy
+msgid "Pay To"
+msgstr "payer à l'ordre de"
+
+#: danceschool/financial/helpers.py:70
+#, fuzzy
+msgid "Location: "
+msgstr "Emplacement:"
+
+#: danceschool/financial/helpers.py:89
+#, fuzzy
+msgid "Revenue Category"
+msgstr "Catégorie de revenu"
+
+#: danceschool/financial/helpers.py:90
+#, fuzzy
+msgid "Gross Total (Pre-Discounts & Vouchers)"
+msgstr "Total brut (pré-escomptes et coupons)"
+
+#: danceschool/financial/helpers.py:91
+#, fuzzy
+msgid "Net Total"
+msgstr "Total net"
+
+#: danceschool/financial/helpers.py:92 danceschool/financial/models.py:736
+#, fuzzy
+msgid "Received From"
+msgstr "Reçu de"
+
+#: danceschool/financial/helpers.py:93
+#, fuzzy
+msgid "Registration"
+msgstr "Inscription"
+
+#: danceschool/financial/helpers.py:95 danceschool/financial/models.py:739
+#, fuzzy
+msgid "Received"
+msgstr "Reçu"
+
+#: danceschool/financial/helpers.py:96
+#, fuzzy
+msgid "Received Date"
+msgstr "Date de réception"
+
+#: danceschool/financial/helpers.py:185
+#, fuzzy
+msgid "Event/Series venue rental"
+msgstr "Location de salles de spectacles / événements"
+
+#: danceschool/financial/helpers.py:186
+msgid "of"
+msgstr ""
+
+#: danceschool/financial/helpers.py:188 danceschool/financial/helpers.py:292
+msgid "for"
+msgstr ""
+
+#: danceschool/financial/helpers.py:206 danceschool/financial/helpers.py:357
+msgid "to"
+msgstr ""
+
+#: danceschool/financial/helpers.py:289
+#, fuzzy
+msgid "Staff"
+msgstr "Personnel"
+
+#: danceschool/financial/helpers.py:290
+#, fuzzy
+msgid "payment to"
+msgstr "Paiement à"
+
+#: danceschool/financial/helpers.py:548
+#, fuzzy
+msgid "Event Registration "
+msgstr "Inscription d'événement"
+
+#: danceschool/financial/helpers.py:727
+#, fuzzy
+msgid "Unspecified Month"
+msgstr "Mois non spécifié"
+
+#: danceschool/financial/models.py:32 danceschool/financial/models.py:48
+#, fuzzy
+msgid "Name"
+msgstr "Nom"
+
+#: danceschool/financial/models.py:32
+#, fuzzy
+msgid ""
+"Different types of tasks and payments should have different category names"
+msgstr ""
+"Différents types de tâches et de paiements doivent avoir des noms de "
+"catégories différents"
+
+#: danceschool/financial/models.py:33
+#, fuzzy
+msgid "Default rate"
+msgstr "Taux de défaut"
+
+#: danceschool/financial/models.py:33
+msgid ""
+"This is the default hourly payment rate for this type of task.  For staff "
+"expenses and venue rentals, this will be overridden by the rate specified as "
+"default for the venue or staff type."
+msgstr ""
+
+#: danceschool/financial/models.py:39
+#, fuzzy
+msgid "Expense category"
+msgstr "Catégorie de dépenses"
+
+#: danceschool/financial/models.py:40
+#, fuzzy
+msgid "Expense categories"
+msgstr "Catégories de dépenses"
+
+#: danceschool/financial/models.py:48
+#, fuzzy
+msgid "Different types of revenue fall under different categories."
+msgstr "Les différents types de revenus relèvent de catégories différentes."
+
+#: danceschool/financial/models.py:49
+#, fuzzy
+msgid "Default amount"
+msgstr "Montant par défaut"
+
+#: danceschool/financial/models.py:49
+#, fuzzy
+msgid "This is the default amount of revenue for items in this category."
+msgstr ""
+"Ceci est le montant par défaut des revenus pour les articles de cette "
+"catégorie."
+
+#: danceschool/financial/models.py:55
+#, fuzzy
+msgid "Revenue category"
+msgstr "Catégorie de revenus"
+
+#: danceschool/financial/models.py:56
+#, fuzzy
+msgid "Revenue categories"
+msgstr "Catégories de revenus"
+
+#: danceschool/financial/models.py:68
+#, fuzzy
+msgid "Per hour"
+msgstr "Par heure"
+
+#: danceschool/financial/models.py:69
+#, fuzzy
+msgid "Per day of scheduled events"
+msgstr "Par jour d'événements programmés"
+
+#: danceschool/financial/models.py:70
+#, fuzzy
+msgid "Per week"
+msgstr "Par semaine"
+
+#: danceschool/financial/models.py:71
+#, fuzzy
+msgid "Per month"
+msgstr "Par mois"
+
+#: danceschool/financial/models.py:74
+#, fuzzy
+msgid "First occurrence starts"
+msgstr "La première occurrence commence"
+
+#: danceschool/financial/models.py:75
+#, fuzzy
+msgid "Last occurrence ends"
+msgstr "La dernière occurrence se termine"
+
+#: danceschool/financial/models.py:78
+#, fuzzy
+msgid "Expense Rate"
+msgstr "Taux de dépenses"
+
+#: danceschool/financial/models.py:78
+#, fuzzy
+msgid "In default currency"
+msgstr "Dans la devise par défaut"
+
+#: danceschool/financial/models.py:82
+#, fuzzy
+msgid "Apply this rate"
+msgstr "Appliquer ce taux"
+
+#: danceschool/financial/models.py:89
+#, fuzzy
+msgid "Day starts at"
+msgstr "La journée commence à"
+
+#: danceschool/financial/models.py:93
+msgid ""
+"If you run events after midnight, avoids creation of duplicate expense items"
+msgstr ""
+
+#: danceschool/financial/models.py:97
+#, fuzzy
+msgid "Week starts on"
+msgstr "La semaine commence le"
+
+#: danceschool/financial/models.py:104
+#, fuzzy
+msgid "Month starts on"
+msgstr "Le mois commence le"
+
+#: danceschool/financial/models.py:111
+#, fuzzy
+msgid "Start date"
+msgstr "Date de début"
+
+#: danceschool/financial/models.py:114
+#, fuzzy
+msgid ""
+"If specified, then expense items will not be generated prior to this date."
+msgstr ""
+"Si spécifié, les articles de dépenses ne seront pas générés avant cette date."
+
+#: danceschool/financial/models.py:118
+#, fuzzy
+msgid "End date"
+msgstr "Date de fin"
+
+#: danceschool/financial/models.py:121
+#, fuzzy
+msgid ""
+"If specified, then expense items will not be generated after this date.  "
+"Leave blank for expenses to be generated indefinitely."
+msgstr ""
+"Si spécifié, les postes de dépenses ne seront pas générés après cette date."
+"Laissez vide pour que les dépenses soient générées indéfiniment."
+
+#: danceschool/financial/models.py:125
+#, fuzzy
+msgid "Generate expenses up to __ days in advance"
+msgstr "Générer des dépenses jusqu'à __ jours à l'avance"
+
+#: danceschool/financial/models.py:130
+#, fuzzy
+msgid "in advance of"
+msgstr "en avance de"
+
+#: danceschool/financial/models.py:137
+#, fuzzy
+msgid "Generate expenses up to __ days in the past"
+msgstr "Générer des dépenses jusqu'à __ jours dans le passé"
+
+#: danceschool/financial/models.py:138
+#, fuzzy
+msgid "Leave blank for no limit."
+msgstr "Laissez vide pour aucune limite."
+
+#: danceschool/financial/models.py:145
+#, fuzzy
+msgid "prior to"
+msgstr "antérieur à"
+
+#: danceschool/financial/models.py:152
+#, fuzzy
+msgid "Disable autogeneration of expenses under this rule"
+msgstr "Désactiver la génération automatique des dépenses selon cette règle"
+
+#: danceschool/financial/models.py:155
+#, fuzzy
+msgid ""
+"It is recommended to disable expense rules rather than delete them for "
+"temporary purposes, to avoid the creation of duplicate expense items."
+msgstr ""
+"Il est recommandé de désactiver les règles de dépenses plutôt que de les "
+"supprimer à des” “fins temporaires, afin d'éviter la création d'éléments de "
+"dépenses en double."
+
+#: danceschool/financial/models.py:160
+#, fuzzy
+msgid "Last run time"
+msgstr "Dernière exécution"
+
+#: danceschool/financial/models.py:286
+#, fuzzy, python-format
+msgid "%(start)s to %(end)s"
+msgstr "% (début) s à% (fin) s"
+
+#: danceschool/financial/models.py:303
+#, fuzzy, python-format
+msgid "week of %(start)s to %(end)s"
+msgstr "semaine de% (début) s à% (fin) s"
+
+#: danceschool/financial/models.py:318
+#, fuzzy, python-format
+msgid "month of %(start)s to %(end)s"
+msgstr "mois de% (début) s à% (fin) s"
+
+#: danceschool/financial/models.py:330 danceschool/financial/models.py:348
+#: danceschool/financial/models.py:375 danceschool/financial/models.py:409
+#: danceschool/financial/models.py:456
+#, fuzzy
+msgid "Rule name"
+msgstr "Nom de la règle"
+
+#: danceschool/financial/models.py:334 danceschool/financial/models.py:472
+#, fuzzy, python-format
+msgid "Repeated expense rule: %s"
+msgstr "Règle de dépenses répétées:% s"
+
+#: danceschool/financial/models.py:342
+#, fuzzy
+msgid "Location"
+msgstr "Emplacement"
+
+#: danceschool/financial/models.py:355
+#, fuzzy, python-format
+msgid "Rental expense information for: %s"
+msgstr "Informations sur les dépenses de location pour:% s"
+
+#: danceschool/financial/models.py:358
+#, fuzzy
+msgid "Location rental information"
+msgstr "Informations sur la location d'emplacement"
+
+#: danceschool/financial/models.py:359
+#, fuzzy
+msgid "Locations' rental information"
+msgstr "Informations sur la location des emplacements"
+
+#: danceschool/financial/models.py:369
+#, fuzzy
+msgid "Room"
+msgstr "Pièce"
+
+#: danceschool/financial/models.py:374
+#, fuzzy, python-format
+msgid "%s at %s"
+msgstr "% s à% s"
+
+#: danceschool/financial/models.py:382
+#, fuzzy, python-format
+msgid "Rental expense information for: %s at %s"
+msgstr "Informations sur les dépenses de location pour:% s à % s"
+
+#: danceschool/financial/models.py:385
+#, fuzzy
+msgid "Room rental information"
+msgstr "Informations sur la location de salle"
+
+#: danceschool/financial/models.py:386
+#, fuzzy
+msgid "Rooms' rental information"
+msgstr "Informations sur la location des salles"
+
+#: danceschool/financial/models.py:396
+#, fuzzy
+msgid "Staff member"
+msgstr "Membre du personnel"
+
+#: danceschool/financial/models.py:399 danceschool/financial/models.py:434
+#: danceschool/financial/models.py:492 danceschool/financial/models.py:717
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#, fuzzy
+msgid "Category"
+msgstr "Catégorie"
+
+#: danceschool/financial/models.py:401
+msgid ""
+"If left blank, then this expense rule will be used for all categories.  If a "
+"category-specific rate is specified, then that will be used instead.  If "
+"nothing is specified for an instructor, then the default hourly rate for "
+"each category will be used."
+msgstr ""
+
+#: danceschool/financial/models.py:408
+#, fuzzy, python-format
+msgid "%s: %s"
+msgstr "%s: %s"
+
+#: danceschool/financial/models.py:416
+#, fuzzy, python-format
+msgid "%s wage/salary information for: %s"
+msgstr "% s Informations sur les salaires / traitements pour:% s"
+
+#: danceschool/financial/models.py:421
+#, fuzzy
+msgid "Staff member salary information"
+msgstr "Informations sur le salaire du membre du personnel"
+
+#: danceschool/financial/models.py:422
+#, fuzzy
+msgid "Staff members' wage/salary information"
+msgstr "Informations sur les salaires / traitements des membres du personnel"
+
+#: danceschool/financial/models.py:432
+#, fuzzy
+msgid "Give this expense generation rule a name"
+msgstr "Donnez à cette règle de génération de dépenses un nom"
+
+#: danceschool/financial/models.py:440 danceschool/financial/models.py:546
+#, fuzzy
+msgid "Pay to user"
+msgstr "Payer à l'utilisateur"
+
+#: danceschool/financial/models.py:441 danceschool/financial/models.py:547
+#, fuzzy
+msgid "Pay to location"
+msgstr "Payer à l'emplacement"
+
+#: danceschool/financial/models.py:442 danceschool/financial/models.py:548
+#, fuzzy
+msgid "Pay to (enter name)"
+msgstr "Payer à (entrer le nom)"
+
+#: danceschool/financial/models.py:444
+#, fuzzy
+msgid "Automatically mark this expense as approved"
+msgstr "Marquer automatiquement cette dépense comme approuvée"
+
+#: danceschool/financial/models.py:445
+#, fuzzy
+msgid "Automatically mark this expense as paid"
+msgstr "Marquer automatiquement cette dépense comme payée"
+
+#: danceschool/financial/models.py:449
+#, fuzzy
+msgid ""
+"This field is ignored unless you have chosen to automatically mark expenses "
+"as paid."
+msgstr ""
+"Ce champ est ignoré sauf si vous avez choisi de marquer automatiquement les "
+"dépenses” “comme payées."
+
+#: danceschool/financial/models.py:462
+#, fuzzy
+msgid ""
+"Either a start date or an \"up to __ days in the past\" limit is required "
+"for repeated expense rules that are not associated with a venue or a staff "
+"member."
+msgstr ""
+"Une date de début ou une limite de\" jusqu'à __ jours dans le passé \"est "
+"requise pour les” “règles de dépenses répétées qui ne sont pas associées à "
+"un lieu ou à un membre du” “personnel."
+
+#: danceschool/financial/models.py:476
+#, fuzzy
+msgid "Other repeated expense"
+msgstr "Autres dépenses répétées"
+
+#: danceschool/financial/models.py:477
+#, fuzzy
+msgid "Other repeated expenses"
+msgstr "Autres dépenses répétées"
+
+#: danceschool/financial/models.py:487 danceschool/financial/models.py:714
+#, fuzzy
+msgid "Submission user"
+msgstr "Utilisateur de soumission"
+
+#: danceschool/financial/models.py:490 danceschool/financial/models.py:715
+#, fuzzy
+msgid "Submission date"
+msgstr "Date de soumission"
+
+#: danceschool/financial/models.py:498
+#, fuzzy
+msgid "Please indicate the number of hours to be paid for."
+msgstr "Veuillez indiquer le nombre d'heures à payer."
+
+#: danceschool/financial/models.py:501
+#, fuzzy
+msgid "Wage rate"
+msgstr "Taux de salaire"
+
+#: danceschool/financial/models.py:502
+#, fuzzy
+msgid "This should be filled automatically, but can be changed as needed."
+msgstr ""
+"Cela devrait être rempli automatiquement, mais peut être modifié au besoin."
+
+#: danceschool/financial/models.py:504
+#, fuzzy
+msgid "Total amount"
+msgstr "Montant total"
+
+#: danceschool/financial/models.py:506
+#, fuzzy
+msgid "Adjustments/refunds"
+msgstr "Ajustements / remboursements"
+
+#: danceschool/financial/models.py:507
+#, fuzzy
+msgid ""
+"Record any ex-post adjustments to the amount (e.g. refunds) in this field. A "
+"positive amount increases the netExpense, a negative amount reduces the "
+"netExpense."
+msgstr ""
+"Enregistrez tous les ajustements ex-post du montant (par exemple les "
+"remboursements) dans ce champ.Un montant positif augmente le netExpense, un "
+"montant négatif réduit le netExpense."
+
+#: danceschool/financial/models.py:510 danceschool/financial/models.py:722
+#, fuzzy
+msgid "Fees"
+msgstr "Honoraires"
+
+#: danceschool/financial/models.py:511
+#, fuzzy
+msgid ""
+"The sum of any transaction fees (e.g. Paypal fees) that were paid <strong>by "
+"us</strong>, and should therefore be added to net expense."
+msgstr ""
+"La somme de tous les frais de transaction (par exemple, les frais Paypal) "
+"qui ont été payés <strong> par nous </ strong>, et devrait donc être ajouté "
+"à la dépense nette."
+
+#: danceschool/financial/models.py:516 danceschool/financial/models.py:729
+#, fuzzy
+msgid "Comments/Notes"
+msgstr "Commentaires/Notes"
+
+#: danceschool/financial/models.py:517 danceschool/financial/models.py:730
+#, fuzzy
+msgid "Attach File (optional)"
+msgstr "Joindre un fichier (facultatif)"
+
+#: danceschool/financial/models.py:527 danceschool/financial/models.py:735
+#, fuzzy
+msgid "If this item is associated with an Event, enter it here."
+msgstr "Si cet article est associé à un événement, entrez-le ici."
+
+#: danceschool/financial/models.py:534
+#, fuzzy
+msgid "Expense generation rule"
+msgstr "Règle de génération de dépenses"
+
+#: danceschool/financial/models.py:539
+#, fuzzy
+msgid "Expense period start"
+msgstr "Début de la période de dépenses"
+
+#: danceschool/financial/models.py:540
+#, fuzzy
+msgid "Expense period end"
+msgstr "Fin de période de dépense"
+
+#: danceschool/financial/models.py:551
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#, fuzzy
+msgid "Reimbursement"
+msgstr "Remboursement"
+
+#: danceschool/financial/models.py:552
+#, fuzzy
+msgid ""
+"Check to indicate that this is a reimbursement expense (i.e. not "
+"compensation)."
+msgstr ""
+"Cocher pour indiquer qu'il s'agit d'une dépense de remboursement (c.-à-d. "
+"Pas de” “compensation)."
+
+#: danceschool/financial/models.py:557
+#, fuzzy
+msgid "Check to indicate that expense is approved for payment."
+msgstr "Cocher pour indiquer que la dépense est approuvée pour le paiement."
+
+#: danceschool/financial/models.py:561
+#, fuzzy
+msgid "Check to indicate that payment has been made."
+msgstr "Cocher pour indiquer que le paiement a été effectué."
+
+#: danceschool/financial/models.py:564
+#, fuzzy
+msgid "Approval date"
+msgstr "Date d'approbation"
+
+#: danceschool/financial/models.py:565
+#, fuzzy
+msgid "Payment date"
+msgstr "Date de paiement"
+
+#: danceschool/financial/models.py:572 danceschool/financial/models.py:747
+#, fuzzy
+msgid "Accrual date"
+msgstr "Date d'échéance"
+
+#: danceschool/financial/models.py:577
+#, fuzzy
+msgid "Net expense"
+msgstr "Dépense nette"
+
+#: danceschool/financial/models.py:587
+#, fuzzy
+msgid "Start Date"
+msgstr "Date de début"
+
+#: danceschool/financial/models.py:597
+#, fuzzy
+msgid "End Date"
+msgstr "Date de fin"
+
+#: danceschool/financial/models.py:611
+#, fuzzy
+msgid "Pay to"
+msgstr "Payer à"
+
+#: danceschool/financial/models.py:674
+#, fuzzy
+msgid "Expense Receipts"
+msgstr "Recettes de dépenses"
+
+#: danceschool/financial/models.py:699
+#, fuzzy
+msgid "Expense item"
+msgstr "Article de dépense"
+
+#: danceschool/financial/models.py:700
+#, fuzzy
+msgid "Expense items"
+msgstr "Articles de dépense"
+
+#: danceschool/financial/models.py:703
+#, fuzzy
+msgid "Mark expenses as paid at the time of submission"
+msgstr "Marquer les dépenses telles que payées au moment de la soumission"
+
+#: danceschool/financial/models.py:719
+#: danceschool/financial/templates/financial/finances_byevent.html:46
+#: danceschool/financial/templates/financial/finances_bymonth.html:67
+#, fuzzy
+msgid "Total"
+msgstr "Total"
+
+#: danceschool/financial/models.py:719
+msgid ""
+"The total revenue received, net of any discounts or voucher uses.  This is "
+"what we actually receive."
+msgstr ""
+
+#: danceschool/financial/models.py:720
+#, fuzzy
+msgid "Gross Total"
+msgstr "Total brut"
+
+#: danceschool/financial/models.py:720
+#, fuzzy
+msgid ""
+"The gross total billed before the application of any discounts, or the use "
+"of any vouchers."
+msgstr ""
+"Le total brut facturé avant l'application des réductions, ou l'utilisation "
+"de tous les bons."
+
+#: danceschool/financial/models.py:721
+#, fuzzy
+msgid "Adjustments"
+msgstr "Ajustements"
+
+#: danceschool/financial/models.py:721
+#, fuzzy
+msgid ""
+"Record any ex-post adjustments to the amount (e.g. refunds) in this field.  "
+"A positive amount increases the netRevenue, a negative amount reduces the "
+"netRevenue."
+msgstr ""
+"Enregistrez tous les ajustements ex-post du montant (par exemple les "
+"remboursements) dans ce champ.Un montant positif augmente le netRevenu, un "
+"montant négatif réduit le netRevenu."
+
+#: danceschool/financial/models.py:722
+msgid ""
+"The sum of any transaction fees (e.g. Paypal fees) that were paid <strong>by "
+"us</strong>, and should therefore be subtracted from net revenue."
+msgstr ""
+
+#: danceschool/financial/models.py:723
+#, fuzzy
+msgid "Taxes"
+msgstr "Taxes"
+
+#: danceschool/financial/models.py:724
+#, fuzzy
+msgid "Buyer pays sales tax"
+msgstr "L'acheteur paie la taxe de vente"
+
+#: danceschool/financial/models.py:727
+#, fuzzy
+msgid "Invoice Number"
+msgstr "Numéro de facture"
+
+#: danceschool/financial/models.py:727
+#, fuzzy
+msgid ""
+"For Paypal payments, this will be the txn_id.  For cash payments, this will "
+"be automatically generated by the submission form.  More than one revenue "
+"item may have the same invoice number, because multiple events are paid for "
+"in one Paypal transaction."
+msgstr ""
+"Pour les paiements Paypal, ce sera le txn_id.Pour les paiements en espèces, "
+"cela sera” “automatiquement généré par le formulaire de soumission.De plus "
+"d'un élément de revenu” “peut avoir le même numéro de facture, car plusieurs "
+"événements sont payés dans une” “transaction Paypal."
+
+#: danceschool/financial/models.py:733
+#, fuzzy
+msgid "Associated invoice item"
+msgstr "Poste de facture associé"
+
+#: danceschool/financial/models.py:736
+#, fuzzy
+msgid ""
+"Enter who this revenue item was received from, if it is not associated with "
+"an existing registration."
+msgstr ""
+"Entrez à qui cet élément de revenu a été reçu, s'il n'est pas associé à un "
+"enregistrement” “existant."
+
+#: danceschool/financial/models.py:738
+#, fuzzy
+msgid ""
+"If cash has not yet been deposited, this indicates who to contact in order "
+"to collect the cash for deposit."
+msgstr ""
+"Si l'argent n'a pas encore été déposé, cela indique qui contacter dans "
+"l'ordrepour collecter l'argent pour le dépôt."
+
+#: danceschool/financial/models.py:739
+#, fuzzy
+msgid ""
+"Check to indicate that payment has been received. Non-received payments are "
+"considered pending."
+msgstr ""
+"Cocher pour indiquer que le paiement a été reçu. Les paiements non reçus "
+"sont considérés” “comme en attente."
+
+#: danceschool/financial/models.py:740
+#, fuzzy
+msgid "Date received"
+msgstr "Date de réception"
+
+#: danceschool/financial/models.py:757
+#, fuzzy
+msgid "Related items"
+msgstr "Articles connexes"
+
+#: danceschool/financial/models.py:765
+#, fuzzy
+msgid "Net revenue"
+msgstr "Revenu net"
+
+#: danceschool/financial/models.py:821
+#, fuzzy
+msgid "Revenue Receipts"
+msgstr "Revenus de recettes"
+
+#: danceschool/financial/models.py:844
+#, fuzzy
+msgid "Revenue item"
+msgstr "Élément de revenu"
+
+#: danceschool/financial/models.py:845
+#, fuzzy
+msgid "Revenue items"
+msgstr "Éléments de revenu"
+
+#: danceschool/financial/models.py:848
+#, fuzzy
+msgid "Export detailed financial transaction information to CSV"
+msgstr ""
+"Exporter des informations détaillées sur les transactions financières au "
+"format CSV"
+
+#: danceschool/financial/models.py:849
+#, fuzzy
+msgid "View school finances month-by-month"
+msgstr "Voir les finances de l'école mois par mois"
+
+#: danceschool/financial/models.py:850
+#, fuzzy
+msgid "View school finances by Event"
+msgstr "Voir les finances de l'école par événement"
+
+#: danceschool/financial/models.py:851
+#, fuzzy
+msgid "View school finances as detailed statement"
+msgstr "Voir les finances de l'école en tant que déclaration détaillée"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:8
+#, fuzzy
+msgid "School Revenues (YTD):"
+msgstr "Revenus scolaires (YTD)"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:9
+#: danceschool/financial/templates/financial/finances_bymonth.html:19
+#, fuzzy
+msgid "School Expenses (YTD)"
+msgstr "Dépenses scolaires (YTD)"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:10
+#: danceschool/financial/templates/financial/finances_bymonth.html:20
+#, fuzzy
+msgid "Pending Expenses"
+msgstr "Dépenses en attente"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:11
+#: danceschool/financial/templates/financial/finances_bymonth.html:21
+#, fuzzy
+msgid "Awaiting Approval and Payment"
+msgstr "En attente d'approbation et de paiement"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:13
+#: danceschool/financial/templates/financial/finances_bymonth.html:23
+#, fuzzy
+msgid "Approved, Awaiting Payment"
+msgstr "Approuvé, en attente de paiement"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:16
+#: danceschool/financial/templates/financial/finances_bymonth.html:26
+#, fuzzy
+msgid "Paid, Not Approved"
+msgstr "Payé, non approuvé"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:18
+#: danceschool/financial/templates/financial/finances_bymonth.html:28
+#, fuzzy
+msgid "Current Balance"
+msgstr "Solde actuel"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:24
+#: danceschool/financial/templates/financial/finances_bymonth.html:34
+#, fuzzy
+msgid "Export Financial Data (CSV)"
+msgstr "Données financières d'exportation (CSV)"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:26
+#: danceschool/financial/templates/financial/finances_bymonth.html:36
+#, fuzzy
+msgid "This View"
+msgstr "Cette vue"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:27
+#: danceschool/financial/templates/financial/finances_bymonth.html:37
+#, fuzzy
+msgid "All Expenses"
+msgstr "Toutes dépenses"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:28
+#: danceschool/financial/templates/financial/finances_bymonth.html:38
+#, fuzzy
+msgid "All Revenues"
+msgstr "Tous les revenus"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:35
+#, fuzzy
+msgid "Details By Event"
+msgstr "Détails par événement"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:40
+#, fuzzy
+msgid "Series"
+msgstr "Séries"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:40
+#: danceschool/financial/templates/financial/finances_bymonth.html:64
+#, fuzzy
+msgid "# Registrations"
+msgstr "# Inscriptions"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:40
+#, fuzzy
+msgid "Series Revenue"
+msgstr "Revenu de la série"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:40
+#, fuzzy
+msgid "Series Expenses"
+msgstr "Dépenses de la série"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:40
+#: danceschool/financial/templates/financial/finances_bymonth.html:64
+#: danceschool/financial/templates/financial/finances_detail.html:41
+#: danceschool/financial/views.py:251 danceschool/financial/views.py:366
+#, fuzzy
+msgid "Net Profit"
+msgstr "Bénéfice net"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:46
+#, fuzzy
+msgid "Gross"
+msgstr "Brut"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:46
+#, fuzzy
+msgid "Net of Discounts"
+msgstr "Net des remises"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:46
+#: danceschool/financial/templates/financial/finances_bymonth.html:67
+#: danceschool/financial/templates/financial/finances_detail.html:125
+#, fuzzy
+msgid "Instruction"
+msgstr "Instruction"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:73
+#: danceschool/financial/templates/financial/finances_bymonth.html:90
+#, fuzzy
+msgid "previous"
+msgstr "précédent"
+
+#: danceschool/financial/templates/financial/finances_byevent.html:76
+#, fuzzy, python-format
+msgid ""
+"\n"
+"                Page %(thisPage)s of %(numPages)s.\n"
+"                "
+msgstr "\\ nPage% (cettePage) s de% (numPages) s. \\ N"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:7
+#: danceschool/financial/templates/financial/finances_detail.html:13
+#, fuzzy
+msgid "Choose Financial Basis"
+msgstr "Choisissez la base financière"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:10
+#: danceschool/financial/templates/financial/finances_detail.html:16
+#, fuzzy
+msgid "Accrual Date (Default)"
+msgstr "Date d'accumulation (par défaut)"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:11
+#: danceschool/financial/templates/financial/finances_detail.html:17
+#, fuzzy
+msgid "Payment/Receipt Date"
+msgstr "Date de paiement / réception"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:18
+#, fuzzy
+msgid "School Revenues (YTD)"
+msgstr "Revenus scolaires (YTD)"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:45
+#, fuzzy
+msgid "School Performance Over Time"
+msgstr "Performance scolaire au fil du temps"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:49
+#, fuzzy
+msgid "Profits"
+msgstr "Bénéfices"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:51
+#: danceschool/financial/templates/financial/finances_detail.html:45
+#, fuzzy
+msgid "Revenues"
+msgstr "Revenus"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:52
+#: danceschool/financial/templates/financial/finances_detail.html:119
+#, fuzzy
+msgid "Expenses"
+msgstr "Dépenses"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:59
+#, fuzzy
+msgid "Details By Month"
+msgstr "Détails par mois"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:64
+#, fuzzy
+msgid "Total Revenue"
+msgstr "Revenu total"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:64
+#: danceschool/financial/templates/financial/finances_detail.html:38
+#, fuzzy
+msgid "Total Expenses"
+msgstr "Dépenses totales"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:93
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t                Page %(thisPage)s of %(numPages)s.\n"
+"\t                "
+msgstr "\\ n\\ t Page% (cettePage) s de% (numPages) s. \\ n\\ t"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:98
+#, fuzzy
+msgid "next"
+msgstr "prochain"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:134
+#, fuzzy
+msgid "School Performance By Month"
+msgstr "Performance scolaire par mois"
+
+#: danceschool/financial/templates/financial/finances_bymonth.html:135
+#, fuzzy
+msgid "Monthly Profits, Revenues, Expenses, and Total Registrations"
+msgstr "Bénéfices mensuels, revenus, dépenses et inscriptions totales"
+
+#: danceschool/financial/templates/financial/finances_detail.html:6
+#, fuzzy
+msgid "Other/Not Specified"
+msgstr "Autre / non spécifié"
+
+#: danceschool/financial/templates/financial/finances_detail.html:11
+#, fuzzy
+msgid "Return to Monthly Summary"
+msgstr "Retour au sommaire mensuel"
+
+#: danceschool/financial/templates/financial/finances_detail.html:29
+#, fuzzy
+msgid "Detailed Financial Statement"
+msgstr "État financier détaillé"
+
+#: danceschool/financial/templates/financial/finances_detail.html:31
+#, fuzzy
+msgid "Period Summary"
+msgstr "Résumé de la période"
+
+#: danceschool/financial/templates/financial/finances_detail.html:35
+#, fuzzy
+msgid "Total Revenues"
+msgstr "Revenus totaux"
+
+#: danceschool/financial/templates/financial/finances_detail.html:50
+#, fuzzy
+msgid "Registrations:"
+msgstr "# Inscriptions"
+
+#: danceschool/financial/templates/financial/finances_detail.html:66
+#: danceschool/financial/templates/financial/finances_detail.html:101
+#: danceschool/financial/templates/financial/finances_detail.html:146
+#: danceschool/financial/templates/financial/finances_detail.html:184
+#: danceschool/financial/templates/financial/finances_detail.html:221
+#, fuzzy
+msgid "Date"
+msgstr "Date"
+
+#: danceschool/financial/templates/financial/finances_detail.html:68
+#: danceschool/financial/templates/financial/finances_detail.html:103
+#: danceschool/financial/templates/financial/finances_detail.html:148
+#: danceschool/financial/templates/financial/finances_detail.html:186
+#: danceschool/financial/templates/financial/finances_detail.html:223
+#, fuzzy
+msgid "Amount"
+msgstr "Montant"
+
+#: danceschool/financial/templates/financial/finances_detail.html:85
+#, fuzzy
+msgid "Other Revenues"
+msgstr "Autres revenus"
+
+#: danceschool/financial/templates/financial/finances_detail.html:205
+#, fuzzy
+msgid "Other Expenses"
+msgstr "Autres dépenses"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:6
+#, fuzzy, python-format
+msgid "Payment History for %(name)s"
+msgstr "Historique des paiements pour% (nom) s"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:8
+#, fuzzy
+msgid "Download Expense History"
+msgstr "Télécharger l'historique des dépenses"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:8
+#, fuzzy
+msgid "for this year"
+msgstr "pour cette annee"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:13
+#, fuzzy
+msgid "Total Pending Payments"
+msgstr "Total des paiements en attente"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:14
+#, fuzzy
+msgid "Total Paid (All Time, excludes reimbursements)"
+msgstr "Total payé (tous les temps, exclut les remboursements)"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:15
+#, fuzzy
+msgid "Total Paid (This Year, excludes reimbursements)"
+msgstr "Total payé (cette année, exclut les remboursements)"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:16
+#, fuzzy
+msgid "Total Costs Reimbursements (This Year)"
+msgstr "Remboursements des coûts totaux (cette année)"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:19
+#, fuzzy
+msgid "Filter By Year"
+msgstr "Filtrer par année"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:21
+#, fuzzy
+msgid "All"
+msgstr "Tout"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:28
+#, fuzzy
+msgid "Reporting Basis"
+msgstr "Base de calcul"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:30
+#, fuzzy
+msgid "Accrual Date"
+msgstr "Date d'accumulation"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:36
+#, fuzzy
+msgid "Pending Payments"
+msgstr "Paiements en attente"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#, fuzzy
+msgid "Total Amount"
+msgstr "Montant total"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:41
+#: danceschool/financial/templates/financial/instructor_payments.html:55
+#: danceschool/financial/templates/financial/instructor_payments.html:66
+#: danceschool/financial/templates/financial/instructor_payments.html:78
+#: danceschool/financial/templates/financial/instructor_payments.html:89
+#: danceschool/financial/templates/financial/instructor_payments.html:101
+#, fuzzy
+msgid "Edit"
+msgstr "Modifier"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:61
+#, fuzzy
+msgid "Prior Payments"
+msgstr "Paiements antérieurs"
+
+#: danceschool/financial/templates/financial/instructor_payments.html:84
+#, fuzzy
+msgid "Reimbursements"
+msgstr "Remboursements"
+
+#: danceschool/financial/templates/financial/update_staff_compensation_rules.html:6
+#, fuzzy
+msgid "Update Staff Compensation Rules"
+msgstr "Mettre à jour les règles d'indemnisation du personnel"
+
+#: danceschool/financial/templates/financial/update_staff_compensation_rules.html:8
+msgid ""
+"You have selected the following staff members for whom to update "
+"compensation information.  Current compensation rules for these individuals "
+"are also listed for reference."
+msgstr ""
+
+#: danceschool/financial/templates/financial/update_staff_compensation_rules.html:19
+#, fuzzy, python-format
+msgid ""
+"\n"
+"\t\t\t\t\t\t%(currencySymbol)s%(rate)s %(rateRule)s for %(category)s\n"
+"\t\t\t\t\t"
+msgstr ""
+"\\ n\\ t \\ t \\ t \\ t \\ t% (deviseSymbol) s% (taux) s% (règle de taux) s "
+"pour% (catégorie) s \\ n\\ t \\ t \\ t \\ t \\ t \\ t"
+
+#: danceschool/financial/templates/financial/update_staff_compensation_rules.html:30
+#, fuzzy
+msgid ""
+"\n"
+"Please select the category and rate information to be applied to all staff "
+"members listed.  If you do not specify a category,\n"
+"then this compensation rule will be a \"catch-all\" that is applied to all "
+"work that is not otherwise covered by another compensation rule.\n"
+msgstr ""
+"\\ nVeuillez sélectionner la catégorie et l'information de taux à appliquer "
+"à tous les membres du” “personnel énumérés.Si vous ne spécifiez pas de "
+"catégorie, \\ n alors cette règle de” “compensation sera un\" fourre-tout "
+"\"qui est appliqué à tous les travaux qui ne sont pas “autrement couvert par "
+"une autre règle de compensation. \\ n "
+
+#: danceschool/financial/views.py:33
+#, fuzzy
+msgid "Expense item successfully submitted."
+msgstr "L'élément de dépense a été envoyé avec succès."
+
+#: danceschool/financial/views.py:39
+#, fuzzy
+msgid "Report Expenses"
+msgstr "Rapport des dépenses"
+
+#: danceschool/financial/views.py:40
+#, fuzzy
+msgid "Use this form to report expenses."
+msgstr "Utilisez ce formulaire pour déclarer les dépenses."
+
+#: danceschool/financial/views.py:48
+#, fuzzy
+msgid "Revenue item successfully submitted."
+msgstr "L'élément de revenu a été soumis avec succès."
+
+#: danceschool/financial/views.py:54
+#, fuzzy
+msgid "Report Revenues"
+msgstr "Revenus du rapport"
+
+#: danceschool/financial/views.py:55
+#, fuzzy
+msgid "Use this form to report revenues."
+msgstr "Utilisez ce formulaire pour déclarer les revenus."
+
+#: danceschool/financial/views.py:86 danceschool/financial/views.py:89
+#: danceschool/financial/views.py:193 danceschool/financial/views.py:195
+#: danceschool/financial/views.py:317
+#, fuzzy
+msgid "Invalid year."
+msgstr "Année invalide"
+
+#: danceschool/financial/views.py:241
+#, fuzzy
+msgid "Month"
+msgstr "Mois"
+
+#: danceschool/financial/views.py:242
+#, fuzzy
+msgid "Registrations: Total"
+msgstr "Inscriptions: Total"
+
+#: danceschool/financial/views.py:243
+#, fuzzy
+msgid "Registrations: Leads"
+msgstr "Inscriptions: Leads"
+
+#: danceschool/financial/views.py:244
+#, fuzzy
+msgid "Registrations: Follows"
+msgstr "Inscriptions: Follows"
+
+#: danceschool/financial/views.py:245
+#, fuzzy
+msgid "Revenues: Gross"
+msgstr "Revenus: Brut"
+
+#: danceschool/financial/views.py:246 danceschool/financial/views.py:360
+#, fuzzy
+msgid "Revenues: Net"
+msgstr "Revenus: Net"
+
+#: danceschool/financial/views.py:247 danceschool/financial/views.py:361
+#, fuzzy
+msgid "Expenses: Instruction"
+msgstr "Dépenses: Instruction"
+
+#: danceschool/financial/views.py:248 danceschool/financial/views.py:362
+#, fuzzy
+msgid "Expenses: Venue"
+msgstr "Dépenses: Lieu"
+
+#: danceschool/financial/views.py:249 danceschool/financial/views.py:363
+#, fuzzy
+msgid "Expenses: Other"
+msgstr "Dépenses: Autre"
+
+#: danceschool/financial/views.py:250 danceschool/financial/views.py:364
+#, fuzzy
+msgid "Expenses: Total"
+msgstr "Dépenses: Total"
+
+#: danceschool/financial/views.py:359
+#, fuzzy
+msgid "Month Name"
+msgstr "Nom du mois"
+
+#: danceschool/financial/views.py:445
+#, fuzzy, python-format
+msgid "From %s"
+msgstr "De% s"
+
+#: danceschool/financial/views.py:449
+#, fuzzy, python-format
+msgid "To %s"
+msgstr "À% s"
+
+#: danceschool/financial/views.py:476
+#, fuzzy
+msgid "Calendar Year To Date"
+msgstr "Année civile à ce jour"
+
+#: danceschool/financial/views.py:549
+#, fuzzy
+msgid "Staff member compensation rules updated successfully."
+msgstr ""
+"Règles de rémunération des membres du personnel mises à jour avec succès."
+
+#: danceschool/financial/views.py:559 danceschool/financial/views.py:563
+#, fuzzy
+msgid "Invalid content type passed."
+msgstr "type de contenu non valide passé."
+
+#: danceschool/financial/views.py:568
+#, fuzzy
+msgid "Invalid ids passed"
+msgstr "ID Invalides passés"

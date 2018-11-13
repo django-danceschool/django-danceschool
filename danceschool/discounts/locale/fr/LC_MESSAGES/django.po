@@ -1,0 +1,522 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:41-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/discounts/admin.py:31
+#, fuzzy
+msgid "Enter a customer name"
+msgstr "Entrez un nom de client"
+
+#: danceschool/discounts/admin.py:82
+#, fuzzy
+msgid "Flat-Price Discount (in default currency)"
+msgstr "Rabais à prix forfaitaire (dans la devise par défaut)"
+
+#: danceschool/discounts/admin.py:86
+#, fuzzy
+msgid "Dollar Discount (in default currency)"
+msgstr "Remise en dollars (dans la devise par défaut)"
+
+#: danceschool/discounts/admin.py:90
+#, fuzzy
+msgid "Percentage Discount"
+msgstr "Remise en pourcentage"
+
+#: danceschool/discounts/admin.py:99
+#, fuzzy
+msgid "Students only"
+msgstr "Étudiants seulement"
+
+#: danceschool/discounts/admin.py:101
+#, fuzzy
+msgid "First-time customer"
+msgstr "nouveau client"
+
+#: danceschool/discounts/admin.py:103
+#, fuzzy, python-format
+msgid "%s day advance registration"
+msgstr "% s jour d'inscription à l'avance"
+
+#: danceschool/discounts/admin.py:105
+#, fuzzy, python-format
+msgid "First %s to register"
+msgstr "Inscription (%s inscrit)"
+
+#: danceschool/discounts/admin.py:107
+#, fuzzy
+msgid "Restrictions"
+msgstr "Restrictions"
+
+#: danceschool/discounts/admin.py:116
+#, fuzzy
+msgid "Disable selected Discounts"
+msgstr "Désactiver les remises sélectionnées"
+
+#: danceschool/discounts/admin.py:125
+#, fuzzy
+msgid "Enable selected Discounts"
+msgstr "Activer les remises sélectionnées"
+
+#: danceschool/discounts/admin.py:159
+#, fuzzy
+msgid "pricing tier discount group"
+msgstr "groupe de réduction de niveau de prix"
+
+#: danceschool/discounts/admin.py:160
+#, fuzzy
+msgid "pricing tier discount groups"
+msgstr "groupes de réduction de niveau de prix"
+
+#: danceschool/discounts/cms_plugins.py:10
+#, fuzzy
+msgid "Statistics on Usage of Discounts"
+msgstr "Statistiques sur l'utilisation des réductions"
+
+#: danceschool/discounts/cms_toolbars.py:21
+#, fuzzy
+msgid "Finances"
+msgstr "Finances"
+
+#: danceschool/discounts/cms_toolbars.py:35
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/discounts/cms_toolbars.py:38 danceschool/discounts/models.py:256
+#, fuzzy
+msgid "Discounts"
+msgstr "Réductions"
+
+#: danceschool/discounts/cms_toolbars.py:40
+#, fuzzy
+msgid "Discount Categories"
+msgstr "Catégories de réduction"
+
+#: danceschool/discounts/models.py:13 danceschool/discounts/models.py:101
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:34
+#, fuzzy
+msgid "Name"
+msgstr "Nom"
+
+#: danceschool/discounts/models.py:13
+#, fuzzy
+msgid ""
+"Give this pricing tier point group a name (e.g. 'Regular Series Class Hours')"
+msgstr ""
+"Attribuez un nom à ce groupe de points de niveau de prix (par exemple,\" "
+"Heures de cours en série standard \")"
+
+#: danceschool/discounts/models.py:19
+#, fuzzy
+msgid "Point group type"
+msgstr "Type de groupe de points"
+
+#: danceschool/discounts/models.py:20
+#, fuzzy
+msgid "Point group types"
+msgstr "Types de groupes de points"
+
+#: danceschool/discounts/models.py:30
+#, fuzzy
+msgid "Point group"
+msgstr "Groupe de points"
+
+#: danceschool/discounts/models.py:31
+#, fuzzy
+msgid "Pricing tier"
+msgstr "Niveau de tarification"
+
+#: danceschool/discounts/models.py:32
+#, fuzzy
+msgid "# of Points"
+msgstr "# de Points"
+
+#: danceschool/discounts/models.py:35
+#, fuzzy, python-format
+msgid "%s points for pricing tier %s"
+msgstr "% s Points pour le niveau de tarification% s"
+
+#: danceschool/discounts/models.py:40
+#, fuzzy
+msgid "Pricing tier point group"
+msgstr "Groupe de points du niveau de tarification"
+
+#: danceschool/discounts/models.py:41
+#, fuzzy
+msgid "Pricing tier point groups"
+msgstr "Groupes de points de niveau de tarification"
+
+#: danceschool/discounts/models.py:48
+#, fuzzy
+msgid "Category name"
+msgstr "Nom de catégorie"
+
+#: danceschool/discounts/models.py:50
+#, fuzzy
+msgid "Category order"
+msgstr "Ordre de catégorie"
+
+#: danceschool/discounts/models.py:51
+#, fuzzy
+msgid "Discounts from categories with lower numbers are applied first."
+msgstr ""
+"Les réductions de catégories avec des nombres inférieurs sont appliquées en "
+"premier."
+
+#: danceschool/discounts/models.py:55
+#, fuzzy
+msgid "Cannot be combined"
+msgstr "Ne peut pas être combiné"
+
+#: danceschool/discounts/models.py:56
+#, fuzzy
+msgid ""
+"If checked, then discounts in this category cannot be combined with any "
+"other type of discount."
+msgstr ""
+"Si coché, alors les réductions dans cette catégorie ne peuvent être "
+"combinées avec aucunAutre type de réduction."
+
+#: danceschool/discounts/models.py:65 danceschool/discounts/models.py:104
+#, fuzzy
+msgid "Discount category"
+msgstr "Catégorie de réduction"
+
+#: danceschool/discounts/models.py:66
+#, fuzzy
+msgid "Discount categories"
+msgstr "Catégories de réduction"
+
+#: danceschool/discounts/models.py:73
+#, fuzzy
+msgid "Exact Specified Price"
+msgstr "Prix exact spécifié"
+
+#: danceschool/discounts/models.py:74
+#, fuzzy
+msgid "Dollar Discount from Regular Price"
+msgstr "Remise de dollar du prix régulier"
+
+#: danceschool/discounts/models.py:75
+#, fuzzy
+msgid "Percentage Discount from Regular Price"
+msgstr "Remise en pourcentage du prix régulier"
+
+#: danceschool/discounts/models.py:76
+msgid "Free Add-on Item (Can be combined with other discounts)"
+msgstr ""
+
+#: danceschool/discounts/models.py:101
+#, fuzzy
+msgid "Give this discount combination a name (e.g. 'Two 4-week series')"
+msgstr ""
+"Article complémentaire gratuit (peut être combiné avec d'autres réductions)"
+
+#: danceschool/discounts/models.py:102
+#, fuzzy
+msgid "Active"
+msgstr "Actif"
+
+#: danceschool/discounts/models.py:102
+#, fuzzy
+msgid "Uncheck this to 'turn off' this discount"
+msgstr "Décochez cette case pour désactiver cette remise"
+
+#: danceschool/discounts/models.py:105
+#, fuzzy
+msgid ""
+"One discount can be applied per category, and the order in which discounts "
+"are applied depends on the order parameter of the categories."
+msgstr ""
+"Une réduction peut être appliquée par catégorie, et l'ordre dans lequel les "
+"réductionssont appliqués dépend du paramètre d'ordre des catégories."
+
+#: danceschool/discounts/models.py:109
+#, fuzzy
+msgid "Expiration Date"
+msgstr "Date d'expiration"
+
+#: danceschool/discounts/models.py:109
+#, fuzzy
+msgid "Leave blank for no expiration."
+msgstr "Laissez vide pour aucune expiration."
+
+#: danceschool/discounts/models.py:111
+#, fuzzy
+msgid "Discount for HS/college/university students only"
+msgstr ""
+"Rabais pour les étudiants au secondaire / collégial / universitaire seulement"
+
+#: danceschool/discounts/models.py:111
+#, fuzzy
+msgid "Check this box to create student discounts."
+msgstr "Cochez cette case pour créer des réductions pour les étudiants."
+
+#: danceschool/discounts/models.py:112
+#, fuzzy
+msgid "Discount for New Customers only"
+msgstr "Réduction pour les nouveaux clients seulement"
+
+#: danceschool/discounts/models.py:114
+#, fuzzy
+msgid "Must register __ days in advance"
+msgstr "Doit s'inscrire __ jours à l'avance"
+
+#: danceschool/discounts/models.py:117
+msgid ""
+"For this discount to apply, all components must be satisfied by events that "
+"begin this many days in the future (measured from midnight of the date of "
+"registration). Leave blank for no restriction."
+msgstr ""
+
+#: danceschool/discounts/models.py:123
+#, fuzzy
+msgid "Only for first __ registrants"
+msgstr "Pour les nouveaux clients seulement"
+
+#: danceschool/discounts/models.py:126
+msgid ""
+"For this discount to apply, all components must be satisfied by events that "
+"have fewer than this many individuals registered (including registrations in "
+"progress). Only one discount per category can be applied, so if you define "
+"tiered discounts in the same category, only the best available discount will "
+"be used."
+msgstr ""
+
+#: danceschool/discounts/models.py:133
+#, fuzzy
+msgid "Discount type"
+msgstr "Type de remise"
+
+#: danceschool/discounts/models.py:133
+#, fuzzy
+msgid ""
+"Is this a flat price, a dollar amount discount, a 'percentage off' discount, "
+"or a free add-on?"
+msgstr ""
+"S'agit-il d'un prix fixe, d'un rabais sur le montant en dollars, d'un rabais"
+"\" en pourcentage \"ou” “d'un ajout gratuit?"
+
+#: danceschool/discounts/models.py:136
+#, fuzzy
+msgid "Online price"
+msgstr "Prix en ligne"
+
+#: danceschool/discounts/models.py:137
+#, fuzzy
+msgid "At-the-door price"
+msgstr "Prix à la porte"
+
+#: danceschool/discounts/models.py:140
+#, fuzzy
+msgid "Amount of dollar discount"
+msgstr "Montant du rabais en dollars"
+
+#: danceschool/discounts/models.py:140
+#, fuzzy
+msgid ""
+"This amount will be subtracted from the customer's total (in currency units, "
+"e.g. dollars)."
+msgstr ""
+"Ce montant sera soustrait du total du client (en unités monétaires, par "
+"exemple en dollars)."
+
+#: danceschool/discounts/models.py:143
+#, fuzzy
+msgid "Amount of percentage discount"
+msgstr "Montant du pourcentage de réduction"
+
+#: danceschool/discounts/models.py:143
+#, fuzzy
+msgid "This percentage will be subtracted from the customer's total."
+msgstr "Ce pourcentage sera soustrait du total du client."
+
+#: danceschool/discounts/models.py:144
+msgid "Percentage discount is univerally applied"
+msgstr "La réduction en pourcentage est appliquée universellement"
+
+#: danceschool/discounts/models.py:144
+#, python-format
+msgid ""
+"If checked, then the percentage discount will be applied to all items in the "
+"order, not just the items that qualify the order for this discount "
+"combination (e.g. 20% off all registrations of three or more classes."
+msgstr ""
+
+#: danceschool/discounts/models.py:196
+#, fuzzy
+msgid "Invalid discount type."
+msgstr "Type de remise invalide."
+
+#: danceschool/discounts/models.py:255 danceschool/discounts/models.py:264
+#: danceschool/discounts/models.py:281 danceschool/discounts/models.py:292
+#: danceschool/discounts/models.py:304 danceschool/discounts/models.py:314
+#, fuzzy
+msgid "Discount"
+msgstr "réductions"
+
+#: danceschool/discounts/models.py:266
+#, fuzzy
+msgid "Pricing Tier Point Group"
+msgstr "Groupe de points de prix"
+
+#: danceschool/discounts/models.py:268
+#, fuzzy
+msgid "Applies to all within Point Group"
+msgstr "S'applique à tous dans le groupe Point"
+
+#: danceschool/discounts/models.py:268
+#, fuzzy
+msgid ""
+"If checked, then this discount applies to this quantity or more within the "
+"point group.  Use, for example, for all-in passes."
+msgstr ""
+"Si cette case est cochée, cette réduction s'applique à cette quantité ou "
+"plus dans le groupe de” “points, par exemple pour les laissez-passer tout "
+"compris."
+
+#: danceschool/discounts/models.py:270
+#, fuzzy
+msgid "Quantity"
+msgstr "Quantité"
+
+#: danceschool/discounts/models.py:271
+#, fuzzy
+msgid "Dance type/level"
+msgstr "Type de danse / niveau"
+
+#: danceschool/discounts/models.py:272
+#, fuzzy
+msgid "Weekday"
+msgstr "Jour de la semaine"
+
+#: danceschool/discounts/models.py:272
+#, fuzzy
+msgid "Leave this blank for no restriction on days of the week"
+msgstr "Laissez ce champ vide pour aucune restriction les jours de la semaine"
+
+#: danceschool/discounts/models.py:275
+#, fuzzy
+msgid "Required component of discount"
+msgstr "Composant requis de la réduction"
+
+#: danceschool/discounts/models.py:276
+#, fuzzy
+msgid "Required components of discount"
+msgstr "Composants requis de réduction"
+
+#: danceschool/discounts/models.py:280
+#, fuzzy
+msgid "Temporary registration"
+msgstr "Inscription temporaire"
+
+#: danceschool/discounts/models.py:282 danceschool/discounts/models.py:293
+#, fuzzy
+msgid "Amount of discount"
+msgstr "Montant de la réduction"
+
+#: danceschool/discounts/models.py:286
+#, fuzzy
+msgid "Discount applied to temporary registration"
+msgstr "Rabais appliqué à l'inscription temporaire"
+
+#: danceschool/discounts/models.py:287
+#, fuzzy
+msgid "Discounts applied to temporary registrations"
+msgstr "Réductions appliquées aux inscriptions temporaires"
+
+#: danceschool/discounts/models.py:291
+#, fuzzy
+msgid "Registration"
+msgstr "Inscription"
+
+#: danceschool/discounts/models.py:297
+#, fuzzy
+msgid "Discount applied to registration"
+msgstr "Rabais appliqué à l'inscription"
+
+#: danceschool/discounts/models.py:298
+#, fuzzy
+msgid "Discounts applied to registrations"
+msgstr "Réductions appliquées aux inscriptions"
+
+#: danceschool/discounts/models.py:303
+#, fuzzy
+msgid "Customer group"
+msgstr "Groupe de points"
+
+#: danceschool/discounts/models.py:307
+#, fuzzy
+msgid "Group-specific discount restriction"
+msgstr "Restriction de remise spécifique au client"
+
+#: danceschool/discounts/models.py:308
+#, fuzzy
+msgid "Group-specific discount restrictions"
+msgstr "Restrictions de remise spécifiques au client"
+
+#: danceschool/discounts/models.py:313
+#, fuzzy
+msgid "Customer"
+msgstr "Client"
+
+#: danceschool/discounts/models.py:317
+#, fuzzy
+msgid "Customer-specific discount restriction"
+msgstr "Restriction de remise spécifique au client"
+
+#: danceschool/discounts/models.py:318
+#, fuzzy
+msgid "Customer-specific discount restrictions"
+msgstr "Restrictions de remise spécifiques au client"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:7
+#, fuzzy
+msgid "Statistics on Discount Usage"
+msgstr "Statistiques sur l'utilisation de la remise"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:13
+#, fuzzy
+msgid "Last 12 Months"
+msgstr "12 derniers mois"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:16
+#, fuzzy
+msgid "Last Month"
+msgstr "Le mois dernier"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:19
+#, fuzzy
+msgid "All Time"
+msgstr "Tout le temps"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:26
+#, fuzzy
+msgid "Percentage of Registration Using Discounts"
+msgstr "Pourcentage d'inscription utilisant des remises"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:31
+#, fuzzy
+msgid "Most Popular Discounts"
+msgstr "Réductions les plus populaires"
+
+#: danceschool/discounts/templates/stats/schoolstats_discountusage.html:34
+#, fuzzy
+msgid "Uses"
+msgstr "Les usages"

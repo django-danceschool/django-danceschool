@@ -1,0 +1,260 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 14:28-0500\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/banlist/admin.py:26
+msgid "Enabled"
+msgstr "Activé"
+
+#: danceschool/banlist/admin.py:33
+msgid "Thumbnail"
+msgstr "Vignette"
+
+#: danceschool/banlist/admin.py:43
+msgid "Enable selected bans"
+msgstr "Activer Interdictions Sélectionnées"
+
+#: danceschool/banlist/admin.py:52
+msgid "Disable selected bans"
+msgstr "Désactiver Interdictions Sélectionnées"
+
+#: danceschool/banlist/admin.py:64 danceschool/banlist/models.py:66
+msgid "Person"
+msgstr "Personne"
+
+#: danceschool/banlist/apps.py:9
+msgid "Registration Ban List Functions"
+msgstr "Fonctions Liste d'Interdiction d'Inscription"
+
+#: danceschool/banlist/cms_toolbars.py:14
+msgid "Events"
+msgstr "Évènements"
+
+#: danceschool/banlist/cms_toolbars.py:19
+#: danceschool/banlist/cms_toolbars.py:23
+#: danceschool/banlist/cms_toolbars.py:28
+msgid "Banned Individuals"
+msgstr "Personnes Interdites"
+
+#: danceschool/banlist/cms_toolbars.py:20
+msgid "View Banned Individuals List"
+msgstr "Voir Liste Personnes Interdites"
+
+#: danceschool/banlist/cms_toolbars.py:24
+msgid "Manage Banned Individuals List"
+msgstr "Gérer Liste Personnes Interdites"
+
+#: danceschool/banlist/cms_toolbars.py:29
+msgid "View Registration Attempts"
+msgstr "Voir Tentatives d'Inscription"
+
+#: danceschool/banlist/dynamic_preferences_registry.py:8
+msgid "Registration"
+msgstr "Inscription"
+
+#: danceschool/banlist/dynamic_preferences_registry.py:15
+msgid "Enable Automated Enforcement of Ban List"
+msgstr "Activer l'Application Automatisée Liste d'Interdiction"
+
+#: danceschool/banlist/dynamic_preferences_registry.py:17
+msgid ""
+"If this box is checked, then if an individual whose name or email address "
+"appears on the ban list will be prevented from registration and asked to "
+"contact the school.  Their attempt to register will be logged."
+msgstr ""
+"Si cette case est cochée, une personne dont le nom ou l'adresse courriel "
+"figure sur la liste d'interdiction ne pourra pas s'inscrire et devra "
+"contacter l'école. Leur tentative d'inscription sera enregistrée."
+
+#: danceschool/banlist/dynamic_preferences_registry.py:29
+msgid ""
+"Individuals who are prevented from registration are asked to contact this "
+"address."
+msgstr ""
+"Les personnes qui sont empêchées de s'incrire sont priées de contacter cette "
+"adresse."
+
+#: danceschool/banlist/dynamic_preferences_registry.py:32
+msgid "If no email is specified, then the default school email will be used."
+msgstr ""
+"Si aucun courriel n'est spécifié, le courriel de l'école par défaut sera "
+"utilisé."
+
+#: danceschool/banlist/dynamic_preferences_registry.py:41
+msgid ""
+"Send a notification of attempted registration by banned users to this "
+"address (optional)."
+msgstr ""
+"Envoyer une notification de tentative d'enregistrement par des utilisateurs "
+"interdits à cetteadresse (facultatif)."
+
+#: danceschool/banlist/dynamic_preferences_registry.py:44
+msgid "If no email is specified, then no notification will be sent."
+msgstr "Si aucun courriel n'est spécifié, aucune notification ne sera envoyée."
+
+#: danceschool/banlist/handlers.py:83
+msgid "Notice of attempted registration by banned individual"
+msgstr "Avis de tentative d'enregistrement par une personne interdite"
+
+#: danceschool/banlist/handlers.py:85
+#, fuzzy, python-format
+#| msgid ""
+#| "This is an automated notification that the following individual has "
+#| "attempted to register for a class series or event:\n"
+msgid ""
+"This is an automated notification that the following individual has "
+"attempted to register for a class series or event:\n"
+"\n"
+"Name: %s\n"
+msgstr ""
+"Ceci est une notification automatique que l'individu suivant atenté de "
+"s'inscrire à une série de cours ou un événement : \n"
+
+#: danceschool/banlist/handlers.py:97
+#, python-format
+msgid ""
+"There appears to be an issue with this registration. Please contact %s to "
+"proceed with the registration process. You may reference the error code %s."
+msgstr ""
+"Il semble y avoir un problème avec cette inscription. Veuillez contacter "
+"%spour continuer le processus d'enregistrement. Vous pouvez mettre en "
+"référence le code d'erreur %s."
+
+#: danceschool/banlist/models.py:10 danceschool/banlist/models.py:11
+msgid "First name"
+msgstr "Prénom"
+
+#: danceschool/banlist/models.py:13
+msgid "Photo"
+msgstr "Photo"
+
+#: danceschool/banlist/models.py:15
+msgid "Notes for internal purposes"
+msgstr "Notes à des fins internes"
+
+#: danceschool/banlist/models.py:18
+msgid "Expiration date"
+msgstr "Date d'Expiration"
+
+#: danceschool/banlist/models.py:20
+msgid "Leave blank for no expiration."
+msgstr "Laissez vide pour aucune expiration."
+
+#: danceschool/banlist/models.py:24
+msgid "Disabled"
+msgstr "Désactiver"
+
+#: danceschool/banlist/models.py:25
+msgid ""
+"<strong>Note:</strong>Checking this box will prevent this ban from being "
+"automatically enforced."
+msgstr ""
+"<strong>Note :</strong>Cocher cette case empêchera cette interdiction d'être "
+"automatiquement appliqué."
+
+#: danceschool/banlist/models.py:29
+msgid "Submission date"
+msgstr "Date de soumission"
+
+#: danceschool/banlist/models.py:30
+msgid "Last updated"
+msgstr "Dernière mise à jour"
+
+#: danceschool/banlist/models.py:35
+msgid "Full name"
+msgstr "Nom complet"
+
+#: danceschool/banlist/models.py:40
+msgid "Email addresses"
+msgstr "Adresses Courriel"
+
+#: danceschool/banlist/models.py:47
+msgid "Can view the list of banned individuals."
+msgstr "Peut voir la liste des individus interdits."
+
+#: danceschool/banlist/models.py:48
+msgid "Can register users despite banned credentials"
+msgstr ""
+"Peut enregistrer des utilisateurs malgré des informations d'identification "
+"interdites"
+
+#: danceschool/banlist/models.py:52
+msgid "Banned individual"
+msgstr "Personnes Interdites"
+
+#: danceschool/banlist/models.py:53
+msgid "Banned individuals"
+msgstr "Personnes Interdites"
+
+#: danceschool/banlist/models.py:57
+msgid "Individual"
+msgstr "Personne"
+
+#: danceschool/banlist/models.py:58
+msgid "Email address"
+msgstr "Adresse Courriel"
+
+#: danceschool/banlist/models.py:61
+msgid "Banned email address"
+msgstr "Adresse courriel interdite"
+
+#: danceschool/banlist/models.py:62
+msgid "Banned email addresses"
+msgstr "Adresses courriel interdites"
+
+#: danceschool/banlist/models.py:67
+msgid "Date and time"
+msgstr "Date et Heure"
+
+#: danceschool/banlist/models.py:68
+msgid "IP address"
+msgstr "Adresse IP"
+
+#: danceschool/banlist/models.py:69
+msgid "Flag code"
+msgstr "Code Drapeau"
+
+#: danceschool/banlist/models.py:69
+msgid "Search for this code for easier reference."
+msgstr "Recherchez ce code pour une référence plus facile."
+
+#: danceschool/banlist/models.py:70
+msgid "Session and form data"
+msgstr "Données de Session et des Formulaires"
+
+#: danceschool/banlist/models.py:73
+#, python-format
+msgid "%s: %s at %s"
+msgstr "%s: %s à %s"
+
+#: danceschool/banlist/models.py:77
+msgid "Record of ban being flagged"
+msgstr "Enregistrement de l'interdiction signalée"
+
+#: danceschool/banlist/models.py:78
+msgid "Records of bans being flagged"
+msgstr "Enregistrements des l'interdictions signalées"
+
+#: danceschool/banlist/templates/banlist/banlist.html:6
+msgid "List of Individuals Banned From Registration"
+msgstr "Liste des personnes interdites de s'inscrire"
+
+#: danceschool/banlist/templates/banlist/banlist.html:7
+msgid "This version:"
+msgstr "Cette version:"

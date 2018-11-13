@@ -1,0 +1,558 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:48-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/private_events/admin.py:60
+#, fuzzy, python-format
+msgid "%s, %s"
+msgstr "%s, %s"
+
+#: danceschool/private_events/apps.py:9
+#, fuzzy
+msgid "Private Events Functions"
+msgstr "Fonctions d'événements privés"
+
+#: danceschool/private_events/cms_toolbars.py:14
+#, fuzzy
+msgid "Events"
+msgstr "Évènements"
+
+#: danceschool/private_events/cms_toolbars.py:18
+#, fuzzy
+msgid "School Calendar"
+msgstr "Calendrier scolaire"
+
+#: danceschool/private_events/cms_toolbars.py:21
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/private_events/cms_toolbars.py:22
+#, fuzzy
+msgid "Private Event Categories"
+msgstr "Catégories d'événements privés"
+
+#: danceschool/private_events/feeds.py:62
+#, fuzzy, python-format
+msgid "Calendar for %s"
+msgstr "Calendrier pour %s"
+
+#: danceschool/private_events/feeds.py:83
+#, fuzzy, python-format
+msgid "%s Events Calendar"
+msgstr "%s Calendrier des événements"
+
+#: danceschool/private_events/feeds.py:84
+#, fuzzy, python-format
+msgid "%s Staff Calendar for %s"
+msgstr "% s Calendrier du personnel pour% s"
+
+#: danceschool/private_events/forms.py:21
+#, fuzzy
+msgid "Hour"
+msgstr "Heure"
+
+#: danceschool/private_events/forms.py:22
+#, fuzzy
+msgid "Day"
+msgstr "Jour"
+
+#: danceschool/private_events/forms.py:23
+#, fuzzy
+msgid "Week"
+msgstr "Semaine"
+
+#: danceschool/private_events/forms.py:24
+#, fuzzy
+msgid "Month"
+msgstr "Mois"
+
+#: danceschool/private_events/forms.py:25
+#, fuzzy
+msgid "Year"
+msgstr "Année"
+
+#: danceschool/private_events/forms.py:29
+#: danceschool/private_events/forms.py:37
+#, fuzzy
+msgid "All Staff"
+msgstr "Tout le personnel"
+
+#: danceschool/private_events/forms.py:30
+#: danceschool/private_events/forms.py:38
+#, fuzzy
+msgid "Only To Me"
+msgstr "Seulement pour moi"
+
+#: danceschool/private_events/forms.py:31
+#: danceschool/private_events/forms.py:39
+#, fuzzy
+msgid "Select User Group"
+msgstr "Sélectionner un groupe d'utilisateurs"
+
+#: danceschool/private_events/forms.py:32
+#: danceschool/private_events/forms.py:40
+#, fuzzy
+msgid "Select Users"
+msgstr "Sélectionner les utilisateurs"
+
+#: danceschool/private_events/forms.py:36
+#, fuzzy
+msgid "No One"
+msgstr "Personne"
+
+#: danceschool/private_events/forms.py:44
+#, fuzzy
+msgid "0 minutes"
+msgstr "0 minutes"
+
+#: danceschool/private_events/forms.py:45
+#, fuzzy
+msgid "30 minutes"
+msgstr "30 minutes"
+
+#: danceschool/private_events/forms.py:46
+#, fuzzy
+msgid "1 hour"
+msgstr "1 heure"
+
+#: danceschool/private_events/forms.py:47
+#, fuzzy
+msgid "12 hours"
+msgstr "12 heures"
+
+#: danceschool/private_events/forms.py:48
+#, fuzzy
+msgid "3 days"
+msgstr "3 jours"
+
+#: danceschool/private_events/forms.py:54
+#, fuzzy
+msgid "Make this event visible to:"
+msgstr "Rendre cet événement visible à:"
+
+#: danceschool/private_events/forms.py:83
+#, fuzzy
+msgid "Add A Description"
+msgstr "Ajouter une description"
+
+#: danceschool/private_events/forms.py:84
+#, fuzzy
+msgid "Add A Location"
+msgstr "Ajouter un emplacement"
+
+#: danceschool/private_events/forms.py:85
+#, fuzzy
+msgid "Add a Link"
+msgstr "Ajouter un lien"
+
+#: danceschool/private_events/forms.py:119
+#, fuzzy
+msgid "All Day"
+msgstr "Toute la journée"
+
+#: danceschool/private_events/forms.py:129
+#, fuzzy
+msgid "End time cannot be before start time."
+msgstr "L'heure de fin ne peut pas être avant l'heure de début."
+
+#: danceschool/private_events/forms.py:171
+#, fuzzy
+msgid "Start Time"
+msgstr "Heure de début"
+
+#: danceschool/private_events/forms.py:172
+#, fuzzy
+msgid "End Time"
+msgstr "Heure de fin"
+
+#: danceschool/private_events/forms.py:173
+#, fuzzy
+msgid "Repeat __ times:"
+msgstr "Répétez __ fois:"
+
+#: danceschool/private_events/forms.py:174
+#, fuzzy
+msgid "Every:"
+msgstr "Chaque:"
+
+#: danceschool/private_events/forms.py:175
+#, fuzzy
+msgid "Send A Reminder To:"
+msgstr "Envoyer un rappel à:"
+
+#: danceschool/private_events/forms.py:176
+#, fuzzy
+msgid "Before:"
+msgstr "Avant:"
+
+#: danceschool/private_events/forms.py:177
+#, fuzzy
+msgid "Ahead Of:"
+msgstr "En avant de:"
+
+#: danceschool/private_events/forms.py:177
+#, fuzzy
+msgid "All Occurrences"
+msgstr "Toutes les occurrences"
+
+#: danceschool/private_events/forms.py:177
+#, fuzzy
+msgid "First Occurrence Only"
+msgstr "Première occurrence seulement"
+
+#: danceschool/private_events/forms.py:178
+#, fuzzy
+msgid "Remind Group:"
+msgstr "Rappelez le groupe:"
+
+#: danceschool/private_events/forms.py:179
+#, fuzzy
+msgid "Remind Users:"
+msgstr "Rappelez aux utilisateurs:"
+
+#: danceschool/private_events/models.py:16
+#, fuzzy
+msgid "Group required to add events to this category."
+msgstr "Groupe requis pour ajouter des événements à cette catégorie."
+
+#: danceschool/private_events/models.py:17
+#, fuzzy
+msgid "Calendar display color"
+msgstr "Couleur d'affichage du calendrier"
+
+#: danceschool/private_events/models.py:20
+#, fuzzy
+msgid "Private events category"
+msgstr "Catégorie d'événements privés"
+
+#: danceschool/private_events/models.py:21
+#, fuzzy
+msgid "Private events categories"
+msgstr "Catégories d'événements privés"
+
+#: danceschool/private_events/models.py:29
+#, fuzzy
+msgid "Title"
+msgstr "Titre"
+
+#: danceschool/private_events/models.py:29
+#, fuzzy
+msgid "Give the event a title"
+msgstr "Donner un titre à l'événement"
+
+#: danceschool/private_events/models.py:30
+#: danceschool/private_events/templates/private_events/reminder_emails.html:12
+#, fuzzy
+msgid "Category"
+msgstr "Catégorie"
+
+#: danceschool/private_events/models.py:39
+#: danceschool/private_events/models.py:47
+#: danceschool/private_events/templates/private_events/reminder_emails.html:10
+#, fuzzy
+msgid "Description"
+msgstr "Description"
+
+#: danceschool/private_events/models.py:50
+#, fuzzy
+msgid "Other location"
+msgstr "autres endroits"
+
+#: danceschool/private_events/models.py:50
+#, fuzzy
+msgid "If this event is not at a public event location, then enter it here."
+msgstr ""
+"Si cet événement n'est pas sur un lieu d'événement public, entrez-le ici."
+
+#: danceschool/private_events/models.py:51
+#, fuzzy
+msgid "Optional link"
+msgstr "Lien optionnel"
+
+#: danceschool/private_events/models.py:51
+#, fuzzy
+msgid ""
+"Optionally include the URL to anything that may be relevant for this event."
+msgstr ""
+"En option, incluez l'URL de tout ce qui peut être pertinent pour cet "
+"événement."
+
+#: danceschool/private_events/models.py:53
+#, fuzzy
+msgid "Display to group"
+msgstr "Afficher au groupe"
+
+#: danceschool/private_events/models.py:53
+#, fuzzy
+msgid ""
+"If this is set, then only these users will see this event on their calendar."
+msgstr ""
+"Si cela est défini, seuls ces utilisateurs verront cet événement sur leur "
+"calendrier."
+
+#: danceschool/private_events/models.py:54
+#, fuzzy
+msgid "Display to users"
+msgstr "Afficher aux utilisateurs"
+
+#: danceschool/private_events/models.py:54
+#, fuzzy
+msgid ""
+"If this is set, then only chosen users will see this event on their calendar."
+msgstr ""
+"Si cela est défini, seuls les utilisateurs sélectionnés verront cet "
+"événement sur leur calendrier."
+
+#: danceschool/private_events/models.py:70
+#, fuzzy
+msgid "Private event/calendar item"
+msgstr "Événement privé / élément de calendrier"
+
+#: danceschool/private_events/models.py:71
+#, fuzzy
+msgid "Private events/calendar items"
+msgstr "Événements privés / éléments de calendrier"
+
+#: danceschool/private_events/models.py:75
+#, fuzzy
+msgid "Event"
+msgstr "Événement"
+
+#: danceschool/private_events/models.py:76
+#, fuzzy
+msgid "Event Occurrence"
+msgstr "Occurrence d'événement"
+
+#: danceschool/private_events/models.py:78
+#, fuzzy
+msgid "Date/Time"
+msgstr "Date / heure"
+
+#: danceschool/private_events/models.py:80
+#, fuzzy
+msgid "Notification List"
+msgstr "Liste de notification"
+
+#: danceschool/private_events/models.py:81
+#, fuzzy
+msgid "Completed"
+msgstr "Terminé"
+
+#: danceschool/private_events/models.py:81
+#, fuzzy
+msgid "This will be set to true once the reminder has been sent."
+msgstr "Ce paramètre sera défini sur true une fois le rappel envoyé."
+
+#: danceschool/private_events/models.py:89
+#, fuzzy
+msgid "Event and EventOccurrence must match!"
+msgstr "L'événement et l'occurrence de l'événement doivent correspondre!"
+
+#: danceschool/private_events/models.py:93
+#, fuzzy
+msgid "Reminder for "
+msgstr "Rappel pour"
+
+#: danceschool/private_events/models.py:97
+#, fuzzy
+msgid "Event reminder"
+msgstr "Rappel d'événement"
+
+#: danceschool/private_events/models.py:98
+#, fuzzy
+msgid "Event reminders"
+msgstr "Rappels d'événements"
+
+#: danceschool/private_events/tasks.py:45
+#, fuzzy
+msgid "REMINDER: "
+msgstr "RAPPEL:"
+
+#: danceschool/private_events/templates/private_events/add_private_event_form.html:7
+#, fuzzy
+msgid "Add an Event or Reminder (non-Public)"
+msgstr "Ajouter un événement ou un rappel (non public)"
+
+#: danceschool/private_events/templates/private_events/add_private_event_form.html:10
+#, fuzzy
+msgid "ERROR"
+msgstr "ERREUR"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:7
+#, fuzzy
+msgid "School Calendars"
+msgstr "Calendriers scolaires"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:10
+#, fuzzy
+msgid "Links To Calendar Feeds"
+msgstr "Liens vers les flux de calendrier"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:13
+#, fuzzy
+msgid "Your Classes &amp; Events"
+msgstr "Vos cours & amp; Événements"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:16
+#, fuzzy
+msgid "Private Events &amp; Reminders"
+msgstr "Événements privés & amp; Rappels"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:19
+#, fuzzy
+msgid "Public Calendar Feed"
+msgstr "Flux du calendrier public"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:20
+#, fuzzy
+msgid "copy and paste these URLs to add them to Google Calendar, etc."
+msgstr "copiez et collez ces URL pour les ajouter à Google Calendar, etc."
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:24
+#, fuzzy
+msgid "Select Calendar Options"
+msgstr "Sélectionnez les options du calendrier"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:30
+#, fuzzy
+msgid "All Events and Reminders"
+msgstr "Tous les événements et rappels"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:31
+#, fuzzy
+msgid "Only Public Events"
+msgstr "Seuls les événements publics"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:32
+#, fuzzy
+msgid "Only My Events"
+msgstr "Seulement mes événements"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:34
+#: danceschool/private_events/templates/private_events/reminder_emails.html:11
+#, fuzzy
+msgid "Location"
+msgstr "Emplacement"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:37
+#, fuzzy
+msgid "Room"
+msgstr "Pièce"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:48
+#, fuzzy
+msgid "Note"
+msgstr "Note"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:48
+#, fuzzy
+msgid ""
+"For all calendar options, private reminders and private lessons displayed "
+"include only those events that are visible to your user account."
+msgstr ""
+"Pour toutes les options d'agenda, les rappels privés et les leçons privées "
+"affichées incluent” “uniquement les événements visibles par votre compte "
+"d'utilisateur."
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:52
+#, fuzzy
+msgid "Event Details"
+msgstr "Détails de l'évènement"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:55
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:71
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:80
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:97
+#, fuzzy
+msgid "Close"
+msgstr "Fermer"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:62
+#, fuzzy
+msgid "Start"
+msgstr "Début"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:64
+#, fuzzy
+msgid "End"
+msgstr "Fin"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:71
+#, fuzzy
+msgid "Edit Details"
+msgstr "Modifier les détails"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:71
+#, fuzzy
+msgid "Read More"
+msgstr "Lire la suite"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:77
+#, fuzzy
+msgid "Add Event"
+msgstr "Ajouter un évènement"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:89
+#, fuzzy
+msgid "Add A Class"
+msgstr "Ajouter un cours"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:90
+#, fuzzy
+msgid "Add A Public Event"
+msgstr "Ajouter un événement public"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:91
+#, fuzzy
+msgid "Add A Private Event/Reminder"
+msgstr "Ajouter un événement / rappel privé"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:204
+#, fuzzy
+msgid "Currently scheduled"
+msgstr "Actuellement prévu"
+
+#: danceschool/private_events/templates/private_events/private_fullcalendar.html:213
+#, fuzzy
+msgid "No currently scheduled events."
+msgstr "Aucun événement actuellement planifié."
+
+#: danceschool/private_events/templates/private_events/reminder_emails.html:2
+#, fuzzy, python-format
+msgid "Dear %(name)s,"
+msgstr "Cher% (nom) s,"
+
+#: danceschool/private_events/templates/private_events/reminder_emails.html:4
+#, fuzzy
+msgid ""
+"This is an automatically generated email is to remind you of the following "
+"event/task"
+msgstr ""
+"Ceci est un email généré automatiquement pour vous rappeler l'événement / "
+"tâche suivant"
+
+#: danceschool/private_events/templates/private_events/reminder_emails.html:8
+msgid "to"
+msgstr ""
+
+#: danceschool/private_events/templates/private_events/reminder_emails.html:14
+#, fuzzy
+msgid "Thanks!"
+msgstr "Merci!"

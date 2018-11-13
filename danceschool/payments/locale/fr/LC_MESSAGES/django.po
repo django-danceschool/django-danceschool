@@ -1,0 +1,430 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-11-13 12:56-0500\n"
+"PO-Revision-Date: 2018-11-13 12:46-0500\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"X-Generator: Poedit 1.8.11\n"
+
+#: danceschool/payments/paypal/admin.py:23
+#: danceschool/payments/square/admin.py:23
+#: danceschool/payments/stripe/admin.py:23
+#, fuzzy
+msgid "Registration invoice"
+msgstr "Facture d'inscription"
+
+#: danceschool/payments/paypal/admin.py:33
+#: danceschool/payments/square/admin.py:33
+#: danceschool/payments/stripe/admin.py:33
+#, fuzzy
+msgid "Basic Information"
+msgstr "Informations de base"
+
+#: danceschool/payments/paypal/admin.py:36
+#: danceschool/payments/square/admin.py:36
+#: danceschool/payments/stripe/admin.py:36
+#, fuzzy
+msgid "Dates"
+msgstr "Dates"
+
+#: danceschool/payments/paypal/cms_plugins.py:12
+#, fuzzy
+msgid "Paypal Gift Certificate Form"
+msgstr "Formulaire de chèque-cadeau Paypal"
+
+#: danceschool/payments/paypal/cms_plugins.py:35
+#, fuzzy
+msgid "Paypal Express Checkout Form"
+msgstr "Formulaire de paiement Paypal Express"
+
+#: danceschool/payments/paypal/cms_toolbars.py:18
+#: danceschool/payments/square/cms_toolbars.py:18
+#, fuzzy
+msgid "Finances"
+msgstr "Finances"
+
+#: danceschool/payments/paypal/cms_toolbars.py:32
+#: danceschool/payments/square/cms_toolbars.py:32
+#, fuzzy
+msgid "Related Items"
+msgstr "Articles connexes"
+
+#: danceschool/payments/paypal/cms_toolbars.py:35
+#, fuzzy
+msgid "Paypal Payment Records"
+msgstr "Dossiers de paiement Paypal"
+
+#: danceschool/payments/paypal/dynamic_preferences_registry.py:11
+#, fuzzy
+msgid "Paypal"
+msgstr "Paypal"
+
+#: danceschool/payments/paypal/dynamic_preferences_registry.py:21
+#, fuzzy
+msgid "Paypal fixed transaction fee"
+msgstr "Paypal frais de transaction fixe"
+
+#: danceschool/payments/paypal/dynamic_preferences_registry.py:22
+msgid ""
+"Paypal fees consist of a fixed fee plus a percentage of the total price.  "
+"When a refund is made, the  the U.S., the variable percentage is refunded, "
+"but the fixed fee is not.  In the U.S., this fixed fee is $0.30.  Entering "
+"your country's fee here ensures that your accounting will remain accurate "
+"when you refund students."
+msgstr ""
+
+#: danceschool/payments/paypal/models.py:24
+#, fuzzy
+msgid "Paypal Payment ID"
+msgstr "Identifiant de paiement Paypal"
+
+#: danceschool/payments/paypal/models.py:25
+#, fuzzy
+msgid "Paypal Payer ID"
+msgstr "Identifiant du payeur Paypal"
+
+#: danceschool/payments/paypal/models.py:26
+#: danceschool/payments/stripe/models.py:30
+#, fuzzy
+msgid "Current status"
+msgstr "Statut actuel"
+
+#: danceschool/payments/paypal/models.py:122
+#, fuzzy
+msgid "Paypal payment record"
+msgstr "Registre des paiements Paypal"
+
+#: danceschool/payments/paypal/models.py:123
+#: danceschool/payments/square/models.py:152
+#, fuzzy
+msgid "Payment records"
+msgstr "Registres de paiements"
+
+#: danceschool/payments/paypal/models.py:129
+#: danceschool/payments/square/models.py:158
+#: danceschool/payments/stripe/models.py:91
+#, fuzzy
+msgid "Success Page"
+msgstr "Succès"
+
+#: danceschool/payments/paypal/models.py:129
+#: danceschool/payments/square/models.py:158
+#: danceschool/payments/stripe/models.py:91
+#, fuzzy
+msgid ""
+"When the user returns to the site after a successful transaction, send them "
+"to this page."
+msgstr ""
+"Lorsque l'utilisateur revient sur le site après une transaction réussie, "
+"envoyez-le à cette page."
+
+#: danceschool/payments/paypal/models.py:130
+#: danceschool/payments/square/models.py:159
+#: danceschool/payments/stripe/models.py:92
+#, fuzzy
+msgid "Default amount"
+msgstr "Montant par défaut"
+
+#: danceschool/payments/paypal/models.py:130
+#: danceschool/payments/square/models.py:159
+#: danceschool/payments/stripe/models.py:92
+#, fuzzy
+msgid "The initial value for gift certificate forms."
+msgstr "La valeur initiale pour les formulaires de chèque-cadeau."
+
+#: danceschool/payments/paypal/templates/paypal/express_checkout.html:3
+#: danceschool/payments/paypal/templates/paypal/giftcertificate_form.html:3
+#: danceschool/payments/square/templates/square/checkout.html:3
+msgid ""
+"An unknown error has occurred. Please try again, or notify us if you "
+"continue to have an issue."
+msgstr ""
+
+#: danceschool/payments/paypal/templates/paypal/giftcertificate_form.html:8
+#, fuzzy
+msgid "Amount"
+msgstr "Montant"
+
+#: danceschool/payments/paypal/views.py:62
+#: danceschool/payments/square/views.py:84
+#: danceschool/payments/square/views.py:372
+#: danceschool/payments/stripe/views.py:69
+#, fuzzy, python-format
+msgid "Invoice Payment: %s"
+msgstr "Paiement de facture:% s"
+
+#: danceschool/payments/paypal/views.py:71
+#: danceschool/payments/square/views.py:93
+#: danceschool/payments/square/views.py:367
+#: danceschool/payments/stripe/views.py:78
+#, fuzzy, python-format
+msgid "Registration Payment: #%s"
+msgstr "Paiement d'inscription: #% s"
+
+#: danceschool/payments/paypal/views.py:81
+#: danceschool/payments/square/views.py:111
+#: danceschool/payments/square/views.py:384
+#: danceschool/payments/stripe/templates/stripe/giftcertificate_form.html:42
+#: danceschool/payments/stripe/views.py:88
+#, fuzzy
+msgid "Gift Certificate Purchase"
+msgstr "Achat de chèques-cadeaux"
+
+#: danceschool/payments/paypal/views.py:136
+#, fuzzy
+msgid "Total Discounts"
+msgstr "Total des remises"
+
+#: danceschool/payments/paypal/views.py:143
+#, fuzzy
+msgid "Previously Paid"
+msgstr "Payé Auparavant"
+
+#: danceschool/payments/paypal/views.py:150
+#, fuzzy
+msgid "Remaining Balance After Payment"
+msgstr "Solde restant après paiement"
+
+#: danceschool/payments/square/cms_plugins.py:13
+#, fuzzy
+msgid "Square Checkout Form"
+msgstr "Formulaire de paiement Square"
+
+#: danceschool/payments/square/cms_plugins.py:31
+#, fuzzy
+msgid "Square Point of Sale Button"
+msgstr "Bouton Point de vente Square"
+
+#: danceschool/payments/square/cms_toolbars.py:35
+#, fuzzy
+msgid "Square Payment Records"
+msgstr "Registres de paiement Square"
+
+#: danceschool/payments/square/models.py:27
+#, fuzzy
+msgid "Square Transaction ID"
+msgstr "Identifiant de transaction Square"
+
+#: danceschool/payments/square/models.py:28
+#, fuzzy
+msgid "Square Location ID"
+msgstr "Identifiant d’endroit Square"
+
+#: danceschool/payments/square/models.py:29
+#, fuzzy
+msgid "Associated email"
+msgstr "Courriel associé"
+
+#: danceschool/payments/square/models.py:149
+#, fuzzy
+msgid "Has access to point-of-sale payment functionality"
+msgstr "A accès à la fonctionnalité de paiement au point de vente"
+
+#: danceschool/payments/square/models.py:151
+#, fuzzy
+msgid "Square payment record"
+msgstr "Registre de paiement Square"
+
+#: danceschool/payments/square/templates/square/checkout.html:10
+#, fuzzy
+msgid "Pay Now with Square"
+msgstr "Payer maintenant avec Square"
+
+#: danceschool/payments/square/templates/square/checkout.html:13
+#, fuzzy
+msgid "Card Number"
+msgstr "Numéro de carte"
+
+#: danceschool/payments/square/templates/square/checkout.html:15
+#, fuzzy
+msgid "CVV"
+msgstr "CVV"
+
+#: danceschool/payments/square/templates/square/checkout.html:17
+#, fuzzy
+msgid "Expiration Date"
+msgstr "Date d'expiration"
+
+#: danceschool/payments/square/templates/square/checkout.html:19
+#, fuzzy
+msgid "Postal Code"
+msgstr "Code Postal"
+
+#: danceschool/payments/square/templates/square/checkout.html:37
+#, fuzzy
+msgid "Pay Now"
+msgstr "Payer maintenant"
+
+#: danceschool/payments/square/templates/square/checkout.html:98
+#, fuzzy
+msgid ""
+"Your browser does not support Square checkout.  Please use another browser."
+msgstr ""
+"Votre navigateur ne prend pas en charge la caisse Square. Veuillez utiliser "
+"un autre” “navigateur."
+
+#: danceschool/payments/square/templates/square/point_of_sale.html:4
+#, fuzzy
+msgid "Send to Square App"
+msgstr "Envoyer à l'application Square"
+
+#: danceschool/payments/square/templates/square/point_of_sale.html:6
+#, fuzzy
+msgid ""
+"<em>Note:</em> Square Point of Sale app must be installed and logged in "
+"before attempting this transaction."
+msgstr ""
+"<em> Remarque: </ em> L'application\" Square Point of Sale \"doit être "
+"installée et connectée” “avant de tenter cette transaction."
+
+#: danceschool/payments/square/templates/square/point_of_sale.html:87
+#, fuzzy
+msgid "unavailable"
+msgstr "indisponible"
+
+#: danceschool/payments/square/templates/square/point_of_sale.html:88
+#, fuzzy
+msgid ""
+"Point of sale integration is only supported for iOS and Android devices."
+msgstr ""
+"L'intégration au point de vente est uniquement prise en charge pour les "
+"appareils iOS et” “Android."
+
+#: danceschool/payments/square/views.py:66
+#: danceschool/payments/square/views.py:103
+#: danceschool/payments/square/views.py:127
+#: danceschool/payments/square/views.py:167
+#, fuzzy
+msgid "ERROR: Error with Square checkout transaction attempt."
+msgstr "ERREUR: Erreur lors de la tentative de transaction Square Checkout."
+
+#: danceschool/payments/square/views.py:67
+#, fuzzy
+msgid "Invalid amount passed."
+msgstr "Quantité non valide transmise"
+
+#: danceschool/payments/square/views.py:104
+#, fuzzy
+msgid "Insufficient information passed to createSquarePayment view."
+msgstr "Information insuffisante transmise à la vue createSquarePayment."
+
+#: danceschool/payments/square/views.py:128
+#, fuzzy, python-format
+msgid ""
+"Invalid registration information passed to createSquarePayment view: (%s, "
+"%s, %s)"
+msgstr ""
+"Informations d'inscription incorrectes transmises à la vue "
+"createSquarePayment: (% s,% s,% s)"
+
+#: danceschool/payments/square/views.py:161
+#, fuzzy
+msgid "Unknown"
+msgstr "Inconnu"
+
+#: danceschool/payments/square/views.py:235
+#: danceschool/payments/square/views.py:274
+#: danceschool/payments/square/views.py:296
+#, fuzzy
+msgid "ERROR: Error with Square point of sale transaction attempt."
+msgstr ""
+"ERREUR: Erreur lors d'une tentative de transaction au point de vente Square."
+
+#: danceschool/payments/square/views.py:236
+#: danceschool/payments/square/views.py:275
+#, fuzzy
+msgid "Invalid metadata passed from Square app."
+msgstr "Métadonnées non valides transmises depuis l'application Square."
+
+#: danceschool/payments/square/views.py:309
+#, fuzzy
+msgid "ERROR: Unable to find Square transaction by server ID."
+msgstr ""
+"ERREUR: Impossible de trouver la transaction Square par l'ID du serveur."
+
+#: danceschool/payments/square/views.py:313
+#, fuzzy
+msgid "ERROR: Unable to find Square transaction by server ID:"
+msgstr ""
+"ERREUR: Impossible de trouver la transaction Square par l'ID du serveur:"
+
+#: danceschool/payments/square/views.py:322
+#, fuzzy
+msgid "ERROR: Unable to find Square transaction by client ID."
+msgstr "ERREUR: Impossible de trouver la transaction Square par ID client."
+
+#: danceschool/payments/square/views.py:326
+#, fuzzy
+msgid "ERROR: Unable to find Square transaction by client ID:"
+msgstr "ERREUR: Impossible de trouver la transaction Square par ID client:"
+
+#: danceschool/payments/square/views.py:333
+#, fuzzy
+msgid "ERROR: Returned client transaction ID not found."
+msgstr "ERREUR: Retour d'identifiant de transaction client introuvable."
+
+#: danceschool/payments/square/views.py:337
+#, fuzzy
+msgid ""
+"ERROR: An unknown error has occurred with Square point of sale transaction "
+"attempt."
+msgstr ""
+"ERREUR: une erreur inconnue s'est produite lors de la tentative de "
+"transaction au point de vente Square."
+
+#: danceschool/payments/square/views.py:360
+#, fuzzy
+msgid "ERROR: Invalid registration ID passed"
+msgstr "ERREUR: ID d'inscription non valide transmis"
+
+#: danceschool/payments/square/views.py:378
+#, fuzzy
+msgid "ERROR: Invalid invoice ID passed"
+msgstr "ERREUR: ID de facture non valide transmis"
+
+#: danceschool/payments/stripe/cms_plugins.py:13
+#, fuzzy
+msgid "Stripe Gift Certificate Form"
+msgstr "Formulaire de chèque-cadeau Stripe"
+
+#: danceschool/payments/stripe/cms_plugins.py:33
+#, fuzzy
+msgid "Stripe Checkout Form"
+msgstr "Formulaire de paiement Stripe"
+
+#: danceschool/payments/stripe/models.py:29
+#, fuzzy
+msgid "Charge Id"
+msgstr "Identifiant de charge"
+
+#: danceschool/payments/stripe/models.py:84
+#, fuzzy
+msgid "Stripe charge"
+msgstr "Frais pour Stripe"
+
+#: danceschool/payments/stripe/models.py:85
+#, fuzzy
+msgid "Stripe charges"
+msgstr "Frais pour Stripe"
+
+#: danceschool/payments/stripe/templates/stripe/checkout.html:26
+#, fuzzy
+msgid "Invoice #"
+msgstr "Facture #"
+
+#: danceschool/payments/stripe/templates/stripe/checkout.html:29
+#, fuzzy
+msgid "Temporary Registration #"
+msgstr "Numéro d'inscription temporaire"
