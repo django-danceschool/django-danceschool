@@ -136,7 +136,7 @@ class StaffMemberToolbar(CMSToolbar):
             menu.add_link_item(_('Your Stats'), url=reverse('instructorStats'))
         if hasattr(self.request.user,'staffmember') and self.request.user.has_perm('core.update_instructor_bio'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
-            menu.add_link_item(_('Update Your Contact Info'), url=reverse('instructorBioChange'))
+            menu.add_link_item(_('Update Your Contact Info'), url=reverse('staffBioChange'))
 
         if self.request.user.has_perm('core.view_staff_directory'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
@@ -158,9 +158,9 @@ class StaffMemberToolbar(CMSToolbar):
         if addBreak:
             menu.add_break('post_instructor_functions_break')
 
-        if self.request.user.has_perm('core.change_instructor'):
+        if self.request.user.has_perm('core.change_staffmember'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
-            menu.add_link_item(_('Manage Instructors'), url=reverse('admin:core_instructor_changelist'))
+            menu.add_link_item(_('Manage Staff/Instructors'), url=reverse('admin:core_staffmember_changelist'))
 
 
 @toolbar_pool.register

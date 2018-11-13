@@ -63,7 +63,7 @@ class EventFeed(ICalFeed):
             return _('%s Events Calendar' % businessName)
         else:
             this_instructor = StaffMember.objects.filter(**{'feedKey': obj}).values('firstName','lastName').first()
-            return _('%s Instructor Calendar for %s %s' % (businessName,this_instructor['firstName'],this_instructor['lastName']))
+            return _('%s Staff Calendar for %s %s' % (businessName,this_instructor['firstName'],this_instructor['lastName']))
 
     def description(self):
         return _('Calendar for %s' % getConstant('contact__businessName'))

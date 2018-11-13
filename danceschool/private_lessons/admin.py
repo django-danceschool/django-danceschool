@@ -4,7 +4,7 @@ from django.utils.translation import ugettext_lazy as _
 
 from .models import InstructorPrivateLessonDetails, InstructorAvailabilitySlot, PrivateLessonEvent, PrivateLessonCustomer
 
-from danceschool.core.models import Instructor, EventStaffMember
+from danceschool.core.models import Instructor, EventStaffMember, StaffMember
 from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline, EventRegistrationInline
 from danceschool.core.constants import getConstant
 from danceschool.core.forms import LocationWithDataWidget
@@ -43,11 +43,15 @@ class PrivateLessonTeacherInlineForm(ModelForm):
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out retired teachers
-            self.fields['staffMember'].queryset = Instructor.objects.exclude(status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden,Instructor.InstructorStatus.retiredGuest])
+            self.fields['staffMember'].queryset = StaffMember.objects.filter(
+                instructor__isnull=False,
+            ).exclude(
+                instructor__status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden,Instructor.InstructorStatus.retiredGuest]
+            )
         else:
-            self.fields['staffMember'].queryset = Instructor.objects.all()
+            self.fields['staffMember'].queryset = StaffMember.objects.all()
 
-        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('status','firstName','lastName')
+        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('instructor__status','firstName','lastName')
 
     class Meta:
         widgets = {
@@ -116,4 +120,4 @@ class PrivateLessonEventAdmin(EventChildAdmin):
     inlines = [EventOccurrenceInline,PrivateLessonCustomerInline,PrivateLessonTeacherInline,PrivateLessonEventRegistrationInline]
 
 
-admin.site._registry[Instructor].inlines.insert(0,InstructorPrivateLessonDetailsInline)
+admin.site._registry[StaffMember].inlines.insert(0,InstructorPrivateLessonDetailsInline)

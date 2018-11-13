@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from dal import autocomplete
 
-from .models import Customer
+from .models import Customer, StaffMember
 
 
 class UserAutoComplete(autocomplete.Select2QuerySetView):
@@ -52,3 +52,39 @@ class CustomerAutoComplete(autocomplete.Select2QuerySetView):
             )
 
         return qs
+
+
+class StaffMemberAutoComplete(autocomplete.Select2QuerySetView):
+
+    def get_queryset(self):
+        # Filter out results for unauthenticated users.
+        if not self.request.user.has_perm('core.can_autocomplete_staffmembers'):
+            return StaffMember.objects.none()
+
+        qs = StaffMember.objects.all()
+
+        category = self.forwarded.get('category', None)
+
+        if category:
+            qs = qs.filter(categories=category)
+
+        if self.q:
+            words = self.q.split(' ')
+            lastName = words.pop()
+            firstName = words.pop() if words else lastName
+
+            qs = qs.filter(
+                Q(firstName__istartswith=firstName) | Q(lastName__istartswith=lastName) |
+                Q(publicEmail__istartswith=self.q)
+            )
+
+        return qs
+
+    def create_object(self, text):
+        ''' Allow creation of staff members using a full name string. '''
+        if self.create_field == 'fullName':
+            firstName = text.split(' ')[0]
+            lastName = ' '.join(text.split(' ')[1:])
+            return self.get_queryset().create(**{'firstName': firstName, 'lastName': lastName})
+        else:
+            return super(StaffMemberAutoComplete,self).create_object(text)

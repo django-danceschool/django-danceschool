@@ -22,7 +22,7 @@
 			<a class="btn btn-outline-secondary" href="{% url 'instructorStats' %}">{% trans "Your Instructor Stats" %}</a>
 		{% endif %}
 		{% if perms.core.update_instructor_bio %}
-			<a class="btn btn-outline-secondary" href="{% url 'instructorBioChange' %}">{% trans "Update Your Contact Info" %}</a>
+			<a class="btn btn-outline-secondary" href="{% url 'staffBioChange' %}">{% trans "Update Your Contact Info" %}</a>
 		{% endif %}
 	{% endif %}
 </div>

@@ -24,7 +24,7 @@ import re
 import logging
 
 from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
-from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
+from .forms import SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin, EventOrderMixin
 from .signals import get_customer_data
@@ -969,18 +969,18 @@ class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, Use
 #
 
 
-class InstructorBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class StaffMemberBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     '''
     This view now permits changing the instructor's bio information.
     '''
-    model = Instructor
+    model = StaffMember
     template_name = 'cms/forms/display_form_classbased_admin.html'
-    form_class = InstructorBioChangeForm
+    form_class = StaffMemberBioChangeForm
     permission_required = 'core.update_instructor_bio'
-    success_message = _('Instructor information updated successfully.')
+    success_message = _('Staff member information updated successfully.')
 
     def get_context_data(self,**kwargs):
-        context = super(InstructorBioChangeView,self).get_context_data(**kwargs)
+        context = super(StaffMemberBioChangeView,self).get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Update Contact Information'),

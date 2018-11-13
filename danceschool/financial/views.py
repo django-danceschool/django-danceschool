@@ -57,14 +57,14 @@ class RevenueReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFor
         return context
 
 
-class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, DetailView):
-    model = Instructor
-    template_name = 'financial/instructor_payments.html'
+class StaffMemberPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, DetailView):
+    model = StaffMember
+    template_name = 'financial/staffmember_payments.html'
     permission_required = 'core.view_own_instructor_finances'
     as_csv = False
 
     def get_context_data(self,**kwargs):
-        instructor = self.object
+        staff_member = self.object
         context = {}
 
         query_filter = Q()
@@ -88,11 +88,11 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
             except (ValueError, TypeError):
                 raise Http404(_("Invalid year."))
 
-        # No point in continuing if we can't actually match this instructor to their payments.
-        if not hasattr(instructor,'userAccount'):
-            return super(DetailView, self).get_context_data(instructor=instructor)
+        # No point in continuing if we can't actually match this staff member to their payments.
+        if not hasattr(staff_member,'userAccount'):
+            return super(DetailView, self).get_context_data(staff_member=staff_member)
 
-        all_payments = instructor.userAccount.payToUser.filter(query_filter).order_by('-submissionDate')
+        all_payments = staff_member.userAccount.payToUser.filter(query_filter).order_by('-submissionDate')
 
         paid_items = all_payments.filter(**{'paid':True,'reimbursement':False}).order_by('-paymentDate')
         unpaid_items = all_payments.filter(**{'paid':False}).order_by('-submissionDate')
@@ -110,7 +110,8 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
         reimbursements_this_year = all_payments.filter(paymentDate__gte=time_lb,paymentDate__lt=time_ub,paid=True,reimbursement=True)
 
         context.update({
-            'instructor': instructor,
+            'instructor': staff_member, # DEPRECATED
+            'staff_member': staff_member,
             'current_year': year,
             'eligible_years': eligible_years,
             'all_payments': all_payments,
@@ -132,29 +133,29 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
     def dispatch(self, request, *args, **kwargs):
         if 'as_csv' in kwargs:
             self.as_csv = True
-        return super(InstructorPaymentsView, self).dispatch(request, *args, **kwargs)
+        return super(StaffMemberPaymentsView, self).dispatch(request, *args, **kwargs)
 
     def render_to_response(self, context, **response_kwargs):
         if self.as_csv:
             return self.render_to_csv(context)
-        return super(InstructorPaymentsView, self).render_to_response(context, **response_kwargs)
+        return super(StaffMemberPaymentsView, self).render_to_response(context, **response_kwargs)
 
     def render_to_csv(self, context):
-        instructor = context['instructor']
-        if hasattr(instructor.userAccount,'payToUser'):
+        staff_member = context['staff_member']
+        if hasattr(staff_member.userAccount,'payToUser'):
             all_expenses = context['all_payments']
         else:
             all_expenses = ExpenseItem.objects.none()
         return getExpenseItemsCSV(all_expenses,scope='instructor')
 
 
-class OtherInstructorPaymentsView(InstructorPaymentsView):
+class OtherStaffMemberPaymentsView(StaffMemberPaymentsView):
     permission_required = 'core.view_other_instructor_finances'
 
     def get_object(self, queryset=None):
         if 'first_name' in self.kwargs and 'last_name' in self.kwargs:
             return get_object_or_404(
-                Instructor.objects.filter(**{'firstName': unquote_plus(self.kwargs['first_name']).replace('_',' '), 'lastName': unquote_plus(self.kwargs['last_name']).replace('_',' ')})
+                StaffMember.objects.filter(**{'firstName': unquote_plus(self.kwargs['first_name']).replace('_',' '), 'lastName': unquote_plus(self.kwargs['last_name']).replace('_',' ')})
             )
         else:
             return None

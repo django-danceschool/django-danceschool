@@ -2,9 +2,9 @@
 
 {% trans "Instructors" as title_default %}
 
-{% if instructor_list and "core.change_instructor" in perms %}<p><a class="btn btn-outline-secondary" href="{% url 'admin:core_instructor_changelist' %}">{% trans "Edit Instructor Bios" %}</a></p>{% endif %}
+{% if staffmember_list and "core.change_staffmember" in perms %}<p><a class="btn btn-outline-secondary" href="{% url 'admin:core_staffmember_changelist' %}">{% trans "Edit Staff Bios" %}</a></p>{% endif %}
 
-{% if instructor_list and list_title %}
+{% if staffmember_list and list_title %}
     <h2>{{ list_title|default:title_default }}</h2>
 
     {% if list_intro %}
@@ -13,7 +13,7 @@
 
     <hr />
 {% endif %}
-{% for teacher in instructor_list %}
+{% for teacher in staffmember_list %}
 <a name="{{ teacher.firstName }}-{{ teacher.lastName }}"></a>
 <div class="bio">
     <h3>

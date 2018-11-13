@@ -124,7 +124,6 @@ class DanceTypeLevel(models.Model):
     name = models.CharField(_('Name'),max_length=50)
     order = models.FloatField(_('Order number'),help_text=_('This is used to order and look up dance types.'))
     danceType = models.ForeignKey(DanceType,verbose_name=_('Dance Type'),on_delete=models.CASCADE)
-
     displayColor = RGBColorField(_('Display Color'),help_text=_('Choose a color for the calendar display.'),default=get_defaultClassColor)
 
     def __str__(self):
@@ -136,7 +135,19 @@ class DanceTypeLevel(models.Model):
         ordering = ('danceType__order','order',)
 
 
-class StaffMember(PolymorphicModel):
+class EventStaffCategory(models.Model):
+    name = models.CharField(_('Name'),max_length=50,unique=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ('name',)
+        verbose_name = _('Event staff category')
+        verbose_name_plural = _('Event staff categories')
+
+
+class StaffMember(models.Model):
     '''
     StaffMembers include instructors and anyone else who you may wish to
     associate with specific events or activities.
@@ -159,6 +170,11 @@ class StaffMember(PolymorphicModel):
 
     image = FilerImageField(verbose_name=_('Staff photo'),blank=True,null=True,related_name='staff_image')
     bio = HTMLField(verbose_name=_('Bio text'),help_text=_('Insert the instructor\'s bio here.  Use HTML to include videos, formatting, etc.'),null=True,blank=True)
+
+    categories = models.ManyToManyField(
+        EventStaffCategory,verbose_name=_('Included in staff categories'),blank=True,
+        help_text=_('When choosing staff members, the individuals available to staff will be limited based on the categories chosen here. If the individual is an instructor, also be sure to set the instructor information below.')
+    )
 
     # This field is a unique key that is used in the URL for the
     # staff member's personal calendar feed.
@@ -192,10 +208,11 @@ class StaffMember(PolymorphicModel):
         permissions = (
             ('view_staff_directory',_('Can access the staff directory view')),
             ('view_school_stats',_('Can view statistics about the school\'s performance.')),
+            ('can_autocomplete_staffmembers',_('Able to use customer and staff member autocomplete features (in admin forms)')),
         )
 
 
-class Instructor(StaffMember):
+class Instructor(models.Model):
     '''
     These go on the instructors page.
     '''
@@ -208,8 +225,10 @@ class Instructor(StaffMember):
         retired = ChoiceItem('X',_('Former/Retired Instructor'))
         hidden = ChoiceItem('H',_('Publicly Hidden'))
 
-    status = models.CharField(_('Instructor status'),max_length=1,choices=InstructorStatus.choices,default=InstructorStatus.roster,help_text=_('Instructor status affects the visibility of the instructor on the site and may also impact the pay rate of the instructor.'))
-    availableForPrivates = models.BooleanField(_('Available For private lessons'),default=True,help_text=_('Check this box if you would like to be listed as available for private lessons from students.'))
+    staffMember = models.OneToOneField(StaffMember,verbose_name=_('Staff member'),on_delete=models.CASCADE,primary_key=True)
+
+    status = models.CharField(_('Instructor status'),max_length=1,choices=InstructorStatus.choices,default=InstructorStatus.hidden,help_text=_('Instructor status affects the visibility of the instructor on the site, but is separate from the "categories" of event staffing on which compensation is based.'))
+    availableForPrivates = models.BooleanField(_('Available for private lessons'),default=True,help_text=_('Check this box if you would like to be listed as available for private lessons from students.'))
 
     @property
     def assistant(self):
@@ -251,8 +270,8 @@ class Instructor(StaffMember):
             ('update_instructor_bio',_('Can update instructors\' bio information')),
             ('view_own_instructor_stats',_('Can view one\'s own statistics (if an instructor)')),
             ('view_other_instructor_stats',_('Can view other instructors\' statistics')),
-            ('view_own_instructor_finances',_('Can view one\'s own financial/payment data (if an instructor)')),
-            ('view_other_instructor_finances',_('Can view other instructors\' financial/payment data')),
+            ('view_own_instructor_finances',_('Can view one\'s own financial/payment data (if a staff member)')),
+            ('view_other_instructor_finances',_('Can view other staff members\' financial/payment data')),
         )
 
 
@@ -1189,18 +1208,6 @@ class EventRole(models.Model):
         verbose_name_plural = _('Event dance roles')
 
 
-class EventStaffCategory(models.Model):
-    name = models.CharField(_('Name'),max_length=50,unique=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ('name',)
-        verbose_name = _('Event staff category')
-        verbose_name_plural = _('Event staff categories')
-
-
 class EventStaffMember(models.Model):
     '''
     Events have staff members of various types.  Instructors and
@@ -1521,6 +1528,33 @@ class EventDJ(EventStaffMember):
         proxy = True
         verbose_name = _('Event DJ')
         verbose_name_plural = _('Event DJs')
+
+
+class SeriesStaffManager(models.Manager):
+    '''
+    Limits SeriesStaff queries to exclude SeriesTeachers and SubstituteTeachers
+    '''
+
+    def get_queryset(self):
+        return super(SeriesStaffManager,self).get_queryset().exclude(
+            category__in=[
+                getConstant('general__eventStaffCategoryInstructor'),
+                getConstant('general__eventStaffCategorySubstitute'),
+            ],
+        )
+
+
+class SeriesStaffMember(EventStaffMember):
+    '''
+    A proxy model with a custom manager that excludes SeriesTeachers and 
+    SubstituteTeachers for easier admin integration.
+    '''
+    objects = SeriesStaffManager()
+
+    class Meta:
+        proxy = True
+        verbose_name = _('Series staff member')
+        verbose_name_plural = _('Series staff members')
 
 
 class PublicEvent(Event):
@@ -3016,7 +3050,7 @@ class StaffMemberPluginModel(CMSPlugin):
         return self.staffMember.fullName
 
 
-class InstructorListPluginModel(CMSPlugin):
+class StaffMemberListPluginModel(CMSPlugin):
     '''
     The Instructor photo list, instructor bio listing, and instructor directory all use this model for configuration.
     '''
@@ -3028,16 +3062,16 @@ class InstructorListPluginModel(CMSPlugin):
         random = ChoiceItem('random',_('Randomly Ordered'))
 
     statusChoices = MultiSelectField(
-        verbose_name=_('Limit to Instructor Status'),
+        verbose_name=_('Limit to Instructors with Status'),
         choices=Instructor.InstructorStatus.choices,
         default=[Instructor.InstructorStatus.roster,Instructor.InstructorStatus.assistant,Instructor.InstructorStatus.guest]
     )
     orderChoice = models.CharField(_('Order By'),max_length=10,choices=OrderChoices.choices)
     imageThumbnail = models.ForeignKey(ThumbnailOption,verbose_name=_('Image thumbnail option'),null=True,blank=True,on_delete=models.SET_NULL)
 
-    bioRequired = models.BooleanField(_('Exclude instructors with no bio'),default=False)
-    photoRequired = models.BooleanField(_('Exclude instructors with no photo'),default=False)
-    activeUpcomingOnly = models.BooleanField(_('Include only instructors with upcoming classes'),default=False)
+    bioRequired = models.BooleanField(_('Exclude staff members with no bio'),default=False)
+    photoRequired = models.BooleanField(_('Exclude staff members with no photo'),default=False)
+    activeUpcomingOnly = models.BooleanField(_('Include only staff members with upcoming classes/events'),default=False)
 
     title = models.CharField(_('Listing Title'),max_length=200,null=True,blank=True)
     template = models.CharField(_('Template'),max_length=250,null=True,blank=True)

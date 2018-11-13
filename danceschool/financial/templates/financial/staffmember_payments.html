@@ -3,11 +3,11 @@
 
 {% block content %}
 
-<h1>{% blocktrans with name=instructor.fullName %}Payment History for {{ name }}{% endblocktrans %}</h1>
+<h1>{% blocktrans with name=staff_member.fullName %}Payment History for {{ name }}{% endblocktrans %}</h1>
 
-<a class='btn btn-outline-secondary btn-sm mb-5 float-right' href="{% if request.user == instructor.userAccount %}{% url 'instructorPaymentsCSV' current_year %}{% elif instructor %}{% url 'instructorPaymentsCSV' current_year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{% trans "Download Expense History" %}{% if current_year != "all" %} {% trans "for this year" %}{% endif %} (CSV)</a>
+<a class='btn btn-outline-secondary btn-sm mb-5 float-right' href="{% if request.user == staff_member.userAccount %}{% url 'staffMemberPaymentsCSV' current_year %}{% elif staff_member %}{% url 'staffMemberPaymentsCSV' current_year staff_member.firstName|urlencodename staff_member.lastName|urlencodename %}{% endif %}">{% trans "Download Expense History" %}{% if current_year != "all" %} {% trans "for this year" %}{% endif %} (CSV)</a>
 
-<img class="float-left m-4" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
+<img class="float-left m-4" src="{% if staff_member.image %}{% thumbnail staff_member.image 118x118 crop %}{% endif %}" width="118" />
 
 <dl>
 	<dt>{% trans "Total Pending Payments" %}:</dt><dd>{{ total_awaiting_payment }}</dd>
@@ -18,9 +18,9 @@
 
 <h4 class="mt-5">{% trans "Filter By Year" %}</h4>
 <div class="btn-group" role="group" aria-label="...">
-  <a type="button" class="btn btn-outline-secondary" {% if current_year == 'all' or not current_year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' 'all' %}{% elif instructor %}{% url 'instructorPayments' 'all' instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{% trans "All" %}</a>
+  <a type="button" class="btn btn-outline-secondary" {% if current_year == 'all' or not current_year %}style="font-weight: bold;"{% endif %} href="{% if request.user == staff_member.userAccount %}{% url 'staffMemberPayments' 'all' %}{% elif staff_member %}{% url 'staffMemberPayments' 'all' staff_member.firstName|urlencodename staff_member.lastName|urlencodename %}{% endif %}">{% trans "All" %}</a>
   {% for year in eligible_years %}
-  <a type="button" class="btn btn-outline-secondary" {% if current_year|add:'0' == year %}style="font-weight: bold;"{% endif %} href="{% if request.user == instructor.userAccount %}{% url 'instructorPayments' year %}{% elif instructor %}{% url 'instructorPayments' year instructor.firstName|urlencodename instructor.lastName|urlencodename %}{% endif %}">{{ year }}</a>
+  <a type="button" class="btn btn-outline-secondary" {% if current_year|add:'0' == year %}style="font-weight: bold;"{% endif %} href="{% if request.user == staff_member.userAccount %}{% url 'staffMemberPayments' year %}{% elif staff_member %}{% url 'staffMemberPayments' year staff_member.firstName|urlencodename staff_member.lastName|urlencodename %}{% endif %}">{{ year }}</a>
   {% endfor %}
 </div>
 

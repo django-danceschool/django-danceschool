@@ -29,7 +29,7 @@
             <select name="instructor">
                 <option>{% trans "Select instructor" %}</option>
                 {% for instructor in instructor_list %}
-                    <option data-id="{{ instructor.id }}" data-fullname="{{ instructor.fullName }}" data-roles="{{ instructor.instructorprivatelessondetails.roles.all|join:', ' }}" data-couples="{{ instructor.instructorprivatelessondetails.couples }}" data-smallgroups="{{ instructor.instructorprivatelessondetails.smallGroups }}" {% if instructor.image %}data-imageurl="{% thumbnail instructor.image thumbnail_dimensions|default:'118x118' crop %}"{% endif %}>{{ instructor.fullName }}</option>
+                    <option data-id="{{ instructor.id }}" data-fullname="{{ instructor.staffMember.fullName }}" data-roles="{{ instructor.staffMember.instructorprivatelessondetails.roles.all|join:', ' }}" data-couples="{{ instructor.staffMember.instructorprivatelessondetails.couples }}" data-smallgroups="{{ instructor.staffMember.instructorprivatelessondetails.smallGroups }}" {% if instructor.image %}data-imageurl="{% thumbnail instructor.staffMember.image thumbnail_dimensions|default:'118x118' crop %}"{% endif %}>{{ instructor.staffMember.fullName }}</option>
                 {% endfor %}
             </select>
             </p>

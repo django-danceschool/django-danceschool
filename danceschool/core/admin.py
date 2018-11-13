@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect, ModelMultipleChoiceField
+from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect, ModelMultipleChoiceField, ModelChoiceField
 from django.utils.safestring import mark_safe
 from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext_lazy as _
@@ -14,7 +14,7 @@ import json
 import six
 from dal import autocomplete
 
-from .models import EventSession, Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
+from .models import EventSession, Event, PublicEventCategory, Series, SeriesCategory, PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor, SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration, TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate, EventStaffMember, SeriesStaffMember, EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 from .constants import getConstant
 from .forms import LocationWithDataWidget
 
@@ -45,6 +45,26 @@ class EventRoleInline(admin.TabularInline):
     verbose_name_plural = _('Event-specific dance roles (override default)')
 
 
+class EventStaffMemberInlineForm(ModelForm):
+
+    staffMember = ModelChoiceField(
+        queryset=StaffMember.objects.all(),
+        widget=autocomplete.ModelSelect2(
+            url='autocompleteStaffMember',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a staff member name'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 1,
+                'data-max-results': 10,
+                'class': 'modern-style',
+            },
+            forward=['category',],
+        )
+    )
+
+
 class SeriesTeacherInlineForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
@@ -56,11 +76,15 @@ class SeriesTeacherInlineForm(ModelForm):
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out retired teachers
-            self.fields['staffMember'].queryset = Instructor.objects.exclude(status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden,Instructor.InstructorStatus.retiredGuest])
+            self.fields['staffMember'].queryset = StaffMember.objects.filter(
+                instructor__isnull=False,
+            ).exclude(
+                instructor__status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden,Instructor.InstructorStatus.retiredGuest]
+            )
         else:
-            self.fields['staffMember'].queryset = Instructor.objects.all()
+            self.fields['staffMember'].queryset = StaffMember.objects.all()
 
-        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('status','firstName','lastName')
+        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('instructor__status','firstName','lastName')
 
     class Meta:
         widgets = {
@@ -93,11 +117,11 @@ class SubstituteTeacherInlineForm(ModelForm):
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out retired teachers
-            self.fields['staffMember'].queryset = Instructor.objects.exclude(status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden])
+            self.fields['staffMember'].queryset = StaffMember.objects.exclude(instructor__status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden])
         else:
-            self.fields['staffMember'].queryset = Instructor.objects.all()
+            self.fields['staffMember'].queryset = StaffMember.objects.all()
 
-        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('status','firstName','lastName')
+        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('instructor__status','firstName','lastName')
 
     class Meta:
         widgets = {
@@ -142,6 +166,7 @@ class EventStaffMemberInline(admin.StackedInline):
     model = EventStaffMember
     exclude = ('submissionUser','replacedStaffMember')
     extra = 0
+    form = EventStaffMemberInlineForm
 
     def formfield_for_manytomany(self, db_field, request=None, **kwargs):
         field = super(EventStaffMemberInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
@@ -157,6 +182,11 @@ class EventStaffMemberInline(admin.StackedInline):
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
         obj.save()
+
+
+class SeriesStaffMemberInline(EventStaffMemberInline):
+    ''' Use the proxy model to exclude SeriesTeachers and SubstituteTeachers. '''
+    model = SeriesStaffMember
 
 
 class EventRegistrationInline(admin.StackedInline):
@@ -678,61 +708,50 @@ class EmailTemplateAdmin(admin.ModelAdmin):
 
 ######################################
 # Staff and subclass admins
+class InstructorInline(admin.StackedInline):
+    model = Instructor
+    exclude = []
+    extra = 0
+    max_num = 1
+    template = 'core/admin/instructor_stackedinline.html'
 
 
-class StaffMemberChildAdmin(PolymorphicChildModelAdmin):
-    '''
-    Base admin class for all child models
-    '''
-    base_model = StaffMember
-    base_fieldsets = (
+@admin.register(StaffMember)
+class StaffMemberAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
+    list_display = ('fullName','privateEmail','instructor_status','instructor_availableForPrivates')
+    list_display_links = ('fullName',)
+    list_editable = ('privateEmail',)
+    list_filter = ('instructor__status','instructor__availableForPrivates')
+    search_fields = ('=firstName','=lastName','publicEmail','privateEmail')
+    ordering = ('lastName','firstName')
+    inlines = [InstructorInline,]
+
+    # Allows overriding from other apps
+    actions = []
+
+    fieldsets = (
         (None, {
-            'fields': ('firstName','lastName','userAccount',)
+            'fields': ('firstName','lastName','userAccount','categories')
         }),
         (_('Contact'), {
             'fields': ('publicEmail','privateEmail','phone'),
         }),
         (_('Bio/Photo'), {
             'fields': ('image','bio'),
-        })
+        }),
     )
 
+    def instructor_status(self,obj):
+        return getattr(getattr(obj,'instructor'),'status')
+    instructor_status.short_description = _('Instructor status')
 
-@admin.register(Instructor)
-class InstructorAdmin(FrontendEditableAdminMixin, StaffMemberChildAdmin):
-    base_model = Instructor
-    show_in_index = True
-
-    # Allows overriding from other apps
-    actions = []
-    inlines = []
-
-    list_display = ('fullName','privateEmail','availableForPrivates','status')
-    list_display_links = ('fullName',)
-    list_editable = ('availableForPrivates','privateEmail','status')
-    list_filter = ('status','availableForPrivates')
-    search_fields = ('=firstName','=lastName','publicEmail','privateEmail')
-    inlines = []
-
-    ordering = ('status','lastName','firstName')
+    def instructor_availableForPrivates(self,obj):
+        return getattr(getattr(obj,'instructor'),'availableForPrivates')
+    instructor_availableForPrivates.short_description = _('Available for private lessons')
 
     class Media:
         js = ('bootstrap/js/bootstrap.min.js',)
         css = {'all':('bootstrap/css/bootstrap.min.css',)}
-
-
-@admin.register(StaffMember)
-class StaffMemberParentAdmin(PolymorphicParentModelAdmin):
-    '''
-    The parent model admin for Staff members
-    '''
-    base_model = StaffMember
-    child_models = (Instructor,)
-    list_filter = (PolymorphicChildModelFilter,)
-
-    # Allows overriding from other apps
-    inlines = []
-    actions = []
 
 
 ######################################
@@ -818,7 +837,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     form = SeriesAdminForm
     show_in_index = True
 
-    inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline,EventStaffMemberInline]
+    inlines = [EventRoleInline,EventOccurrenceInline,SeriesTeacherInline,SubstituteTeacherInline,SeriesStaffMemberInline]
     list_display = ('name','series_month','location','class_time','status','registrationOpen','pricingTier','category','session','customers')
     list_editable = ('status','category','session')
     list_filter = ('location','status','registrationOpen','category','session','pricingTier')

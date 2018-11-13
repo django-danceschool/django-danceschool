@@ -12,7 +12,7 @@ from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 
-from danceschool.core.models import Location, Room, StaffMember, Instructor
+from danceschool.core.models import Location, Room, StaffMember
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, RepeatedExpenseRule, LocationRentalInfo, RoomRentalInfo, StaffMemberWageInfo, GenericRepeatedExpense
 from .forms import ExpenseCategoryWidget
@@ -424,6 +424,4 @@ admin.site.register(RevenueCategory)
 admin.site._registry[Location].inlines.insert(0,LocationRentalInfoInline)
 admin.site._registry[Room].inlines.insert(0,RoomRentalInfoInline)
 admin.site._registry[StaffMember].inlines.insert(0,StaffMemberWageInfoInline)
-admin.site._registry[Instructor].inlines.insert(0,StaffMemberWageInfoInline)
 admin.site._registry[StaffMember].actions.insert(0,updateStaffCompensationInfo)
-admin.site._registry[Instructor].actions.insert(0,updateStaffCompensationInfo)

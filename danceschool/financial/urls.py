@@ -1,16 +1,16 @@
 from django.conf.urls import url
 
-from .views import InstructorPaymentsView, OtherInstructorPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView
+from .views import StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import PaymentMethodAutoComplete
 
 urlpatterns = [
-    url(r'^instructor-payments/$', InstructorPaymentsView.as_view(), name='instructorPayments'),
-    url(r'^instructor-payments/(?P<year>[\w\+]+)/$', InstructorPaymentsView.as_view(), name='instructorPayments'),
-    url(r'^instructor-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$', OtherInstructorPaymentsView.as_view(), name='instructorPayments'),
-    url(r'^instructor-payments/csv/$', InstructorPaymentsView.as_view(as_csv=True), name='instructorPaymentsCSV'),
-    url(r'^instructor-payments/(?P<year>[\w\+]+)/csv/$', InstructorPaymentsView.as_view(as_csv=True), name='instructorPaymentsCSV'),
-    url(r'^instructor-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/csv/$', OtherInstructorPaymentsView.as_view(as_csv=True), name='instructorPaymentsCSV'),
+    url(r'^staff-payments/$', StaffMemberPaymentsView.as_view(), name='staffMemberPayments'),
+    url(r'^staff-payments/(?P<year>[\w\+]+)/$', StaffMemberPaymentsView.as_view(), name='staffMemberPayments'),
+    url(r'^staff-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$', OtherStaffMemberPaymentsView.as_view(), name='staffMemberPayments'),
+    url(r'^staff-payments/csv/$', StaffMemberPaymentsView.as_view(as_csv=True), name='staffMemberPaymentsCSV'),
+    url(r'^staff-payments/(?P<year>[\w\+]+)/csv/$', StaffMemberPaymentsView.as_view(as_csv=True), name='staffMemberPaymentsCSV'),
+    url(r'^staff-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/csv/$', OtherStaffMemberPaymentsView.as_view(as_csv=True), name='staffMemberPaymentsCSV'),
 
     url(r'^submit-expenses/$', ExpenseReportingView.as_view(), name='submitExpenses'),
     url(r'^submit-revenues/$', RevenueReportingView.as_view(), name='submitRevenues'),

@@ -398,7 +398,7 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
         EventStaffCategory,
         verbose_name=_('Category'),
         null=True,blank=True,
-        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for an instructor, then the default hourly rate for each category will be used.'),
+        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for a staff member, then the default hourly rate for each category will be used.'),
         on_delete=models.SET_NULL,
     )
 
