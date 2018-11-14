@@ -6,7 +6,7 @@ from django.utils import timezone
 import random
 import string
 
-from danceschool.core.models import CustomerGroup, Customer, Registration, TemporaryRegistration, ClassDescription, DanceTypeLevel
+from danceschool.core.models import CustomerGroup, Customer, Registration, TemporaryRegistration, ClassDescription, DanceTypeLevel, SeriesCategory, PublicEventCategory, EventSession
 
 
 class VoucherCategory(models.Model):
@@ -143,7 +143,19 @@ class Voucher(models.Model):
         if self.dancetypevoucher_set.exists():
             for s in seriess:
                 if not self.dancetypevoucher_set.filter(danceTypeLevel=s.classDescription.danceTypeLevel).exists():
-                    raise ValidationError(_('This voucher can only be used for %(level)s classes' % {'level': s.classDescription.danceTypeLevel.name}))
+                    raise ValidationError(_('This voucher can be only used for specific classes.'))
+        if self.seriescategoryvoucher_set.exists():
+            for s in seriess:
+                if not self.seriescategoryvoucher_set.filter(seriesCategory=s.category).exists():
+                    raise ValidationError(_('This voucher can be only used for specific classes.'))
+        if self.publiceventcategoryvoucher_set.exists():
+            for s in seriess:
+                if not self.publiceventcategoryvoucher_set.filter(publicEventCategory=s.category).exists():
+                    raise ValidationError(_('This voucher can be only used for specific events.'))
+        if self.sessionvoucher_set.exists():
+            for s in seriess:
+                if not self.sessionvoucher_set.filter(session=s.session).exists():
+                    raise ValidationError(_('This voucher can be only used for specific classes or events.'))
 
         # is not disabled
         if self.disabled:
@@ -217,6 +229,33 @@ class ClassVoucher(models.Model):
     class Meta:
         verbose_name = _('Class-specific voucher restriction')
         verbose_name_plural = _('Class-specific voucher restrictions')
+
+
+class SeriesCategoryVoucher(models.Model):
+    seriesCategory = models.ForeignKey(SeriesCategory,verbose_name=_('Series Category'))
+    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+
+    class Meta:
+        verbose_name = _('Series category-specific voucher restriction')
+        verbose_name_plural = _('Series category-specific voucher restrictions')
+
+
+class PublicEventCategoryVoucher(models.Model):
+    publicEventCategory = models.ForeignKey(PublicEventCategory,verbose_name=_('Public Event Category'))
+    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+
+    class Meta:
+        verbose_name = _('Public event category-specific voucher restriction')
+        verbose_name_plural = _('public event Category-specific voucher restrictions')
+
+
+class SessionVoucher(models.Model):
+    session = models.ForeignKey(EventSession,verbose_name=_('Event Session'))
+    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+
+    class Meta:
+        verbose_name = _('Session-specific voucher restriction')
+        verbose_name_plural = _('Session-specific voucher restrictions')
 
 
 class CustomerGroupVoucher(models.Model):
