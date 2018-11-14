@@ -4,6 +4,8 @@ Version History
 0.7.0 - November 13, 2018
 -------------------------
 
+**NOTE**: After upgrading to 0.7.0, it is recommended to run ``python manage.py setup_permissions`` to ensure that staff have appropriate permissions for the new guestlist app. 
+
 - **New:** Customizable guest lists by individual event, category, or session, with rules for adding staff members.
 - Improved management of staff members and instructors in the admin (Instructor is now non-polymorphic).
 - Misc. bug fixes and improvements.
