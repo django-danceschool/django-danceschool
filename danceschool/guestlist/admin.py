@@ -19,5 +19,26 @@ class GuestListAdmin(admin.ModelAdmin):
     list_filter = ('includeStaff','includeRegistrants',)
     inlines = [GuestListComponentInline, GuestListNameInline]
 
+    fieldsets = (
+        (None, {
+            'fields': ('name',),
+        }),
+        (_('Apply to categories'), {
+            'classes': ('collapse',),
+            'fields': ('seriesCategories','eventCategories'),
+        }),
+        (_('Apply to sessions'), {
+            'classes': ('collapse',),
+            'fields': ('eventSessions',),
+        }),
+        (_('Apply to individual series/events'), {
+            'classes': ('collapse',),
+            'fields': ('individualEvents',),
+        }),
+        (None, {
+            'fields': ('includeStaff','includeRegistrants','sortOrder',),
+        }),
+    )
+
 
 admin.site.register(GuestList, GuestListAdmin)
