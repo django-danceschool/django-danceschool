@@ -1,5 +1,5 @@
 {% extends "cms/admin_home.html" %}
-{% load sekizai_tags i18n %}
+{% load sekizai_tags static i18n %}
 
 {% block content %}
 
@@ -23,11 +23,12 @@
 
 <h3 class="my-4" id="eventHeader">{{ event.name }}: {{ event.startTime|date:"N jS, P" }}</h3>
 
-<table class="table">
-	<thead>
-		<tr><th>{% trans "Name" %}</th><th>{% trans "Guest Type" %}</th></tr>
+<table class="table tablesorter" id="guestListTable">
+	<thead class="thead-light">
+		<tr><th>{% trans "Name" %}</th>
+		<th class="filter-select filter-exact">{% trans "Guest Type" %}</th></tr>
 	</thead>
-	<tbody id="guestListTable">
+	<tbody id="guestListBody">
     {% for name in names %}
     	<tr>
 			<td>{{ name.firstName }} {{ name.lastName }}</td>
@@ -46,23 +47,42 @@
 
 			var event_id = $('#guestListSelect option:selected').val()
 
-		$.ajax({
-			type: "GET",
-			url: "{% url 'guestListJSON' guestlist_id=guestList.id %}" + event_id + "/",
-			contentType: "application/json; charset=utf-8",
-			dataType: "json",
-			success: function(data) {
-				$("#guestListTable").empty();
+			$.ajax({
+				type: "GET",
+				url: "{% url 'guestListJSON' guestlist_id=guestList.id %}" + event_id + "/",
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				success: function(data) {
+					$("#guestListBody").empty();
 
-				$.each(data.names, function(index, item) {
-					$("#guestListTable").append('<tr><td>' + item.firstName + ' ' + item.lastName + '</td><td>' + item.guestType + '</td></tr>');
-				});
-			},
-			error: function() {
-				console.log("ERROR: Failed to load guest list.");
-			}
+					$.each(data.names, function(index, item) {
+						$("#guestListBody").append('<tr><td>' + item.firstName + ' ' + item.lastName + '</td><td>' + item.guestType + '</td></tr>');
+					});
+					$('#guestListTable').trigger('update');
+				},
+				error: function() {
+					console.log("ERROR: Failed to load guest list.");
+				}
+			});
+
 		});
+	});
+</script>
+{% endaddtoblock %}
 
+{% addtoblock "css" %}
+<link rel="stylesheet" href="{% static 'tablesorter/css/theme.bootstrap_4.min.css' %}">
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript" src="{% static 'tablesorter/js/jquery.tablesorter.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'tablesorter/js/jquery.tablesorter.widgets.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('#guestListTable').tablesorter({
+			theme: "bootstrap",
+			widgets: ["filter",],
 		});
 	});
 </script>

@@ -1,5 +1,6 @@
 from django.db import models
-from django.db.models import Q, Value
+from django.db.models import Q, Value, Case, When
+from django.db.models.functions import Concat
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
@@ -171,7 +172,11 @@ class GuestList(models.Model):
 
         # Execute the constructed query and add the names of staff
         names += list(StaffMember.objects.filter(filters).annotate(
-            guestType=Value('Staff Member',output_field=models.CharField())
+            guestType=Case(
+                When(eventstaffmember__event=event, then=Concat(Value('Event Staff: '), 'eventstaffmember__category__name')),
+                default_value=Value('Other Staff'),
+                output_field=models.CharField()
+            )
         ).distinct().values('firstName','lastName','guestType'))
 
         if self.includeRegistrants and event and self.appliesToEvent(event):
