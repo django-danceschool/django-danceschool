@@ -29,6 +29,7 @@ from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin, EventOrderMixin
 from .signals import get_customer_data
 from .utils.requests import getIntFromGet
+from .utils.timezone import ensure_localtime
 
 
 # Define logger for this file
@@ -866,6 +867,9 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
         quantity = form.cleaned_data.get('quantity')
         endDate = form.cleaned_data.get('endDate')
 
+        print('Start date is: %s' % startDate)
+        print('End date is: %s' % endDate)
+
         # Create a list of start dates, based on the passed  values of repeatEvery,
         # periodicity, quantity and endDate.  This list will be iterated through to
         # create the new instances for each event.
@@ -894,7 +898,9 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
             # For each new occurrence, we determine the new startime by the distance from
             # midnight of the first occurrence date, where the first occurrence date is
             # replaced by the date given in repeat list
-            old_min_time = event.startTime.replace(hour=0,minute=0,second=0,microsecond=0)
+            old_min_time = ensure_localtime(event.startTime).replace(hour=0,minute=0,second=0,microsecond=0)
+
+            print('Old_min_time is: %s' % old_min_time)
 
             old_occurrence_data = [
                 (x.startTime - old_min_time, x.endTime - old_min_time, x.cancelled)
@@ -906,7 +912,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
             for instance_date in repeat_list:
 
                 # Ensure that time zones are treated properly
-                new_datetime = timezone.now().replace(
+                new_datetime = ensure_localtime(timezone.now()).replace(
                     year=instance_date.year,month=instance_date.month,day=instance_date.day,
                     hour=0,minute=0,second=0,microsecond=0
                 )
@@ -916,6 +922,8 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
                 event.id = None
                 event.pk = None
                 event.save()
+
+                print('Old occurrence data is: %s' % old_occurrence_data)
 
                 # Create new occurrences
                 for occurrence in old_occurrence_data:
