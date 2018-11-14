@@ -85,7 +85,7 @@ may arise, see the `Documentation
 What you will need:
 ===================
 
--  Python 3.4+
+-  Python 3.4, 3.5, or 3.6
 -  pip3 - the Python package manager
 -  External library dependencies for Pillow, used for basic image
    processing (see the `Pillow
