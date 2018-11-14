@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, Value, Case, When
 from django.db.models.functions import Concat
@@ -222,10 +223,17 @@ class GuestListName(models.Model):
 class GuestListComponent(models.Model):
     guestList = models.ForeignKey(GuestList,on_delete=models.CASCADE)
 
-    staffCategory = models.ForeignKey(EventStaffCategory,verbose_name=_('Categories of staff members'),null=True, blank=True, on_delete=models.CASCADE)
-    staffMember = models.ForeignKey(StaffMember,help_text="",null=True,blank=True,on_delete=models.CASCADE)
+    staffCategory = models.ForeignKey(EventStaffCategory,verbose_name=_('Category of staff members'),null=True, blank=True, on_delete=models.CASCADE)
+    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Individual staff member'),null=True,blank=True,on_delete=models.CASCADE)
 
     admissionRule = models.CharField(_('Event admission rule'),choices=GUESTLIST_ADMISSION_CHOICES,max_length=10)
+
+    def clean(self):
+        ''' Either staffCategory or staffMember must be filled in, but not both. '''
+        if not self.staffCategory and not self.staffMember:
+            raise ValidationError(_('Either staff category or staff member must be specified.'))
+        if self.staffCategory and self.staffMember:
+           raise ValidationError(_('Specify either a staff category or a staff member, not both.'))      
 
     class Meta:
         ordering = ('guestList','admissionRule')

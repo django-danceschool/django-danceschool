@@ -40,8 +40,8 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('admissionRule', models.CharField(choices=[('Always', 'Always added to guest list'), ('EventOnly', 'Add if the person is a staff member for this event'), ('Day', 'Add if the person is a staff member on that day'), ('Week', 'Add if the person is a staff member in that week'), ('Month', 'Add if the person is a staff member in that month'), ('Year', 'Add if the person is a staff member in that year')], max_length=10, verbose_name='Event admission rule')),
                 ('guestList', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='guestlist.GuestList')),
-                ('staffCategory', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.EventStaffCategory', verbose_name='Categories of staff members')),
-                ('staffMember', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.StaffMember')),
+                ('staffCategory', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.EventStaffCategory', verbose_name='Category of staff members')),
+                ('staffMember', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='core.StaffMember', verbose_name='Individual staff member')),
             ],
             options={
                 'verbose_name': 'Guest list component',
