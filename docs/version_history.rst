@@ -1,6 +1,13 @@
 Version History
 ===============
 
+0.7.0 - November 13, 2018
+-------------------------
+
+- **New:** Customizable guest lists by individual event, category, or session, with rules for adding staff members.
+- Improved management of staff members and instructors in the admin (Instructor is now non-polymorphic).
+- Misc. bug fixes and improvements.
+
 0.6.3 - September 19, 2018
 --------------------------
 
