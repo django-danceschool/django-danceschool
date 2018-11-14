@@ -1,6 +1,13 @@
 Version History
 ===============
 
+0.7.1 - November 13, 2018
+-------------------------
+
+- Vouchers can now be restricted to specific series/event categories or sessions (#98)
+- Payment processor scripts updated to reflect changed CMS logic (#97)
+- Fixed timezone issues with "Duplicate events" view
+
 0.7.0 - November 13, 2018
 -------------------------
 
