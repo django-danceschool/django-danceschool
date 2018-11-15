@@ -8,7 +8,7 @@ from jsonfield import JSONField
 class BannedPerson(models.Model):
 
     firstName = models.CharField(_('First name'), max_length=30,)
-    lastName = models.CharField(_('First name'), max_length=30,)
+    lastName = models.CharField(_('Last name'), max_length=30,)
 
     photo = FilerImageField(verbose_name=_('Photo'), blank=True, null=True, related_name='banned_person_image')
 
