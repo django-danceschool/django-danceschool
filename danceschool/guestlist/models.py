@@ -1,8 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, Value, Case, When
+from django.db.models import Q, Value, Case, When, F
 from django.db.models.functions import Concat
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext_lazy as _, ugettext
 from django.utils import timezone
 
 from cms.models.pluginmodel import CMSPlugin
@@ -152,7 +152,11 @@ class GuestList(models.Model):
     def getListForEvent(self, event=None):
         ''' Get the list of names associated with a particular event. '''
         names = list(self.guestlistname_set.annotate(
-            guestType=Value('Manually Added',output_field=models.CharField())
+            guestType=Case(
+                When(notes__isnull=False, then=F('notes')),
+                default=Value(ugettext('Manually Added')),
+                output_field=models.CharField()
+            )
         ).values('firstName','lastName','guestType'))
 
         # Component-by-component, OR append filters to an initial filter that always
@@ -175,14 +179,14 @@ class GuestList(models.Model):
         names += list(StaffMember.objects.filter(filters).annotate(
             guestType=Case(
                 When(eventstaffmember__event=event, then=Concat(Value('Event Staff: '), 'eventstaffmember__category__name')),
-                default_value=Value('Other Staff'),
+                default=Value(ugettext('Other Staff')),
                 output_field=models.CharField()
             )
         ).distinct().values('firstName','lastName','guestType'))
 
         if self.includeRegistrants and event and self.appliesToEvent(event):
             names += list(Registration.objects.filter(eventregistration__event=event).annotate(
-                guestType=Value('Registered',output_field=models.CharField())
+                guestType=Value(_('Registered'),output_field=models.CharField())
             ).values('firstName','lastName','guestType'))
         return names
 
@@ -202,6 +206,8 @@ class GuestListName(models.Model):
     guestList = models.ForeignKey(GuestList,on_delete=models.CASCADE)
     firstName = models.CharField(_('First name'),max_length=50)
     lastName = models.CharField(_('Last name'),max_length=50)
+
+    notes = models.CharField(_('Notes (optional)'),help_text=_('These will be included on the list for reference.'),null=True,blank=True,max_length=200)
 
     @property
     def fullName(self):
