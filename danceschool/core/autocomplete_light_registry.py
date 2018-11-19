@@ -63,11 +63,6 @@ class StaffMemberAutoComplete(autocomplete.Select2QuerySetView):
 
         qs = StaffMember.objects.all()
 
-        category = self.forwarded.get('category', None)
-
-        if category:
-            qs = qs.filter(categories=category)
-
         if self.q:
             words = self.q.split(' ')
             lastName = words.pop()

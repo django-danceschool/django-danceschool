@@ -60,7 +60,6 @@ class EventStaffMemberInlineForm(ModelForm):
                 'data-max-results': 10,
                 'class': 'modern-style',
             },
-            forward=['category',],
         )
     )
 
@@ -162,9 +161,10 @@ class SubstituteTeacherInline(admin.StackedInline):
         obj.save()
 
 
-class EventStaffMemberInline(admin.StackedInline):
+class EventStaffMemberInline(admin.TabularInline):
     model = EventStaffMember
     exclude = ('submissionUser','replacedStaffMember')
+    fields = ('staffMember','category','specifiedHours','occurrences')
     extra = 0
     form = EventStaffMemberInlineForm
 
