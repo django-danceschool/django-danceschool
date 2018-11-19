@@ -1184,7 +1184,7 @@ class EventOccurrence(models.Model):
             else:
                 textStrings.append(d.strftime('%B %d, %Y, %l:%M %p'))
 
-        return _('From ') + (_(' to ').join(textStrings))
+        return _('From {startTime} to {endTime}'.format(startTime=textStrings[0], endTime=textStrings[1]))
     timeDescription.fget.short_description = _('Occurs')
 
     def __str__(self):
