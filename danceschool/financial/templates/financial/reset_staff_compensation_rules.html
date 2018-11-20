@@ -35,6 +35,13 @@ default wages to generate expenses" box in Financial global settings.
 {% endblocktrans %}
 </p>
 
+<p>
+{% blocktrans %}
+<strong>Note:</strong> Deleting existing compensation rules will result in the deletion of any expenses generated
+under those rules, and is not recommended unless you know what you are doing.
+{% endblocktrans %}
+</p>
+	
 <form action="" id="" method="post" {% if 'attachment' in form.fields %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
 {{ form|crispy }}
 <input type="submit" value="{% trans "Submit" %}" class="btn btn-primary">

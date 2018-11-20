@@ -332,4 +332,4 @@ class CompensationRuleResetForm(forms.Form):
 
             self.fields['category_%s' % cat.id] = forms.BooleanField(required=False,label=this_label,help_text=this_help_text)
 
-        self.fields['resetHow'] = forms.ChoiceField(label=_('For each selected category:'), choices=(('DELETE',_('Delete existing custom rules')),('COPY',_('Copy default rules to each staff member'))))
+        self.fields['resetHow'] = forms.ChoiceField(label=_('For each selected category:'), choices=(('COPY',_('Copy default rules to each staff member')),('DELETE',_('Delete existing custom rules'))))
