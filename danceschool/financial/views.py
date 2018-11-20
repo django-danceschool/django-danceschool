@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
+from django.forms.models import model_to_dict
 
 from datetime import datetime
 import unicodecsv as csv
@@ -15,15 +16,15 @@ from calendar import month_name
 from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 
-from danceschool.core.models import Instructor, Location, Event, StaffMember
+from danceschool.core.models import Instructor, Location, Event, StaffMember, EventStaffCategory
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from danceschool.core.utils.timezone import ensure_timezone
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
-from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule
+from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule, StaffMemberWageInfo
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
-from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm
+from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm, CompensationRuleResetForm
 from .constants import EXPENSE_BASES
 
 
@@ -540,14 +541,11 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         return super(self.__class__,self).get_context_data(**context)
 
 
-class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FinancialContextMixin, FormView):
+class CompensationActionView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FinancialContextMixin, FormView):
     '''
-    This view is for an admin action to repeat events.
+    Base class with repeated logic for update and replace actions.
     '''
-    template_name = 'financial/update_staff_compensation_rules.html'
-    form_class = CompensationRuleUpdateForm
     permission_required = 'core.change_staffmember'
-    success_message = _('Staff member compensation rules updated successfully.')
 
     def dispatch(self, request, *args, **kwargs):
         ids = request.GET.get('ids')
@@ -559,7 +557,7 @@ class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, Perm
         except (ValueError, ObjectDoesNotExist):
             return HttpResponseBadRequest(_('Invalid content type passed.'))
 
-        # This view only deals with subclasses of StaffMember (Instructor, etc.)
+        # This view only deals with StaffMember
         if not isinstance(self.objectClass(),StaffMember):
             return HttpResponseBadRequest(_('Invalid content type passed.'))
 
@@ -568,16 +566,31 @@ class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, Perm
         except ValueError:
             return HttpResponseBadRequest(_('Invalid ids passed'))
 
-        return super(CompensationRuleUpdateView,self).dispatch(request,*args,**kwargs)
+        return super(CompensationActionView,self).dispatch(request,*args,**kwargs)
+
+    def get_form_kwargs(self, **kwargs):
+        ''' pass the list of staff members along to the form '''
+        kwargs = super(CompensationActionView, self).get_form_kwargs(**kwargs)
+        kwargs['staffmembers'] = self.queryset
+        return kwargs
 
     def get_context_data(self,**kwargs):
-        context = super(CompensationRuleUpdateView,self).get_context_data(**kwargs)
+        context = super(CompensationActionView,self).get_context_data(**kwargs)
         context.update({
             'staffmembers': self.queryset,
             'rateRuleValues': RepeatedExpenseRule.RateRuleChoices.values,
         })
 
         return context
+
+
+class CompensationRuleUpdateView(CompensationActionView):
+    '''
+    This view is for an admin action to bulk update staff member compensation information.
+    '''
+    template_name = 'financial/update_staff_compensation_rules.html'
+    form_class = CompensationRuleUpdateForm
+    success_message = _('Staff member compensation rules updated successfully.')
 
     def form_valid(self, form):
         category = form.cleaned_data.pop('category',None)
@@ -589,6 +602,36 @@ class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, Perm
             )
 
         return super(CompensationRuleUpdateView,self).form_valid(form)
+
+
+class CompensationRuleResetView(CompensationActionView):
+    '''
+    This view is for an admin action to bulk delete custom staff member compensation information
+    and/or reset to category defaults.
+    '''
+    template_name = 'financial/reset_staff_compensation_rules.html'
+    form_class = CompensationRuleResetForm
+    success_message = _('Staff member compensation rules reset successfully.')
+
+    def form_valid(self, form):
+        resetHow = form.cleaned_data.get('resetHow')
+
+        cat_numbers = [int(x.split('_')[1]) for x in [y[0] for y in form.cleaned_data.items() if y[1] and 'category_' in y[0]]]
+
+        if resetHow == 'DELETE':
+            StaffMemberWageInfo.objects.filter(staffMember__in=self.queryset,category__in=cat_numbers).delete()
+        elif resetHow == 'COPY':
+            cats = EventStaffCategory.objects.filter(id__in=cat_numbers,defaultwage__isnull=False)
+            for this_cat in cats:
+                this_default = model_to_dict(this_cat.defaultwage,exclude=('category','id','repeatedexpenserule_ptr','lastRun'))
+
+                for staffmember in self.queryset:
+                    staffmember.expenserules.update_or_create(
+                        category=this_cat,
+                        defaults=this_default,
+                    )
+
+        return super(CompensationRuleResetView,self).form_valid(form)
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):

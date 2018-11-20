@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from .views import StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView
+from .views import StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView, CompensationRuleResetView
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import PaymentMethodAutoComplete
 
@@ -37,4 +37,5 @@ urlpatterns = [
     url(r'^finances/revenues/(?P<year>[\w\+]+)/csv/$', AllRevenuesViewCSV.as_view(), name='allrevenuesCSV'),
 
     url(r'^compensation/update/$', CompensationRuleUpdateView.as_view(), name='updateCompensationRules'),
+    url(r'^compensation/reset/$', CompensationRuleResetView.as_view(), name='resetCompensationRules'),
 ]

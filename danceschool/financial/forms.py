@@ -8,7 +8,7 @@ from django.forms.widgets import Select
 from django.utils.encoding import force_text
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext_lazy as _, ugettext
 from django.utils import timezone
 
 from crispy_forms.helper import FormHelper
@@ -17,7 +17,7 @@ from collections import OrderedDict
 from dal import autocomplete
 import logging
 
-from danceschool.core.models import InvoiceItem
+from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo
 from .autocomplete_light_registry import get_method_list
@@ -296,7 +296,7 @@ class RevenueReportingForm(forms.ModelForm):
 
 
 class CompensationRuleUpdateForm(forms.ModelForm):
-    ''' Used for bulk update of Instructor compensation rules. '''
+    ''' Used for bulk update of StaffMember compensation rules. '''
 
     def save(self, commit=True):
         ''' Handle the update logic for this in the view, not the form '''
@@ -305,3 +305,31 @@ class CompensationRuleUpdateForm(forms.ModelForm):
     class Meta:
         model = StaffMemberWageInfo
         fields = ['category', 'rentalRate','applyRateRule','dayStarts','weekStarts','monthStarts']
+
+
+class CompensationRuleResetForm(forms.Form):
+    ''' Used for bulk reset of StaffMember compensation rules to category defaults '''
+
+    def save(self, commit=True):
+        ''' Handle the update logic for this in the view, not the form '''
+        pass
+
+    def __init__(self,*args,**kwargs):
+        staffmembers = kwargs.pop('staffmembers', StaffMember.objects.none())
+
+        # Initialize a default (empty) form to fill
+        super(CompensationRuleResetForm, self).__init__(*args, **kwargs)
+
+        for cat in EventStaffCategory.objects.order_by('name'):
+            this_label = cat.name
+            this_help_text = ''
+            if not getattr(cat,'defaultwage',None):
+                this_help_text += ugettext('No default compensation specified. ')
+            if staffmembers:
+                this_help_text += ugettext('{count} selected members with rules specified.').format(
+                    count=staffmembers.filter(expenserules__category=cat).count(),
+                )
+
+            self.fields['category_%s' % cat.id] = forms.BooleanField(required=False,label=this_label,help_text=this_help_text)
+
+        self.fields['resetHow'] = forms.ChoiceField(label=_('For each selected category:'), choices=(('DELETE',_('Delete existing custom rules')),('COPY',_('Copy default rules to each staff member'))))

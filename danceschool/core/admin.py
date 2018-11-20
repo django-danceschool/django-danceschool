@@ -976,8 +976,14 @@ class SeriesCategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
 
 
+@admin.register(EventStaffCategory)
+class EventStaffCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name',]
+
+    # Allows financial app to add default wage inline
+    inlines = []
+
 # These admin classes are registered but need nothing additional
 admin.site.register(DanceRole)
 admin.site.register(DanceType)
 admin.site.register(DanceTypeLevel)
-admin.site.register(EventStaffCategory)
