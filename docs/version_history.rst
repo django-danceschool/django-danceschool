@@ -1,6 +1,15 @@
 Version History
 ===============
 
+0.7.2 - November 20, 2018
+-------------------------
+
+- Added default compensation by staff category, with an updated action for resetting/deleting staff member custom compensation.
+- Added notes field to manually-added guest list entries.
+- fixed EventOccurrence string format issue.
+- improvements to EventStaffMemberInline.
+
+
 0.7.1 - November 13, 2018
 -------------------------
 
