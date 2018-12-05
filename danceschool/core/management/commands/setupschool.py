@@ -6,7 +6,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 
-from danceschool.core.models import DanceType, DanceTypeLevel, DanceRole, PricingTier, InstructorListPluginModel
+from danceschool.core.models import DanceType, DanceTypeLevel, DanceRole, PricingTier, StaffMemberListPluginModel
 
 from dynamic_preferences.registries import global_preferences_registry
 import re
@@ -457,14 +457,14 @@ Remember, all page settings and content can be changed later via the admin inter
             content_placeholder = instructor_page.placeholders.get(slot='content')
             sidebar_placeholder = instructor_page.placeholders.get(slot='sidebar')
             add_plugin(
-                content_placeholder, 'InstructorListPlugin', initial_language,
-                orderChoice=InstructorListPluginModel.OrderChoices.random,
+                content_placeholder, 'StaffMemberListPlugin', initial_language,
+                orderChoice=StaffMemberListPluginModel.OrderChoices.random,
                 bioRequired=True,
                 template='core/instructor_list.html'
             )
             add_plugin(
-                sidebar_placeholder, 'InstructorListPlugin', initial_language,
-                orderChoice=InstructorListPluginModel.OrderChoices.random,
+                sidebar_placeholder, 'StaffMemberListPlugin', initial_language,
+                orderChoice=StaffMemberListPluginModel.OrderChoices.random,
                 photoRequired=True,
                 template='core/instructor_image_set.html'
             )
