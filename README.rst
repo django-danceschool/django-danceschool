@@ -80,7 +80,7 @@ the Django development server, then this method of installation is for you.
 
 For more detailed instructions, and for a discussion of possible issues that
 may arise, see the `Documentation
-<https://django-danceschool.readthedocs.io/en/latest/installation.html#development-installation>`__.
+<https://django-danceschool.readthedocs.io/en/latest/installation_development.html>`__.
 
 What you will need:
 ===================
