@@ -17,25 +17,25 @@ register = template.Library()
 def readable_month(month):
     try:
         return month_name[month]
-    except (TypeError,IndexError):
+    except (TypeError, IndexError):
         return None
 
 
 @register.filter
 def urlencodename(string):
-    return string.replace('-','_').replace(' ','+')
+    return string.replace('-', '_').replace(' ', '+')
 
 
 @register.filter
 def urldecodename(string):
-    return string.replace('_','-').replace('+',' ')
+    return string.replace('_', '-').replace('+', ' ')
 
 
 @register.simple_tag
 def readable_weekday(weekday):
     try:
         return day_name[weekday]
-    except (TypeError,IndexError):
+    except (TypeError, IndexError):
         return None
 
 
@@ -78,7 +78,7 @@ def get_item_by_key(passed_list, key, value):
     not work with None or null string passed values.
     '''
 
-    if value in [None,'']:
+    if value in [None, '']:
         return
 
     if type(passed_list) in [QuerySet, PolymorphicQuerySet]:
@@ -92,7 +92,7 @@ def get_item_by_key(passed_list, key, value):
 
 
 @register.simple_tag
-def get_field_for_object(field_type,field_id, form):
+def get_field_for_object(field_type, field_id, form):
     '''
     This tag allows one to get a specific series or event form field
     in registration views.
@@ -115,23 +115,23 @@ def template_exists(template_name):
 
 
 @register.simple_tag
-def numRegisteredForRole(event,role):
+def numRegisteredForRole(event, role):
     '''
     This tag allows one to access the number of registrations
     for any dance role.
     '''
-    if not isinstance(event,Event) or not isinstance(role,DanceRole):
+    if not isinstance(event, Event) or not isinstance(role, DanceRole):
         return None
     return event.numRegisteredForRole(role)
 
 
 @register.simple_tag
-def numRegisteredForRoleName(event,roleName):
+def numRegisteredForRoleName(event, roleName):
     '''
     This tag allows one to access the number of registrations
     for any dance role using only the role's name.
     '''
-    if not isinstance(event,Event):
+    if not isinstance(event, Event):
         return None
 
     try:
@@ -143,17 +143,17 @@ def numRegisteredForRoleName(event,roleName):
 
 
 @register.filter
-def getStatusValue(obj,value):
+def getStatusValue(obj, value):
     '''
     Several model fields use the DjangoChoices app for cleaner
     enum-type value storage of status variables.  This gets the label for a passed value
     associated with one of these fields.
     '''
-    if isinstance(obj,Event):
+    if isinstance(obj, Event):
         choice_dict = Event.RegStatus.values
-    elif isinstance(obj,Instructor):
+    elif isinstance(obj, Instructor):
         choice_dict = Instructor.InstructorStatus.values
-    elif isinstance(obj,Location):
+    elif isinstance(obj, Location):
         choice_dict = Location.StatusChoices.values
     else:
         return None
