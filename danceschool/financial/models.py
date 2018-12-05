@@ -386,19 +386,51 @@ class RoomRentalInfo(RepeatedExpenseRule):
         verbose_name_plural = _('Rooms\' rental information')
 
 
-class StaffMemberWageInfo(RepeatedExpenseRule):
+class StaffDefaultWage(RepeatedExpenseRule):
     '''
-    This model is used to store information on rental periods and rates
+    This model is used to store default wage information on rental periods and rates
     for individual rooms.  If a rental rate does not exist for a room,
     or if it is specified that the room rental rate not be applied,
     then the location's rental rate and parameters are used instead.
+    '''
+    category = models.OneToOneField(
+        EventStaffCategory,
+        verbose_name=_('Category'),
+        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for a staff member, then the default hourly rate for each category will be used.'),
+        on_delete=models.CASCADE,
+        related_name='defaultwage'
+    )
+
+    @property
+    def ruleName(self):
+        ''' overrides from parent class '''
+        return self.category.name
+    ruleName.fget.short_description = _('Rule name')
+
+    def generateExpenses(self,request=None,datetimeTuple=None):
+        from .helpers import createExpenseItemsForEvents
+        return createExpenseItemsForEvents(rule=self,request=request,datetimeTuple=datetimeTuple)
+
+    def __str__(self):
+        return str(_('Default wage information: {category}'.format(category=self.ruleName)))
+
+    class Meta:
+        ordering = ('category__name',)
+        verbose_name = _('Default staff wage')
+        verbose_name_plural = _('Default staff wages')
+
+
+class StaffMemberWageInfo(RepeatedExpenseRule):
+    '''
+    This model is used to store information on wages
+    for individual staff members staffed in particular ways.
     '''
     staffMember = models.ForeignKey(StaffMember,related_name='expenserules',verbose_name=_('Staff member'))
     category = models.ForeignKey(
         EventStaffCategory,
         verbose_name=_('Category'),
         null=True,blank=True,
-        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for an instructor, then the default hourly rate for each category will be used.'),
+        help_text=_('If left blank, then this expense rule will be used for all categories.  If a category-specific rate is specified, then that will be used instead.  If nothing is specified for a staff member, then the default hourly rate for each category will be used.'),
         on_delete=models.SET_NULL,
     )
 

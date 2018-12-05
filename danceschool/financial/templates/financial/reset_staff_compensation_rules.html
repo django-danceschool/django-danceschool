@@ -1,0 +1,53 @@
+{% extends "cms/admin_home.html" %}
+{% load crispy_forms_tags sekizai_tags i18n danceschool_tags %}
+
+{% block content %}
+
+<h1>{% trans "Reset Staff Compensation Rules" %}</h1>
+
+<p>{% blocktrans %}You have selected the following staff members for whom to update compensation information.  Current compensation rules for these individuals are also listed for reference.{% endblocktrans %}</p>
+
+<div class="card">
+	<div class="card-body">
+		<dl>
+			{% for member in staffmembers %}
+				<dt>
+					<a href="{% url 'admin:core_staffmember_change' member.id %}">{{ member.fullName }}</a>
+				</dt>
+				{% for rule in member.expenserules.all %}
+					<dd>
+					{% blocktrans with rate=rule.rentalRate|floatformat:"2" rateRule=rateRuleValues|get_item:rule.applyRateRule category=rule.category|default:"All Other Categories" %}
+						{{ currencySymbol }}{{ rate }} {{ rateRule }} for {{ category }}
+					{% endblocktrans %}
+					</dd>
+				{% endfor %}
+			{% endfor %}
+		</dl>
+	</div>
+</div>
+
+<p>
+{% blocktrans %}
+Please select the categories for which you wish to reset compensation information. Custom compensation rules may either
+be deleted entirely, or the category defaults may be copied to the selected staff members, if category defaults exist.
+To enable/disable generation of staff expense items using category defaults only, check/uncheck the "Use staff category
+default wages to generate expenses" box in Financial global settings.
+{% endblocktrans %}
+</p>
+
+<p>
+{% blocktrans %}
+<strong>Note:</strong> Deleting existing compensation rules will result in the deletion of any expenses generated
+under those rules, and is not recommended unless you know what you are doing.
+{% endblocktrans %}
+</p>
+	
+<form action="" id="" method="post" {% if 'attachment' in form.fields %}enctype="multipart/form-data"{% endif %}>{% csrf_token %}
+{{ form|crispy }}
+<input type="submit" value="{% trans "Submit" %}" class="btn btn-primary">
+</form>
+
+{% addtoblock "js" %}
+	{{ form.media }}
+{% endaddtoblock %}
+{% endblock %}

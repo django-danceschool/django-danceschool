@@ -14,7 +14,7 @@ from danceschool.core.utils.timezone import ensure_localtime
 
 
 class InstructorPrivateLessonDetails(models.Model):
-    instructor = models.OneToOneField(Instructor)
+    instructor = models.OneToOneField(StaffMember)
     defaultPricingTier = models.ForeignKey(
         PricingTier,verbose_name=_('Default Pricing Tier'),null=True,blank=True
     )

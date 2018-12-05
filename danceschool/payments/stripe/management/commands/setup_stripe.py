@@ -80,7 +80,7 @@ CHECKING STRIPE INTEGRATION
 
         add_stripe_checkout = self.boolean_input('Add Stripe Checkout link to the registration summary view to allow students to pay [Y/n]', True)
         if add_stripe_checkout:
-            home_page = Page.objects.filter(is_home=True,publisher_public=True).first()
+            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Stripe checkout link because a home page has not yet been set.'))
             else:

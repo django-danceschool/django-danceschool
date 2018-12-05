@@ -2,9 +2,9 @@ from django.conf.urls import url
 from django.contrib import admin
 
 from .feeds import EventFeed, json_event_feed
-from .views import SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, EmailConfirmationView, SendEmailView, SubstituteReportingView, InstructorBioChangeView, AccountProfileView, OtherAccountProfileView, RepeatEventsView
+from .views import SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, EmailConfirmationView, SendEmailView, SubstituteReportingView, StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView, RepeatEventsView
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
-from .autocomplete_light_registry import CustomerAutoComplete, UserAutoComplete
+from .autocomplete_light_registry import CustomerAutoComplete, UserAutoComplete, StaffMemberAutoComplete
 
 admin.autodiscover()
 
@@ -14,6 +14,7 @@ urlpatterns = [
     url(r'^staff/sendemail/template/$', getEmailTemplate, name='ajaxhandler_getemailtemplate'),
     url(r'^staff/autocomplete/user', UserAutoComplete.as_view(), name='autocompleteUser'),
     url(r'^staff/autocomplete/customer', CustomerAutoComplete.as_view(), name='autocompleteCustomer'),
+    url(r'^staff/autocomplete/staffmember', StaffMemberAutoComplete.as_view(create_field='fullName'), name='autocompleteStaffMember'),
     url(r'^accounts/info/$', UserAccountInfo.as_view(), name='getUserAccountInfo'),
 
     # For general admin form submission redirects
@@ -25,11 +26,11 @@ urlpatterns = [
     url(r'^staff/substitute/$', SubstituteReportingView.as_view(),name='substituteTeacherForm'),
 
     # These provide the ability to view one's own stats or another instructor's stats
-    url(r'^staff/instructor-stats/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$', OtherInstructorStatsView.as_view(), name='instructorStats'),
-    url(r'^staff/instructor-stats/$', InstructorStatsView.as_view(), name='instructorStats'),
+    url(r'^staff/instructor-stats/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$', OtherInstructorStatsView.as_view(), name='staffMemberStats'),
+    url(r'^staff/instructor-stats/$', InstructorStatsView.as_view(), name='staffMemberStats'),
 
     # This provides the ability to edit one's own bio
-    url(r'^staff/bio/$', InstructorBioChangeView.as_view(), name='instructorBioChange'),
+    url(r'^staff/bio/$', StaffMemberBioChangeView.as_view(), name='staffBioChange'),
 
     # These are for the calendar feeds
     url(r'^events/feed/$', EventFeed(), name='calendarFeed'),

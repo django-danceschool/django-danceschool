@@ -12,9 +12,9 @@ from dal import autocomplete
 from daterange_filter.filter import DateRangeFilter
 from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModelAdmin, PolymorphicChildModelFilter
 
-from danceschool.core.models import Location, Room, StaffMember, Instructor
+from danceschool.core.models import Location, Room, StaffMember, EventStaffCategory
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, RepeatedExpenseRule, LocationRentalInfo, RoomRentalInfo, StaffMemberWageInfo, GenericRepeatedExpense
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, RepeatedExpenseRule, LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo, GenericRepeatedExpense
 from .forms import ExpenseCategoryWidget
 from .autocomplete_light_registry import get_method_list
 
@@ -252,6 +252,16 @@ class RoomRentalInfoInline(admin.StackedInline):
         return False
 
 
+class StaffDefaultWageInline(admin.StackedInline):
+    model = StaffDefaultWage
+    extra = 1
+    fields = (('rentalRate','applyRateRule'),('dayStarts','weekStarts','monthStarts'),('advanceDays','advanceDaysReference','priorDays','priorDaysReference'),'disabled')
+    classes = ('collapse',)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class StaffMemberWageInfoInline(admin.StackedInline):
     model = StaffMemberWageInfo
     min_num = 0
@@ -260,9 +270,22 @@ class StaffMemberWageInfoInline(admin.StackedInline):
     classes = ('collapse',)
 
 
+def resetStaffCompensationInfo(self, request, queryset):
+    '''
+    This action is added to the list for staff member to permit bulk
+    reseting to category defaults of compensation information for staff members.
+    '''
+    selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+    ct = ContentType.objects.get_for_model(queryset.model)
+    return HttpResponseRedirect(reverse('resetCompensationRules') + "?ct=%s&ids=%s" % (ct.pk, ",".join(selected)))
+
+
+resetStaffCompensationInfo.short_description = _('Reset compensation rules')
+
+
 def updateStaffCompensationInfo(self, request, queryset):
     '''
-    This action is added to the list for instructors to permit bulk
+    This action is added to the list for staff member to permit bulk
     updating of compensation information for staff members.
     '''
     selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
@@ -424,6 +447,6 @@ admin.site.register(RevenueCategory)
 admin.site._registry[Location].inlines.insert(0,LocationRentalInfoInline)
 admin.site._registry[Room].inlines.insert(0,RoomRentalInfoInline)
 admin.site._registry[StaffMember].inlines.insert(0,StaffMemberWageInfoInline)
-admin.site._registry[Instructor].inlines.insert(0,StaffMemberWageInfoInline)
+admin.site._registry[StaffMember].actions.insert(0,resetStaffCompensationInfo)
 admin.site._registry[StaffMember].actions.insert(0,updateStaffCompensationInfo)
-admin.site._registry[Instructor].actions.insert(0,updateStaffCompensationInfo)
+admin.site._registry[EventStaffCategory].inlines.insert(0,StaffDefaultWageInline)

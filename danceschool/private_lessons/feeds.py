@@ -105,7 +105,7 @@ def json_availability_feed(request,instructor_id=None):
 
     if (
         ((
-            hasattr(request.user,'staffmember') and request.user.staffmember == this_instructor and
+            hasattr(request.user,'staffmember') and getattr(request.user.staffmember,'instructor') == this_instructor and
             request.user.has_perm('private_lessons.edit_own_availability')
         ) or
             request.user.has_perm('private_lessons.edit_others_availability')

@@ -1,0 +1,91 @@
+{% extends "cms/admin_home.html" %}
+{% load sekizai_tags static i18n %}
+
+{% block content %}
+
+<h2>{% trans "Guest List:" %} {{ guestList.name }}</h2>
+<h3>{% trans "This version:" %} {% now "F jS, Y" %}</h3>
+
+{% if 'guestlist.change_guestlist' in perms %}
+<p><a class="btn btn-outline-secondary" href="{% url 'admin:guestlist_guestlist_change' guestList.id %}">{% trans "Edit Guest List" %}</a></p>
+{% endif %}
+
+<div class="card my-4">
+	<div class="card-header"><h5>{% trans "Select an Event:" %}</h5></div>
+	<div class="card-body">
+		<select id="guestListSelect">
+		{% for event in guestList.recentEvents %}
+			<option value="{{ event.id }}" {% ifequal event guestList.currentEvent %}selected{% endifequal %}>{{ event.name }}: {{ event.startTime|date:"N jS, P" }}</option>
+		{% endfor %}
+		</select>
+	</div>
+</div>
+
+<h3 class="my-4" id="eventHeader">{{ event.name }}: {{ event.startTime|date:"N jS, P" }}</h3>
+
+<table class="table tablesorter" id="guestListTable">
+	<thead class="thead-light">
+		<tr><th>{% trans "Name" %}</th>
+		<th class="filter-select filter-exact">{% trans "Guest Type" %}</th></tr>
+	</thead>
+	<tbody id="guestListBody">
+    {% for name in names %}
+    	<tr>
+			<td>{{ name.firstName }} {{ name.lastName }}</td>
+			<td>{{ name.guestType }}</td>
+    	</tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% addtoblock "js" %}
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('#guestListSelect').change(function(){
+			// Get the ID of the selected event, grab the JSON name list,
+			// and refresh the table.
+
+			var event_id = $('#guestListSelect option:selected').val()
+
+			$.ajax({
+				type: "GET",
+				url: "{% url 'guestListJSON' guestlist_id=guestList.id %}" + event_id + "/",
+				contentType: "application/json; charset=utf-8",
+				dataType: "json",
+				success: function(data) {
+					$("#guestListBody").empty();
+
+					$.each(data.names, function(index, item) {
+						$("#guestListBody").append('<tr><td>' + item.firstName + ' ' + item.lastName + '</td><td>' + item.guestType + '</td></tr>');
+					});
+					$('#guestListTable').trigger('update');
+				},
+				error: function() {
+					console.log("ERROR: Failed to load guest list.");
+				}
+			});
+
+		});
+	});
+</script>
+{% endaddtoblock %}
+
+{% addtoblock "css" %}
+<link rel="stylesheet" href="{% static 'tablesorter/css/theme.bootstrap_4.min.css' %}">
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript" src="{% static 'tablesorter/js/jquery.tablesorter.min.js' %}"></script>
+<script type="text/javascript" src="{% static 'tablesorter/js/jquery.tablesorter.widgets.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+	$(document).ready(function() {
+		$('#guestListTable').tablesorter({
+			theme: "bootstrap",
+			widgets: ["filter",],
+		});
+	});
+</script>
+{% endaddtoblock %}
+
+{% endblock %}

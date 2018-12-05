@@ -22,7 +22,21 @@ class GenerateEventStaffExpensesEnabled(BooleanPreference):
     section = financial
     name = 'autoGenerateExpensesEventStaff'
     verbose_name = _('Auto-generate ExpenseItems for completed events')
-    help_text = _('Uncheck to disable the automatic generation of ExpenseItems for class series instructors in the financial app.')
+    help_text = _('Uncheck to disable the automatic generation of expense items for class series instructors in the financial app.')
+    default = True
+
+
+@global_preferences_registry.register
+class GenerateFromStaffCategoryDefaultsEnabled(BooleanPreference):
+    section = financial
+    name = 'autoGenerateFromStaffCategoryDefaults'
+    verbose_name = _('Use staff category default wages to generate expenses')
+    help_text = _(
+        'If checked, then expenses will be generated as long as a default compensation rate for that staff category. ' +
+        'If unchecked, then you will need to specify compensation rules separately for each staff member. Note: you ' +
+        'can update or copy the defaults to a group of staff members in the admin by using the "Update compensation ' +
+        'rules" and "Reset compensation rules" actions.'
+    )
     default = True
 
 
@@ -31,7 +45,7 @@ class GenerateVenueExpensesEnabled(BooleanPreference):
     section = financial
     name = 'autoGenerateExpensesVenueRental'
     verbose_name = _('Auto-generate ExpenseItems for venue rental')
-    help_text = _('Uncheck to disable the automatic generation of ExpenseItems for venue rental in the financial app.')
+    help_text = _('Uncheck to disable the automatic generation of expense items for venue rental in the financial app.')
     default = True
 
 
@@ -40,7 +54,7 @@ class GenerateRegistrationRevenuesEnabled(BooleanPreference):
     section = financial
     name = 'autoGenerateRevenueRegistrations'
     verbose_name = _('Auto-generate RevenueItems for registrations')
-    help_text = _('Uncheck to disable the automatic generation of RevenueItems for old Registrations in the financial app (useful when migrating old DBs).')
+    help_text = _('Uncheck to disable the automatic generation of revenue items for old registrations in the financial app (useful when migrating old DBs).')
     default = True
 
 
@@ -49,7 +63,7 @@ class GenerateRegistrationRevenuesWindow(IntegerPreference):
     section = financial
     name = 'autoGenerateRevenueRegistrationsWindow'
     verbose_name = _('Registration revenue autogeneration window (months)')
-    help_text = _('Set how many months back back from the date of execution to autogenerate RevenueItems for old Registrations in the financial app, or set to 0 to autogenerate with no time restriction.')
+    help_text = _('Set how many months back back from the date of execution to autogenerate revenue items for old registrations in the financial app, or set to 0 to autogenerate with no time restriction.')
     default = 0
 
 

@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
-from danceschool.core.models import DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier, Location, Instructor, Event, Series, EventStaffMember, EventOccurrence
+from danceschool.core.models import DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier, Location, StaffMember, Instructor, Event, Series, EventStaffMember, EventOccurrence
 from danceschool.core.constants import getConstant
 
 
@@ -87,8 +87,7 @@ class DefaultSchoolTestCase(TestCase):
         )
 
         # Make the superuser an Instructor
-        cls.defaultInstructor = Instructor.objects.create(
-            status=Instructor.InstructorStatus.roster,
+        cls.defaultInstructor = StaffMember.objects.create(
             firstName='Frankie',
             lastName='Manning',
             userAccount=cls.superuser,
@@ -96,6 +95,12 @@ class DefaultSchoolTestCase(TestCase):
             privateEmail='admin@test.com',
             bio='This is Frankie Manning.',
         )
+
+        Instructor.objects.create(
+            staffMember=cls.defaultInstructor,
+            status=Instructor.InstructorStatus.roster,
+        )
+
 
     def create_series(self,**kwargs):
         """
@@ -158,8 +163,7 @@ class DefaultSchoolTestCase(TestCase):
         bio = kwargs.get('bio', 'This is Norma Miller.')
         userAccount = kwargs.get('userAccount', None)
 
-        return Instructor.objects.create(
-            status=status,
+        staffMember = StaffMember.objects.create(
             firstName=firstName,
             lastName=lastName,
             userAccount=userAccount,
@@ -167,3 +171,9 @@ class DefaultSchoolTestCase(TestCase):
             privateEmail=privateEmail,
             bio=bio,
         )
+        Instructor.objects.create(
+            staffMember=staffMember,
+            status=status,
+        )
+
+        return staffMember

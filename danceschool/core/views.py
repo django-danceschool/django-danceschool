@@ -24,11 +24,12 @@ import re
 import logging
 
 from .models import Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration, StaffMember, Instructor, Invoice, Customer
-from .forms import SubstituteReportingForm, InstructorBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
+from .forms import SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm, RepeatEventForm, InvoiceNotificationForm
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin, EventOrderMixin
 from .signals import get_customer_data
 from .utils.requests import getIntFromGet
+from .utils.timezone import ensure_localtime, ensure_timezone
 
 
 # Define logger for this file
@@ -894,7 +895,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
             # For each new occurrence, we determine the new startime by the distance from
             # midnight of the first occurrence date, where the first occurrence date is
             # replaced by the date given in repeat list
-            old_min_time = event.startTime.replace(hour=0,minute=0,second=0,microsecond=0)
+            old_min_time = ensure_localtime(event.startTime).replace(hour=0,minute=0,second=0,microsecond=0)
 
             old_occurrence_data = [
                 (x.startTime - old_min_time, x.endTime - old_min_time, x.cancelled)
@@ -906,10 +907,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
             for instance_date in repeat_list:
 
                 # Ensure that time zones are treated properly
-                new_datetime = timezone.now().replace(
-                    year=instance_date.year,month=instance_date.month,day=instance_date.day,
-                    hour=0,minute=0,second=0,microsecond=0
-                )
+                new_datetime = ensure_timezone(datetime.combine(instance_date,datetime.min.time()), old_min_time.tzinfo)
 
                 # Removing the pk and ID allow new instances of the event to
                 # be created upon saving with automatically generated ids.
@@ -969,18 +967,18 @@ class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, Use
 #
 
 
-class InstructorBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
+class StaffMemberBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     '''
     This view now permits changing the instructor's bio information.
     '''
-    model = Instructor
+    model = StaffMember
     template_name = 'cms/forms/display_form_classbased_admin.html'
-    form_class = InstructorBioChangeForm
+    form_class = StaffMemberBioChangeForm
     permission_required = 'core.update_instructor_bio'
-    success_message = _('Instructor information updated successfully.')
+    success_message = _('Staff member information updated successfully.')
 
     def get_context_data(self,**kwargs):
-        context = super(InstructorBioChangeView,self).get_context_data(**kwargs)
+        context = super(StaffMemberBioChangeView,self).get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Update Contact Information'),
@@ -1005,3 +1003,16 @@ class StaffDirectoryView(PermissionRequiredMixin, ListView):
         Instructor.InstructorStatus.retiredGuest,
         Instructor.InstructorStatus.hidden,
     ])
+
+    def get_context_data(self, **kwargs):
+        context = super(StaffDirectoryView,self).get_context_data(**kwargs)
+
+        staff = context.get('staffmember_list',StaffMember.objects.none())
+
+        context.update({
+            'active_instructors_list': staff.filter(instructor__status='R'),
+            'assistant_instructors_list': staff.filter(instructor__status__in=['T','A']),
+            'guest_instructors_list': staff.filter(instructor__status='G'),
+            'other_staff_list': staff.filter(instructor__isnull=True),
+        })
+        return context

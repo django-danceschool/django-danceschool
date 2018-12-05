@@ -7,27 +7,27 @@ from cms.models.pluginmodel import CMSPlugin
 
 from datetime import datetime, timedelta
 
-from .models import InstructorListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, Instructor, Event, Series, PublicEvent, Location
+from .models import StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, StaffMember, Event, Series, PublicEvent, Location
 from .mixins import PluginTemplateMixin
 from .registries import plugin_templates_registry, PluginTemplateBase
 
 
-class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
-    model = InstructorListPluginModel
-    name = _('Set of Instructor Images or Bios')
-    render_template = 'core/instructor_image_set.html'
+class StaffMemberListPlugin(PluginTemplateMixin, CMSPluginBase):
+    model = StaffMemberListPluginModel
+    name = _('Set of Staff Images or Bios')
+    render_template = 'core/staff_image_set.html'
     cache = True
     module = _('Staff')
 
     def render(self, context, instance, placeholder):
-        context = super(InstructorListPlugin,self).render(context,instance,placeholder)
+        context = super(StaffMemberListPlugin,self).render(context,instance,placeholder)
 
-        listing = Instructor.objects.all()
+        listing = StaffMember.objects.all()
 
         if instance.statusChoices:
-            listing = listing.filter(status__in=instance.statusChoices)
+            listing = listing.filter(instructor__status__in=instance.statusChoices)
         else:
-            listing = listing.exclude(status__in=[
+            listing = listing.exclude(instructor__status__in=[
                 Instructor.InstructorStatus.hidden,
                 Instructor.InstructorStatus.retired,
                 Instructor.InstructorStatus.retiredGuest
@@ -52,7 +52,8 @@ class InstructorListPlugin(PluginTemplateMixin, CMSPluginBase):
 
         context.update({
             'list_title': instance.title,
-            'instructor_list': listing,
+            'instructor_list': listing, # DEPRECATED
+            'staffmember_list': listing,
             'thumbnail': instance.imageThumbnail,
         })
 
@@ -185,7 +186,7 @@ class PublicCalendarPlugin(CMSPluginBase):
     module = _('Events')
 
 
-plugin_pool.register_plugin(InstructorListPlugin)
+plugin_pool.register_plugin(StaffMemberListPlugin)
 plugin_pool.register_plugin(LocationPlugin)
 plugin_pool.register_plugin(LocationListPlugin)
 plugin_pool.register_plugin(EventListPlugin)
@@ -193,17 +194,17 @@ plugin_pool.register_plugin(PublicCalendarPlugin)
 
 
 @plugin_templates_registry.register
-class InstructorImageSetTemplate(PluginTemplateBase):
-    plugin = 'InstructorListPlugin'
-    template_name = 'core/instructor_image_set.html'
-    description = _('Instructor Images')
+class StaffImageSetTemplate(PluginTemplateBase):
+    plugin = 'StaffMemberListPlugin'
+    template_name = 'core/staff_image_set.html'
+    description = _('Staff Images')
 
 
 @plugin_templates_registry.register
-class InstructorListTemplate(PluginTemplateBase):
-    plugin = 'InstructorListPlugin'
-    template_name = 'core/instructor_list.html'
-    description = _('Instructor Bios with Images')
+class StaffListTemplate(PluginTemplateBase):
+    plugin = 'StaffMemberListPlugin'
+    template_name = 'core/staff_list.html'
+    description = _('Staff Bios with Images')
 
 
 @plugin_templates_registry.register

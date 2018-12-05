@@ -116,7 +116,7 @@ CHECKING SQUARE INTEGRATION
 
         add_square_checkout = self.boolean_input('Add Square Checkout form to the registration summary view to allow students to pay [Y/n]', True)
         if add_square_checkout:
-            home_page = Page.objects.filter(is_home=True,publisher_public=True).first()
+            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Square Checkout form because a home page has not yet been set.'))
                 foundErrors = True
@@ -161,7 +161,7 @@ Notes for Checkout integration
 
         add_square_pos = self.boolean_input('Add Square point-of-sale button to the registration summary view to allow students to pay [Y/n]', True)
         if add_square_pos:
-            home_page = Page.objects.filter(is_home=True,publisher_public=True).first()
+            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Square point-of-sale button because a home page has not yet been set.'))
                 foundErrors = True

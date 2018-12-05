@@ -10,7 +10,7 @@ from django.utils.dateparse import parse_datetime
 
 from datetime import datetime, timedelta
 
-from danceschool.core.models import Instructor, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Event, EventOccurrence, EventStaffMember, Customer
+from danceschool.core.models import Instructor, StaffMember, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Event, EventOccurrence, EventStaffMember, Customer
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -39,8 +39,8 @@ class InstructorAvailabilityView(TemplateView):
 
         context.update({
             'instructor': getattr(getattr(self.request,'user'),'staffmember'),
-            'instructor_list': Instructor.objects.filter(
-                availableForPrivates=True,instructorprivatelessondetails__isnull=False
+            'instructor_list': StaffMember.objects.filter(
+                instructor__availableForPrivates=True,instructorprivatelessondetails__isnull=False
             ),
             'creation_form': SlotCreationForm(),
             'update_form': SlotUpdateForm(),

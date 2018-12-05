@@ -7,7 +7,7 @@ from dal import autocomplete
 from danceschool.core.models import Customer, Registration, TemporaryRegistration
 from danceschool.core.admin import CustomerAdmin
 
-from .models import VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher, CustomerGroupVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse, VoucherCredit
+from .models import VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher, SeriesCategoryVoucher, PublicEventCategoryVoucher, SessionVoucher, CustomerGroupVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse, VoucherCredit
 
 
 class CustomerVoucherInlineForm(ModelForm):
@@ -89,6 +89,30 @@ class ClassVoucherInline(admin.StackedInline):
     classes = ['collapse',]
 
 
+class SeriesCategoryVoucherInline(admin.StackedInline):
+    model = SeriesCategoryVoucher
+    extra = 1
+    classes = ['collapse',]
+
+
+class PublicEventCategoryVoucherInline(admin.StackedInline):
+    model = PublicEventCategoryVoucher
+    extra = 1
+    classes = ['collapse',]
+
+
+class EventSessionVoucherInline(admin.StackedInline):
+    model = SessionVoucher
+    extra = 1
+    classes = ['collapse',]
+
+
+class ClassVoucherInline(admin.StackedInline):
+    model = ClassVoucher
+    extra = 1
+    classes = ['collapse',]
+
+
 class VoucherUseInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
@@ -121,7 +145,7 @@ class VoucherCreditInline(admin.TabularInline):
 
 
 class VoucherAdmin(admin.ModelAdmin):
-    inlines = [DanceTypeVoucherInline,ClassVoucherInline,CustomerGroupVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
+    inlines = [DanceTypeVoucherInline,ClassVoucherInline,SeriesCategoryVoucherInline,PublicEventCategoryVoucherInline,EventSessionVoucherInline,CustomerGroupVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
     list_display = ['voucherId','name','category','amountLeft','maxAmountPerUse','expirationDate','isEnabled','restrictions']
     list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
     search_fields = ['voucherId','name','description']

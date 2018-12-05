@@ -1,0 +1,15 @@
+{% load thumbnail i18n %}
+
+{% trans "Instructors" as title_default %}
+
+<div class="instructors">
+	{% if staffmember_list %}
+    <h3>{{ list_title|default:title_default }}</h3>
+    {% endif %}
+	{% for teacher in staffmember_list %}
+		<div class="instructor">
+		    <img src="{% if teacher.image %}{% thumbnail teacher.image thumbnail_dimensions|default:'118x118' crop %}{% endif %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="{{ thumbnail.width|default:'118' }}" />
+			<a href="#{{teacher.firstName}}-{{teacher.lastName}}" class="name">{{teacher.firstName}}</a>
+		</div>
+	{% endfor %}
+</div>

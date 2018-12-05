@@ -1,6 +1,31 @@
 Version History
 ===============
 
+0.7.2 - November 20, 2018
+-------------------------
+
+- Added default compensation by staff category, with an updated action for resetting/deleting staff member custom compensation.
+- Added notes field to manually-added guest list entries.
+- fixed EventOccurrence string format issue.
+- improvements to EventStaffMemberInline.
+
+
+0.7.1 - November 13, 2018
+-------------------------
+
+- Vouchers can now be restricted to specific series/event categories or sessions (#98)
+- Payment processor scripts updated to reflect changed CMS logic (#97)
+- Fixed timezone issues with "Duplicate events" view
+
+0.7.0 - November 13, 2018
+-------------------------
+
+**NOTE**: After upgrading to 0.7.0, it is recommended to run ``python manage.py setup_permissions`` to ensure that staff have appropriate permissions for the new guestlist app. 
+
+- **New:** Customizable guest lists by individual event, category, or session, with rules for adding staff members.
+- Improved management of staff members and instructors in the admin (Instructor is now non-polymorphic).
+- Misc. bug fixes and improvements.
+
 0.6.3 - September 19, 2018
 --------------------------
 

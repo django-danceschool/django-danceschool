@@ -17,7 +17,7 @@ import json
 import logging
 from djangocms_text_ckeditor.widgets import TextEditorWidget
 
-from .models import EventStaffMember, SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, EmailTemplate, Location, Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
+from .models import EventStaffMember, SubstituteTeacher, Event, EventOccurrence, Series, SeriesTeacher, Instructor, StaffMember, EmailTemplate, Location, Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 from .utils.emails import get_text_for_html
@@ -812,12 +812,15 @@ class SubstituteReportingForm(forms.ModelForm):
 
         super(SubstituteReportingForm,self).__init__(*args,**kwargs)
         self.fields['event'] = forms.ModelChoiceField(queryset=Series.objects.order_by('-startTime'))
-        self.fields['staffMember'] = forms.ModelChoiceField(queryset=Instructor.objects.exclude(
-            status__in=[
-                Instructor.InstructorStatus.hidden,
-                Instructor.InstructorStatus.retired,
-                Instructor.InstructorStatus.retiredGuest
-            ]).order_by('status','lastName','firstName'))
+        self.fields['staffMember'] = forms.ModelChoiceField(queryset=StaffMember.objects.filter(
+                instructor__isnull=False,
+            ).exclude(
+                instructor__status__in=[
+                    Instructor.InstructorStatus.hidden,
+                    Instructor.InstructorStatus.retired,
+                    Instructor.InstructorStatus.retiredGuest
+                ]
+            ).order_by('instructor__status','lastName','firstName'))
         self.fields['replacedStaffMember'] = SeriesTeacherChoiceField(queryset=SeriesTeacher.objects.none())
         self.fields['occurrences'] = SeriesClassesChoiceField(queryset=EventOccurrence.objects.none())
         self.fields['submissionUser'].widget = forms.HiddenInput()
@@ -882,11 +885,31 @@ class SubstituteReportingForm(forms.ModelForm):
         js = ('js/substituteteacher_ajax.js',)
 
 
-class InstructorBioChangeForm(forms.ModelForm):
+class StaffMemberBioChangeForm(forms.ModelForm):
+
+    def __init__(self,*args,**kwargs):
+        # Initialize a default form to fill
+        super(StaffMemberBioChangeForm, self).__init__(*args, **kwargs)
+
+        # If the individual is an instructor, then add the availableForPrivates field
+        if getattr(self.instance,'instructor',None):
+            self.fields['availableForPrivates'] = forms.BooleanField(
+                label=_('Available For private lessons'),
+                initial=True,
+                required=False,
+                help_text=_('Check this box if you would like to be listed as available for private lessons from students.')
+            )
+
+    def save(self, commit=True):
+        ''' If the staff member is an instructor, also update the availableForPrivates field on the Instructor record. '''
+        if getattr(self.instance,'instructor',None):
+            self.instance.instructor.availableForPrivates = self.cleaned_data.pop('availableForPrivates',self.instance.instructor.availableForPrivates)
+            self.instance.instructor.save(update_fields=['availableForPrivates',])
+        super(StaffMemberBioChangeForm,self).save(commit=True)
 
     class Meta:
-        model = Instructor
-        fields = ['publicEmail','privateEmail','phone','availableForPrivates']
+        model = StaffMember
+        fields = ['publicEmail','privateEmail','phone']
 
 
 class RepeatEventForm(forms.Form):

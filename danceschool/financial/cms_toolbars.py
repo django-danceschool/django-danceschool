@@ -46,7 +46,7 @@ class FinancialToolbar(CMSToolbar):
             addBreak = True
         if hasattr(self.request.user,'staffmember') and self.request.user.staffmember and self.request.user.has_perm('core.view_own_instructor_finances'):
             menu, newPosition = self.addTheMenu()
-            menu.add_link_item(_('Your Payment History'), url=reverse('instructorPayments'), position=newPosition)
+            menu.add_link_item(_('Your Payment History'), url=reverse('staffMemberPayments'), position=newPosition)
 
         if addBreak:
             menu.add_break('post_submission_break', position=newPosition + 1)

@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
+from django.forms.models import model_to_dict
 
 from datetime import datetime
 import unicodecsv as csv
@@ -15,15 +16,15 @@ from calendar import month_name
 from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 
-from danceschool.core.models import Instructor, Location, Event, StaffMember
+from danceschool.core.models import Instructor, Location, Event, StaffMember, EventStaffCategory
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from danceschool.core.utils.timezone import ensure_timezone
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
-from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule
+from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule, StaffMemberWageInfo
 from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
-from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm
+from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm, CompensationRuleResetForm
 from .constants import EXPENSE_BASES
 
 
@@ -57,14 +58,14 @@ class RevenueReportingView(AdminSuccessURLMixin, StaffuserRequiredMixin, UserFor
         return context
 
 
-class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, DetailView):
-    model = Instructor
-    template_name = 'financial/instructor_payments.html'
+class StaffMemberPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, DetailView):
+    model = StaffMember
+    template_name = 'financial/staffmember_payments.html'
     permission_required = 'core.view_own_instructor_finances'
     as_csv = False
 
     def get_context_data(self,**kwargs):
-        instructor = self.object
+        staff_member = self.object
         context = {}
 
         query_filter = Q()
@@ -88,11 +89,11 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
             except (ValueError, TypeError):
                 raise Http404(_("Invalid year."))
 
-        # No point in continuing if we can't actually match this instructor to their payments.
-        if not hasattr(instructor,'userAccount'):
-            return super(DetailView, self).get_context_data(instructor=instructor)
+        # No point in continuing if we can't actually match this staff member to their payments.
+        if not hasattr(staff_member,'userAccount'):
+            return super(DetailView, self).get_context_data(staff_member=staff_member)
 
-        all_payments = instructor.userAccount.payToUser.filter(query_filter).order_by('-submissionDate')
+        all_payments = getattr(staff_member.userAccount,'payToUser',ExpenseItem.objects.none()).filter(query_filter).order_by('-submissionDate')
 
         paid_items = all_payments.filter(**{'paid':True,'reimbursement':False}).order_by('-paymentDate')
         unpaid_items = all_payments.filter(**{'paid':False}).order_by('-submissionDate')
@@ -110,7 +111,8 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
         reimbursements_this_year = all_payments.filter(paymentDate__gte=time_lb,paymentDate__lt=time_ub,paid=True,reimbursement=True)
 
         context.update({
-            'instructor': instructor,
+            'instructor': staff_member, # DEPRECATED
+            'staff_member': staff_member,
             'current_year': year,
             'eligible_years': eligible_years,
             'all_payments': all_payments,
@@ -132,29 +134,29 @@ class InstructorPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, De
     def dispatch(self, request, *args, **kwargs):
         if 'as_csv' in kwargs:
             self.as_csv = True
-        return super(InstructorPaymentsView, self).dispatch(request, *args, **kwargs)
+        return super(StaffMemberPaymentsView, self).dispatch(request, *args, **kwargs)
 
     def render_to_response(self, context, **response_kwargs):
         if self.as_csv:
             return self.render_to_csv(context)
-        return super(InstructorPaymentsView, self).render_to_response(context, **response_kwargs)
+        return super(StaffMemberPaymentsView, self).render_to_response(context, **response_kwargs)
 
     def render_to_csv(self, context):
-        instructor = context['instructor']
-        if hasattr(instructor.userAccount,'payToUser'):
+        staff_member = context['staff_member']
+        if hasattr(staff_member.userAccount,'payToUser'):
             all_expenses = context['all_payments']
         else:
             all_expenses = ExpenseItem.objects.none()
         return getExpenseItemsCSV(all_expenses,scope='instructor')
 
 
-class OtherInstructorPaymentsView(InstructorPaymentsView):
+class OtherStaffMemberPaymentsView(StaffMemberPaymentsView):
     permission_required = 'core.view_other_instructor_finances'
 
     def get_object(self, queryset=None):
         if 'first_name' in self.kwargs and 'last_name' in self.kwargs:
             return get_object_or_404(
-                Instructor.objects.filter(**{'firstName': unquote_plus(self.kwargs['first_name']).replace('_',' '), 'lastName': unquote_plus(self.kwargs['last_name']).replace('_',' ')})
+                StaffMember.objects.filter(**{'firstName': unquote_plus(self.kwargs['first_name']).replace('_',' '), 'lastName': unquote_plus(self.kwargs['last_name']).replace('_',' ')})
             )
         else:
             return None
@@ -539,14 +541,11 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         return super(self.__class__,self).get_context_data(**context)
 
 
-class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FinancialContextMixin, FormView):
+class CompensationActionView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequiredMixin, FinancialContextMixin, FormView):
     '''
-    This view is for an admin action to repeat events.
+    Base class with repeated logic for update and replace actions.
     '''
-    template_name = 'financial/update_staff_compensation_rules.html'
-    form_class = CompensationRuleUpdateForm
     permission_required = 'core.change_staffmember'
-    success_message = _('Staff member compensation rules updated successfully.')
 
     def dispatch(self, request, *args, **kwargs):
         ids = request.GET.get('ids')
@@ -558,7 +557,7 @@ class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, Perm
         except (ValueError, ObjectDoesNotExist):
             return HttpResponseBadRequest(_('Invalid content type passed.'))
 
-        # This view only deals with subclasses of StaffMember (Instructor, etc.)
+        # This view only deals with StaffMember
         if not isinstance(self.objectClass(),StaffMember):
             return HttpResponseBadRequest(_('Invalid content type passed.'))
 
@@ -567,16 +566,31 @@ class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, Perm
         except ValueError:
             return HttpResponseBadRequest(_('Invalid ids passed'))
 
-        return super(CompensationRuleUpdateView,self).dispatch(request,*args,**kwargs)
+        return super(CompensationActionView,self).dispatch(request,*args,**kwargs)
+
+    def get_form_kwargs(self, **kwargs):
+        ''' pass the list of staff members along to the form '''
+        kwargs = super(CompensationActionView, self).get_form_kwargs(**kwargs)
+        kwargs['staffmembers'] = self.queryset
+        return kwargs
 
     def get_context_data(self,**kwargs):
-        context = super(CompensationRuleUpdateView,self).get_context_data(**kwargs)
+        context = super(CompensationActionView,self).get_context_data(**kwargs)
         context.update({
             'staffmembers': self.queryset,
             'rateRuleValues': RepeatedExpenseRule.RateRuleChoices.values,
         })
 
         return context
+
+
+class CompensationRuleUpdateView(CompensationActionView):
+    '''
+    This view is for an admin action to bulk update staff member compensation information.
+    '''
+    template_name = 'financial/update_staff_compensation_rules.html'
+    form_class = CompensationRuleUpdateForm
+    success_message = _('Staff member compensation rules updated successfully.')
 
     def form_valid(self, form):
         category = form.cleaned_data.pop('category',None)
@@ -588,6 +602,36 @@ class CompensationRuleUpdateView(SuccessMessageMixin, AdminSuccessURLMixin, Perm
             )
 
         return super(CompensationRuleUpdateView,self).form_valid(form)
+
+
+class CompensationRuleResetView(CompensationActionView):
+    '''
+    This view is for an admin action to bulk delete custom staff member compensation information
+    and/or reset to category defaults.
+    '''
+    template_name = 'financial/reset_staff_compensation_rules.html'
+    form_class = CompensationRuleResetForm
+    success_message = _('Staff member compensation rules reset successfully.')
+
+    def form_valid(self, form):
+        resetHow = form.cleaned_data.get('resetHow')
+
+        cat_numbers = [int(x.split('_')[1]) for x in [y[0] for y in form.cleaned_data.items() if y[1] and 'category_' in y[0]]]
+
+        if resetHow == 'DELETE':
+            StaffMemberWageInfo.objects.filter(staffMember__in=self.queryset,category__in=cat_numbers).delete()
+        elif resetHow == 'COPY':
+            cats = EventStaffCategory.objects.filter(id__in=cat_numbers,defaultwage__isnull=False)
+            for this_cat in cats:
+                this_default = model_to_dict(this_cat.defaultwage,exclude=('category','id','repeatedexpenserule_ptr','lastRun'))
+
+                for staffmember in self.queryset:
+                    staffmember.expenserules.update_or_create(
+                        category=this_cat,
+                        defaults=this_default,
+                    )
+
+        return super(CompensationRuleResetView,self).form_valid(form)
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):

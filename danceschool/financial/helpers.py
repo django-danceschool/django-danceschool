@@ -11,7 +11,7 @@ import unicodecsv as csv
 from calendar import month_name
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room
+from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room, StaffMember
 from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
 
 from .constants import EXPENSE_BASES
@@ -261,11 +261,11 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
 
     # First, construct the set of rules that need to be checked for affiliated events
     rule_filters = Q(disabled=False) & Q(rentalRate__gt=0) & \
-        Q(staffmemberwageinfo__isnull=False)
+        Q(Q(staffmemberwageinfo__isnull=False) | Q(staffdefaultwage__isnull=False))
     if rule:
         rule_filters = rule_filters & Q(id=rule.id)
     rulesToCheck = RepeatedExpenseRule.objects.filter(
-        rule_filters).distinct().order_by('-staffmemberwageinfo__category')
+        rule_filters).distinct().order_by('-staffmemberwageinfo__category','-staffdefaultwage__category')
 
     # These are the filters placed on Events that overlap the window in which expenses are being generated.
     if datetimeTuple and len(datetimeTuple) == 2:
@@ -278,17 +278,20 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
     # Now, we loop through the set of rules that need to be applied, then loop through the
     # Events in the window in question that involved the staff member indicated by the rule.
     for rule in rulesToCheck:
-        staffMember = rule.staffMember
+        staffMember = getattr(rule,'staffMember',None)
         staffCategory = getattr(rule,'category',None)
 
-        if not staffMember:
+        # No need to continue if expenses are not to be generated
+        if (
+            (not staffMember and not staffCategory) or
+            (not staffMember and not getConstant('financial__autoGenerateFromStaffCategoryDefaults'))
+        ):
             continue
 
         # For construction of expense descriptions
         replacements = {
             'type': _('Staff'),
             'to': _('payment to'),
-            'name': staffMember.fullName,
             'for': _('for'),
         }
 
@@ -296,7 +299,12 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
         expense_category = getConstant('financial__otherStaffExpenseCat')
 
         if staffCategory:
-            eventstaff_filter = Q(staffMember=staffMember) & Q(category=staffCategory)
+            if staffMember:
+                # This staff member in this category
+                eventstaff_filter = Q(staffMember=staffMember) & Q(category=staffCategory)
+            elif getConstant('financial__autoGenerateFromStaffCategoryDefaults'):
+                # Any staff member who does not already have a rule specified this category
+                eventstaff_filter = Q(category=staffCategory) & ~Q(staffMember__expenserules__category=staffCategory)
             replacements['type'] = staffCategory.name
 
             # For standard categories of staff, map the EventStaffCategory to
@@ -342,6 +350,7 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
         # Loop through EventStaffMembers for which there are not already directly allocated expenses under this rule,
         # and create new ExpenseItems for them depending on whether the rule requires hourly expenses or
         # non-hourly ones to be generated.
+
         staffers = EventStaffMember.objects.filter(eventstaff_filter & event_timefilters).exclude(
             Q(event__expenseitem__expenseRule=rule)).distinct()
 
@@ -352,6 +361,7 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                 # are allocated directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
                 replacements['event'] = staffer.event.name
+                replacements['name'] = staffer.staffMember.fullName
                 replacements['dates'] = staffer.event.startTime.strftime('%Y-%m-%d')
                 if staffer.event.startTime.strftime('%Y-%m-%d') != staffer.event.endTime.strftime('%Y-%m-%d'):
                     replacements['dates'] += ' %s %s' % (_('to'),staffer.event.endTime.strftime('%Y-%m-%d'))
@@ -368,10 +378,10 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                     'accrualDate': staffer.event.startTime,
                 }
 
-                if getattr(staffMember,'userAccount',None):
-                    params['payToUser'] = staffMember.userAccount
+                if getattr(staffer.staffMember,'userAccount',None):
+                    params['payToUser'] = staffer.staffMember.userAccount
                 else:
-                    params['payToName'] = staffMember.fullName
+                    params['payToName'] = staffer.staffMember.fullName
 
                 ExpenseItem.objects.create(**params)
                 generate_count += 1
@@ -379,33 +389,39 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
             # Non-hourly expenses are generated by constructing the time intervals in which the occurrence
             # occurs, and removing from that interval any intervals in which an expense has already been
             # generated under this rule (so, for example, monthly rentals will now show up multiple times).
-            # So, we just need to construct the set of intervals for which to construct expenses
-            events = [x.event for x in staffers]
+            # So, we just need to construct the set of intervals for which to construct expenses.  We first
+            # need to split the set of EventStaffMember objects by StaffMember (in case this rule is not
+            # person-specific) and then run this provedure separated by StaffMember.
+            members = StaffMember.objects.filter(eventstaffmember__in=staffers)
 
-            intervals = [(ensure_localtime(x.startTime), ensure_localtime(x.endTime)) for x in EventOccurrence.objects.filter(event__in=events)]
-            remaining_intervals = rule.getWindowsAndTotals(intervals)
+            for member in members:
+                events = [x.event for x in staffers.filter(staffMember=member)]
 
-            for startTime, endTime, total, description in remaining_intervals:
-                replacements['when'] = description
+                intervals = [(ensure_localtime(x.startTime), ensure_localtime(x.endTime)) for x in EventOccurrence.objects.filter(event__in=events)]
+                remaining_intervals = rule.getWindowsAndTotals(intervals)
 
-                params = {
-                    'category': expense_category,
-                    'expenseRule': rule,
-                    'periodStart': startTime,
-                    'periodEnd': endTime,
-                    'description': '%(type)s %(to)s %(name)s %(for)s %(when)s' % replacements,
-                    'submissionUser': submissionUser,
-                    'total': total,
-                    'accrualDate': startTime,
-                }
+                for startTime, endTime, total, description in remaining_intervals:
+                    replacements['when'] = description
+                    replacements['name'] = member.fullName
 
-                if getattr(staffMember,'userAccount',None):
-                    params['payToUser'] = staffMember.userAccount
-                else:
-                    params['payToName'] = staffMember.fullName
+                    params = {
+                        'category': expense_category,
+                        'expenseRule': rule,
+                        'periodStart': startTime,
+                        'periodEnd': endTime,
+                        'description': '%(type)s %(to)s %(name)s %(for)s %(when)s' % replacements,
+                        'submissionUser': submissionUser,
+                        'total': total,
+                        'accrualDate': startTime,
+                    }
 
-                ExpenseItem.objects.create(**params)
-                generate_count += 1
+                    if getattr(member,'userAccount',None):
+                        params['payToUser'] = member.userAccount
+                    else:
+                        params['payToName'] = member.fullName
+
+                    ExpenseItem.objects.create(**params)
+                    generate_count += 1
     rulesToCheck.update(lastRun=timezone.now())
     return generate_count
 

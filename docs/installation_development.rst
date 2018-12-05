@@ -16,7 +16,7 @@ standard tools such as Docker and Heroku.
 What you need:
 ~~~~~~~~~~~~~~
 
--  Python 3.4+
+-  Python 3.4, 3.5, or 3.6
 -  The ability to create a virtual environment (on Linux, install the
    ``python-virtualenv`` package)
 -  pip3 - the Python package manager
