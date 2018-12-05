@@ -11,7 +11,7 @@ your new project by running the following:
 
    ::
 
-      django-admin startproject --template http://leetucker.net/django-danceschool/danceschool_default_setup.zip <your_project_name>
+      django-admin startproject --template https://github.com/django-danceschool/development-template/archive/master.zip <your_project_name>
 
 However, it is also possible to deploy a new project by manually
 editing ``settings.py`` to enter the needed values.

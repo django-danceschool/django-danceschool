@@ -17,7 +17,7 @@ setup(
     ' all of the regular functions of a social dance school'
     ' with the Django CMS content management system',
     long_description=README,
-    url='https://github.com/leetucker/django-danceschool',
+    url='https://github.com/django-danceschool/django-danceschool',
     author='Lee Tucker',
     author_email='lee.c.tucker@gmail.com',
     install_requires=[
