@@ -56,6 +56,95 @@ class RevenueCategory(models.Model):
         verbose_name_plural = _('Revenue categories')
 
 
+class TransactionParty(models.Model):
+    '''
+    An expense can be directly associated with a User or StaffMember (like an instructor),
+    a location, or the name of another party.  Similarly, a revenue item can be received
+    from different types of parties. 
+    '''
+
+    name = models.CharField(_('Name'),max_length=50,null=True,blank=True)
+    user = models.OneToOneField(
+        User,null=True,blank=True,
+        verbose_name=_('User'),
+        on_delete=models.SET_NULL
+    )
+    staffMember = models.OneToOneField(
+        StaffMember,null=True,blank=True,
+        verbose_name=_('Staff member'),
+        on_delete=models.SET_NULL
+    )
+    location = models.OneToOneField(
+        Location,null=True,blank=True,
+        verbose_name=_('Location'),
+        on_delete=models.SET_NULL
+    )
+
+    def clean(self):
+        '''
+        Verify that the user and staffMember are not mismatched.
+        Location can only be specified if user and staffMember are not.
+        '''
+
+        if self.staffMember and self.staffMember.userAccount and \
+        self.user and not self.staffMember.userAccount == self.user:
+            raise ValidationError(_('Transaction party user does not match staff member user.'))
+
+        if self.location and (self.user or self.staffMember):
+            raise ValidationError(_('Transaction party may not be both a Location and a User or StaffMember.'))
+
+    def save(self, updateBy=None, *args, **kwargs):
+        '''
+        Verify that the user and staffMember are populated with linked information, and
+        ensure that the name is properly specified.
+        '''
+
+        if (
+            self.staffMember and self.staffMember.userAccount and not self.user
+        ) or (
+            isinstance(updateBy,StaffMember) and self.staffMember.userAccount
+        ):
+            self.user = self.staffMember.userAccount
+        elif (
+            self.user and self.user.staffmember and not self.staffMember
+        ) or (
+            isinstance(updateBy,User) and self.user.staffMember
+        ):
+            self.staffMember = self.user.staffmember
+
+        # Don't replace the name if it has been given, but do fill it out if it is blank.
+        if not self.name:
+            if self.user and self.user.get_full_name():
+                self.name = self.user.get_full_name()
+            elif self.staffMember:
+                self.name = self.staffMember.fullName or self.staffMember.privateEmail
+            elif self.location:
+                self.name = self.location.name
+
+        super(TransactionParty, self).save(*args, **kwargs)
+
+    def __str__(self):
+        if self.name:
+            return self.name
+        elif self.user:
+            return self.user.get_full_name()
+        elif self.staffMember:
+            return self.staffMember.fullName
+        elif self.location:
+            return self.location.name
+        else:
+            return str(_('Unspecified'))
+
+    class Meta:
+        ordering = ['name',]
+        verbose_name = _('Transaction party')
+        verbose_name_plural = _('Transaction parties')
+
+        permissions = (
+            ('can_autocomplete_transactionparty',_('Able to use transaction party autocomplete features (in admin forms)')),
+        )
+
+
 class RepeatedExpenseRule(PolymorphicModel):
     '''
     This base class defines the pieces of information
@@ -465,13 +554,11 @@ class GenericRepeatedExpense(RepeatedExpenseRule):
 
     category = models.ForeignKey(ExpenseCategory,verbose_name=_('Category'),null=True,on_delete=models.SET_NULL,)
 
-    # An expense can be directly associated with a user (like an instructor) or
-    # a location, or the name of another party can be entered.
-    payToUser = models.ForeignKey(
-        User,null=True,blank=True,
-        verbose_name=_('Pay to user'),on_delete=models.SET_NULL,)
-    payToLocation = models.ForeignKey(Location,null=True,blank=True,verbose_name=_('Pay to location'))
-    payToName = models.CharField(_('Pay to (enter name)'),max_length=50, null=True,blank=True)
+    # An expense rule is associated with a transaction party, which can be a User, a StaffMember,
+    # a Location, or just a name of the party.
+    payTo = models.ForeignKey(
+        TransactionParty,null=True,verbose_name=_('Pay to'),on_delete=models.SET_NULL,
+    )
 
     markApproved = models.BooleanField(_('Automatically mark this expense as approved'),default=False)
     markPaid = models.BooleanField(_('Automatically mark this expense as paid'),default=False)
@@ -571,13 +658,11 @@ class ExpenseItem(models.Model):
     periodStart = models.DateTimeField(_('Expense period start'),null=True,blank=True)
     periodEnd = models.DateTimeField(_('Expense period end'),null=True,blank=True)
 
-    # An expense can be directly associated with a user (like an instructor) or
-    # a location, or the name of another party can be entered.
-    payToUser = models.ForeignKey(
-        User,null=True,blank=True,
-        related_name='payToUser',verbose_name=_('Pay to user'),on_delete=models.SET_NULL,)
-    payToLocation = models.ForeignKey(Location,null=True,blank=True,verbose_name=_('Pay to location'))
-    payToName = models.CharField(_('Pay to (enter name)'),max_length=50, null=True,blank=True)
+    # An expense is associated with a transaction party, which can be a User, a StaffMember,
+    # a Location, or just a name of the party.
+    payTo = models.ForeignKey(
+        TransactionParty,null=True,verbose_name=_('Pay to'),on_delete=models.SET_NULL,
+    )
 
     reimbursement = models.BooleanField(
         _('Reimbursement'),
@@ -628,20 +713,6 @@ class ExpenseItem(models.Model):
         return theTime
     expenseEndDate.fget.short_description = _('End Date')
 
-    @property
-    def payTo(self):
-        '''
-        Returns a string indicating who the expense is to be paid to.
-        For more convenient references of miscellaneous expenses.
-        '''
-        if self.payToUser:
-            return ' '.join([self.payToUser.first_name,self.payToUser.last_name])
-        elif self.payToLocation:
-            return self.payToLocation.name
-        else:
-            return self.payToName or ''
-    payTo.fget.short_description = _('Pay to')
-
     def save(self, *args, **kwargs):
         '''
         This custom save method ensures that an expense is not attributed to multiple categories.
@@ -662,16 +733,23 @@ class ExpenseItem(models.Model):
 
         # Fill out the series and event properties to permit easy calculation of
         # revenues and expenses by series or by event.
-        if (
-            self.expenseRule and hasattr(self.expenseRule,'staffMember') and
-            hasattr(self.expenseRule.staffMember,'userAccount') and not self.payToUser
-        ):
-            self.payToUser = self.expenseRule.staffMember.userAccount
-        if (
-            self.expenseRule and hasattr(self.expenseRule,'location') and
-            not self.payToLocation
-        ):
-            self.payToLocation = self.expenseRule.location
+        if self.expenseRule and not self.payTo:
+            this_loc = getattr(self.expenseRule,'location',None)
+            this_member = getattr(self.expenseRule,'location',None)
+
+            if this_loc:
+                self.payTo = TransactionParty.objects.get_or_create(
+                    location=this_loc,
+                    defaults={'name': this_loc.name}
+                )[0]
+            elif this_member:
+                self.payTo = TransactionParty.objects.get_or_create(
+                    staffMember=this_member,
+                    defaults={
+                        'name': this_member.fullName,
+                        'user': getattr(this_member,'userAccount',None)
+                    }
+                )[0]
 
         # Set the accrual date.  The method for events ensures that the accrualDate month
         # is the same as the reported month of the series/event by accruing to the end date of the last
@@ -686,10 +764,10 @@ class ExpenseItem(models.Model):
                 self.accrualDate = self.submissionDate
 
         # Set the total for hourly work
-        if self.hours and not self.wageRate and not self.total and not self.payToLocation and self.category:
+        if self.hours and not self.wageRate and not self.total and not getattr(getattr(self,'payTo',None),'location',None) and self.category:
             self.wageRate = self.category.defaultRate
-        elif self.hours and not self.wageRate and not self.total and self.payToLocation:
-            self.wageRate = self.payToLocation.rentalRate
+        elif self.hours and not self.wageRate and not self.total and getattr(getattr(self,'payTo',None),'location',None):
+            self.wageRate = self.payTo.location.rentalRate
 
         if self.hours and self.wageRate and not self.total:
             self.total = self.hours * self.wageRate
@@ -765,7 +843,13 @@ class RevenueItem(models.Model):
     invoiceItem = models.OneToOneField(InvoiceItem,null=True, blank=True,verbose_name=_('Associated invoice item'))
 
     event = models.ForeignKey(Event,null=True,blank=True,verbose_name=_('Event'),help_text=_('If this item is associated with an Event, enter it here.'))
-    receivedFromName = models.CharField(_('Received From'),max_length=50,null=True,blank=True,help_text=_('Enter who this revenue item was received from, if it is not associated with an existing registration.'))
+
+    # A revenue item is associated with a transaction party, which can be a User, a StaffMember,
+    # a Location, or just a name of the party.  If the revenue item is associated with a Registration,
+    # then it is associated with a Customer, and it does not require a separate value for receivedFrom.
+    receivedFrom = models.ForeignKey(
+        TransactionParty,null=True,blank=True,verbose_name=_('Pay to'),on_delete=models.SET_NULL,
+    )
 
     currentlyHeldBy = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Cash currently in possession of'),help_text=_('If cash has not yet been deposited, this indicates who to contact in order to collect the cash for deposit.'),related_name='revenuesheldby')
     received = models.BooleanField(_('Received'),help_text=_('Check to indicate that payment has been received. Non-received payments are considered pending.'),default=False)

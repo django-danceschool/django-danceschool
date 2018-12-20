@@ -15,7 +15,7 @@ from danceschool.core.models import Registration, Event, EventOccurrence, EventS
 from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
 
 from .constants import EXPENSE_BASES
-from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule, RoomRentalInfo
+from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule, RoomRentalInfo, TransactionParty
 
 
 def getExpenseItemsCSV(queryset, scope='instructor'):
@@ -40,7 +40,7 @@ def getExpenseItemsCSV(queryset, scope='instructor'):
         _('Event'),
         _('Approved'),
         _('Paid'),
-        _('Payment Date')
+        _('Payment Date'),
     ]
 
     if scope != 'instructor':
@@ -60,18 +60,11 @@ def getExpenseItemsCSV(queryset, scope='instructor'):
             x.event,
             x.approved,
             x.paid,
-            x.paymentDate
+            x.paymentDate,
         ]
 
         if scope != 'instructor':
-            if x.payToUser:
-                this_row_data.append(x.payToUser.first_name + ' ' + x.payToUser.last_name)
-            elif x.payToLocation:
-                this_row_data.append(_('Location: ') + x.payToLocation.name)
-            elif x.payToName:
-                this_row_data.append(x.payToName)
-            else:
-                this_row_data.append('')
+            this_row_data.append(x.payTo)
 
         writer.writerow(this_row_data)
     return response
@@ -107,7 +100,7 @@ def getRevenueItemsCSV(queryset):
         if x.registration:
             this_row_data.append(x.registration.fullName)
         else:
-            this_row_data.append(x.receivedFromName)
+            this_row_data.append(x.receivedFrom.name)
         this_row_data += [
             x.registration,
             x.event,
@@ -159,6 +152,9 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
         loc = getattr(venue,'location') if isinstance(venue,Room) else venue
         event_locfilter = Q(room=venue) if isinstance(venue,Room) else Q(location=venue)
 
+        # Find or create the TransactionParty associated with the location.
+        loc_party = TransactionParty.objects.get_or_create(location=loc,defaults={'name': loc.name})[0]
+
         if rule.advanceDays:
             if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
                 event_timefilters = event_timefilters & Q(endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
@@ -208,7 +204,7 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
                 ExpenseItem.objects.create(
                     event=event,
                     category=rental_category,
-                    payToLocation=loc,
+                    payTo=loc_party,
                     expenseRule=rule,
                     description='%(type)s %(of)s %(location)s %(for)s: %(name)s, %(dates)s' % replacements,
                     submissionUser=submissionUser,
@@ -229,7 +225,7 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
 
                 ExpenseItem.objects.create(
                     category=rental_category,
-                    payToLocation=loc,
+                    payTo=loc_party,
                     expenseRule=rule,
                     periodStart=startTime,
                     periodEnd=endTime,
@@ -366,6 +362,15 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                 if staffer.event.startTime.strftime('%Y-%m-%d') != staffer.event.endTime.strftime('%Y-%m-%d'):
                     replacements['dates'] += ' %s %s' % (_('to'),staffer.event.endTime.strftime('%Y-%m-%d'))
 
+                # Find or create the TransactionParty associated with the staff member.
+                staffer_party = TransactionParty.objects.get_or_create(
+                    staffMember=staffer.staffMember,
+                    defaults={
+                        'name': staffer.staffMember.fullName,
+                        'user': getattr(staffer.staffMember,'userAccount',None)
+                    }
+                )[0]
+
                 params = {
                     'event': staffer.event,
                     'category': expense_category,
@@ -376,12 +381,8 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                     'wageRate': rule.rentalRate,
                     'total': staffer.netHours * rule.rentalRate,
                     'accrualDate': staffer.event.startTime,
+                    'payTo': staffer_party,
                 }
-
-                if getattr(staffer.staffMember,'userAccount',None):
-                    params['payToUser'] = staffer.staffMember.userAccount
-                else:
-                    params['payToName'] = staffer.staffMember.fullName
 
                 ExpenseItem.objects.create(**params)
                 generate_count += 1
@@ -396,6 +397,15 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
 
             for member in members:
                 events = [x.event for x in staffers.filter(staffMember=member)]
+
+                # Find or create the TransactionParty associated with the staff member.
+                staffer_party = TransactionParty.objects.get_or_create(
+                    staffMember=member,
+                    defaults={
+                        'name': member.fullName,
+                        'user': getattr(member,'userAccount',None)
+                    }
+                )[0]
 
                 intervals = [(ensure_localtime(x.startTime), ensure_localtime(x.endTime)) for x in EventOccurrence.objects.filter(event__in=events)]
                 remaining_intervals = rule.getWindowsAndTotals(intervals)
@@ -413,12 +423,8 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
                         'submissionUser': submissionUser,
                         'total': total,
                         'accrualDate': startTime,
+                        'payTo': staffer_party,
                     }
-
-                    if getattr(member,'userAccount',None):
-                        params['payToUser'] = member.userAccount
-                    else:
-                        params['payToName'] = member.fullName
 
                     ExpenseItem.objects.create(**params)
                     generate_count += 1
@@ -509,16 +515,14 @@ def createGenericExpenseItems(request=None,datetimeTuple=None,rule=None):
                 'submissionUser': submissionUser,
                 'total': rule.rentalRate,
                 'accrualDate': this_time,
-                'payToUser': rule.payToUser,
-                'payToLocation': rule.payToLocation,
-                'payToName': rule.payToName,
+                'payTo': rule.payTo,
             }
-            item, created = ExpenseItem.objects.get_or_create(
+            item = ExpenseItem.objects.get_or_create(
                 expenseRule=rule,
                 periodStart=this_time,
                 periodEnd=this_time,
                 defaults=defaults_dict
-            )
+            )[0]
             if created:
                 generate_count += 1
             if rule.applyRateRule == RepeatedExpenseRule.RateRuleChoices.hourly:

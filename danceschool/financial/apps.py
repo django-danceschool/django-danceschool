@@ -120,9 +120,5 @@ class FinancialAppConfig(AppConfig):
         for field in [f for f in SubstituteTeacher._meta.fields if f.name == 'event']:
             field.validators.append(validate_EnsureNotPaidOut)
 
-        # Add get_or_create calls to ensure that the Expense and Revenue categories needed
-        # for our handlers exist.  Other categories can always be created, and these can be
-        # modified in the database.
-
         # This ensures that the receivers are loaded.
         from . import handlers

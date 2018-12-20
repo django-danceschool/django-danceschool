@@ -14,29 +14,30 @@ from polymorphic.admin import PolymorphicParentModelAdmin, PolymorphicChildModel
 
 from danceschool.core.models import Location, Room, StaffMember, EventStaffCategory
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, RepeatedExpenseRule, LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo, GenericRepeatedExpense
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, RepeatedExpenseRule, LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo, GenericRepeatedExpense, TransactionParty
 from .forms import ExpenseCategoryWidget
 from .autocomplete_light_registry import get_method_list
 
 
 class ExpenseItemAdminForm(ModelForm):
-    payToUser = ModelChoiceField(
-        queryset=User.objects.all(),
-        label=_('Pay to this user'),
-        required=False,
+    payTo = ModelChoiceField(
+        queryset=TransactionParty.objects.all(),
+        label=_('Pay to'),
+        required=True,
         widget=autocomplete.ModelSelect2(
-            url='autocompleteUser',
+            url='transactionParty-list-autocomplete',
             attrs={
                 # This will set the input placeholder attribute:
-                'data-placeholder': _('Enter a user name'),
+                'data-placeholder': _('Enter a name or location'),
                 # This will set the yourlabs.Autocomplete.minimumCharacters
                 # options, the naming conversion is handled by jQuery
                 'data-minimum-input-length': 2,
-                'data-max-results': 4,
+                'data-max-results': 8,
                 'class': 'modern-style',
             }
         )
     )
+
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
@@ -55,25 +56,30 @@ class ExpenseItemAdminForm(ModelForm):
 class ExpenseItemAdmin(admin.ModelAdmin):
     form = ExpenseItemAdminForm
 
-    list_display = ('category','expenseStartDate','expenseEndDate','description','hours','total','approved','paid','reimbursement','payTo','paymentMethod')
+    list_display = ('category','expenseStartDate','expenseEndDate','description','hours','total','approved','paid','reimbursement','payToName','paymentMethod')
     list_editable = ('approved','paid','paymentMethod')
-    search_fields = ('description','comments','=category__name','=payToUser__first_name','=payToUser__last_name','=payToLocation__name')
-    list_filter = ('category','approved','paid','paymentMethod','reimbursement','payToLocation',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter),'expenseRule')
+    search_fields = ('description','comments','=category__name','=payTo__name')
+    list_filter = ('category','approved','paid','paymentMethod','reimbursement','payTo',('accrualDate',DateRangeFilter),('paymentDate',DateRangeFilter),('submissionDate',DateRangeFilter),'expenseRule')
     readonly_fields = ('submissionUser','expenseRule','expenseStartDate','expenseEndDate')
     actions = ('approveExpense','unapproveExpense')
 
     fieldsets = (
         (_('Basic Info'), {
-            'fields': ('category','description','hours','wageRate','total','adjustments','fees','reimbursement','comments')
+            'fields': ('category','description','payTo','hours','wageRate','total','adjustments','fees','reimbursement','comments')
         }),
         (_('File Attachment (optional)'), {
             'fields': ('attachment',)
         }),
         (_('Approval/Payment Status'), {
             'classes': ('collapse',),
-            'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','expenseRule','event','payToUser','payToLocation','payToName')
+            'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','expenseRule','event')
         }),
     )
+
+    def payToName(self,obj):
+        ''' Avoids widget issues with list_display '''
+        return obj.payTo.name
+    payToName.short_description = _('Pay to')
 
     def approveExpense(self, request, queryset):
         rows_updated = queryset.update(approved=True)
@@ -123,6 +129,23 @@ class RevenueItemAdminForm(ModelForm):
             }
         )
     )
+    receivedFrom = ModelChoiceField(
+        queryset=TransactionParty.objects.all(),
+        label=_('Received from'),
+        required=False,
+        widget=autocomplete.ModelSelect2(
+            url='transactionParty-list-autocomplete',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a name or location'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 8,
+                'class': 'modern-style',
+            }
+        )
+    )
     paymentMethod = autocomplete.Select2ListChoiceField(
         choice_list=get_method_list,
         required=False,
@@ -147,7 +170,7 @@ class RevenueItemAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (_('Basic Info'), {
-            'fields': ('category','description','grossTotal','total','adjustments','fees','netRevenue','paymentMethod','receivedFromName','invoiceNumber','comments')
+            'fields': ('category','description','grossTotal','total','adjustments','fees','netRevenue','paymentMethod','receivedFrom','invoiceNumber','comments')
         }),
         (_('Related Items'),{
             'fields': ('relatedRevItemsLink','eventLink','invoiceLink'),
@@ -230,6 +253,28 @@ class RevenueItemAdmin(admin.ModelAdmin):
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
         obj.save()
+
+
+@admin.register(TransactionParty)
+class TransactionPartyAdmin(admin.ModelAdmin):
+    list_display = ('name','user_exists','staffmember_exists','location_exists')
+    search_fields = ('name',)
+    exclude = []
+
+    def user_exists(self,obj):
+        return (obj.user is not None)
+    user_exists.short_description = _('User?')
+    user_exists.boolean = True
+
+    def staffmember_exists(self,obj):
+        return (obj.staffMember is not None)
+    staffmember_exists.short_description = _('Staff member?')
+    staffmember_exists.boolean = True
+
+    def location_exists(self,obj):
+        return (obj.location is not None)
+    location_exists.short_description = _('Location?')
+    location_exists.boolean = True
 
 
 class LocationRentalInfoInline(admin.StackedInline):
@@ -374,13 +419,10 @@ class GenericRepeatedExpenseAdmin(RepeatedExpenseRuleChildAdmin):
 
     base_fieldsets = (
         (None, {
-            'fields': ('name','rentalRate','applyRateRule','disabled','lastRun')
+            'fields': ('name','payTo','rentalRate','applyRateRule','category','disabled','lastRun')
         }),
         (_('Generation rules'),{
             'fields': ('dayStarts','weekStarts','monthStarts',('advanceDays','advanceDaysReference'),('priorDays','priorDaysReference')),
-        }),
-        (_('Expense item parameters'),{
-            'fields': ('category','payToUser','payToLocation','payToName',)
         }),
         (_('Start and End Date (optional)'), {
             'fields': ('startDate','endDate'),

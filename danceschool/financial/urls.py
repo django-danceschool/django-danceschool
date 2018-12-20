@@ -2,7 +2,7 @@ from django.conf.urls import url
 
 from .views import StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView, CompensationRuleResetView
 from .ajax import updateEventRegistrations
-from .autocomplete_light_registry import PaymentMethodAutoComplete
+from .autocomplete_light_registry import PaymentMethodAutoComplete, TransactionPartyAutoComplete
 
 urlpatterns = [
     url(r'^staff-payments/$', StaffMemberPaymentsView.as_view(), name='staffMemberPayments'),
@@ -18,6 +18,7 @@ urlpatterns = [
     # These URLs are for Ajax/autocomplete functionality
     url(r'^submit-revenues/eventfilter/$', updateEventRegistrations, name='ajaxhandler_updateEventRegistrations'),
     url(r'^autocomplete/paymentmethod/$', PaymentMethodAutoComplete.as_view(), name='paymentMethod-list-autocomplete'),
+    url(r'^autocomplete/transactionparty/$', TransactionPartyAutoComplete.as_view(create_field='name'), name='transactionParty-list-autocomplete'),
 
     # These URLs are for the financial views
     url(r'^finances/detail/(?P<year>[\w\+]+)/(?P<month>[\w\+]+)/$', FinancialDetailView.as_view(), name='financialDetailView'),

@@ -2,11 +2,12 @@ from django.dispatch import receiver
 from django.db.models import Q
 from django.db.models.signals import post_save, m2m_changed
 from django.utils.translation import ugettext_lazy as _
+from django.contrib.auth.models import User
 
 import sys
 import logging
 
-from danceschool.core.models import EventStaffMember, EventOccurrence, InvoiceItem, Invoice
+from danceschool.core.models import EventStaffMember, EventOccurrence, InvoiceItem, Invoice, StaffMember, Location
 from danceschool.core.constants import getConstant
 
 from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule
@@ -142,3 +143,23 @@ def createRevenueItemForInvoiceItem(sender,instance,**kwargs):
         if saveFlag:
             related_item.save()
             logger.info('RevenueItem associated with InvoiceItem %s updated.' % instance.id)
+
+
+@receiver(post_save, sender=User)
+@receiver(post_save, sender=StaffMember)
+@receiver(post_save, sender=Location)
+def updateTransactionParty(sender,instance,**kwargs):
+    '''
+    If a User, StaffMember, or Location is updated, and there exists an associated
+    TransactionParty, then the name and other attributes of that party should be updated
+    to reflect the new information.
+    '''
+
+    if 'loaddata' in sys.argv or ('raw' in kwargs and kwargs['raw']):
+        return
+
+    logger.debug('TransactionParty signal fired for %s %s.' % (instance.__class__.__name__, instance.id))
+
+    party = getattr(instance,'transactionparty',None)
+    if party:
+        party.save(updateBy=instance)

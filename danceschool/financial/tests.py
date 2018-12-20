@@ -11,7 +11,7 @@ from datetime import timedelta
 from danceschool.core.utils.tests import DefaultSchoolTestCase
 from danceschool.core.utils.timezone import ensure_localtime
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, RevenueCategory, TransactionParty
 
 
 class RevenueTest(DefaultSchoolTestCase):
@@ -109,8 +109,7 @@ class ExpensesTest(DefaultSchoolTestCase):
         response = self.client.get(reverse('submitExpenses'))
         self.assertEqual(response.status_code, 200)
 
-        # Check that choices are populated for payTo, payBy, and paymentMethod
-        self.assertIn(1, [x[0] for x in response.context_data.get('form').fields['payTo'].choices])
+        # Check that choices are populated for payBy and paymentMethod
         self.assertIn(1, [x[0] for x in response.context_data.get('form').fields['payBy'].choices])
         self.assertIn(('Cash','Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
 
@@ -118,8 +117,9 @@ class ExpensesTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('submitExpenses'),{
             'hours': 1,
             'category': default_expense_cat.id,
-            'payTo': 1,
-            'payToUser': self.superuser.id,
+            'payTo': TransactionParty.objects.get_or_create(
+                user=self.superuser,defaults={'name': self.superuser.get_full_name()}
+            )[0].id,
             'payBy': 1,
             'description': 'Test Expense Item',
             'paymentMethod': 'Cash',
@@ -138,15 +138,16 @@ class ExpensesTest(DefaultSchoolTestCase):
 
         self.assertEqual(ei.total, 20)
         self.assertTrue(ei.approved and ei.paid)
-        self.assertEqual(ei.payToUser, self.superuser)
+        self.assertEqual(ei.payTo.user, self.superuser)
 
         # Create a second expense item for $50, paid to a location
         response = self.client.post(reverse('submitExpenses'),{
             'total': 50,
             'category': default_expense_cat.id,
-            'payTo': 2,
             'payBy': 2,
-            'payToLocation': self.defaultLocation.id,
+            'payTo': TransactionParty.objects.get_or_create(
+                location=self.defaultLocation,defaults={'name': self.defaultLocation.name}
+            )[0].id,
             'description': 'Test Venue Expense Item',
             'paymentMethod': 'Cash',
             'reimbursement': False,
@@ -164,7 +165,7 @@ class ExpensesTest(DefaultSchoolTestCase):
 
         self.assertEqual(ei.total, 50)
         self.assertFalse(ei.approved or ei.paid)
-        self.assertEqual(ei.payToLocation, self.defaultLocation)
+        self.assertEqual(ei.payTo.location, self.defaultLocation)
 
     def test_event_creates_teachingexpense(self):
         """

@@ -19,18 +19,12 @@ import logging
 
 from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo
+from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo, TransactionParty
 from .autocomplete_light_registry import get_method_list
 
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
-
-
-RECIPIENT_CHOICES = (
-                    (1,_('Me')),
-                    (2,_('A Location (e.g. a rental payment)')),
-                    (3,_('Someone else')),)
 
 PAYBY_CHOICES = (
                 (1,_('Hours of Work/Rental (paid at default rate)')),
@@ -74,7 +68,24 @@ class ExpenseCategoryWidget(Select):
 
 
 class ExpenseReportingForm(forms.ModelForm):
-    payTo = forms.ChoiceField(widget=forms.RadioSelect, choices=RECIPIENT_CHOICES,label=_('This expense to be paid to:'),initial=1)
+    payTo = forms.ModelChoiceField(
+        queryset=TransactionParty.objects.all(),
+        label=_('Pay to'),
+        required=True,
+        widget=autocomplete.ModelSelect2(
+            url='transactionParty-list-autocomplete',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a name or location'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 8,
+                'class': 'modern-style',
+            }
+        )
+    )
+
     payBy = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYBY_CHOICES, label=_('Report this expense as:'), initial=1)
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
@@ -85,7 +96,14 @@ class ExpenseReportingForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        user_id = getattr(user,'id')
+        user_id = getattr(user,'id',None)
+ 
+        if user_id:
+            kwargs.update(initial={
+                'payTo': TransactionParty.objects.get_or_create(
+                    user=user,defaults={'name': user.get_full_name()}
+                )[0].id,
+            })
 
         super(ExpenseReportingForm,self).__init__(*args,**kwargs)
 
@@ -133,11 +151,8 @@ class ExpenseReportingForm(forms.ModelForm):
 
         self.helper.layout = Layout(
             Field('submissionUser', type="hidden", value=user_id),
-            Field('payToUser', type="hidden", value=user_id),
             'payTo',
             'payBy',
-            'payToLocation',
-            'payToName',
             category_field,
             'description',
             'hours',
@@ -153,10 +168,6 @@ class ExpenseReportingForm(forms.ModelForm):
         # are not reported where not necessary.
         super(ExpenseReportingForm, self).clean()
 
-        payTo = self.cleaned_data.get('payTo')
-        payToUser = self.cleaned_data.get('payToUser')
-        payToLocation = self.cleaned_data.get('payToLocation')
-        payToName = self.cleaned_data.get('payToName')
         payBy = self.cleaned_data.get('payBy')
         hours = self.cleaned_data.get('hours')
         total = self.cleaned_data.get('total')
@@ -171,13 +182,6 @@ class ExpenseReportingForm(forms.ModelForm):
         else:
             self.cleaned_data.pop('paymentDate',None)
 
-        if payTo != '1' and payToUser:
-            self.cleaned_data.pop('payToUser',None)
-        if payTo != '2' and payToLocation:
-            self.cleaned_data.pop('payToLocation',None)
-        if payTo != '3' and payToName:
-            self.cleaned_data.pop('payToName',None)
-
         if payBy == '1' and total:
             self.cleaned_data.pop('total',None)
         if payBy == '2' and hours:
@@ -186,7 +190,7 @@ class ExpenseReportingForm(forms.ModelForm):
 
     class Meta:
         model = ExpenseItem
-        fields = ['submissionUser','payToUser','payToLocation','payToName','category','description','hours','total','reimbursement','attachment','approved','paid','paymentDate','paymentMethod','accrualDate']
+        fields = ['submissionUser','payTo','category','description','hours','total','reimbursement','attachment','approved','paid','paymentDate','paymentMethod','accrualDate']
         widgets = {
             'category': ExpenseCategoryWidget,
         }
@@ -219,6 +223,25 @@ class InvoiceItemChoiceField(forms.ModelChoiceField):
 
 class RevenueReportingForm(forms.ModelForm):
     associateWith = forms.ChoiceField(widget=forms.RadioSelect, choices=REVENUE_ASSOCIATION_CHOICES,label=_('This revenue is associated with:'),initial=1)
+
+    receivedFrom = forms.ModelChoiceField(
+        queryset=TransactionParty.objects.all(),
+        label=_('Received from'),
+        required=False,
+        widget=autocomplete.ModelSelect2(
+            url='transactionParty-list-autocomplete',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a name or location'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 8,
+                'class': 'modern-style',
+            }
+        )
+    )
+
     currentlyHeldBy = forms.ModelChoiceField(
         queryset=User.objects.filter(Q(is_staff=True) | Q(staffmember__isnull=False)),
         label=_('Cash currently in possession of'),
@@ -289,7 +312,7 @@ class RevenueReportingForm(forms.ModelForm):
 
     class Meta:
         model = RevenueItem
-        fields = ['submissionUser','invoiceNumber','category','description','event','invoiceItem','receivedFromName','paymentMethod','currentlyHeldBy','total','attachment']
+        fields = ['submissionUser','invoiceNumber','category','description','event','invoiceItem','receivedFrom','paymentMethod','currentlyHeldBy','total','attachment']
 
     class Media:
         js = ('js/revenue_reporting.js',)

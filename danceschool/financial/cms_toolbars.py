@@ -95,3 +95,5 @@ class FinancialToolbar(CMSToolbar):
                 related_menu.add_link_item(_('Revenue Categories'), url=reverse('admin:financial_revenuecategory_changelist'))
             if self.request.user.has_perm('financial.change_revenueitem'):
                 related_menu.add_link_item(_('Revenue Items'), url=reverse('admin:financial_revenueitem_changelist'))
+            if self.request.user.has_perm('financial.change_transactionparty'):
+                related_menu.add_link_item(_('Transaction Parties'), url=reverse('admin:financial_transactionparty_changelist'))

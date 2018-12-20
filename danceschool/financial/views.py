@@ -93,7 +93,7 @@ class StaffMemberPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, D
         if not hasattr(staff_member,'userAccount'):
             return super(DetailView, self).get_context_data(staff_member=staff_member)
 
-        all_payments = getattr(staff_member.userAccount,'payToUser',ExpenseItem.objects.none()).filter(query_filter).order_by('-submissionDate')
+        all_payments = getattr(getattr(staff_member,'transactionparty'),'expenseitem_set',ExpenseItem.objects.none()).filter(query_filter).order_by('-submissionDate')
 
         paid_items = all_payments.filter(**{'paid':True,'reimbursement':False}).order_by('-paymentDate')
         unpaid_items = all_payments.filter(**{'paid':False}).order_by('-submissionDate')
@@ -143,7 +143,7 @@ class StaffMemberPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, D
 
     def render_to_csv(self, context):
         staff_member = context['staff_member']
-        if hasattr(staff_member.userAccount,'payToUser'):
+        if hasattr(getattr(staff_member,'transactionparty',None),'expenseitem_set'):
             all_expenses = context['all_payments']
         else:
             all_expenses = ExpenseItem.objects.none()
@@ -501,17 +501,17 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         # are broken out separately.
 
         context.update({
-            'instructionExpenseItems': expenseItems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).order_by('payToUser__last_name','payToUser__first_name'),
-            'venueExpenseItems': expenseItems.filter(category=getConstant('financial__venueRentalExpenseCat')).order_by('payToLocation__name'),
+            'instructionExpenseItems': expenseItems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).order_by('payTo__name'),
+            'venueExpenseItems': expenseItems.filter(category=getConstant('financial__venueRentalExpenseCat')).order_by('payTo__name'),
             'otherExpenseItems': expenseItems.exclude(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat'),getConstant('financial__venueRentalExpenseCat')]).order_by('category'),
             'expenseCategoryTotals': ExpenseCategory.objects.filter(expenseitem__in=expenseItems).annotate(category_total=Sum('expenseitem__total'),category_adjustments=Sum('expenseitem__adjustments'),category_fees=Sum('expenseitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') + F('category_fees')),
         })
         context.update({
-            'instructionExpenseInstructorTotals': User.objects.filter(payToUser__in=context['instructionExpenseItems']).annotate(instructor_total=Sum('payToUser__total'),instructor_adjustments=Sum('payToUser__adjustments'),instructor_fees=Sum('payToUser__fees')).annotate(instructor_net=F('instructor_total') + F('instructor_adjustments') + F('instructor_fees')),
-            'instructionExpenseOtherTotal': context['instructionExpenseItems'].filter(payToUser__isnull=True).annotate(net=F('total') + F('adjustments') + F('fees')).aggregate(instructor_total=Sum('total'),instructor_adjustments=Sum('adjustments'),instructor_fees=Sum('fees'),instructor_net=Sum('net')),
+            'instructionExpenseInstructorTotals': StaffMember.objects.filter(transactionparty__expenseitem__in=context['instructionExpenseItems']).annotate(instructor_total=Sum('transactionparty__expenseitem__total'),instructor_adjustments=Sum('transactionparty__expenseitem__adjustments'),instructor_fees=Sum('transactionparty__expenseitem__fees')).annotate(instructor_net=F('instructor_total') + F('instructor_adjustments') + F('instructor_fees')),
+            'instructionExpenseOtherTotal': context['instructionExpenseItems'].filter(payTo__staffMember__isnull=True).annotate(net=F('total') + F('adjustments') + F('fees')).aggregate(instructor_total=Sum('total'),instructor_adjustments=Sum('adjustments'),instructor_fees=Sum('fees'),instructor_net=Sum('net')),
 
-            'venueExpenseVenueTotals': Location.objects.filter(expenseitem__in=context['venueExpenseItems']).annotate(location_total=Sum('expenseitem__total'),location_adjustments=Sum('expenseitem__adjustments'),location_fees=Sum('expenseitem__fees')).annotate(location_net=F('location_total') + F('location_adjustments') + F('location_fees')),
-            'venueExpenseOtherTotal': context['venueExpenseItems'].filter(payToLocation__isnull=True).annotate(location_net=F('total') + F('adjustments') + F('fees')).aggregate(location_total=Sum('total'),location_adjustments=Sum('adjustments'),location_fees=Sum('fees'),location_net=Sum('net')),
+            'venueExpenseVenueTotals': Location.objects.filter(transactionparty__expenseitem__in=context['venueExpenseItems']).annotate(location_total=Sum('transactionparty__expenseitem__total'),location_adjustments=Sum('transactionparty__expenseitem__adjustments'),location_fees=Sum('transactionparty__expenseitem__fees')).annotate(location_net=F('location_total') + F('location_adjustments') + F('location_fees')),
+            'venueExpenseOtherTotal': context['venueExpenseItems'].filter(payTo__location__isnull=True).annotate(location_net=F('total') + F('adjustments') + F('fees')).aggregate(location_total=Sum('total'),location_adjustments=Sum('adjustments'),location_fees=Sum('fees'),location_net=Sum('net')),
 
             'totalInstructionExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id__in=[getConstant('financial__classInstructionExpenseCat').id,getConstant('financial__assistantClassInstructionExpenseCat').id])]),
             'totalVenueExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals'].filter(id=getConstant('financial__venueRentalExpenseCat').id)]),
