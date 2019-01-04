@@ -102,7 +102,7 @@
 			<td>{{ item.name }}</td>
 			<td>
 				{% for occ in item.finalEventRegistration.event.eventoccurrence_set.all %}
-					{{ occ.startTime|date:"M. jS" }{% if not forloop.last %}, {% endif %}
+					{{ occ.startTime|date:"M. jS" }}{% if not forloop.last %}, {% endif %}
 				{% endfor %}
 			</td>
 			<td id="item_price_{{ item.id }}">{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
