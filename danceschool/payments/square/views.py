@@ -299,6 +299,7 @@ def processPointOfSalePayment(request):
         return HttpResponseRedirect(sourceUrl)
 
     api_instance = TransactionsApi()
+    api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
     location_id = getattr(settings,'SQUARE_LOCATION_ID','')
 
     if serverTransId:

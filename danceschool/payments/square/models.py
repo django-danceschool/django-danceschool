@@ -77,6 +77,7 @@ class SquarePaymentRecord(PaymentRecord):
 
     def refund(self, amount=None):
         api_instance = TransactionsApi()
+        api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
         transaction = self.getPayment()
 
         # For both partial and full refunds, we loop through the tenders and refund
@@ -117,9 +118,9 @@ class SquarePaymentRecord(PaymentRecord):
                     logger.error('Error in providing Square refund: %s' % response.errors)
                     refundData.append({'status': 'error', 'status': response.errors})
                     break
-            except ApiException:
+            except ApiException as e:
                 logger.error('Error in providing Square refund.')
-                refundData.append({'status': 'error', 'errors': response.errors})
+                refundData.append({'status': 'error', 'errors': e})
                 break
 
             print('Refund was successful?  Data is: %s' % response)
