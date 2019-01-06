@@ -1,0 +1,33 @@
+{% load cms_tags i18n %}
+
+<form action="{% url 'stripeHandler' %}" method="POST" class="my-4">
+{% csrf_token %}
+<input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
+{% if user.is_authenticated %}
+  <input type="hidden" name="submissionUser" value="{{ user.id }}">
+{% endif %}
+{% if invoice %}
+  <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+  <input type="hidden" name="stripeAmount" value="{{ invoice.outstandingBalance }}">
+{% elif registration %}
+  <input type="hidden" name="reg_id" value="{{ registration.id }}">
+  <input type="hidden" name="stripeAmount" value="{{ registration.priceWithDiscountAndTaxes }}">
+{% endif %}
+
+<script
+  src="https://checkout.stripe.com/checkout.js" class="stripe-button"
+  data-key="{{ stripe_key }}"
+  data-name="{{ businessName }}"
+  data-image="https://stripe.com/img/documentation/checkout/marketplace.png"
+  data-locale="auto"
+  data-currency="{{ currencyCode }}"
+  {% if invoice %}
+      data-amount="{% widthratio invoice.outstandingBalance 1 100 %}"
+      data-description="{% trans "Invoice #" %}{{ invoice.id }}"
+  {% elif registration %}
+      data-amount="{% widthratio registration.priceWithDiscountAndTaxes 1 100 %}"
+      data-description="{% trans "Temporary Registration #" %}{{ registration.id}}"
+      data-email="{{ registration.email }}"
+  {% endif %}
+</script>
+</form>

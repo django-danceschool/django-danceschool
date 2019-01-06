@@ -1,0 +1,9 @@
+{% load crispy_forms_tags sekizai_tags %}
+<form action="{{ form.helper.form_action }}" method="POST" class="my-4">
+
+  {% crispy form %}
+
+{% addtoblock "js" %}
+	{{ form.media }}
+{% endaddtoblock %}
+</form>
