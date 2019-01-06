@@ -58,6 +58,6 @@ def handle_payatdoor(request):
             submissionUser=subUser,collectedByUser=subUser,
         )
 
-        if instance:
-            return HttpResponseRedirect(instance.successPage.get_absolute_url())
+        # Send users back to the invoice to confirm the successful payment.            
+        return HttpResponseRedirect(reverse('viewInvoice',kwargs={'pk': invoice.pk}))
     return HttpResponseBadRequest()
