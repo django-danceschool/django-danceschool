@@ -106,9 +106,9 @@ class TransactionParty(models.Model):
         ):
             self.user = self.staffMember.userAccount
         elif (
-            self.user and self.user.staffmember and not self.staffMember
+            self.user and getattr(self.user,'staffmember',None) and not self.staffMember
         ) or (
-            isinstance(updateBy,User) and self.user.staffMember
+            isinstance(updateBy,User) and getattr(self.user,'staffmember',None)
         ):
             self.staffMember = self.user.staffmember
 
