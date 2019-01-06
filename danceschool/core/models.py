@@ -661,8 +661,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         # Default grouping is "Other", in case session, month, or weekday are not specified.
         org = {
             'name': _('Other'),
-            'nameFirst': _('Other'),
-            'nameSecond': '',
+            'nameFirst': {'name': _('Other'), 'sorter': _('Other')},
+            'nameSecond': {'name': '', 'sorter': ''},
             'id': None,
         }
 
@@ -671,7 +671,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.month:
                 org.update({
                     'name': _(month_name[self.month]),
-                    'nameFirst': _(month_name[self.month]),
+                    'nameFirst': {'name': _(month_name[self.month]), 'sorter': self.month},
                     'id': 'month_%s' % self.month,
                 })
             return org
@@ -681,7 +681,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.session:
                 org.update({
                     'name': self.session.name,
-                    'nameFirst': self.session.name,
+                    'nameFirst': {'name': _(self.session.name), 'sorter': _(self.session.name)},
                     'id': self.session.pk,
                 })
             return org
@@ -698,8 +698,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.session and self.month:
                 org.update({
                     'name': _('%s: %s' % (month_name[self.month], self.session.name)),
-                    'nameFirst': _(month_name[self.month]),
-                    'nameSecond': _(self.session.name),
+                    'nameFirst': {'name': _(month_name[self.month]), 'sorter': self.month},
+                    'nameSecond': {'name': _(self.session.name), 'sorter': _(self.session.name)},
                     'id': 'month_%s_session_%s' % (self.month, self.session.pk),
                 })
             elif not self.month:
@@ -712,7 +712,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if w is not None:
                 org.update({
                     'name': _(d),
-                    'nameFirst': _(d),
+                    'nameFirst': {'name': _(d), 'sorter': w},
                     'id': w,
                 })
         elif rule == 'MonthWeekday':
@@ -723,8 +723,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if w is not None and m:
                 org.update({
                     'name': _('%ss in %s' % (d, mn)),
-                    'nameFirst': _(mn),
-                    'nameSecond': _('%ss' % d),
+                    'nameFirst': {'name': _(mn), 'sorter': m},
+                    'nameSecond': {'name': _('%ss' % d), 'sorter': w},
                     'id': 'month_%s_weekday_%s' % (m, w)
                 })
         return org

@@ -5,10 +5,10 @@
 <div class="selectclass">
     <h2>{% trans "Select an Event to View Registrations" %}</h2>
  
-    {% regroup event_list|dictsort:"organizer.nameFirst" by organizer.nameFirst as group_list %}
+    {% regroup event_list|dictsort:"organizer.nameFirst.sorter" by organizer.nameFirst.name as group_list %}
     {% for groupFirst in group_list %}
         <h4>{{ groupFirst.grouper }}</h4>
-        {% regroup groupFirst.list|dictsort:"organizer.nameSecond" by organizer.nameSecond as groupSecond_list %}
+        {% regroup groupFirst.list|dictsort:"organizer.nameSecond.sorter" by organizer.nameSecond.name as groupSecond_list %}
         {% for groupSecond in groupSecond_list %}
             {% if groupSecond.grouper %}<h5>{{ groupSecond.grouper }}</h5>{% endif %}
             <ul>            

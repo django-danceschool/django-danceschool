@@ -3,12 +3,12 @@
 
 <h2 class="mt-4 reg-section-header">{% trans group_header %}</h2>
 <hr />
-{% regroup group|dictsort:"organizer.nameFirst" by organizer.nameFirst as group_list %}
+{% regroup group|dictsort:"organizer.nameFirst.sorter" by organizer.nameFirst.name as group_list %}
 {% for groupFirst in group_list %}
   <div class="reg-section">
     <h3 class="mt-4">{{ groupFirst.grouper }} {% trans group_section %}</h3>
     <div class="reg-event-group mt-4">
-      {% regroup groupFirst.list|dictsort:"organizer.nameSecond" by organizer.nameSecond as groupSecond_list %}
+      {% regroup groupFirst.list|dictsort:"organizer.nameSecond.sorter" by organizer.nameSecond.name as groupSecond_list %}
       {% for groupSecond in groupSecond_list %}
         {% if groupSecond.grouper is not None %}
             <h4 class="reg-groupsecond-header">{{ groupSecond.grouper }}</h4>
