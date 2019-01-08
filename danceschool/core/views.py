@@ -12,6 +12,7 @@ from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 from calendar import month_name
 from datetime import datetime, timedelta
@@ -29,7 +30,7 @@ from .forms import (SubstituteReportingForm, StaffMemberBioChangeForm, RefundFor
                     RepeatEventForm, InvoiceNotificationForm)
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import (EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin,
-                     AdminSuccessURLMixin, EventOrderMixin)
+                     AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin)
 from .signals import get_customer_data
 from .utils.requests import getIntFromGet
 from .utils.timezone import ensure_localtime, ensure_timezone
@@ -58,7 +59,7 @@ class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, List
         )
 
 
-class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
+class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, DetailView):
     '''
     This view is used to access the set of registrations for a given series or event
     '''
@@ -67,10 +68,15 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
 
     def get_object(self, queryset=None):
         return get_object_or_404(
-            Event.objects.filter(id=self.kwargs.get('series_id')))
+            Event.objects.filter(id=self.kwargs.get('event_id')))
 
     def get_context_data(self, **kwargs):
         ''' Add the list of registrations for the given series '''
+
+        # Update the site session data so that registration processes know to send return links to
+        # the view class registrations page.  set_return_page() is in SiteHistoryMixin.
+        self.set_return_page('viewregistrations',_('View Registrations'),event_id=self.object.id)
+
         context = {
             'event': self.object,
             'registrations': EventRegistration.objects.filter(
@@ -86,20 +92,28 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, DetailView):
 # Used for various form submission redirects (called by the AdminSuccessURLMixin)
 
 
-class SubmissionRedirectView(TemplateView):
+class SubmissionRedirectView(SiteHistoryMixin, TemplateView):
     template_name = 'cms/forms/submission_redirect.html'
 
     def get_context_data(self, **kwargs):
+        '''
+        The URL to redirect to can be explicitly specified, or it can come
+        from the site session history, or it can be the default admin success page
+        as specified in the site settings.
+        '''
+
         context = super(SubmissionRedirectView, self).get_context_data(**kwargs)
 
-        try:
-            redirect_url = unquote(self.request.GET.get('redirect_url', ''))
-            if not redirect_url:
+        redirect_url = unquote(self.request.GET.get('redirect_url', ''))
+        if not redirect_url:
+            redirect_url = self.get_return_page().get('url','')
+        if not redirect_url:
+            try:
                 redirect_url = Page.objects.get(
                     pk=getConstant('general__defaultAdminSuccessPage')
                 ).get_absolute_url(settings.LANGUAGE_CODE)
-        except ObjectDoesNotExist:
-            redirect_url = '/'
+            except ObjectDoesNotExist:
+                redirect_url = '/'
 
         context.update({
             'redirect_url': redirect_url,
@@ -112,7 +126,7 @@ class SubmissionRedirectView(TemplateView):
 # For Viewing Invoices and sending notifications
 
 
-class ViewInvoiceView(AccessMixin, FinancialContextMixin, DetailView):
+class ViewInvoiceView(AccessMixin, FinancialContextMixin, SiteHistoryMixin, DetailView):
     template_name = 'core/invoice.html'
     model = Invoice
 
@@ -133,6 +147,10 @@ class ViewInvoiceView(AccessMixin, FinancialContextMixin, DetailView):
             'invoice': self.object,
             'payments': self.get_payments(),
         })
+
+        # Update the session data so that subsequent views return to this page.
+        self.set_return_page('viewInvoice',_('Invoice'),pk=str(self.object.pk))
+
         return context
 
     def get_payments(self):

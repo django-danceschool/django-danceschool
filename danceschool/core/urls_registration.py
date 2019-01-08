@@ -22,8 +22,7 @@ urlpatterns = [
 
     # These are the URLs affiliated with viewing registrations and check-in
     url(r'^registrations/$',EventRegistrationSelectView.as_view(), name='viewregistrations_selectevent'),
-    url(r'^registrations/(?P<series_id>[0-9]+)/$', EventRegistrationSummaryView.as_view(), name='viewregistrations'),
-    url(r'^registrations/(?P<series_id>[0-9]+)/$', EventRegistrationSummaryView.as_view(), name='viewregistrations'),
+    url(r'^registrations/(?P<event_id>[0-9]+)/$', EventRegistrationSummaryView.as_view(), name='viewregistrations'),
     url(r'^registrations/checkin/$', processCheckIn, name='formhandler_checkin'),
 
     # These URLs are associated with viewing individual invoices and sending notifications

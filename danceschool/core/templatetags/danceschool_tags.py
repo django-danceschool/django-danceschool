@@ -8,6 +8,7 @@ import re
 
 from danceschool.core.models import Event, DanceRole, Instructor, Location
 from danceschool.core.constants import getConstant
+from danceschool.core.helpers import getReturnPage as returnPageHelper
 
 # This is needed to register all the tags
 register = template.Library()
@@ -166,3 +167,15 @@ def getStatusValue(obj, value):
 def camelSpace(obj):
     ''' Add spaces in camelCase words '''
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', obj)
+
+
+@register.simple_tag(takes_context=True)
+def getReturnPage(context, prior=False):
+    '''
+    This tag makes it easy to get return links from within a template without
+    requiring custom logic inside the view.  Just include
+    {% getReturnPage as returnPage %} and then reference {{ returnPage.url }}
+    and {{ returnPage.title }} as needed.
+    '''
+    siteHistory = getattr(context.get('request',None),'session',{}).get('SITE_HISTORY',{})
+    return returnPageHelper(siteHistory,prior=prior)

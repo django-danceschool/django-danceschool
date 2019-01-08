@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
 from danceschool.core.models import Invoice, TemporaryRegistration, CashPaymentRecord
+from danceschool.core.helpers import getReturnPage
 
 from .forms import WillPayAtDoorForm, DoorPaymentForm
 from .models import PayAtDoorFormModel
@@ -44,11 +45,12 @@ def handle_payatdoor(request):
 
     if form.is_valid():
         invoice = form.cleaned_data.get('invoice')
-        instance = form.cleaned_data.get('instance')
         amountPaid = form.cleaned_data.get('amountPaid')
         subUser = form.cleaned_data.get('submissionUser')
+        event = form.cleaned_data.get('event')
+        sourcePage = form.cleaned_data.get('sourcePage')
 
-        payment = CashPaymentRecord.objects.create(
+        CashPaymentRecord.objects.create(
             invoice=invoice,amount=amountPaid,
             status=CashPaymentRecord.PaymentStatus.collected,
             submissionUser=subUser,collectedByUser=subUser,
@@ -58,6 +60,10 @@ def handle_payatdoor(request):
             submissionUser=subUser,collectedByUser=subUser,
         )
 
-        # Send users back to the invoice to confirm the successful payment.            
-        return HttpResponseRedirect(reverse('viewInvoice',kwargs={'pk': invoice.pk}))
+        # Send users back to the invoice to confirm the successful payment.
+        # If none is specified, then return to the registration page.
+        returnPage = getReturnPage(request.session.get('SITE_HISTORY',{}))
+        if returnPage.get('url'):
+            return HttpResponseRedirect(returnPage['url'])
+        return HttpResponseRedirect(reverse('registration'))
     return HttpResponseBadRequest()

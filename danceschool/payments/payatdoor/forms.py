@@ -13,7 +13,7 @@ from random import random
 import json
 import logging
 
-from danceschool.core.models import Invoice, TemporaryRegistration
+from danceschool.core.models import Invoice, TemporaryRegistration, Event
 from .models import PayAtDoorFormModel
 
 
@@ -126,7 +126,7 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
             }
         )
     )
-    amountPaid = forms.FloatField(label=_('Amount Paid'),required=True)
+    amountPaid = forms.FloatField(label=_('Amount Paid'),required=True,min_value=0)
 
     def __init__(self,*args,**kwargs):
         subUser = kwargs.pop('user','')

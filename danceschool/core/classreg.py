@@ -18,7 +18,7 @@ from .models import Event, Series, PublicEvent, TemporaryRegistration, Temporary
 from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import post_student_info, request_discounts, apply_discount, apply_addons, apply_price_adjustments
-from .mixins import FinancialContextMixin, EventOrderMixin
+from .mixins import FinancialContextMixin, EventOrderMixin, SiteHistoryMixin
 
 
 # Define logger for this file
@@ -55,7 +55,7 @@ class ClassRegistrationReferralView(RedirectView):
         return super(ClassRegistrationReferralView,self).get(request,*args,**kwargs)
 
 
-class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, FormView):
+class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin, FormView):
     '''
     This is the main view that is called from the class registration page.
     '''
@@ -75,6 +75,10 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, FormView):
         context = self.get_listing()
         context['showDescriptionRule'] = getConstant('registration__showDescriptionRule') or 'all'
         context.update(kwargs)
+
+        # Update the site session data so that registration processes know to send return links to
+        # the registration page.  set_return_page() is in SiteHistoryMixin.
+        self.set_return_page('registration',_('Registration'))
 
         return super(ClassRegistrationView,self).get_context_data(**context)
 

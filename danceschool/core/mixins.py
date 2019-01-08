@@ -5,6 +5,8 @@ from django.core.urlresolvers import reverse
 from django.db.models import Case, When, F, Q, IntegerField, ExpressionWrapper
 from django.db.models.functions import ExtractWeekDay
 from django.forms import ModelForm, ChoiceField, Media
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template, render_to_string
 from django.template import Template, Context
@@ -15,10 +17,12 @@ from braces.views import GroupRequiredMixin
 from urllib.parse import quote
 from six import string_types
 import re
+from datetime import timedelta
 
 from .constants import getConstant
 from .tasks import sendEmail
 from .registries import plugin_templates_registry
+from .helpers import getReturnPage
 
 
 class EmailRecipientMixin(object):
@@ -451,3 +455,36 @@ class EventOrderMixin(object):
         reverseTime = getattr(self,'reverse_time_ordering',reverseTime)
         timeParameter = '-startTime' if reverseTime is True else 'startTime'
         return ('nullParam', 'paramOne', 'paramTwo', timeParameter)
+
+
+class SiteHistoryMixin(object):
+    '''
+    This mixin provides convenience methods for updating session data to keep track of
+    the logical place in the registration process (e.g. registration page, viewing of
+    event registrations, etc.) that was last accessed, so that successful form submissions
+    can automatically return to a logical place.
+    '''
+
+    def set_return_page(self,namedUrl,pageName='',**kwargs):
+        expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+        siteHistory = self.request.session.get('SITE_HISTORY',{})
+
+        updates = {
+            'returnPage': (namedUrl, kwargs),
+            'returnPageName': str(pageName),
+            'expiry': expiry.strftime('%Y-%m-%dT%H:%M:%S%z'),
+        }
+
+        if list(siteHistory.get('returnPage',[])) != list(updates['returnPage']):
+            updates.update({
+                'priorPage': siteHistory.get('returnPage',(None,{})),
+                'priorPageName': siteHistory.get('returnPageName', ''),
+            })
+
+        siteHistory.update(updates)
+        self.request.session['SITE_HISTORY'] = siteHistory
+
+    def get_return_page(self,prior=False):
+        ''' This is just a wrapper for the getReturnPage helper function. '''
+        siteHistory = self.request.session.get('SITE_HISTORY',{})
+        return getReturnPage(siteHistory,prior=prior)

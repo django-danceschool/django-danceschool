@@ -11,6 +11,12 @@
 {% endif %}
 </h3>
 
+{% getReturnPage as returnPage %}
+{% if returnPage.url %}
+	<p><a class="btn btn-outline-secondary" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+{% endif %}
+
+
 <dl class="card card-body">
 	<dt>{% trans "Date &amp; Time" %}:</dt><dd>{{ invoice.creationDate|date:'DATETIME_FORMAT' }}</dd>
 	<dt>{% trans "Net Amount Paid" %}:</dt><dd>{{ invoice.amountPaid }}</dd>
@@ -128,10 +134,14 @@
 
 <hr />
 
-<p>
-	<a class="btn btn-secondary btn-sm" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
-	<a class="btn btn-secondary btn-sm" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Event" %}</a>
-</p>
+{% if returnPage.url %}
+	<p><a class="btn btn-outline-secondary" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+{% else %}
+	<p>
+		<a class="btn btn-outline-secondary" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
+		<a class="btn btn-outline-secondary" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Event" %}</a>
+	</p>
+{% endif %}
 
 {% addtoblock "js" %}
 <script type="text/javascript">

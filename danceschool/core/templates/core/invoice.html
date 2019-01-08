@@ -3,6 +3,11 @@
 
 {% block content %}
 
+{% getReturnPage prior=True as returnPage %}
+{% if returnPage.url %}
+	<p><a class="btn btn-outline-secondary float-right" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+{% endif %}
+
 <h1>{% blocktrans %}Invoice for {{ businessName }}{% endblocktrans %}:</h1>
 
 <dl>
@@ -12,7 +17,7 @@
 	{% if object.firstName or object.lastName or object.email %}
 	<dt>{% trans "Recipient" %}:</dt>
 	<dd>{% if object.firstName or object.lastName %}{{ object.firstName }} {{ object.lastName }}: {% endif %}{{ object.email|default:"unknown email" }}
-	{% if "core.send_invoices" in perms and object.email %}<a class="btn btn-secondary btn-sm" href="{% url 'sendInvoiceNotifications' object.id %}">{% trans "Notify Recipient" %}</a>{% endif %}
+	{% if "core.send_invoices" in perms and object.email %}<a class="btn btn-outline-secondary btn-sm" href="{% url 'sendInvoiceNotifications' object.id %}">{% trans "Notify Recipient" %}</a>{% endif %}
 	</dd>
 	{% endif %}
 
@@ -90,7 +95,7 @@
 		{% if 'financial.change_revenueitem' in perms %}
 			<td>
 				{% if item.revenueitem %}
-					<a class="btn btn-secondary btn-sm" href="{% url 'admin:financial_revenueitem_change' item.revenueitem.id %}">{% trans "Rev. Item" %}</a>
+					<a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_revenueitem_change' item.revenueitem.id %}">{% trans "Rev. Item" %}</a>
 				{% endif %}
 			</td>
 		{% endif %}
@@ -138,6 +143,10 @@
 	<h2>{% trans "Pay Invoice" %}</h2>
 
 	{% static_placeholder "registration_payment_placeholder" %}
+{% endif %}
+
+{% if returnPage.url %}
+	<p class="my-4 clearfix"><a class="btn btn-outline-secondary float-right" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
 {% endif %}
 
 {% endblock %}
