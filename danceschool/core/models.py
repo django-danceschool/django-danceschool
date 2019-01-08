@@ -768,7 +768,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         This method is also generally overridden by subclasses of this class, but it is
         defined here to ensure that the method always exists when looping through events.
         '''
-        return None
+        return 0
 
     # For standard subclasses, basePrice is the non-student, online registration price.
     basePrice = property(fget=getBasePrice)
@@ -1048,10 +1048,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             self.RegStatus.linkOnly,
         ]
 
-        if self.status in force_closed_codes and open is True:
+        if (self.status in force_closed_codes or not self.pricingTier) and open is True:
             open = False
             modified = True
-        elif self.status in force_open_codes and open is False:
+        elif not self.pricingTier:
+            open = False
+            modified = False
+        elif (self.status in force_open_codes and self.pricingTier) and open is False:
             open = True
             modified = True
         elif (
@@ -1077,6 +1080,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     def clean(self):
         if self.status in [Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen] and not self.capacity:
             raise ValidationError(_('If registration is enabled then a capacity must be set.'))
+        if self.status in [Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen] and not self.pricingTier:
+            raise ValidationError(_('If registration is enabled then a pricing tier must be set.'))
         if self.room and self.location and self.room.location != self.location:
             raise ValidationError(_('Selected room is not part of selected location.'))
 
@@ -1349,7 +1354,7 @@ class Series(Event):
         the appropriate price for it.
         '''
         if not self.pricingTier:
-            return None
+            return 0
         return self.pricingTier.getBasePrice(**kwargs)
 
     # base price is the non-student, online registration price.
@@ -1581,7 +1586,7 @@ class PublicEvent(Event):
         the appropriate price for it.
         '''
         if not self.pricingTier:
-            return None
+            return 0
         return self.pricingTier.getBasePrice(**kwargs)
 
     # The base price is the non-student, online registration price.
