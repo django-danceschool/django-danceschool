@@ -1,6 +1,18 @@
 Version History
 ===============
 
+0.8.0 - January 8, 2018
+-----------------------
+
+**NOTE**: The upgrade to version 0.8.0 makes database migrations in the way that financial records are kept that are not designed to be reversed.  It is *strongly* recommended that you backup your site's database immediately before upgrading.
+
+- **NEW**: Pay at the door payment processor app that allows customers to commit to pay at the door, and individuals running registration at the door to rapidly process at-the-door cash payments.
+- Substantial under-the-hood improvements to the way in which financial records keep track of transaction parties.
+- Month and weekday names now sort logically rather than alphabetically in EventListPlugin as well as registration pages.
+- New site-history helper function that improves UX in the admin by redirecting users back to the appropriate previous pages.
+- Fixed issues with Square point-of-sale and refund processing callbacks arising from an API change.
+- Fixed version incompatibility with Django-easy-pdf (for gift certificates)
+
 0.7.2 - November 20, 2018
 -------------------------
 
