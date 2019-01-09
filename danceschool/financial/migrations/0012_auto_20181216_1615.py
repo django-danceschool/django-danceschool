@@ -10,6 +10,17 @@ import django.db.models.deletion
 from itertools import chain
 
 
+def getFullName(obj):
+    '''
+    This function replaces the fullName property for StaffMembers and the
+    get_full_name() method for Users, since those methods are not available
+    in the migration.
+    '''
+    if hasattr(obj,'firstName') and hasattr(obj,'lastName'):
+        return ' '.join([obj.firstName or '',obj.lastName or ''])
+    return ' '.join([getattr(obj,'first_name',''),getattr(obj,'last_name','')])
+
+
 def createPartyFromName(apps, name):
     '''
     For creating/matching TransactionParty objects using names alone.
@@ -37,7 +48,7 @@ def createPartyFromName(apps, name):
         party = TransactionParty.objects.get_or_create(
             staffMember=this_member,
             defaults={
-                'name': this_member.fullName,
+                'name': getFullName(this_member),
                 'staffMember': this_member.userAccount,
             }
         )[0]
@@ -46,7 +57,7 @@ def createPartyFromName(apps, name):
         party = TransactionParty.objects.get_or_create(
             user=this_user,
             defaults={
-                'name': this_user.get_full_name(),
+                'name': getFullName(this_user),
                 'staffMember': getattr(this_user,'staffmember',None),
             }
         )[0]
@@ -82,7 +93,7 @@ def update_payTo(apps, schema_editor):
             party = TransactionParty.objects.get_or_create(
                 user=item.payToUser,
                 defaults={
-                    'name': item.payToUser.get_full_name(),
+                    'name': getFullName(item.payToUser),
                     'staffMember': getattr(item.payToUser,'staffmember',None),
                 }
             )[0]
