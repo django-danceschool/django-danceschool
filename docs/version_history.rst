@@ -1,7 +1,15 @@
 Version History
 ===============
 
-0.8.0 - January 8, 2018
+0.8.1 - January 9, 2019
+-----------------------
+
+**NOTE**: To avoid an issue in migrations, it is recommended to upgrade directly to this version or higher and skip
+version 0.8.0.
+
+- Fixed issue with financial app migration arising from lack of User and StaffMember methods available in migration.
+
+0.8.0 - January 8, 2019
 -----------------------
 
 **NOTE**: The upgrade to version 0.8.0 makes database migrations in the way that financial records are kept that are not designed to be reversed.  It is *strongly* recommended that you backup your site's database immediately before upgrading.
