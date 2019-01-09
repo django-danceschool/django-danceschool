@@ -24,8 +24,8 @@ class SquarePaymentRecord(PaymentRecord):
     using the REST API.
     '''
 
-    transactionId = models.CharField(_('Square Transaction ID'),max_length=50,unique=True)
-    locationId = models.CharField(_('Square Location ID'),max_length=50)
+    transactionId = models.CharField(_('Square Transaction ID'),max_length=100,unique=True)
+    locationId = models.CharField(_('Square Location ID'),max_length=100)
     payerEmail = models.EmailField(_('Associated email'), null=True, blank=True)
 
     @property
