@@ -144,26 +144,6 @@ def numRegisteredForRoleName(event, roleName):
 
 
 @register.filter
-def getStatusValue(obj, value):
-    '''
-    Several model fields use the DjangoChoices app for cleaner
-    enum-type value storage of status variables.  This gets the label for a passed value
-    associated with one of these fields.
-    '''
-    if isinstance(obj, Event):
-        choice_dict = Event.RegStatus.values
-    elif isinstance(obj, Instructor):
-        choice_dict = Instructor.InstructorStatus.values
-    elif isinstance(obj, Location):
-        choice_dict = Location.StatusChoices.values
-    else:
-        return None
-
-    # All these classes store choice information in the status field.
-    return choice_dict.get(obj.status) or obj.status
-
-
-@register.filter
 def camelSpace(obj):
     ''' Add spaces in camelCase words '''
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', obj)
