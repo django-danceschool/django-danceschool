@@ -46,7 +46,7 @@ version 0.8.0.
 - Improved management of staff members and instructors in the admin (Instructor is now non-polymorphic).
 - Misc. bug fixes and improvements.
 
-0.6.3 - September 19, 2018
+0.6.3 - September 21, 2018
 --------------------------
 
 - Fixed bug that led EventListPlugin instances to differ between draft and publication.
