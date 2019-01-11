@@ -263,6 +263,13 @@ class Instructor(models.Model):
         return self.InstructorStatus.values.get(self.status,'')
     statusLabel.fget.short_description = _('Status')
 
+    @property
+    def fullName(self):
+        return self.staffMember.fullName
+
+    def __str__(self):
+        return self.fullName
+
     class Meta:
         verbose_name = _('Instructor')
         verbose_name_plural = _('Instructors')
@@ -366,6 +373,11 @@ class Location(models.Model):
         Allows for easy viewing of location-specific calendar feeds.
         '''
         return reverse('jsonCalendarLocationFeed', args=(self.id,))
+
+    @property
+    def statusLabel(self):
+        return self.StatusChoices.values.get(self.status,'')
+    statusLabel.fget.short_description = _('Status')
 
     def __str__(self):
         return self.name
@@ -884,6 +896,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         ''' Just checks if this event ever permits/permitted registration '''
         return self.status in [self.RegStatus.enabled,self.RegStatus.heldOpen,self.RegStatus.heldClosed]
     registrationEnabled.fget.short_description = _('Registration enabled')
+
+    @property
+    def statusLabel(self):
+        return self.RegStatus.values.get(self.status,'')
+    statusLabel.fget.short_description = _('Status')
 
     @property
     def numDropIns(self, includeTemporaryRegs=False):
