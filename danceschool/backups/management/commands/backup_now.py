@@ -23,7 +23,7 @@ class Command(BaseCommand):
                 'BACKUP_LOCATION must be updated in project settings.py.'
             )
             return None
-        backup_loc = os.path.join(backup_folder,'%s%s.json' % (getConstant('backups__filePrefix'), timezone.now().strftime('%Y%m%d')))
+        backup_loc = os.path.join(backup_folder,'%s%s.json' % (getConstant('backups__filePrefix'), timezone.now().strftime('%Y%m%d%H%M%S')))
 
         if not getConstant('backups__enableDataBackups'):
             logger.info('Aborting backup because backups are not enabled in global settings.')
