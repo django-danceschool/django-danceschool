@@ -104,9 +104,11 @@
 		 		<div class="card mt-4">
 	 				<h6 class="card-header">{% trans "Immediate Payment" %}</h6>
 		 			<div class="card-body">
-		 	{% endif %}
 
-		 	{% static_placeholder "registration_payment_placeholder" %}
+					{% static_placeholder "registration_payatdoor_placeholder" %}
+			{% else %}
+				{% static_placeholder "registration_payment_placeholder" %}
+			{% endif %}
 
 		 	{% if payAtDoor %}
 		 			</div>

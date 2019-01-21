@@ -142,7 +142,11 @@
 	<hr />
 	<h2>{% trans "Pay Invoice" %}</h2>
 
-	{% static_placeholder "registration_payment_placeholder" %}
+	{% if user_has_permissions and not user_has_validation_string %}
+		{% static_placeholder "registration_payatdoor_placeholder" %}
+	{% else %}
+		{% static_placeholder "registration_payment_placeholder" %}
+	{% endif %}
 {% endif %}
 
 {% if returnPage.url %}

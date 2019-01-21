@@ -159,14 +159,14 @@ Notes for Checkout integration
                         """
                     )
 
-        add_square_pos = self.boolean_input('Add Square point-of-sale button to the registration summary view to allow students to pay [Y/n]', True)
+        add_square_pos = self.boolean_input('Add Square point-of-sale button for at-the-door payments to allow students to pay [Y/n]', True)
         if add_square_pos:
             home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Square point-of-sale button because a home page has not yet been set.'))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
+                checkout_sp = StaticPlaceholder.objects.get_or_create(code='registration_payatdoor_placeholder')
                 checkout_p_draft = checkout_sp[0].draft
                 checkout_p_public = checkout_sp[0].public
 
@@ -222,6 +222,31 @@ Notes for point-of-sale integration
 
                         """ % (Site.objects.get_current().domain,reverse('processSquarePointOfSale'))
                     )
+
+        add_square_checkout_atdoor = self.boolean_input('Add Square Checkout form for at-the-door payments in case point-of-sale is not working [y/N]', False)
+        if add_square_checkout_atdoor:
+            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+            if not home_page:
+                self.stdout.write(self.style.ERROR('Cannot add Square Checkout form because a home page has not yet been set.'))
+                foundErrors = True
+            else:
+                checkout_sp = StaticPlaceholder.objects.get_or_create(code='registration_payatdoor_placeholder')
+                checkout_p_draft = checkout_sp[0].draft
+                checkout_p_public = checkout_sp[0].public
+
+                if checkout_p_public.get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
+                    self.stdout.write('Square checkout form already present for at-the-door transactions.')
+                else:
+                    add_plugin(
+                        checkout_p_draft, 'SquareCheckoutFormPlugin', initial_language,
+                        successPage=home_page,
+                    )
+                    add_plugin(
+                        checkout_p_public, 'SquareCheckoutFormPlugin', initial_language,
+                        successPage=home_page,
+                    )
+                    self.stdout.write('Square Checkout form added for at-the-door transcations.')
+
         if not foundErrors:
             self.stdout.write(self.style.SUCCESS('Square setup complete.'))
         else:

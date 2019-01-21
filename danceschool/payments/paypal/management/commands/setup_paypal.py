@@ -95,19 +95,25 @@ CHECKING PAYPAL INTEGRATION
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Pay Now link because a home page has not yet been set.'))
             else:
-                paynow_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
-                paynow_p_draft = paynow_sp[0].draft
-                paynow_p_public = paynow_sp[0].public
+                placeholders = [
+                    ('registration_payment_placeholder','online registrations'),
+                    ('registration_payatdoor_placeholder','at-the-door payments')
+                ]
 
-                if paynow_p_public.get_plugins().filter(plugin_type='CartPaymentFormPlugin').exists():
-                    self.stdout.write('Paypal Pay Now button already present.')
-                else:
-                    add_plugin(
-                        paynow_p_draft, 'CartPaymentFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    add_plugin(
-                        paynow_p_public, 'CartPaymentFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    self.stdout.write('Paypal Pay Now link added.')
+                for p in in placeholders:
+                    paynow_sp = StaticPlaceholder.objects.get_or_create(code=p[0])
+                    paynow_p_draft = paynow_sp[0].draft
+                    paynow_p_public = paynow_sp[0].public
+
+                    if paynow_p_public.get_plugins().filter(plugin_type='CartPaymentFormPlugin').exists():
+                        self.stdout.write('Paypal Pay Now button already present for %s.' % p[1])
+                    else:
+                        add_plugin(
+                            paynow_p_draft, 'CartPaymentFormPlugin', initial_language,
+                            successPage=home_page,
+                        )
+                        add_plugin(
+                            paynow_p_public, 'CartPaymentFormPlugin', initial_language,
+                            successPage=home_page,
+                        )
+                        self.stdout.write('Paypal Pay Now link added for %s.' % p[1])

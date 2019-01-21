@@ -135,10 +135,19 @@ class ViewInvoiceView(AccessMixin, FinancialContextMixin, SiteHistoryMixin, Deta
         Invoices can be viewed only if the validation string is provided, unless
         the user is logged in and has view_all_invoice permissions
         '''
-        user_has_validation_string = self.get_object().validationString
+        self.object = self.get_object()
         user_has_permissions = request.user.has_perm('core.view_all_invoices')
-        if request.GET.get('v', None) == user_has_validation_string or user_has_permissions:
-            return super(ViewInvoiceView, self).get(request, *args, **kwargs)
+        user_has_validation_string = (
+            request.GET.get('v', None) == self.object.validationString
+        )
+        
+        if user_has_validation_string or user_has_permissions:
+            context = self.get_context_data(
+                object=self.object,
+                user_has_permissions=user_has_permissions
+                user_has_validation_string=user_has_validation_string
+            )
+            return self.render_to_response(context)
         return self.handle_no_permission()
 
     def get_context_data(self, **kwargs):

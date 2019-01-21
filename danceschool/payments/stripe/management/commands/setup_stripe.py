@@ -84,19 +84,25 @@ CHECKING STRIPE INTEGRATION
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Stripe checkout link because a home page has not yet been set.'))
             else:
-                stripe_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
-                stripe_p_draft = stripe_sp[0].draft
-                stripe_p_public = stripe_sp[0].public
+                placeholders = [
+                    ('registration_payment_placeholder','online registrations'),
+                    ('registration_payatdoor_placeholder','at-the-door payments')
+                ]
 
-                if stripe_p_public.get_plugins().filter(plugin_type='StripePaymentFormPlugin').exists():
-                    self.stdout.write('Stripe Checkout button already present.')
-                else:
-                    add_plugin(
-                        stripe_p_draft, 'StripePaymentFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    add_plugin(
-                        stripe_p_public, 'StripePaymentFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    self.stdout.write('Stripe checkout link added.')
+                for p in in placeholders:
+                    stripe_sp = StaticPlaceholder.objects.get_or_create(code=p[0])
+                    stripe_p_draft = stripe_sp[0].draft
+                    stripe_p_public = stripe_sp[0].public
+
+                    if stripe_p_public.get_plugins().filter(plugin_type='StripePaymentFormPlugin').exists():
+                        self.stdout.write('Stripe Checkout button already present for %s.' % p[1])
+                    else:
+                        add_plugin(
+                            stripe_p_draft, 'StripePaymentFormPlugin', initial_language,
+                            successPage=home_page,
+                        )
+                        add_plugin(
+                            stripe_p_public, 'StripePaymentFormPlugin', initial_language,
+                            successPage=home_page,
+                        )
+                        self.stdout.write('Stripe checkout link added for %s.' % p[1])
