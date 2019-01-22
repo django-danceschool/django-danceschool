@@ -7,7 +7,7 @@ from cms.models.pluginmodel import CMSPlugin
 
 from datetime import datetime, timedelta
 
-from .models import StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, StaffMember, Event, Series, PublicEvent, Location
+from .models import StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent, Location
 from .mixins import PluginTemplateMixin
 from .registries import plugin_templates_registry, PluginTemplateBase
 
