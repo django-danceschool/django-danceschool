@@ -79,7 +79,7 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
             user__customer__isnull=True
         )
 
-        logger.info("Found user {} to associate with customer {}.".format(verified_email.user.id, customer.id))
+        logger.info("Found user %s to associate with customer %s.", verified_email.user.id, customer.id)
 
         customer.user = verified_email.user
         customer.save()
@@ -89,13 +89,11 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
             customer.user.last_name = customer.last_name
             customer.user.save()
     except ObjectDoesNotExist:
-        logger.info("No user found to associate with customer {}.".format(customer.id))
-    except MultipleObjectsReturned as e:
+        logger.info("No user found to associate with customer %s.", customer.id)
+    except MultipleObjectsReturned:
         # This should never happen, as email should be unique in the db table account_emailaddress.
         # If it does, something's broken in the database or Django.
-        logger.error(
-            "Something's not right with the database: more than one entry found on the database for the email {}. "
-            "This duplicate key value violates unique constraint \"account_emailaddress_email_key\". "
-            "The email field should be unique for each account.".format(customer.email))
-        logger.error("Exception:")
-        logger.error(e)
+        errmsg = "Something's not right with the database: more than one entry found on the database for the email %s. \
+             This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
+             The email field should be unique for each account.\n"
+        logger.exception(errmsg, customer.email)
