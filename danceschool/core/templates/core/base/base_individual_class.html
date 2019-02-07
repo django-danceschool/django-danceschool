@@ -40,7 +40,7 @@
 			<div class="row mb-4">
 			{% for teacher in series.teachers %}
 				{% if teacher.image %}
-					<img src="{% thumbnail teacher.image 118x118 crop %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="float-right" style="margin: 5px;" />
+					<img src="{% thumbnail teacher.image 118x118 crop %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="float-right" style="margin: 5px;" /> 
 				{% endif %}
 			{% endfor %}
 			</div>
@@ -73,7 +73,7 @@
 			</h4>
 
 			{% if series.teachers %}
-				<h4 class="instructor-names">{% trans "with" %}
+				<h4 class="instructor-names">{% trans "with" %} 
 				{% for teacher in series.teachers %}
 						{{ teacher.firstName }} {{ teacher.lastName }}{% if not forloop.last %} {% trans "and" %} {% endif %}
 				{% endfor %}
@@ -101,7 +101,7 @@
 			</p>
 			{% endif %}
 		</div>
-	</div>
+	</div>	
 
 	<hr />
 
@@ -119,9 +119,9 @@
 	{% addtoblock "js" %}
 		<script type="text/javascript">
 		$( document ).ready(function() {
-			$('.pricingPopover').popover();
+			$('.pricingPopover').popover();	
 		});
 		</script>
 	{% endaddtoblock %}
-
+	
 {% endblock %}
