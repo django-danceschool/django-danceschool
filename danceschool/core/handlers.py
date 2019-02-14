@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.dispatch import receiver
 
 from allauth.account.signals import email_confirmed
@@ -52,7 +53,7 @@ def linkUserToMostRecentCustomer(sender,**kwargs):
 
 @receiver(post_registration)
 def linkCustomerToVerifiedUser(sender, **kwargs):
-    '''
+    """
     If a Registration is processed in which the associated Customer does not yet
     have a User, then check to see if the Customer's email address has been
     verified as belonging to a specific User, and if that User has an associated
@@ -60,8 +61,8 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
     User.  This way, if a new User verifies their email account before they have
     submitted any Registrations, their Customer account is seamlessly linked when
     they do complete their first Registration.
-    '''
-    registration = kwargs.get('registration',None)
+    """
+    registration = kwargs.get('registration', None)
 
     if not registration or (hasattr(registration.customer,'user') and registration.customer.user):
         return
@@ -70,15 +71,15 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
 
     customer = registration.customer
 
-    verified_email = EmailAddress.objects.filter(
-        email=customer.email,
-        verified=True,
-        primary=True,
-        user__customer__isnull=True
-    )
+    try:
+        verified_email = EmailAddress.objects.get(
+            email=customer.email,
+            verified=True,
+            primary=True,
+            user__customer__isnull=True
+        )
 
-    if verified_email:
-        logger.info('Found user %s to associate with customer %s' % (verified_email.user.id, customer.id))
+        logger.info("Found user %s to associate with customer %s.", verified_email.user.id, customer.id)
 
         customer.user = verified_email.user
         customer.save()
@@ -87,3 +88,12 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
             customer.user.first_name = customer.first_name
             customer.user.last_name = customer.last_name
             customer.user.save()
+    except ObjectDoesNotExist:
+        logger.info("No user found to associate with customer %s.", customer.id)
+    except MultipleObjectsReturned:
+        # This should never happen, as email should be unique in the db table account_emailaddress.
+        # If it does, something's broken in the database or Django.
+        errmsg = "Something's not right with the database: more than one entry found on the database for the email %s. \
+             This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
+             The email field should be unique for each account.\n"
+        logger.exception(errmsg, customer.email)
