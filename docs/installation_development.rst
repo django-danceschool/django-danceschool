@@ -88,7 +88,7 @@ Basic Installation Process
 
    ::
 
-      django-admin startproject --template https://raw.githubusercontent.com/django-danceschool/development-template/archive/master.zip <your_project_name>
+      django-admin startproject --template https://github.com/django-danceschool/development-template/archive/master.zip <your_project_name>
 
 5. Perform initial database migrations
 
