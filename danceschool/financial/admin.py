@@ -52,6 +52,14 @@ class ExpenseItemAdminForm(ModelForm):
         }
 
 
+class ExpenseItemAdminChangelistForm(ExpenseItemAdminForm):
+    ''' Make the payTo field optional. '''
+
+    def __init__(self,*args,**kwargs):
+        super(ExpenseItemAdminChangelistForm,self).__init__(*args,**kwargs)
+        self.fields['payTo'].required=False
+
+
 @admin.register(ExpenseItem)
 class ExpenseItemAdmin(admin.ModelAdmin):
     form = ExpenseItemAdminForm
@@ -101,7 +109,7 @@ class ExpenseItemAdmin(admin.ModelAdmin):
 
     def get_changelist_form(self, request, **kwargs):
         ''' Ensures that the autocomplete view works for payment methods. '''
-        return ExpenseItemAdminForm
+        return ExpenseItemAdminChangelistForm
 
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
