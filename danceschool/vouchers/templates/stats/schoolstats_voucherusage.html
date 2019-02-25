@@ -81,7 +81,7 @@ $.ajax({
   	var tableData = '';
 
   	jsonData.forEach(function(e) {
-        tableData += '<tr><td>' + e.voucherId + '</td><td>' + e.description + '</td><td>' + e.counter + '</td></tr>';
+        tableData += '<tr><td>' + e.voucherId + '</td><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
   	});
 
   	$('#popularVouchersTable').append(tableData);
@@ -122,7 +122,7 @@ $('.registrationVoucherButton').click(function(e) {
     	var tableData = '';
   
     	jsonData.forEach(function(e) {
-	        tableData += '<tr><td>' + e.voucherId + '</td><td>' + e.description + '</td><td>' + e.counter + '</td></tr>';
+	        tableData += '<tr><td>' + e.voucherId + '</td><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
     	});
   
     	$('#popularVouchersTable').append(tableData);

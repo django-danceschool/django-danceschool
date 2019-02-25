@@ -25,7 +25,7 @@ def popularVouchersJSON(request):
     uses = list(Voucher.objects.annotate(
         counter=Count(Case(
             When(timeLimit, then=1), output_field=IntegerField())
-        )).filter(counter__gt=0).values('name','counter').order_by('-counter')[:10])
+        )).filter(counter__gt=0).values('name', 'counter', 'voucherId').order_by('-counter')[:10])
 
     return JsonResponse(uses,safe=False)
 
