@@ -1,6 +1,16 @@
 Version History
 ===============
 
+0.8.2 - February 24, 2019
+-------------------------
+
+- Fixed issue with ExpenseItem changelist form treating payTo as a required field
+- Fixed issue with display of most popular vouchers in school stats (#120)
+- Fixed access to QuerySet object in core/handlers.py (#121)
+- Fixed configuration issue with Redis dependency (#122)
+- Fixed issue with reversed occurrence dates in individual series view
+- Fixed incorrect page template for staff list in setupschool script (#115)
+
 0.8.1 - January 9, 2019
 -----------------------
 
