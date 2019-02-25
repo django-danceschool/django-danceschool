@@ -89,6 +89,12 @@ Basic Installation Process
    ::
 
       django-admin startproject --template https://github.com/django-danceschool/development-template/archive/master.zip <your_project_name>
+      
+   **Mac/OS X Users**: If you having SSL issues trying to run this command on the Mac check out this `Stack Overflow response <https://stackoverflow.com/questions/44316292/ssl-sslerror-tlsv1-alert-protocol-version/>`_ or download the file manually, move it to the local install folder, and run this modified version of the ``django-admin`` command.
+   
+   ::
+
+      django-admin startproject --template development-template-master.zip <your_project_name>
 
 5. Perform initial database migrations
 
