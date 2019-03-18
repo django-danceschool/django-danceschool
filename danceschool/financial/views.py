@@ -444,11 +444,11 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         if startDate:
             timeFilters['%s__gte' % basis] = startDate
             context['rangeType'] = 'Date Range'
-            context['rangeTitle'] += _('From %s' % startDate.strftime('%b. %d, %Y'))
+            context['rangeTitle'] += str(_('From %s' % startDate.strftime('%b. %d, %Y')))
         if endDate:
             timeFilters['%s__lt' % basis] = endDate
             context['rangeType'] = 'Date Range'
-            context['rangeTitle'] += _('To %s' % endDate.strftime('%b. %d, %Y'))
+            context['rangeTitle'] += str(_('To %s' % endDate.strftime('%b. %d, %Y')))
 
         if not startDate and not endDate:
             if month and year:
