@@ -183,15 +183,16 @@ processors:
   to indicate whether a payment is refundable, and the ``refund()`` method
   to actually process a refund.
 
-To create new payment processor, first create a new model in your app's
+To create a new payment processor, first create a new model in your app's
 ``models.py`` that simply subclasses the ``danceschool.core.models.PaymentRecord`` model.
 Because of the way Django-polymorphic works, your payments will now be recognized just as
 payments from other payment processors.
 
 Add any fields that your particular payment processor may need (for example some kind of
 transaction identifier field).  Then, be sure to override the following from the parent model:
-- The ``refundable`` property (decorated method): defaults to False.  This can usually just return True if your
-  payment method is refundable.
+
+- The ``refundable`` property (decorated method): defaults to False. This can 
+  usually just return True if your payment method is refundable.
 - The ``recordId`` property (decorated method).  This will usually just return the identifier used by the payment
   processor, but since different payment processor apps must store this information differently, ``recordId``
   ensures that the information is always available to the parent app.
