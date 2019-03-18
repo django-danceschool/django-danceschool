@@ -24,6 +24,7 @@ urlpatterns = [
     url(r'^finances/detail/(?P<year>[\w\+]+)/(?P<month>[\w\+]+)/$', FinancialDetailView.as_view(), name='financialDetailView'),
     url(r'^finances/detail/(?P<year>[\w\+]+)/$', FinancialDetailView.as_view(), name='financialDetailView'),
     url(r'^finances/detail/$', FinancialDetailView.as_view(), name='financialDetailView'),
+    url(r'^finances/event/(?P<event>[\w\+]+)/$', FinancialDetailView.as_view(), name='financialEventView'),
 
     url(r'^finances/csv/$', FinancesByMonthView.as_view(as_csv=True), name='financesByMonthCSV'),
     url(r'^finances/(?P<year>[\w\+]+)/$', FinancesByMonthView.as_view(), name='financesByMonth'),

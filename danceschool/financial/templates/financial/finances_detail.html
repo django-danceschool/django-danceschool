@@ -8,14 +8,18 @@
 <div class="row">
 <div class="col-12">
 
-	<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
+	{% if event %}
+		<a href="{% url 'financesByEvent' %}" class="btn btn-primary float-right">{% trans "Return to Event Summary" %}</a>
+	{% else %}
+		<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
+	{% endif %}
 
 	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financialDetailView' year month %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=paymentDate" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
-	  <a href="{% url 'financialDetailView' year month %}?basis=submissionDate" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
+		<a href="{{ request.path }}?basis=accrualDate{% if startDate %}&amp;startDate={{ startDate|date:'Y-m-d' }}{% endif %}{% if endDate %}&amp;endDate={{ endDate|date:'Y-m-d' }}{% endif %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+		<a href="{{ request.path }}?basis=paymentDate{% if startDate %}&amp;startDate={{ startDate|date:'Y-m-d' }}{% endif %}{% if endDate %}&amp;endDate={{ endDate|date:'Y-m-d' }}{% endif %}" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+		<a href="{{ request.path }}?basis=submissionDate{% if startDate %}&amp;startDate={{ startDate|date:'Y-m-d' }}{% endif %}{% if endDate %}&amp;endDate={{ endDate|date:'Y-m-d' }}{% endif %}" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 <hr />
@@ -58,7 +62,7 @@
 					<th colspan="2">
 						<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>{{ event.grouper|default:grouper_default }}
 					</th>
-					<td>{% get_item_by_key registrationRevenueEventTotals 'id' event.grouper.id as cat %} {{ currencySymbol }}{{ cat.event_net|default:registrationRevenueOtherTotal.event_net|floatformat:"2" }}</td>
+					<td>{% get_item_by_key registrationRevenueEventTotals 'id' event.grouper.id as cat %} {{ currencySymbol }}{{ cat.event_net|default_if_none:registrationRevenueOtherTotal.event_net|floatformat:"2" }}</td>
 				</tr>
 			</tbody>
 			<tbody id="accordionevent_{{ event.grouper.id }}" class="collapse">
@@ -134,7 +138,7 @@
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>
 							{{ teacher.grouper.name|default:grouper_default }}
 						</th>
-						<td>{% get_item_by_key instructionExpenseInstructorTotals 'id' teacher.grouper.id as cat %} {{ currencySymbol }}{{ cat.instructor_net|default:instructionExpenseOtherTotal.instructor_net|floatformat:"2" }}</td>
+						<td>{% get_item_by_key instructionExpenseInstructorTotals 'transactionparty' teacher.grouper.id as cat %} {{ currencySymbol }}{{ cat.instructor_net|default:instructionExpenseOtherTotal.instructor_net|floatformat:"2" }}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordioninstructor_{{ teacher.grouper.id }}" class="collapse">

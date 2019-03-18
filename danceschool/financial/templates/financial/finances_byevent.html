@@ -50,7 +50,7 @@
 {% for this_event in statement.statementByEvent %}
 	<tr>
 		<td>{{ this_event.month_name }}</td>
-		<td>{{ this_event.event_name }}</td>
+		<td><a href="{% url 'financialEventView' this_event.id %}">{{ this_event.event_name }}</a></td>
 		{% for this_role in roles %}
 			<td>{{ this_event.registrations|get_item:this_role }}</td>
 		{% endfor %}

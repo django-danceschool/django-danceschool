@@ -407,7 +407,19 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 except (ValueError, TypeError):
                     month = None
         else:
-            month = getIntFromGet(request,'month')
+            month = getIntFromGet(request, 'month')
+
+        try:
+            event_id = int(self.kwargs.get('event'))
+        except (ValueError, TypeError):
+            event_id = getIntFromGet(request, 'event')
+        
+        event = None
+        if event_id:
+            try:
+                event = Event.objects.get(id=event_id)
+            except ObjectDoesNotExist:
+                pass
 
         kwargs.update({
             'year': year,
@@ -415,6 +427,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'startDate': getDateTimeFromGet(request,'startDate'),
             'endDate': getDateTimeFromGet(request,'endDate'),
             'basis': request.GET.get('basis'),
+            'event': event,
         })
 
         if kwargs.get('basis') not in EXPENSE_BASES.keys():
@@ -423,7 +436,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         context = kwargs.copy()
         timeFilters = {}
 
@@ -432,6 +445,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         month = kwargs.get('month')
         startDate = kwargs.get('startDate')
         endDate = kwargs.get('endDate')
+        event = kwargs.get('event')
 
         basis = kwargs.get('basis')
 
@@ -441,14 +455,18 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'rangeTitle': '',
         })
 
+        if event:
+            timeFilters['event'] = event
+            context['rangeTitle'] += '%s ' % event.name
+
         if startDate:
             timeFilters['%s__gte' % basis] = startDate
             context['rangeType'] = 'Date Range'
-            context['rangeTitle'] += str(_('From %s' % startDate.strftime('%b. %d, %Y')))
+            context['rangeTitle'] += str(_('From %s ' % startDate.strftime('%b. %d, %Y')))
         if endDate:
             timeFilters['%s__lt' % basis] = endDate
             context['rangeType'] = 'Date Range'
-            context['rangeTitle'] += str(_('To %s' % endDate.strftime('%b. %d, %Y')))
+            context['rangeTitle'] += str(_('To %s ' % endDate.strftime('%b. %d, %Y')))
 
         if not startDate and not endDate:
             if month and year:
