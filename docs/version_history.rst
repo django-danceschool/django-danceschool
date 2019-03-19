@@ -1,6 +1,14 @@
 Version History
 ===============
 
+0.8.3 - March 19, 2019
+-------------------------
+
+- Added event-specific financial detail view
+- Fixed issue with financial detail view with explicit start/end dates
+- Fixed issue with reverse() call when prior site history is missing (e.g. viewing an invoice directly from an email link)
+- Fixed extra column with total registrations in finances by event view
+
 0.8.2 - February 24, 2019
 -------------------------
 
