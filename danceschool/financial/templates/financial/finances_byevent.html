@@ -54,7 +54,6 @@
 		{% for this_role in roles %}
 			<td>{{ this_event.registrations|get_item:this_role }}</td>
 		{% endfor %}
-		<td>{{ this_event.registrations.total }}</td>
 		<td>{{ this_event.revenues.gross|floatformat:2 }}</td>
 		<td>{{ this_event.revenues.net|floatformat:2 }}</td>
 		<td>{{ this_event.expenses.instruction|floatformat:2 }}</td>
