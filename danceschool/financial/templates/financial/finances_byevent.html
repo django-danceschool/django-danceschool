@@ -37,7 +37,7 @@
 <table class="table">
 <thead>
 	<tr>
-		<th rowspan="2" colspan="2">{% trans "Series" %}</th><th colspan="{{ roles|length }}">{% trans "# Registrations" %}</th><th colspan="2">{% trans "Series Revenue" %}</th><th colspan="3">{% trans "Series Expenses" %}</th><th rowspan="2">{% trans "Net Profit" %}</th>
+		<th rowspan="2" colspan="2">{% trans "Event" %}</th><th colspan="{{ roles|length }}">{% trans "# Registrations" %}</th><th colspan="2">{% trans "Event Revenue" %}</th><th colspan="3">{% trans "Event Expenses" %}</th><th rowspan="2">{% trans "Net Profit" %}</th>
 	</tr>
 	<tr>
 		{% for this_role in roles %}
@@ -50,7 +50,15 @@
 {% for this_event in statement.statementByEvent %}
 	<tr>
 		<td>{{ this_event.month_name }}</td>
-		<td><a href="{% url 'financialEventView' this_event.event.id %}">{{ this_event.event_name }}</a></td>
+		<td>
+			<a href="{% url 'financialEventView' this_event.event.id %}">{{ this_event.event_name }}</a>
+			<br />
+			<small>
+				{% for occurrence in this_event.event.eventoccurrence_set.all %}
+					{{occurrence.startTime|date:'N jS' }}{% if not forloop.last %}, {% endif %}
+				{% endfor %}
+			</small>
+		</td>
 		{% for this_role in roles %}
 			<td>{{ this_event.registrations|get_item:this_role }}</td>
 		{% endfor %}
