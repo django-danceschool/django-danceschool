@@ -385,7 +385,10 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         ]
 
     class Media:
-        js = ('js/revenue_reporting.js',)
+        js = ('js/revenue_reporting.js','jquery-ui/jquery-ui.min.js',)
+        css = {
+            'all': ('jquery-ui/jquery-ui.min.css',),
+        }
 
 
 class CompensationRuleUpdateForm(forms.ModelForm):

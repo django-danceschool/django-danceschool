@@ -1,6 +1,9 @@
 $(document).ready(function(){
 	$('#id_invoiceItem').attr('disabled',true);
 
+	// Make received date field a datepicker
+	$('#id_receivedDate').datepicker();
+
 	// Keep track of previous value of grossTotal
 	var grossField = $('#id_grossTotal');
 	grossField.data('previous', grossField.val());
