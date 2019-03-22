@@ -16,7 +16,8 @@ from crispy_forms.layout import Layout, Field, Div, Submit, HTML
 from dal import autocomplete
 import logging
 
-from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory
+from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
+from danceschool.core.forms import EventAutocompleteForm
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo, TransactionParty
 from .autocomplete_light_registry import get_method_list
@@ -28,11 +29,6 @@ logger = logging.getLogger(__name__)
 PAYBY_CHOICES = (
                 (1,_('Hours of Work/Rental (paid at default rate)')),
                 (2,_('Flat Payment')),)
-
-REVENUE_ASSOCIATION_CHOICES = (
-                              (2, _('A Class Series or Event')),
-                              (3, _('Neither')),)
-
 
 class ExpenseCategoryWidget(Select):
     '''
@@ -66,7 +62,7 @@ class ExpenseCategoryWidget(Select):
                            force_text(option_label))
 
 
-class ExpenseReportingForm(forms.ModelForm):
+class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
     payTo = forms.ModelChoiceField(
         queryset=TransactionParty.objects.all(),
         label=_('Pay to'),
@@ -85,7 +81,7 @@ class ExpenseReportingForm(forms.ModelForm):
         )
     )
 
-    payBy = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYBY_CHOICES, label=_('Report this expense as:'), initial=1)
+    payBy = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYBY_CHOICES, label=_('Report this expense as:'), initial=2)
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
@@ -148,6 +144,9 @@ class ExpenseReportingForm(forms.ModelForm):
         else:
             category_field = Div('category')
 
+        self.fields['event'].label = _('Event (optional)')
+        self.fields['event'].required = False
+
         self.helper.layout = Layout(
             Field('submissionUser', type="hidden", value=user_id),
             'payTo',
@@ -156,6 +155,7 @@ class ExpenseReportingForm(forms.ModelForm):
             'description',
             'hours',
             'total',
+            'event',
             'reimbursement',
             payment_section,
             'attachment',
@@ -189,13 +189,21 @@ class ExpenseReportingForm(forms.ModelForm):
 
     class Meta:
         model = ExpenseItem
-        fields = ['submissionUser','payTo','category','description','hours','total','reimbursement','attachment','approved','paid','paymentDate','paymentMethod','accrualDate']
+        fields = [
+            'submissionUser', 'payTo', 'category', 'description', 'hours',
+            'total', 'reimbursement', 'attachment', 'approved', 'paid',
+            'paymentDate', 'paymentMethod', 'accrualDate', 'event'
+        ]
         widgets = {
             'category': ExpenseCategoryWidget,
         }
 
     class Media:
-        js = ('admin/js/admin/RelatedObjectLookups.js','jquery-ui/jquery-ui.min.js','js/expense_reporting.js')
+        js = (
+            'admin/js/admin/RelatedObjectLookups.js',
+            'jquery-ui/jquery-ui.min.js',
+            'js/expense_reporting.js'
+        )
         css = {
             'all': ('jquery-ui/jquery-ui.min.css',),
         }
@@ -220,17 +228,10 @@ class InvoiceItemChoiceField(forms.ModelChoiceField):
         return value
 
 
-class RevenueReportingForm(forms.ModelForm):
+class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
     '''
     This form is used in the revenue reporting view for quick generation of RevenueItems.
     '''
-
-    associateWith = forms.ChoiceField(
-        widget=forms.RadioSelect,
-        choices=REVENUE_ASSOCIATION_CHOICES,
-        label=_('This revenue is associated with:'),
-        initial=1
-    )
 
     receivedFrom = forms.ModelChoiceField(
         queryset=TransactionParty.objects.all(),
@@ -291,12 +292,24 @@ class RevenueReportingForm(forms.ModelForm):
                 css_class='card-header'
             ),
             Div(
+                'total',
                 'adjustments',
                 'fees',
-                # The hidden input of accrual date must be passed as a naive datetime.
-                # Django will take care of converting it to local time
                 css_class='card-body collapse',
                 id='collapsedetails',
+            ),
+            css_class='card my-4')
+
+        event_section = Div(
+            Div(
+                HTML('<a data-toggle="collapse" href="#collapseevent">%s</a> (%s)' % (_('Event/Invoice item (optional)'),_('click to expand'))),
+                css_class='card-header'
+            ),
+            Div(
+                'event',
+                'invoiceItem',
+                css_class='card-body collapse',
+                id='collapseevent',
             ),
             css_class='card my-4')
 
@@ -330,19 +343,23 @@ class RevenueReportingForm(forms.ModelForm):
             receipt_section = None
 
         self.fields["invoiceItem"] = InvoiceItemChoiceField(queryset=InvoiceItem.objects.none(),required=False)
+        self.fields['event'].required = False
+        
+        # Handled by the model's save() method
+        self.fields['total'].required = False
+        self.fields['fees'].required = False
+        self.fields['adjustments'].required = False
 
         self.helper.layout = Layout(
             Field('submissionUser', type="hidden", value=getattr(user, 'id')),
             Field('invoiceNumber', type="hidden"),
-            'associateWith',
             'category',
             'description',
-            'event',
-            'invoiceItem',
             'receivedFrom',
             'paymentMethod',
             'grossTotal',
             detail_section,
+            event_section,
             receipt_section,
             'attachment',
             Submit('submit',_('Submit')),
@@ -358,26 +375,13 @@ class RevenueReportingForm(forms.ModelForm):
             getattr(self.cleaned_data['submissionUser'], 'id', 'None'), timezone.now().strftime('%Y%m%d%H%M%S')
         )
 
-    def clean(self):
-        # Custom cleaning ensures that revenues are not attributed
-        # to both a series and to an event.
-        super(RevenueReportingForm, self).clean()
-
-        associateWith = self.cleaned_data.get('associateWith')
-        event = self.cleaned_data.get('event')
-
-        if associateWith in ['1', '3'] and event:
-            self.cleaned_data.pop('event', None)
-            self.cleaned_data.pop('invoiceItem', None)
-
-        return self.cleaned_data
-
     class Meta:
         model = RevenueItem
         fields = [
             'submissionUser', 'invoiceNumber', 'category', 'description', 'event',
             'invoiceItem', 'receivedFrom', 'paymentMethod', 'currentlyHeldBy',
-            'grossTotal', 'adjustments', 'fees', 'attachment', 'received', 'receivedDate'
+            'grossTotal', 'total', 'adjustments', 'fees', 'attachment', 'received',
+            'receivedDate'
         ]
 
     class Media:

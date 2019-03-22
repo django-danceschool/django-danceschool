@@ -1,6 +1,6 @@
 $(document).ready(function(){
-	$('#div_id_hours').show();
-	$('#div_id_total').hide();
+	$('#div_id_total').show();
+	$('#div_id_hours').hide();
 
 	// Make payment date field a datepicker
 	$('#id_paymentDate').datepicker();

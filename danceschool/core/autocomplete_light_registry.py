@@ -3,8 +3,9 @@ from django.utils.encoding import force_text
 from django.db.models import Q
 
 from dal import autocomplete
+from calendar import month_name
 
-from .models import Customer, StaffMember
+from .models import Customer, StaffMember, Series, PublicEvent, Event
 
 
 class UserAutoComplete(autocomplete.Select2QuerySetView):
@@ -49,6 +50,38 @@ class CustomerAutoComplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(
                 Q(first_name__istartswith=firstName) | Q(last_name__istartswith=lastName) |
                 Q(email__istartswith=self.q)
+            )
+
+        return qs
+
+
+class EventAutoComplete(autocomplete.Select2QuerySetView):
+    '''
+    Allow the user to filter autocomplates on the name of the series/event and
+    on the year or month name.
+    '''
+
+    def get_queryset(self):
+
+        qs = Event.objects.filter(
+            Q(instance_of=PublicEvent) | Q(instance_of=Series)
+        )
+
+        if not self.request.user.is_staff:
+            qs = qs.exclude(status=Event.RegStatus.hidden)
+
+        if self.q:
+            try:
+                month_dict = {v: k for k,v in enumerate(month_name)}
+                month_value = next(value for key, value in month_dict.items() if key.startswith(self.q.title()))
+            except StopIteration:
+                month_value = ''
+
+            qs = qs.filter(
+                Q(series__classDescription__title__icontains=self.q) | 
+                Q(publicevent__title__icontains=self.q) |
+                Q(year__icontains=self.q) |
+                Q(month__icontains=month_value)
             )
 
         return qs

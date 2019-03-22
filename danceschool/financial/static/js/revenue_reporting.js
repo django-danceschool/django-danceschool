@@ -1,7 +1,9 @@
 $(document).ready(function(){
-	$('#div_id_event').hide();
-	$('#div_id_invoiceItem').hide();
 	$('#id_invoiceItem').attr('disabled',true);
+
+	// Keep track of previous value of grossTotal
+	var grossField = $('#id_grossTotal');
+	grossField.data('previous', grossField.val());
 
 	// Use Jquery to get the cookie value of the CSRF token
 	function getCookie(name) {
@@ -35,20 +37,21 @@ $(document).ready(function(){
 	    }
 	});
 
-	$('input[name=associateWith]').change(function(){
-		var this_associateWith = $('#div_id_associateWith input:checked').val();
+	grossField.change(function(event) {
+		event.preventDefault();
 
-		if (this_associateWith == "2") {
-			$('#div_id_invoiceItem').show();
-			$('#div_id_event').show();
+		var priorGross = $(this).data("previous");
+		var currentTotal = $('#id_total').val();
+		var currentGross = $(this).val();
+
+		if ((currentTotal == priorGross) || (currentTotal == "")) {
+			$('#id_total').val(currentGross);
 		}
-		if (this_associateWith == "3") {
-			$('#div_id_event').hide();
-			$('#div_id_invoiceItem').hide();
-		}
+
+		$(this).data("previous", currentGross);
 	});
 
-	$('#id_event').change(function(event){
+	$('#id_event').change(function(event) {
 		event.preventDefault();
 
 		var formData = {event: $('#id_event').val()}

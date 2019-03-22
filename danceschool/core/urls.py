@@ -4,7 +4,7 @@ from django.contrib import admin
 from .feeds import EventFeed, json_event_feed
 from .views import SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView, IndividualClassView, IndividualEventView, StaffDirectoryView, EmailConfirmationView, SendEmailView, SubstituteReportingView, StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView, RepeatEventsView
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
-from .autocomplete_light_registry import CustomerAutoComplete, UserAutoComplete, StaffMemberAutoComplete
+from .autocomplete_light_registry import CustomerAutoComplete, UserAutoComplete, StaffMemberAutoComplete, EventAutoComplete
 
 admin.autodiscover()
 
@@ -15,6 +15,7 @@ urlpatterns = [
     url(r'^staff/autocomplete/user', UserAutoComplete.as_view(), name='autocompleteUser'),
     url(r'^staff/autocomplete/customer', CustomerAutoComplete.as_view(), name='autocompleteCustomer'),
     url(r'^staff/autocomplete/staffmember', StaffMemberAutoComplete.as_view(create_field='fullName'), name='autocompleteStaffMember'),
+    url(r'^staff/autocomplete/event', EventAutoComplete.as_view(), name='autocompleteEvent'),
     url(r'^accounts/info/$', UserAccountInfo.as_view(), name='getUserAccountInfo'),
 
     # For general admin form submission redirects

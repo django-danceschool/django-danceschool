@@ -499,8 +499,8 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 context['rangeType'] = 'YTD'
                 context['rangeTitle'] = _('Calendar Year To Date')
 
-        context['startDate'] = timeFilters['%s__gte' % basis]
-        context['endDate'] = timeFilters['%s__lt' % basis]
+        context['startDate'] = timeFilters.get('%s__gte' % basis)
+        context['endDate'] = timeFilters.get('%s__lt' % basis)
 
         # Revenues are booked on receipt basis, not payment/approval basis
         rev_timeFilters = timeFilters.copy()
@@ -508,10 +508,12 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
 
         if basis in ['paymentDate', 'approvalDate']:
             rev_basis = 'receivedDate'
-            rev_timeFilters['receivedDate__gte'] = rev_timeFilters['%s__gte' % basis]
-            rev_timeFilters['receivedDate__lt'] = rev_timeFilters['%s__lt' % basis]
-            del rev_timeFilters['%s__gte' % basis]
-            del rev_timeFilters['%s__lt' % basis]
+            if rev_timeFilters.get('%s__gte' % basis):
+                rev_timeFilters['receivedDate__gte'] = rev_timeFilters.get('%s__gte' % basis)
+                rev_timeFilters.pop('%s__gte' % basis,None)
+            if rev_timeFilters.get('%s__lt' % basis):
+                rev_timeFilters['receivedDate__lt'] = rev_timeFilters.get('%s__lt' % basis)
+                rev_timeFilters.pop('%s__lt' % basis,None)
 
         expenseItems = ExpenseItem.objects.filter(**timeFilters).annotate(net=F('total') + F('adjustments') + F('fees'),basisDate=Min(basis)).order_by(basis)
         revenueItems = RevenueItem.objects.filter(**rev_timeFilters).annotate(net=F('total') + F('adjustments') - F('fees'),basisDate=Min(rev_basis)).order_by(rev_basis)
