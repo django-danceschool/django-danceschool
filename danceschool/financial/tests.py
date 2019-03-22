@@ -34,7 +34,6 @@ class RevenueTest(DefaultSchoolTestCase):
 
         # Check that association and payment method choices are populated
         self.assertIn(('Cash','Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
-        self.assertIn(3, [x[0] for x in response.context_data.get('form').fields['associateWith'].choices])
 
         # Create a Revenue item that is not associated with a Series/Event for $10
         response = self.client.post(reverse('submitRevenues'),{
@@ -43,7 +42,6 @@ class RevenueTest(DefaultSchoolTestCase):
             'adjustments': 0,
             'fees': 0,
             'category': default_rev_cat.id,
-            'associateWith': 3,
             'description': 'Test Revenue Item',
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
@@ -69,7 +67,6 @@ class RevenueTest(DefaultSchoolTestCase):
             'adjustments': 0,
             'fees': 0,
             'category': default_rev_cat.id,
-            'associateWith': 2,
             'event': s.id,
             'description': 'Test Associated Revenue Item',
             'paymentMethod': 'Cash',

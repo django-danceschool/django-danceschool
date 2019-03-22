@@ -605,6 +605,7 @@ class EventAutocompleteForm(forms.Form):
                 'data-minimum-input-length': 0,
                 'data-max-results': 10,
                 'class': 'modern-style',
+                'data-html': True,
             }
         )
     )

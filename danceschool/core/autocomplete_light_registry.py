@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.utils.encoding import force_text
+from django.utils.html import format_html
 from django.db.models import Q
 
 from dal import autocomplete
@@ -29,8 +30,8 @@ class UserAutoComplete(autocomplete.Select2QuerySetView):
 
         return qs
 
-    def get_result_label(self,item):
-        return force_text(item.get_full_name() + ': ' + item.email)
+    def get_result_label(self, result):
+        return force_text(result.get_full_name() + ': ' + result.email)
 
 
 class CustomerAutoComplete(autocomplete.Select2QuerySetView):
@@ -85,6 +86,19 @@ class EventAutoComplete(autocomplete.Select2QuerySetView):
             )
 
         return qs
+
+    def get_result_label(self, result):
+        return format_html(
+            '{}: {} {} <br /><small>{}</small>',
+            result.name, result.getMonthName, result.year,
+            ', '.join([x.startTime.strftime('%b. %d') for x in result.eventoccurrence_set.all()])
+        )
+
+    def get_selected_result_label(self, result):
+        return format_html(
+            '{}: {} {}',
+            result.name, result.getMonthName, result.year,
+        )
 
 
 class StaffMemberAutoComplete(autocomplete.Select2QuerySetView):
