@@ -961,6 +961,7 @@ class RevenueItem(models.Model):
         verbose_name_plural = _('Revenue items')
 
         permissions = (
+            ('mark_revenues_received',_('Mark revenues as received at the time of submission')),
             ('export_financial_data',_('Export detailed financial transaction information to CSV')),
             ('view_finances_bymonth',_('View school finances month-by-month')),
             ('view_finances_byevent',_('View school finances by Event')),
