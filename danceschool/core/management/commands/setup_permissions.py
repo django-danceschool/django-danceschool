@@ -137,6 +137,7 @@ Note: This process may take a minute or two to complete.
                 ('mark_expenses_paid', 'financial', 'expenseitem'),
                 ('add_revenueitem', 'financial', 'revenueitem'),
                 ('view_finances_bymonth', 'financial', 'revenueitem'),
+                ('mark_revenues_received','financial', 'revenueitem'),
                 ('add_newsitem', 'news', 'newsitem'),
                 ('change_newsitem', 'news', 'newsitem'),
                 ('ignore_requirements', 'prerequisites', 'requirement'),
