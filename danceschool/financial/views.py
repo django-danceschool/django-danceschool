@@ -487,6 +487,10 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
 
                 context['rangeType'] = 'Year'
                 context['rangeTitle'] = '%s' % year
+
+            elif event:
+                context['rangeType'] = 'Event'
+
             else:
                 # Assume year to date if nothing otherwise specified
                 timeFilters['%s__gte' % basis] = ensure_timezone(datetime(timezone.now().year,1,1))
