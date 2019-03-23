@@ -1,7 +1,7 @@
 from django.contrib.auth.views import redirect_to_login
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db.models import Case, When, F, Q, IntegerField, ExpressionWrapper
 from django.db.models.functions import ExtractWeekDay
 from django.forms import ModelForm, ChoiceField, Media

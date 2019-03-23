@@ -3,7 +3,7 @@ from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
 from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, ListView
 from django.db.models import Min, Q, Count
@@ -109,7 +109,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'invoiceitem','role','registration__invoice',
         ).order_by('registration__firstName', 'registration__lastName')
 
-        extras = get_eventregistration_data.send(sender=self.__class__,eventregistrations=registrations)
+        extras = get_eventregistration_data.send(sender=EventRegistrationSummaryView,eventregistrations=registrations)
         extras_dict = {x: [] for x in registrations.values_list('id',flat=True)}
         for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras]]):
             extras_dict[k].extend(v)
@@ -183,7 +183,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
             ('role',['id','name']),
         ]
 
-        extras = get_eventregistration_data.send(sender=self.__class__,eventregistrations=queryset)
+        extras = get_eventregistration_data.send(sender=EventRegistrationJsonView,eventregistrations=queryset)
         extras_dict = {x: [] for x in queryset.values_list('id',flat=True)}
         for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras]]):
             extras_dict[k].extend(v)

@@ -29,7 +29,7 @@ class DefaultSchoolTestCase(TestCase):
         DanceRole.objects.create(name='Follow',order=2)
         cls.defaultDanceRoles = DanceRole.objects.filter(name__in=['Lead','Follow'])
         cls.defaultDanceType = DanceType.objects.create(name='Lindy Hop',order=1)
-        cls.defaultDanceType.roles = cls.defaultDanceRoles
+        cls.defaultDanceType.roles.set(cls.defaultDanceRoles)
         cls.defaultDanceType.save()
 
         # Create two levels for tests that involve different levels
@@ -143,7 +143,7 @@ class DefaultSchoolTestCase(TestCase):
                 category=getConstant('general__eventStaffCategoryInstructor'),
                 staffMember=i,
             )
-            seriesteacher.occurrences = s.eventoccurrence_set.all()
+            seriesteacher.occurrences.set(s.eventoccurrence_set.all())
             seriesteacher.save()
         # Must save after adding event occurrences to ensure that
         # registration status is updated properly.

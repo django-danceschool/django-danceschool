@@ -29,7 +29,10 @@ class Voucher(models.Model):
     name = models.CharField(_('Name'),max_length=80,help_text=_('Give a descriptive name that will be used when a customer applies the voucher.'))
 
     # i.e. LivingSocial.  This is for categorical convenience only.
-    category = models.ForeignKey(VoucherCategory,verbose_name=_('Category'),null=True)
+    category = models.ForeignKey(
+        VoucherCategory, verbose_name=_('Category'), null=True,
+        on_delete=models.SET_NULL,
+    )
 
     # Optional description for when vouchers are given in special cases.
     description = models.CharField(_('Description (optional)'),null=True,blank=True,max_length=200,help_text=_('For internal use only'))
@@ -192,8 +195,14 @@ class Voucher(models.Model):
 
 
 class VoucherReferralDiscount(models.Model):
-    referrerVoucher = models.ForeignKey(Voucher,related_name="VoucherReferralDiscountForReferrer",verbose_name=_('Referrer voucher'))
-    referreeVoucher = models.ForeignKey(Voucher,related_name="voucherreferralDiscountForReferree",verbose_name=_('Referree voucher'))
+    referrerVoucher = models.ForeignKey(
+        Voucher, related_name="VoucherReferralDiscountForReferrer",
+        verbose_name=_('Referrer voucher'), on_delete=models.CASCADE,
+    )
+    referreeVoucher = models.ForeignKey(
+        Voucher, related_name="voucherreferralDiscountForReferree",
+        verbose_name=_('Referree voucher'), on_delete=models.CASCADE
+    )
     referrerBonus = models.FloatField(_('Amount awarded to referrer'))
 
     class Meta:
@@ -202,8 +211,13 @@ class VoucherReferralDiscount(models.Model):
 
 
 class VoucherUse(models.Model):
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
-    registration = models.ForeignKey(Registration,null=True,verbose_name=_('Registration'))
+    voucher = models.ForeignKey(
+        Voucher,verbose_name=_('Voucher'), on_delete=models.CASCADE,
+    )
+    registration = models.ForeignKey(
+        Registration, null=True, verbose_name=_('Registration'),
+        on_delete=models.SET_NULL,
+    )
     amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
     notes = models.CharField(_('Notes'),max_length=100,null=True,blank=True)
     creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
@@ -214,8 +228,13 @@ class VoucherUse(models.Model):
 
 
 class DanceTypeVoucher(models.Model):
-    danceTypeLevel = models.ForeignKey(DanceTypeLevel,verbose_name=_('Dance Type/Level'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    danceTypeLevel = models.ForeignKey(
+        DanceTypeLevel, verbose_name=_('Dance Type/Level'),
+        on_delete=models.CASCADE,
+    )
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,
+    )
 
     class Meta:
         verbose_name = _('Dance type/level voucher restriction')
@@ -223,8 +242,12 @@ class DanceTypeVoucher(models.Model):
 
 
 class ClassVoucher(models.Model):
-    classDescription = models.ForeignKey(ClassDescription,verbose_name=_('Class Type (Description)'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    classDescription = models.ForeignKey(
+        ClassDescription, verbose_name=_('Class Type (Description)'), on_delete=models.CASCADE,
+    )
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,
+    )
 
     class Meta:
         verbose_name = _('Class-specific voucher restriction')
@@ -232,8 +255,10 @@ class ClassVoucher(models.Model):
 
 
 class SeriesCategoryVoucher(models.Model):
-    seriesCategory = models.ForeignKey(SeriesCategory,verbose_name=_('Series Category'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    seriesCategory = models.ForeignKey(
+        SeriesCategory, verbose_name=_('Series Category'), on_delete=models.CASCADE,
+    )
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,)
 
     class Meta:
         verbose_name = _('Series category-specific voucher restriction')
@@ -241,8 +266,10 @@ class SeriesCategoryVoucher(models.Model):
 
 
 class PublicEventCategoryVoucher(models.Model):
-    publicEventCategory = models.ForeignKey(PublicEventCategory,verbose_name=_('Public Event Category'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    publicEventCategory = models.ForeignKey(
+        PublicEventCategory, verbose_name=_('Public Event Category'), on_delete=models.CASCADE,
+    )
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,)
 
     class Meta:
         verbose_name = _('Public event category-specific voucher restriction')
@@ -250,8 +277,10 @@ class PublicEventCategoryVoucher(models.Model):
 
 
 class SessionVoucher(models.Model):
-    session = models.ForeignKey(EventSession,verbose_name=_('Event Session'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    session = models.ForeignKey(
+        EventSession, verbose_name=_('Event Session'), on_delete=models.CASCADE,
+    )
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,)
 
     class Meta:
         verbose_name = _('Session-specific voucher restriction')
@@ -259,8 +288,10 @@ class SessionVoucher(models.Model):
 
 
 class CustomerGroupVoucher(models.Model):
-    group = models.ForeignKey(CustomerGroup,verbose_name=_('Customer group'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    group = models.ForeignKey(
+        CustomerGroup, verbose_name=_('Customer group'), on_delete=models.CASCADE,
+    )
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = _('Group-specific voucher restriction')
@@ -268,8 +299,8 @@ class CustomerGroupVoucher(models.Model):
 
 
 class CustomerVoucher(models.Model):
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    customer = models.ForeignKey(Customer, verbose_name=_('Customer'), on_delete=models.CASCADE)
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = _('Customer-specific voucher restriction')
@@ -277,7 +308,7 @@ class CustomerVoucher(models.Model):
 
 
 class VoucherCredit(models.Model):
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
     amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
     description = models.TextField(_('Description'),null=True, blank=True)
     creationDate = models.DateTimeField(_('Date of credit'),auto_now_add=True,null=True)
@@ -288,8 +319,10 @@ class VoucherCredit(models.Model):
 
 
 class TemporaryVoucherUse(models.Model):
-    registration = models.ForeignKey(TemporaryRegistration,verbose_name=_('Registration'))
-    voucher = models.ForeignKey(Voucher,verbose_name=_('Voucher'))
+    registration = models.ForeignKey(
+        TemporaryRegistration, verbose_name=_('Registration'), on_delete=models.CASCADE
+    )
+    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
     amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
     creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
 
@@ -299,9 +332,16 @@ class TemporaryVoucherUse(models.Model):
 
 
 class VoucherReferralDiscountUse(models.Model):
-    voucherReferralDiscount = models.ForeignKey(VoucherReferralDiscount,verbose_name=_('Voucher referral discount'))
-    voucherUse = models.ForeignKey(VoucherUse,verbose_name=_('Voucher use'))
-    voucherCredit = models.ForeignKey(VoucherCredit,verbose_name=_('Voucher credit'))
+    voucherReferralDiscount = models.ForeignKey(
+        VoucherReferralDiscount, verbose_name=_('Voucher referral discount'),
+        on_delete=models.CASCADE
+    )
+    voucherUse = models.ForeignKey(
+        VoucherUse, verbose_name=_('Voucher use'), on_delete=models.CASCADE
+    )
+    voucherCredit = models.ForeignKey(
+        VoucherCredit, verbose_name=_('Voucher credit'), on_delete=models.CASCADE
+    )
     creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
 
     class Meta:

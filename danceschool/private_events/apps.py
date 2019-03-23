@@ -1,7 +1,7 @@
 # Give this app a custom verbose name to avoid confusion
 from django.apps import AppConfig
 from django.utils.translation import ugettext_lazy as _
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 
 class PrivateEventsAppConfig(AppConfig):

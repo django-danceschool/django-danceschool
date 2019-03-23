@@ -10,7 +10,10 @@ class BannedPerson(models.Model):
     firstName = models.CharField(_('First name'), max_length=30,)
     lastName = models.CharField(_('Last name'), max_length=30,)
 
-    photo = FilerImageField(verbose_name=_('Photo'), blank=True, null=True, related_name='banned_person_image')
+    photo = FilerImageField(
+        verbose_name=_('Photo'), blank=True, null=True,
+        related_name='banned_person_image', on_delete=models.SET_NULL,
+    )
 
     notes = models.TextField(_('Notes for internal purposes'), null=True, blank=True)
 
@@ -54,7 +57,10 @@ class BannedPerson(models.Model):
 
 
 class BannedEmail(models.Model):
-    person = models.ForeignKey(BannedPerson, verbose_name=_('Individual'))
+    person = models.ForeignKey(
+        BannedPerson, verbose_name=_('Individual'),
+        on_delete=models.CASCADE,
+    )
     email = models.EmailField(_('Email address'), unique=True)
 
     class Meta:
@@ -63,7 +69,9 @@ class BannedEmail(models.Model):
 
 
 class BanFlaggedRecord(models.Model):
-    person = models.ForeignKey(BannedPerson, verbose_name=_('Person'))
+    person = models.ForeignKey(
+        BannedPerson, verbose_name=_('Person'), on_delete=models.CASCADE,
+    )
     dateTime = models.DateTimeField(_('Date and time'), auto_now_add=True)
     ipAddress = models.GenericIPAddressField(_('IP address'), null=True, blank=True)
     flagCode = models.CharField(_('Flag code'), max_length=8, help_text=_('Search for this code for easier reference.'))

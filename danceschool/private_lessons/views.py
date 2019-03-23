@@ -2,7 +2,7 @@ from django.views.generic import FormView, TemplateView
 from django.http import JsonResponse, HttpResponseRedirect, Http404
 from django.contrib import messages
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
