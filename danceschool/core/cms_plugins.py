@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from .models import StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent, Location
 from .mixins import PluginTemplateMixin
 from .registries import plugin_templates_registry, PluginTemplateBase
+from .forms import CreateInvoiceForm
 
 
 class StaffMemberListPlugin(PluginTemplateMixin, CMSPluginBase):
@@ -184,6 +185,24 @@ class PublicCalendarPlugin(CMSPluginBase):
     render_template = 'core/public_calendar.html'
     cache = True
     module = _('Events')
+
+
+class CreateInvoicePlugin(CMSPluginBase):
+    model = CMSPlugin
+    name = _('Generate Invoice')
+    render_template = 'cms/forms/plugin_crispy_form.html'
+    cache = False
+    module = _('Payments')
+
+    def render(self, context, instance, placeholder):
+        context = super(CreateInvoicePlugin, self).render(context, instance, placeholder)
+
+        registration = getattr(context.get('registration', None),'id',None)
+        user=getattr(context.get('user',None),'id',None)
+
+        context.update({
+            'form': CreateInvoiceForm(user=user,registration=registration),
+        })
 
 
 plugin_pool.register_plugin(StaffMemberListPlugin)

@@ -8,7 +8,6 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from braces.views import UserFormKwargsMixin
 import logging
 from allauth.account.forms import LoginForm, SignupForm
 from datetime import timedelta
@@ -289,9 +288,8 @@ class SingleClassRegistrationView(ClassRegistrationView):
         return self.allEvents
 
 
-class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormView):
+class RegistrationSummaryView(FinancialContextMixin, TemplateView):
     template_name = 'core/registration_summary.html'
-    form_class = DoorAmountForm
 
     def dispatch(self,request,*args,**kwargs):
         ''' Always check that the temporary registration has not expired '''
@@ -451,70 +449,7 @@ class RegistrationSummaryView(UserFormKwargsMixin, FinancialContextMixin, FormVi
             'is_free': isFree,
         })
 
-        if self.request.user:
-            door_permission = self.request.user.has_perm('core.accept_door_payments')
-            invoice_permission = self.request.user.has_perm('core.send_invoices')
-
-            if door_permission or invoice_permission:
-                context_data['form'] = DoorAmountForm(
-                    user=self.request.user,
-                    doorPortion=door_permission,
-                    invoicePortion=invoice_permission,
-                    payerEmail=reg.email,
-                    discountAmount=max(reg.totalPrice - reg.priceWithDiscount,0),
-                )
-
         return context_data
-
-    def form_valid(self,form):
-        regSession = self.request.session[REG_VALIDATION_STR]
-        reg_id = regSession["temp_reg_id"]
-        tr = TemporaryRegistration.objects.get(id=reg_id)
-
-        # Create a new Invoice if one does not already exist.
-        new_invoice = Invoice.get_or_create_from_registration(tr)
-
-        if form.cleaned_data.get('paid'):
-            logger.debug('Form is marked paid. Preparing to process payment.')
-
-            amount = form.cleaned_data["amountPaid"]
-            submissionUser = form.cleaned_data.get('submissionUser')
-            receivedBy = form.cleaned_data.get('receivedBy')
-            payerEmail = form.cleaned_data.get('cashPayerEmail')
-
-            this_cash_payment = CashPaymentRecord.objects.create(
-                invoice=new_invoice,
-                submissionUser=submissionUser,
-                amount=amount,
-                payerEmail=payerEmail,
-                collectedByUser=receivedBy,
-                status=CashPaymentRecord.PaymentStatus.needsCollection,
-            )
-
-            # Process payment, but mark cash payment as needing collection from
-            # the user who processed the registration and collected it.
-            new_invoice.processPayment(
-                amount,0,
-                paidOnline=False,
-                methodName='Cash',
-                methodTxn='CASHPAYMENT_%s' % (this_cash_payment.recordId),
-                submissionUser=submissionUser,
-                collectedByUser=receivedBy,
-                status=Invoice.PaymentStatus.needsCollection,
-                forceFinalize=True,
-            )
-        elif form.cleaned_data.get('invoiceSent'):
-            # Do not finalize this registration, but set the expiration date
-            # on the TemporaryRegistration such that it will not be deleted
-            # until after the last series ends, in case this person does not make
-            # a payment right away.  This will also hold this individual's spot
-            # in anything for which they have registered indefinitely.
-            payerEmail = form.cleaned_data['invoicePayerEmail']
-            tr.expirationDate = tr.lastEndTime
-            tr.save()
-            new_invoice.sendNotification(payerEmail=payerEmail,newRegistration=True)
-
-        return HttpResponseRedirect(reverse('registration'))
 
 
 class StudentInfoView(FormView):

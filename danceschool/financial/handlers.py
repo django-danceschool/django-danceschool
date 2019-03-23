@@ -1,5 +1,6 @@
 from django.dispatch import receiver
-from django.db.models import Q
+from django.db.models import Q, Value, CharField, F
+from django.db.models.query import QuerySet
 from django.db.models.signals import post_save, m2m_changed
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.models import User
@@ -7,8 +8,9 @@ from django.contrib.auth.models import User
 import sys
 import logging
 
-from danceschool.core.models import EventStaffMember, EventOccurrence, InvoiceItem, Invoice, StaffMember, Location
+from danceschool.core.models import EventStaffMember, EventOccurrence, InvoiceItem, Invoice, StaffMember, Location, EventRegistration
 from danceschool.core.constants import getConstant
+from danceschool.core.signals import get_eventregistration_data
 
 from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule
 
@@ -163,3 +165,28 @@ def updateTransactionParty(sender,instance,**kwargs):
     party = getattr(instance,'transactionparty',None)
     if party:
         party.save(updateBy=instance)
+
+
+@receiver(get_eventregistration_data)
+def reportRevenue(sender, **kwargs):
+
+    logger.debug('Signal fired to return revenue items associated with registrations')
+
+    regs = kwargs.pop('eventregistrations',None)
+    if not regs or not isinstance(regs,QuerySet) or not (regs.model == EventRegistration):
+        logger.warning('No/invalid EventRegistration queryset passed, so revenue items not found.')
+        return
+    
+    extras = {}
+    regs = regs.filter(invoiceitem__revenueitem__isnull=False).select_related(
+        'invoiceitem__revenueitem'
+    )
+
+    for reg in regs:
+        extras[reg.id] = [{
+            'id': reg.invoiceitem.revenueitem.id,
+            'name': reg.invoiceitem.revenueitem.description,
+            'type': 'revenueitem',
+            'amount': reg.invoiceitem.revenueitem.total,
+        },]
+    return extras

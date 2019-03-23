@@ -52,7 +52,7 @@ def getReturnPage(siteHistory,prior=False):
         returnPage = siteHistory.get('returnPage',None)
         returnPageName = siteHistory.get('returnPageName',None)
 
-    if expiry and expiry >= timezone.now() and returnPage:
+    if expiry and expiry >= timezone.now() and returnPage[0]:
         return {
             'url': reverse(returnPage[0],kwargs=returnPage[1]),
             'title': returnPageName,

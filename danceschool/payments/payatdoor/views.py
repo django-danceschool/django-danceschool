@@ -37,7 +37,8 @@ def handle_willpayatdoor(request):
         if instance:
             return HttpResponseRedirect(instance.successPage.get_absolute_url())
     return HttpResponseBadRequest()
-    
+
+
 def handle_payatdoor(request):
 
     logger.info('Received request for At-the-door payment.')
@@ -49,15 +50,22 @@ def handle_payatdoor(request):
         subUser = form.cleaned_data.get('submissionUser')
         event = form.cleaned_data.get('event')
         sourcePage = form.cleaned_data.get('sourcePage')
+        paymentMethod = form.cleaned_data.get('paymentMethod')
+        payerEmail = form.cleaned_data.get('payerEmail')
+        receivedBy = form.cleaned_data.get('receivedBy')
 
-        CashPaymentRecord.objects.create(
+        this_cash_payment = CashPaymentRecord.objects.create(
             invoice=invoice,amount=amountPaid,
             status=CashPaymentRecord.PaymentStatus.collected,
-            submissionUser=subUser,collectedByUser=subUser,
+            paymentMethod=paymentMethod,
+            payerEmail=payerEmail,
+            submissionUser=subUser,collectedByUser=receivedBy,
         )
         invoice.processPayment(
-            amount=amountPaid,fees=0,paidOnline=False,methodName='At-the-door payment',
-            submissionUser=subUser,collectedByUser=subUser,
+            amount=amountPaid,fees=0,paidOnline=False,methodName=paymentMethod,
+            submissionUser=subUser,collectedByUser=receivedBy,
+            methodTxn='CASHPAYMENT_%s' % this_cash_payment.recordId,
+            forceFinalize=True,
         )
 
         # Send users back to the invoice to confirm the successful payment.

@@ -30,7 +30,7 @@ import random
 from cms.models.pluginmodel import CMSPlugin
 
 from .constants import getConstant
-from .signals import post_registration
+from .signals import post_registration, get_eventregistration_data
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
 from .utils.timezone import ensure_localtime
@@ -2053,9 +2053,9 @@ class Registration(EmailRecipientMixin, models.Model):
     There is a single registration for an online transaction.
     A single Registration includes multiple classes, as well as events.
     '''
-    firstName = models.CharField(_('First name'),max_length=100,default='TBD')
-    lastName = models.CharField(_('Last name'),max_length=100,default='TBD')
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),on_delete=models.CASCADE)
+    firstName = models.CharField(_('First name'),max_length=100,null=True)
+    lastName = models.CharField(_('Last name'),max_length=100,null=True)
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),null=True,on_delete=models.SET_NULL)
 
     howHeardAboutUs = models.TextField(_('How they heard about us'),default='',blank=True,null=True)
     student = models.BooleanField(_('Eligible for student discount'),default=False)
@@ -2282,7 +2282,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     '''
     registration = models.ForeignKey(Registration,verbose_name=_('Registration'),on_delete=models.CASCADE)
     event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),null=True,on_delete=models.SET_NULL)
     role = models.ForeignKey(DanceRole, null=True,blank=True,verbose_name=_('Dance role'),on_delete=models.SET_NULL)
     price = models.FloatField(_('Price before discounts'),default=0,validators=[MinValueValidator(0)])
 
@@ -3035,6 +3035,11 @@ class PaymentRecord(PolymorphicModel):
 
 
 class CashPaymentRecord(PaymentRecord):
+    '''
+    This subclass of PaymentRecord is actually a catch-all that can be used for cash payments,
+    checks, or other non-electronic or electronic methods of payment that do not have their own
+    payment processor app.
+    '''
 
     class PaymentStatus(DjangoChoices):
         needsCollection = ChoiceItem('N',_('Cash payment recorded, needs collection'))
@@ -3046,10 +3051,11 @@ class CashPaymentRecord(PaymentRecord):
 
     status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.needsCollection)
     collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedcashpayments',on_delete=models.SET_NULL)
+    paymentMethod = models.CharField(_('Payment method'),max_length=30,default='Cash')
 
     @property
     def methodName(self):
-        return 'Cash'
+        return self.paymentMethod
 
     @property
     def netAmountPaid(self):

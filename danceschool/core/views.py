@@ -1,8 +1,10 @@
-from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest
+from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
+from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
+from django.core.serializers.json import DjangoJSONEncoder
 from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, ListView
 from django.db.models import Min, Q, Count
 from django.utils.translation import ugettext_lazy as _
@@ -17,21 +19,23 @@ from django.utils import timezone
 from calendar import month_name
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from itertools import chain
 from urllib.parse import unquote_plus, unquote
 from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin, StaffuserRequiredMixin
 from cms.constants import RIGHT
 from cms.models import Page
 import re
 import logging
+import json
 
 from .models import (Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
                      StaffMember, Instructor, Invoice, Customer)
 from .forms import (SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
-                    RepeatEventForm, InvoiceNotificationForm)
+                    RepeatEventForm, InvoiceNotificationForm, CreateInvoiceForm)
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import (EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin,
                      AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin)
-from .signals import get_customer_data
+from .signals import get_customer_data, get_eventregistration_data
 from .utils.requests import getIntFromGet
 from .utils.timezone import ensure_localtime, ensure_timezone
 
@@ -77,15 +81,113 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
         # the view class registrations page.  set_return_page() is in SiteHistoryMixin.
         self.set_return_page('viewregistrations',_('View Registrations'),event_id=self.object.id)
 
+        registrations = EventRegistration.objects.filter(
+            event=self.object, cancelled=False
+        ).select_related(
+            'registration','event','customer',
+            'invoiceitem','role','registration__invoice',
+        ).order_by('registration__firstName', 'registration__lastName')
+
+        extras = get_eventregistration_data.send(sender=self.__class__,eventregistrations=registrations)
+        extras_dict = {x: [] for x in registrations.values_list('id',flat=True)}
+        for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras]]):
+            extras_dict[k].extend(v)
+
         context = {
             'event': self.object,
-            'registrations': EventRegistration.objects.filter(
-                event=self.object,
-                cancelled=False
-            ).order_by('registration__customer__user__first_name', 'registration__customer__user__last_name'),
+            'registrations': registrations,
+            'extras': extras_dict,
         }
         context.update(kwargs)
         return super(EventRegistrationSummaryView, self).get_context_data(**context)
+
+
+class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
+    '''
+    This view is used to access a list of event registrations for a particular date.
+    '''
+    permission_required = 'core.view_registration_summary'
+
+    def get(self,request,*args,**kwargs):
+        ''' Parse the date and customer information that is passed. '''
+
+        def recurse_listing(listing,obj,extras=None):
+            '''
+            Recursively go through a list of model attributes, including attributes that
+            are of linked models.
+            '''
+            this_dict = {}
+            if not isinstance(listing,list):
+                raise ValueError('Invalid listing for recursion.')
+
+            for item in listing:
+                if isinstance(item,str):
+                    this_dict[item] = getattr(obj,item,None)
+                elif isinstance(item,tuple) and len(item) == 2 and isinstance(item[0],str):
+                    this_dict[item[0]] = recurse_listing(item[1],getattr(obj,item[0],None))
+
+            if (
+                isinstance(obj,EventRegistration) and
+                extras_dict is not None and
+                extras_dict.get(obj.id,None)
+            ):
+                this_dict['extras'] = extras_dict[obj.id]
+
+            return this_dict
+
+        if self.request.GET.get('date',None):
+            try:
+                self.startTime = ensure_localtime(datetime.strptime(self.request.GET.get('date',''),'%Y-%m-%d'))
+                self.endTime = self.startTime + timedelta(days=1)
+            except ValueError:
+                logger.warning('Invalid date passed to EventRegistrationJsonView.')
+
+        if self.request.GET.get('customer',None):
+            try:
+                self.customer = Customer.objects.get(id=self.request.GET.get('customer'))
+            except ObjectDoesNotExist:
+                logger.warning('Invalid customer passed to EventRegistrationJsonView.')
+
+        queryset = self.get_queryset()
+
+        # These are all the various attributes that we want to be populated in the response JSON
+        attributeList = [
+            'id','checkedIn','dropIn','price','netPrice','refundFlag','warningFlag',
+            ('registration',[
+                'id','priceWithDiscount','student','refundFlag','totalPrice','fullName','discounted',
+                ('customer',['id','fullName','email','numClassSeries']),
+                ('invoice',['id','adjustments','outstandingBalance','statusLabel']),
+            ]),
+            ('invoiceitem', ['id','adjustments','revenueMismatch','revenueNotYetReceived','revenueReceived','revenueReported']),
+            ('role',['id','name']),
+        ]
+
+        extras = get_eventregistration_data.send(sender=self.__class__,eventregistrations=queryset)
+        extras_dict = {x: [] for x in queryset.values_list('id',flat=True)}
+        for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras]]):
+            extras_dict[k].extend(v)
+
+        this_listing = [recurse_listing(attributeList,q,extras=extras_dict) for q in queryset]
+
+        data = json.dumps(this_listing, cls=DjangoJSONEncoder)
+        return HttpResponse(data, content_type='application/json')
+
+    def get_queryset(self):
+        filters = {'cancelled': False}
+        if getattr(self,'startTime',None):
+            filters['event__eventoccurrence__endTime__gte'] = self.startTime
+        if getattr(self,'endTime',None):
+            filters['event__eventoccurrence__startTime__lte'] = self.endTime
+        if getattr(self,'customer',None):
+            filters['customer'] = self.customer
+
+        registrations = EventRegistration.objects.filter(
+            **filters
+        ).distinct().select_related(
+            'registration','event','customer',
+            'invoiceitem','role','registration__invoice',
+        ).order_by('registration__firstName', 'registration__lastName')
+        return registrations
 
 
 #################################
@@ -144,7 +246,7 @@ class ViewInvoiceView(AccessMixin, FinancialContextMixin, SiteHistoryMixin, Deta
         if user_has_validation_string or user_has_permissions:
             context = self.get_context_data(
                 object=self.object,
-                user_has_permissions=user_has_permissions
+                user_has_permissions=user_has_permissions,
                 user_has_validation_string=user_has_validation_string
             )
             return self.render_to_response(context)
@@ -234,6 +336,36 @@ class InvoiceNotificationView(FinancialContextMixin, AdminSuccessURLMixin,
             'cannotNotify': self.cannotNotify,
         })
         return context
+
+
+class CreateInvoiceView(UserFormKwargsMixin,FormView):
+    form_class = CreateInvoiceForm
+
+    def form_valid(self,form):
+        regSession = self.request.session[REG_VALIDATION_STR]
+        reg_id = regSession["temp_reg_id"]
+        tr = TemporaryRegistration.objects.get(id=reg_id)
+
+        # Create a new Invoice if one does not already exist.
+        new_invoice = Invoice.get_or_create_from_registration(tr)
+
+        if form.cleaned_data.get('invoiceSent'):
+            # Do not finalize this registration, but set the expiration date
+            # on the TemporaryRegistration such that it will not be deleted
+            # until after the last series ends, in case this person does not make
+            # a payment right away.  This will also hold this individual's spot
+            # in anything for which they have registered indefinitely.
+            payerEmail = form.cleaned_data['invoicePayerEmail']
+            tr.expirationDate = tr.lastEndTime
+            tr.save()
+            new_invoice.sendNotification(payerEmail=payerEmail,newRegistration=True)
+
+        return HttpResponseRedirect(reverse('registration'))
+
+    def form_invalid(self,form):
+        ''' TODO: Figure out better handling for this case. '''
+        return HttpResponseBadRequest()
+
 
 
 #################################

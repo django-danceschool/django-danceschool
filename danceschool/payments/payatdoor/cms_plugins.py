@@ -1,5 +1,6 @@
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
+from cms.models.pluginmodel import CMSPlugin
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
@@ -9,12 +10,12 @@ from .models import PayAtDoorFormModel
 from .forms import WillPayAtDoorForm, DoorPaymentForm
 
 
-class PayAtDoorFormPlugin(CMSPluginBase):
+class WillPayAtDoorFormPlugin(CMSPluginBase):
     model = PayAtDoorFormModel
-    name = _('At-the-door Payment Method')
+    name = _('Agreement to pay at-the-door')
+    module = _('Payments')
     cache = False
-    module = 'Payment'
-    render_template = 'payatdoor/checkout.html'
+    render_template = 'cms/forms/plugin_crispy_form.html'
 
     def render(self, context, instance, placeholder):
         ''' Add the cart-specific context to this form '''
@@ -32,11 +33,36 @@ class PayAtDoorFormPlugin(CMSPluginBase):
         registration = getattr(context.get('registration', None),'id',None)
         invoice=getattr(context.get('invoice',None),'id',None)
         user=getattr(context.get('user',None),'id',None)
-        payAtDoor = context.get('payAtDoor',None)
 
-        if registration and payAtDoor is False:
-            return WillPayAtDoorForm(user=user,invoice=invoice,registration=registration,instance=instance.id)
-        elif invoice:
-            return DoorPaymentForm(user=user,invoice=invoice,registration=registration,instance=instance.id)
+        return WillPayAtDoorForm(user=user,invoice=invoice,registration=registration,instance=instance.id)
 
+
+class PayAtDoorFormPlugin(CMSPluginBase):
+    model = CMSPlugin
+    name = _('At-the-door payment form')
+    module = _('Payments')
+    cache = False
+    render_template = 'cms/forms/plugin_crispy_form.html'
+
+    def render(self, context, instance, placeholder):
+        ''' Add the cart-specific context to this form '''
+        context = super(PayAtDoorFormPlugin, self).render(context, instance, placeholder)
+
+        context.update({
+            'business_name': getConstant('contact__businessName'),
+            'currencyCode': getConstant('general__currencyCode'),
+            'form': self.get_form(context, instance, placeholder),
+        })
+
+        return context
+
+    def get_form(self, context, instance, placeholder):
+        registration = getattr(context.get('registration', None),'id',None)
+        invoice=getattr(context.get('invoice',None),'id',None)
+        user=getattr(context.get('user',None),'id',None)
+
+        return DoorPaymentForm(user=user,invoice=invoice,registration=registration,instance=instance.id)
+
+
+plugin_pool.register_plugin(WillPayAtDoorFormPlugin)
 plugin_pool.register_plugin(PayAtDoorFormPlugin)

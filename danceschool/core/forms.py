@@ -169,6 +169,13 @@ class CheckboxSeriesChoiceField(forms.MultipleChoiceField):
     '''
     widget = CheckboxSelectMultipleWithDisabled
 
+    def __init__(self,*args,**kwargs):
+        # Add field attributes for the associated event, and a dictionary of
+        # additional field features (e.g. roles, drop-ins, etc.).
+        self.event = kwargs.pop('event',None)
+        self.features = kwargs.pop('features',{})
+        super(CheckboxSeriesChoiceField,self).__init__(*args,**kwargs)
+
 
 class ClassChoiceForm(forms.Form):
     '''
@@ -179,6 +186,13 @@ class ClassChoiceForm(forms.Form):
         openEvents = kwargs.pop('openEvents',Event.objects.none())
         closedEvents = kwargs.pop('closedEvents', Event.objects.none())
         user = kwargs.pop('user',None)
+        includeCounts = kwargs.pop('includeCounts',True)
+        usePluralName = kwargs.pop('pluralName',True)
+        interval = kwargs.pop('interval',None)
+
+        # Only the keys passed in this property will be entered into session data.
+        # This prevents injection of unknown values into the registration process.
+        self.permitted_event_keys = kwargs.pop('permittedEventKeys',['role',])
 
         # Initialize a default (empty) form to fill
         super(ClassChoiceForm, self).__init__(*args, **kwargs)
@@ -192,12 +206,18 @@ class ClassChoiceForm(forms.Form):
         else:
             choice_set = openEvents
 
-        # Only the keys passed in this property will be entered into session data.
-        # This prevents injection of unknown values into the registration process.
-        self.permitted_event_keys = ['role',]
+
+        occurrence_filters = {}
+        if interval:
+            occurrence_filters.update({
+                'endTime__gte': interval[0],
+                'startTime__lte': interval[1]
+            })
+
 
         for event in choice_set:
             field_choices = []
+            field_features = set()
 
             # Get the set of roles for registration.  If custom roles and capacities
             # are provided, those will be used.  Or, if the DanceType of a Series
@@ -206,29 +226,38 @@ class ClassChoiceForm(forms.Form):
             eventRoles = event.eventrole_set.all()
             roles = []
             if eventRoles.count() > 0:
+                field_features.update(['roles'])
                 roles = [x.role for x in eventRoles]
             elif isinstance(event,Series) and event.classDescription.danceTypeLevel.danceType.roles.count() > 0:
+                field_features.update(['roles'])
                 roles = event.classDescription.danceTypeLevel.danceType.roles.all()
 
             # Add one choice per role
             for role in roles:
+                this_label_text = role.pluralName if usePluralName else role.name
+                if includeCounts:
+                    this_label_text += '(%s %s)' % (event.numRegisteredForRole(role),str(_('registered')))
                 this_label = {
-                    'label': '%s (%s registered)' % (role.pluralName,event.numRegisteredForRole(role))
+                    'label': this_label_text,
+                    'type': 'role',
                 }
                 if event.soldOutForRole(role):
                     this_label = {'label': _('%s sold out!') % role.pluralName, 'disabled': True}
                     if user.has_perm('core.override_register_soldout'):
                         this_label['disabled'] = False
                         this_label['override'] = True
-                if event in closedEvents:
-                    this_label['closed'] = True
-                    this_label['override'] = True
+                    if event in closedEvents:
+                        this_label['closed'] = True
+                        this_label['override'] = True
                 field_choices.append(
                     (json.dumps({'role': role.id,}),this_label)
                 )
             # If no choices, then add a general Register choice
             if not roles:
-                this_label = {'label': _('Register (%s registered)') % event.numRegistered}
+                this_label = {
+                    'label': _('Register (%s registered)') % event.numRegistered,
+                    'type': 'general',
+                }
                 if event.soldOut:
                     this_label = {'label': _('Sold out!'), 'disabled': True}
                     if user.has_perm('core.override_register_soldout'):
@@ -245,18 +274,29 @@ class ClassChoiceForm(forms.Form):
             # If the user only has override permissions, add the override collapse only.
             # Note that this works because django-polymorphic returns the subclass.
             if isinstance(event,Series):
-                if event.allowDropins and user and user.has_perm('core.register_dropins'):
-                    for occurrence in event.eventoccurrence_set.all():
-                        field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}), _('Drop-in: ') + ensure_localtime(occurrence.startTime).strftime('%B %-d')),)
-                        self.permitted_event_keys.append('dropin_' + str(occurrence.id))
-                elif (user and user.has_perm('core.override_register_dropins')):
-                    for occurrence in event.eventoccurrence_set.all():
-                        field_choices += ((json.dumps({'dropin_' + str(occurrence.id): True}),{'label': _('Drop-in: ') + ensure_localtime(occurrence.startTime).strftime('%B %-d'),'override':True}),)
+                a = (event.allowDropins and user and user.has_perm('core.register_dropins'))
+                b = (user and user.has_perm('core.override_register_dropins'))
+
+                if a or b:
+                    field_features.update(['dropin'])
+                    for occurrence in event.eventoccurrence_set.filter(**occurrence_filters):
+                        this_label = {
+                            'label': _('Drop-in: ') + ensure_localtime(occurrence.startTime).strftime('%B %-d'),
+                            'type': 'dropin',
+                        }
+                        if b:
+                            this_label['override'] = True 
+                        field_choices += ((
+                            json.dumps({'dropin_' + str(occurrence.id): True}),
+                            this_label
+                        ),)
                         self.permitted_event_keys.append('dropin_' + str(occurrence.id))
 
             self.fields['event_' + str(event.id)] = CheckboxSeriesChoiceField(
                 label=event.name,
                 choices=field_choices,
+                event=event,
+                features=field_features,
                 required=False,
             )
 
@@ -427,6 +467,80 @@ class RegistrationContactForm(forms.Form):
         return self.cleaned_data
 
 
+class CreateInvoiceForm(forms.Form):
+    '''
+    This form is used by staff users to create an invoice.
+    '''
+
+    submissionUser = forms.ModelChoiceField(queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),required=True)
+    invoiceSent = forms.BooleanField(label=_('Send Invoice'),required=True)
+    invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
+    discountAmount = forms.FloatField(required=False)
+
+    def __init__(self,*args,**kwargs):
+        user = kwargs.pop('user',None)
+        payerEmail = kwargs.pop('payerEmail',None)
+        discountAmount = kwargs.pop('discountAmount', None)
+
+        subUser = getattr(user,'id',None)
+
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_tag = False  # Our template must explicitly include the <form tag>
+
+        self.helper.layout = Layout(
+            HTML("""
+                <div class="card mt-4">
+                    <h6 class="card-header" role="tab" id="door_headingTwo">
+                            """ + str(_('Send Invoice')) + """
+                    </h6>
+                    <div class="card-body">
+                """),
+            Hidden('submissionUser',subUser),
+            'invoiceSent',
+            'invoicePayerEmail',
+            Hidden('discountAmount', discountAmount),
+            Submit('submit','Submit'),
+            HTML("""
+                    </div>
+                </div>
+            """),
+        )
+
+        kwargs.update(initial={
+            'invoicePayerEmail': payerEmail,
+        })
+
+        super(CreateInvoiceForm,self).__init__(*args, **kwargs)
+
+    def clean_submissionUser(self):
+        invoiceSent = self.data.get('invoiceSent') or None
+        user_id = self.data.get('submissionUser') or None
+
+        if user_id:
+            user = User.objects.get(id=user_id)
+        if not user_id or not user:
+            raise ValidationError(_('submissionUser not found.'))
+        elif invoiceSent and not user.has_perm('core.send_invoices'):
+            raise ValidationError(_('Invalid user submitted invoice.'))
+        return user
+
+    def clean(self):
+        form_data = self.cleaned_data
+
+        logger.debug('Form Data:\n%s' % form_data)
+
+        invoiceSent = form_data.get('invoiceSent')
+
+        if invoiceSent:
+            if not form_data.get('submissionUser'):
+                raise ValidationError(_('Submission user is required.'))
+            if not form_data.get('invoicePayerEmail'):
+                raise ValidationError(_('Must specify the email address of the invoice recipient.'))
+
+        return form_data
+
+
 class DoorAmountForm(forms.Form):
     '''
     This is the form that staff users fill out to indicate that they received a cash
@@ -456,7 +570,7 @@ class DoorAmountForm(forms.Form):
     amountPaid = forms.FloatField(label=_('Amount Paid'),required=False)
 
     invoiceSent = forms.BooleanField(label=_('Send Invoice'),required=False)
-    cashPayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
+    payerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
     invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
     discountAmount = forms.FloatField(required=False)
 

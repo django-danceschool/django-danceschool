@@ -15,6 +15,7 @@ import logging
 
 from danceschool.core.models import Invoice, TemporaryRegistration, Event
 from .models import PayAtDoorFormModel
+from .constants import ATTHEDOOR_PAYMENTMETHOD_CHOICES
 
 
 class CashPaymentMixin(object):
@@ -105,10 +106,22 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
     that they received a cash payment at-the-door.
     '''
 
-    submissionUser = forms.ModelChoiceField(queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),required=True)
+    submissionUser = forms.ModelChoiceField(
+        queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
+        required=True
+    )
     invoice = forms.ModelChoiceField(queryset=Invoice.objects.all(),required=True)
     instance = forms.ModelChoiceField(queryset=PayAtDoorFormModel.objects.all(),required=True)
 
+    amountPaid = forms.FloatField(label=_('Amount Paid'),required=True,min_value=0)
+    paymentMethod = forms.ChoiceField(
+        label=_('Payment method'),
+        required=True,
+        initial='Cash',
+        choices=ATTHEDOOR_PAYMENTMETHOD_CHOICES,
+    )
+
+    payerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
     receivedBy = forms.ModelChoiceField(
         queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
         label=_('Payment received by:'),
@@ -126,7 +139,6 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
             }
         )
     )
-    amountPaid = forms.FloatField(label=_('Amount Paid'),required=True,min_value=0)
 
     def __init__(self,*args,**kwargs):
         subUser = kwargs.pop('user','')
@@ -152,8 +164,10 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
             Hidden('submissionUser',subUser),
             Hidden('instance',instance),
             Hidden('invoice',invoiceId),
-            'receivedBy',
             'amountPaid',
+            'paymentMethod',
+            'payerEmail',
+            'receivedBy',
             Submit('submit',_('Submit')),
             HTML("""
                     </div>

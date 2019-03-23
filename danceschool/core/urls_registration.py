@@ -1,6 +1,6 @@
 from django.conf.urls import url
 
-from .views import EventRegistrationSummaryView, EventRegistrationSelectView, RefundProcessingView, RefundConfirmationView, ViewInvoiceView, InvoiceNotificationView
+from .views import EventRegistrationSummaryView, EventRegistrationSelectView, EventRegistrationJsonView, RefundProcessingView, RefundConfirmationView, ViewInvoiceView, InvoiceNotificationView
 from .classreg import RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView, ClassRegistrationReferralView,RegistrationSummaryView, StudentInfoView
 from .ajax import processCheckIn
 
@@ -23,7 +23,9 @@ urlpatterns = [
     # These are the URLs affiliated with viewing registrations and check-in
     url(r'^registrations/$',EventRegistrationSelectView.as_view(), name='viewregistrations_selectevent'),
     url(r'^registrations/(?P<event_id>[0-9]+)/$', EventRegistrationSummaryView.as_view(), name='viewregistrations'),
+    url(r'^registrations/json/$', EventRegistrationJsonView.as_view(), name='viewregistrations_json'),
     url(r'^registrations/checkin/$', processCheckIn, name='formhandler_checkin'),
+
 
     # These URLs are associated with viewing individual invoices and sending notifications
     url(r'^invoice/view/(?P<pk>[0-9a-f-]+)/$', ViewInvoiceView.as_view(), name='viewInvoice'),

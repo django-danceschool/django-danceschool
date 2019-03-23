@@ -1,9 +1,12 @@
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.translation import ugettext_lazy as _
+from django.db.models import Value, CharField
+from django.db.models.query import QuerySet
+from django.db.models.functions import Concat
 
-from danceschool.core.signals import post_student_info, post_registration, apply_price_adjustments, get_customer_data, check_student_info
-from danceschool.core.models import Customer, Series
+from danceschool.core.signals import post_student_info, post_registration, apply_price_adjustments, get_customer_data, check_student_info, get_eventregistration_data
+from danceschool.core.models import Customer, Series, Registration, EventRegistration
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 
 import logging
@@ -197,3 +200,29 @@ def provideCustomerReferralCode(sender,**kwargs):
         return {
             'referralVoucherId': vrd.referreeVoucher.voucherId
         }
+
+
+@receiver(get_eventregistration_data)
+def reportVouchers(sender,**kwargs):
+    if not getConstant('vouchers__enableVouchers'):
+        return
+
+    logger.debug('Signal fired to return vouchers associated with registrations')
+
+    regs = kwargs.pop('eventregistrations',None)
+    if not regs or not isinstance(regs,QuerySet) or not (regs.model == EventRegistration):
+        logger.warning('No/invalid EventRegistration queryset passed, so vouchers not found.')
+        return
+    
+    extras = {}
+    regs = regs.filter(registration__voucheruse__isnull=False).prefetch_related(
+        'registration__voucheruse_set','registration__voucheruse_set__voucher'
+    )
+
+    for reg in regs:
+        extras[reg.id] = list(reg.registration.voucheruse_set.annotate(
+            name=Concat('voucher__voucherId',Value(': '),'voucher__name',output_field=CharField()),
+            type=Value('voucher',output_field=CharField()),
+        ).values('id','amount','name','type'))
+
+    return extras

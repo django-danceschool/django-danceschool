@@ -50,16 +50,21 @@ def updateConstant(name,value,fail_silently=False):
             return False
 
 
-HOW_HEARD_CHOICES = [
+# These are the options for the optional question re: how the person
+# heard about us.  If you want different choices, this list can be
+# overridden in your project's settings.py.
+HOW_HEARD_CHOICES = getattr(settings,'HOW_HEARD_CHOICES',[
     ('','------'),
     ('Previous Student',_('I\'ve Taken Classes Before')),
     ('Facebook',_('Facebook')),
     ('Flyers',_('Flyers/Cards')),
     ('Friend',_('Another Student')),
     ('Other',_('Other')),
-]
+])
 
 
+# Validation strings for information that is kept in session data.  It is unlikely
+# that you will want to change these, but it can be done in settings to avoid conflicts.
 REG_VALIDATION_STR = getattr(settings,'REG_VALIDATION_STR','danceschool_registration')
 EMAIL_VALIDATION_STR = getattr(settings,'EMAIL_VALIDATION_STR','sendEmailView')
 REFUND_VALIDATION_STR = getattr(settings, 'REFUND_VALIDATION_STR', 'refundProcessingView')

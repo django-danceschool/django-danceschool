@@ -53,25 +53,42 @@ CHECKING AT-THE-DOOR PAYMENTS INTEGRATION
             """
         )
 
-        add_payatdoor_checkout = self.boolean_input('Add At-the-door payments checkbox to the registration summary view to allow students to elect to pay at the door [Y/n]', True)
-        if add_payatdoor_checkout:
-            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
-            if not home_page:
-                self.stdout.write(self.style.ERROR('Cannot add at-the-door payments checkbox because a home page has not yet been set.'))
-            else:
-                payment_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
-                payment_p_draft = payment_sp[0].draft
-                payment_p_public = payment_sp[0].public
+        add_payatdoor = self.boolean_input('Add form for staff members to record payments at the door [Y/n]', True)
+        if add_payatdoor:
+            payatdoor_sp = StaticPlaceholder.objects.get_or_create(code='registration_payatdoor_placeholder')
+            payatdoor_p_draft = payatdoor_sp[0].draft
+            payatdoor_p_public = payatdoor_sp[0].public
 
-                if payment_p_public.get_plugins().filter(plugin_type='PayAtDoorFormPlugin').exists():
-                    self.stdout.write('At-the-door payments checkbox already present.')
+            if payatdoor_p_public.get_plugins().filter(plugin_type='PayAtDoorFormPlugin').exists():
+                self.stdout.write('At-the-door payment processing form already present.')
+            else:
+                add_plugin(
+                    payatdoor_p_draft, 'PayAtDoorFormPlugin', initial_language,
+                )
+                add_plugin(
+                    payatdoor_p_public, 'PayAtDoorFormPlugin', initial_language,
+                )
+                self.stdout.write('At-the-door payment processing form added.')
+
+            add_willpayatdoor = self.boolean_input('Add At-the-door payments checkbox to the registration summary view to allow students to elect to pay at the door [Y/n]', True)
+            if add_willpayatdoor:
+                home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+                if not home_page:
+                    self.stdout.write(self.style.ERROR('Cannot add at-the-door payments checkbox because a home page has not yet been set.'))
                 else:
-                    add_plugin(
-                        payment_p_draft, 'PayAtDoorFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    add_plugin(
-                        payment_p_public, 'PayAtDoorFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    self.stdout.write('At-the-door payments checkbox added.')
+                    payment_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
+                    payment_p_draft = payment_sp[0].draft
+                    payment_p_public = payment_sp[0].public
+
+                    if payment_p_public.get_plugins().filter(plugin_type='WillPayAtDoorFormPlugin').exists():
+                        self.stdout.write('At-the-door payments checkbox already present.')
+                    else:
+                        add_plugin(
+                            payment_p_draft, 'WillPayAtDoorFormPlugin', initial_language,
+                            successPage=home_page,
+                        )
+                        add_plugin(
+                            payment_p_public, 'WillPayAtDoorFormPlugin', initial_language,
+                            successPage=home_page,
+                        )
+                        self.stdout.write('At-the-door payments checkbox added.')

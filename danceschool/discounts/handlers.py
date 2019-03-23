@@ -1,13 +1,14 @@
 from django.dispatch import receiver
-from django.db.models import Q
+from django.db.models import Q, Value, CharField, F
+from django.db.models.query import QuerySet
 from django.apps import apps
 
 import logging
 from collections import OrderedDict
 
-from danceschool.core.signals import request_discounts, apply_discount, apply_addons, post_registration
+from danceschool.core.signals import request_discounts, apply_discount, apply_addons, post_registration, get_eventregistration_data
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Customer
+from danceschool.core.models import Customer, EventRegistration, Registration
 from danceschool.core.classreg import RegistrationSummaryView
 
 from .helpers import getApplicableDiscountCombos
@@ -239,3 +240,30 @@ def applyFinalDiscount(sender,**kwargs):
 
     logger.debug('Discounts applied.')
     return obj
+
+
+@receiver(get_eventregistration_data)
+def reportDiscounts(sender,**kwargs):
+    if not getConstant('general__discountsEnabled'):
+        return
+
+    logger.debug('Signal fired to return discounts associated with registrations')
+
+    regs = kwargs.pop('eventregistrations',None)
+    if not regs or not isinstance(regs,QuerySet) or not (regs.model == EventRegistration):
+        logger.warning('No/invalid EventRegistration queryset passed, so discounts not found.')
+        return
+    
+    extras = {}
+    regs = regs.filter(registration__registrationdiscount__isnull=False).prefetch_related(
+        'registration__registrationdiscount_set','registration__registrationdiscount_set__discount'
+    )
+
+    for reg in regs:
+        extras[reg.id] = list(reg.registration.registrationdiscount_set.annotate(
+            name=F('discount__name'),
+            type=Value('discount',output_field=CharField()),
+            amount=F('discountAmount'),
+        ).values('id','amount','name','type'))
+
+    return extras

@@ -45,3 +45,7 @@ post_registration = Signal(providing_args=['registration',])
 # Fires on the customer profile page to collect customer information from other apps
 # without overriding the CustomerStatsView.
 get_customer_data = Signal(providing_args=['customer',])
+
+# Fires when viewing prior EventRegistrations to collect information from other apps
+# such as discounts or vouchers that were applied to the Registrations. 
+get_eventregistration_data = Signal(providing_args=['eventregistrations',])
