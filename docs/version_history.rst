@@ -1,6 +1,34 @@
 Version History
 ===============
 
+0.8.4 - March 22, 2019
+-------------------------
+
+- Added EventAutocompleteForm for easier selecting of events in Expense/Revenue reporting forms (#134)
+- Improved Revenue Reporting form by adding adjustments/fees and adding ability to mark revenue as received (#135)
+- Fixed PublicEvent model showing UTC instead of local time (#136)
+- Added direct registration link to PublicEventAdmin (#125)
+- Fixed bug that excluded prior-year expenses from financial detail view for events (#137)
+- Misc. bug fixes
+
+0.8.3 - March 19, 2019
+-------------------------
+
+- Added event-specific financial detail view
+- Fixed issue with financial detail view with explicit start/end dates
+- Fixed issue with reverse() call when prior site history is missing (e.g. viewing an invoice directly from an email link)
+- Fixed extra column with total registrations in finances by event view
+
+0.8.2 - February 24, 2019
+-------------------------
+
+- Fixed issue with ExpenseItem changelist form treating payTo as a required field
+- Fixed issue with display of most popular vouchers in school stats (#120)
+- Fixed access to QuerySet object in core/handlers.py (#121)
+- Fixed configuration issue with Redis dependency (#122)
+- Fixed issue with reversed occurrence dates in individual series view
+- Fixed incorrect page template for staff list in setupschool script (#115)
+
 0.8.1 - January 9, 2019
 -----------------------
 
@@ -46,7 +74,7 @@ version 0.8.0.
 - Improved management of staff members and instructors in the admin (Instructor is now non-polymorphic).
 - Misc. bug fixes and improvements.
 
-0.6.3 - September 19, 2018
+0.6.3 - September 21, 2018
 --------------------------
 
 - Fixed bug that led EventListPlugin instances to differ between draft and publication.

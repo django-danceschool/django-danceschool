@@ -934,7 +934,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         (_('Registration/Visibility'), {
             'fields': ('status',('pricingTier','capacity'),),
         }),
-        (_('Description/Link'), {'fields': ('descriptionField','shortDescriptionField','link')})
+        (_('Description/Link'), {'fields': ('descriptionField','shortDescriptionField','link','uuidLink',)})
     )
 
     # This allows us to save the obj reference in order to process related objects in an inline (substitute teachers)

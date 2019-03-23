@@ -460,7 +460,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 content_placeholder, 'StaffMemberListPlugin', initial_language,
                 orderChoice=StaffMemberListPluginModel.OrderChoices.random,
                 bioRequired=True,
-                template='core/instructor_list.html'
+                template='core/staff_list.html'
             )
             add_plugin(
                 sidebar_placeholder, 'StaffMemberListPlugin', initial_language,

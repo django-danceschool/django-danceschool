@@ -28,10 +28,14 @@ import re
 import logging
 import json
 
-from .models import (Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
-                     StaffMember, Instructor, Invoice, Customer)
-from .forms import (SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
-                    RepeatEventForm, InvoiceNotificationForm, CreateInvoiceForm)
+from .models import (
+    Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
+    StaffMember, Instructor, Invoice, Customer
+)
+from .forms import (
+    SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
+    RepeatEventForm, InvoiceNotificationForm, CreateInvoiceForm, EventAutocompleteForm
+)
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import (EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin,
                      AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin)
@@ -44,7 +48,7 @@ from .utils.timezone import ensure_localtime, ensure_timezone
 logger = logging.getLogger(__name__)
 
 
-class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, ListView):
+class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, FormView):
     '''
     This view is used to select an event for viewing registration data in
     the EventRegistrationSummaryView
@@ -52,15 +56,32 @@ class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, List
     template_name = 'core/events_viewregistration_list.html'
     permission_required = 'core.view_registration_summary'
     reverse_time_ordering = True
+    form_class = EventAutocompleteForm
 
     def get_queryset(self):
+        ''' Recent events are listed in link form. '''
+
         return Event.objects.filter(
             Q(startTime__gte=timezone.now() - timedelta(days=90)) & (
                 Q(series__isnull=False) | Q(publicevent__isnull=False)
             )
         ).annotate(count=Count('eventregistration')).annotate(**self.get_annotations()).exclude(
-            Q(count=0) & Q(status__in=[Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled])
+            Q(count=0) & Q(status__in=[
+                Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled
+            ])
         )
+
+    def get_context_data(self, **kwargs):
+        context = super(EventRegistrationSelectView,self).get_context_data(**kwargs)
+        queryset = self.get_queryset()
+        context.update({'queryset': queryset, 'object_list': queryset, 'event_list': queryset})
+        return context
+
+    def form_valid(self, form):
+        return HttpResponseRedirect(reverse(
+            'viewregistrations',
+            args=(form.cleaned_data.get('event').id,)
+        ))
 
 
 class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, DetailView):

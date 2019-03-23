@@ -407,7 +407,19 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 except (ValueError, TypeError):
                     month = None
         else:
-            month = getIntFromGet(request,'month')
+            month = getIntFromGet(request, 'month')
+
+        try:
+            event_id = int(self.kwargs.get('event'))
+        except (ValueError, TypeError):
+            event_id = getIntFromGet(request, 'event')
+        
+        event = None
+        if event_id:
+            try:
+                event = Event.objects.get(id=event_id)
+            except ObjectDoesNotExist:
+                pass
 
         kwargs.update({
             'year': year,
@@ -415,6 +427,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'startDate': getDateTimeFromGet(request,'startDate'),
             'endDate': getDateTimeFromGet(request,'endDate'),
             'basis': request.GET.get('basis'),
+            'event': event,
         })
 
         if kwargs.get('basis') not in EXPENSE_BASES.keys():
@@ -423,7 +436,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         context = kwargs.copy()
         timeFilters = {}
 
@@ -432,6 +445,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         month = kwargs.get('month')
         startDate = kwargs.get('startDate')
         endDate = kwargs.get('endDate')
+        event = kwargs.get('event')
 
         basis = kwargs.get('basis')
 
@@ -441,14 +455,18 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'rangeTitle': '',
         })
 
+        if event:
+            timeFilters['event'] = event
+            context['rangeTitle'] += '%s ' % event.name
+
         if startDate:
             timeFilters['%s__gte' % basis] = startDate
             context['rangeType'] = 'Date Range'
-            context['rangeTitle'] += _('From %s' % startDate.strftime('%b. %d, %Y'))
+            context['rangeTitle'] += str(_('From %s ' % startDate.strftime('%b. %d, %Y')))
         if endDate:
             timeFilters['%s__lt' % basis] = endDate
             context['rangeType'] = 'Date Range'
-            context['rangeTitle'] += _('To %s' % endDate.strftime('%b. %d, %Y'))
+            context['rangeTitle'] += str(_('To %s ' % endDate.strftime('%b. %d, %Y')))
 
         if not startDate and not endDate:
             if month and year:
@@ -469,6 +487,10 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
 
                 context['rangeType'] = 'Year'
                 context['rangeTitle'] = '%s' % year
+
+            elif event:
+                context['rangeType'] = 'Event'
+
             else:
                 # Assume year to date if nothing otherwise specified
                 timeFilters['%s__gte' % basis] = ensure_timezone(datetime(timezone.now().year,1,1))
@@ -477,8 +499,8 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 context['rangeType'] = 'YTD'
                 context['rangeTitle'] = _('Calendar Year To Date')
 
-        context['startDate'] = timeFilters['%s__gte' % basis]
-        context['endDate'] = timeFilters['%s__lt' % basis]
+        context['startDate'] = timeFilters.get('%s__gte' % basis)
+        context['endDate'] = timeFilters.get('%s__lt' % basis)
 
         # Revenues are booked on receipt basis, not payment/approval basis
         rev_timeFilters = timeFilters.copy()
@@ -486,10 +508,12 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
 
         if basis in ['paymentDate', 'approvalDate']:
             rev_basis = 'receivedDate'
-            rev_timeFilters['receivedDate__gte'] = rev_timeFilters['%s__gte' % basis]
-            rev_timeFilters['receivedDate__lt'] = rev_timeFilters['%s__lt' % basis]
-            del rev_timeFilters['%s__gte' % basis]
-            del rev_timeFilters['%s__lt' % basis]
+            if rev_timeFilters.get('%s__gte' % basis):
+                rev_timeFilters['receivedDate__gte'] = rev_timeFilters.get('%s__gte' % basis)
+                rev_timeFilters.pop('%s__gte' % basis,None)
+            if rev_timeFilters.get('%s__lt' % basis):
+                rev_timeFilters['receivedDate__lt'] = rev_timeFilters.get('%s__lt' % basis)
+                rev_timeFilters.pop('%s__lt' % basis,None)
 
         expenseItems = ExpenseItem.objects.filter(**timeFilters).annotate(net=F('total') + F('adjustments') + F('fees'),basisDate=Min(basis)).order_by(basis)
         revenueItems = RevenueItem.objects.filter(**rev_timeFilters).annotate(net=F('total') + F('adjustments') - F('fees'),basisDate=Min(rev_basis)).order_by(rev_basis)
@@ -526,8 +550,8 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'revenueCategoryTotals': RevenueCategory.objects.filter(revenueitem__in=revenueItems).annotate(category_total=Sum('revenueitem__total'),category_adjustments=Sum('revenueitem__adjustments'),category_fees=Sum('revenueitem__fees')).annotate(category_net=F('category_total') + F('category_adjustments') - F('category_fees')),
         })
         context.update({
-            'registrationRevenueEventTotals': Event.objects.filter(eventregistration__invoiceitem__revenueitem__in=context['registrationRevenueItems']).annotate(event_total=Sum('eventregistration__invoiceitem__revenueitem__total'),event_adjustments=Sum('eventregistration__invoiceitem__revenueitem__adjustments'),event_fees=Sum('eventregistration__invoiceitem__revenueitem__fees')).annotate(event_net=F('event_total') + F('event_adjustments') - F('event_fees')),
-            'registrationRevenueOtherTotal': context['registrationRevenueItems'].filter(invoiceItem__finalEventRegistration__isnull=True).annotate(event_net=F('total') + F('adjustments') - F('fees')).aggregate(event_total=Sum('total'),event_adjustments=Sum('adjustments'),event_fees=Sum('fees'),event_net=Sum('net')),
+            'registrationRevenueEventTotals': Event.objects.filter(revenueitem__in=context['registrationRevenueItems']).annotate(event_total=Sum('revenueitem__total'),event_adjustments=Sum('revenueitem__adjustments'),event_fees=Sum('revenueitem__fees')).annotate(event_net=F('event_total') + F('event_adjustments') - F('event_fees')),
+            'registrationRevenueOtherTotal': context['registrationRevenueItems'].filter(event__isnull=True).annotate(event_net=F('total') + F('adjustments') - F('fees')).aggregate(event_total=Sum('total'),event_adjustments=Sum('adjustments'),event_fees=Sum('fees'),event_net=Sum('net')),
 
             'totalRegistrationRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].filter(id=getConstant('financial__registrationsRevenueCat').id)]),
             'totalOtherRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals'].exclude(id=getConstant('financial__registrationsRevenueCat').id)]),

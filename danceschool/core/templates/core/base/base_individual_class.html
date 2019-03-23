@@ -82,7 +82,7 @@
 
 			<p class='schedule'>
 			<strong>{% trans "Class Schedule" %}:</strong><br />
-			{% for class in series.eventoccurrence_set.all reversed %}
+			{% for class in series.eventoccurrence_set.all %}
 				{{ class.startTime|date:'F j, h:i' }}&nbsp;-&nbsp;{{ class.endTime|date:'h:i A' }}<br />
 			{% endfor %}
 			</p>
