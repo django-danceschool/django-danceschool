@@ -16,7 +16,9 @@ from crispy_forms.layout import Layout, Field, Div, Submit, HTML
 from dal import autocomplete
 import logging
 
-from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
+from danceschool.core.models import (
+    InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
+)
 from danceschool.core.forms import EventAutocompleteForm
 
 from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo, TransactionParty
@@ -27,8 +29,9 @@ from .autocomplete_light_registry import get_method_list
 logger = logging.getLogger(__name__)
 
 PAYBY_CHOICES = (
-                (1,_('Hours of Work/Rental (paid at default rate)')),
-                (2,_('Flat Payment')),)
+    (1,_('Hours of Work/Rental (paid at default rate)')),
+    (2,_('Flat Payment')),
+)
 
 class ExpenseCategoryWidget(Select):
     '''
@@ -385,7 +388,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         ]
 
     class Media:
-        js = ('js/revenue_reporting.js','jquery-ui/jquery-ui.min.js',)
+        js = ('js/revenue_reporting.js', 'jquery-ui/jquery-ui.min.js',)
         css = {
             'all': ('jquery-ui/jquery-ui.min.css',),
         }
