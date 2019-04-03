@@ -81,4 +81,41 @@
 
 </form>
 
+{% addtoblock "js" %}
+    <script type="text/javascript">
+    $(document).ready(function(){
+
+        $('th.top-level input').change(function() {
+            var checked = $(this).is(':checked');
+            var children = $(this).closest('thead').nextUntil('thead').find('input');
+
+            $(children).each(function() {
+                $(this).prop("checked",checked);
+            })
+        });
+
+        $('tbody input').change(function() {
+            var checked = $(this).is(':checked');
+            var siblings = $(this).closest('tr').siblings('tr').find('td input');
+            var parent = $(this).closest('tbody').prev('thead').find('input');
+
+            var allSiblings = $(siblings).length;
+            var checkedSiblings = $(siblings).filter(':checked').length;
+
+            if (checked && (checkedSiblings == allSiblings)) {
+                $(parent).prop('indeterminate', false);
+                $(parent).prop('checked', true);
+            }
+            else if (!(checked) && (checkedSiblings == 0)) {
+                $(parent).prop('indeterminate', false);
+                $(parent).prop('checked', false);
+            }
+            else {
+                $(parent).prop('indeterminate', true);
+            }
+        });
+    });
+    </script>
+{% endaddtoblock %}
+
 {% endblock %}

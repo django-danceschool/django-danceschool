@@ -465,8 +465,3 @@ class ExpenseRuleGenerationForm(forms.Form):
             self.fields['%s_%s' % (prefix, rule.id)] = forms.BooleanField(
                 required=False, initial=True, label=rule.ruleName
             )
-
-    class Media:
-        js = (
-            'js/rule_generation_tree.js',
-        )
