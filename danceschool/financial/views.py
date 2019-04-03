@@ -1,11 +1,13 @@
 from django.views.generic import DetailView, TemplateView, CreateView, View, FormView
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, Http404, HttpResponseBadRequest
+from django.http import HttpResponse, Http404, HttpResponseBadRequest, HttpResponseRedirect
 from django.db.models import Q, Sum, F, Min
+from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
-from django.utils.translation import ugettext_lazy as _
+from django.core.urlresolvers import reverse
+from django.utils.translation import ugettext_lazy as _, ugettext
 from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
 from django.forms.models import model_to_dict
@@ -15,6 +17,7 @@ import unicodecsv as csv
 from calendar import month_name
 from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
+from collections import OrderedDict
 
 from danceschool.core.models import Instructor, Location, Event, StaffMember, EventStaffCategory
 from danceschool.core.constants import getConstant
@@ -23,8 +26,15 @@ from danceschool.core.utils.timezone import ensure_timezone
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule, StaffMemberWageInfo
-from .helpers import prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth, prepareStatementByEvent
-from .forms import ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm, CompensationRuleResetForm
+from .helpers import (
+    prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth,
+    prepareStatementByEvent, createExpenseItemsForEvents, createExpenseItemsForVenueRental, createGenericExpenseItems,
+    createRevenueItemsForRegistrations
+)
+from .forms import (
+    ExpenseReportingForm, RevenueReportingForm, CompensationRuleUpdateForm,
+    CompensationRuleResetForm, ExpenseRuleGenerationForm
+)
 from .constants import EXPENSE_BASES
 
 
@@ -656,6 +666,92 @@ class CompensationRuleResetView(CompensationActionView):
                     )
 
         return super(CompensationRuleResetView,self).form_valid(form)
+
+
+class ExpenseRuleGenerationView(AdminSuccessURLMixin, PermissionRequiredMixin, FormView):
+    template_name = 'financial/expense_generation.html'
+    form_class = ExpenseRuleGenerationForm
+    permission_required = 'financial.can_generate_repeated_expenses'
+
+    def get_context_data(self,**kwargs):
+        context = super(ExpenseRuleGenerationView,self).get_context_data(**kwargs)
+
+        fields = getattr(context.get('form',{}),'fields',OrderedDict())
+
+        context.update({
+            'form_title': _('Generate rule-based financial items'),
+            'form_description': _(
+                'This form is used to generate expense items and revenue items ' +
+                'based on pre-set repeated expense rules. Please check the boxes ' +
+                'for the rules that you wish to apply. Depending on your site ' +
+                'settings, regular automatic generation of these financial items ' +
+                'may already be occurring. Using this form should not lead duplicate ' +
+                'items to be generated under these rules.'
+            ),
+            'staff_keys': [key for key in fields.keys()
+                if key.startswith('staff') and key != 'staff'
+            ],
+            'venue_keys': [key for key in fields.keys()
+                if key.startswith('location') or key.startswith('room')
+            ],
+            'generic_keys': [key for key in fields.keys()
+                if key.startswith('generic') and key != 'generic'
+            ],
+        })
+        return context
+
+    def form_valid(self, form):
+        try:
+            generic_rules = RepeatedExpenseRule.objects.filter(id__in=[
+                int(key.split('_')[-1]) for key, value in form.cleaned_data.items() if key.startswith('rule_') and value
+            ]).order_by('id')
+            location_rules = RepeatedExpenseRule.objects.filter(id__in=[
+                int(key.split('_')[-1]) for key, value in form.cleaned_data.items() if (
+                    key.startswith('locationrule_') or key.startswith('roomrule_')
+                ) and value
+            ]).order_by('id')
+            staff_rules = RepeatedExpenseRule.objects.filter(id__in=[
+                int(key.split('_')[-1]) for key, value in form.cleaned_data.items() if (
+                    key.startswith('staffdefaultrule_') or key.startswith('staffmemberrule_')
+                ) and value                
+            ]).order_by('id')
+        except ValueError:
+            return HttpResponseBadRequest(_('Invalid rules provided.'))
+
+        response_items = [
+            {
+                'name': x.ruleName,
+                'id': x.id,
+                'type':_('Venue rental'),
+                'created': createExpenseItemsForVenueRental(rule=x)
+            } for x in location_rules
+        ]
+        response_items += [
+            {
+                'name': x.ruleName,
+                'id': x.id,
+                'type':_('Staff expenses'),
+                'created': createExpenseItemsForEvents(rule=x)
+            } for x in staff_rules
+        ]
+        response_items += [
+            {
+                'name': x.ruleName,
+                'id': x.id,
+                'type':_('Other expenses'),
+                'created': createGenericExpenseItems(rule=x)
+            } for x in generic_rules
+        ]
+        if form.cleaned_data.get('registrations'):
+            response_items += [{
+                'name': _('Revenue items for registrations'),
+                'type': _('Revenue items for registrations'),
+                'created': createRevenueItemsForRegistrations()
+            },]
+
+        success_message = ugettext('Successfully created {count} financial items.'.format(count=sum([x.get('created',0) or 0 for x in response_items])))
+        messages.success(self.request, success_message)
+        return HttpResponseRedirect(self.get_success_url())
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):

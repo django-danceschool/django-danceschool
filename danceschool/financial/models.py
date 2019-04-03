@@ -422,6 +422,14 @@ class RepeatedExpenseRule(PolymorphicModel):
         ''' Should be overridden by child classes with something more descriptive. '''
         return str(_('Repeated expense rule: %s' % self.name))
 
+    class Meta:
+        verbose_name = _('Repeated expense rule')
+        verbose_name_plural = _('Repeated expense rules')
+
+        permissions = (
+            ('can_generate_repeated_expenses',_('Able to generate rule-based repeated expenses using the admin view')),
+        )
+
 
 class LocationRentalInfo(RepeatedExpenseRule):
     '''
