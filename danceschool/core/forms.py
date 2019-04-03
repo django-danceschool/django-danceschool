@@ -592,7 +592,7 @@ class EventAutocompleteForm(forms.Form):
     '''
 
     event = forms.ModelChoiceField(
-        queryset=Event.objects.filter(Q(instance_of=PublicEvent) | Q(instance_of=Series)),
+        queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),
         label=_('Search for an Event'),
         required=True,
         widget=autocomplete.ModelSelect2(
