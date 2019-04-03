@@ -1,6 +1,8 @@
 from django.core.management.base import BaseCommand
 
-from danceschool.financial.helpers import createExpenseItemsForEvents, createExpenseItemsForVenueRental,createRevenueItemsForRegistrations
+from danceschool.financial.helpers import (
+    createExpenseItemsForEvents, createExpenseItemsForVenueRental, createRevenueItemsForRegistrations
+)
 from danceschool.core.constants import getConstant
 
 

@@ -112,7 +112,7 @@ def getRevenueItemsCSV(queryset):
     return response
 
 
-def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
+def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None, event=None):
     '''
     For each Location or Room-related Repeated Expense Rule, look for Events
     in the designated time window that do not already have expenses associated
@@ -137,12 +137,14 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
     rulesToCheck = RepeatedExpenseRule.objects.filter(rule_filters).distinct()
 
     # These are the filters place on Events that overlap the window in which expenses are being generated.
+    event_timefilters = Q()
+
     if datetimeTuple and len(datetimeTuple) == 2:
         timelist = list(datetimeTuple)
         timelist.sort()
-        event_timefilters = Q(startTime__gte=timelist[0]) & Q(startTime__lte=timelist[1])
-    else:
-        event_timefilters = Q()
+        event_timefilters = event_timefilters & Q(startTime__gte=timelist[0]) & Q(startTime__lte=timelist[1])
+    if event:
+        event_timefilters = event_timefilters & Q(id=event.id)
 
     # Now, we loop through the set of rules that need to be applied, then loop through the
     # Events in the window in question that occurred at the location indicated by the rule.
@@ -191,25 +193,30 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
             Q(expenseitem__expenseRule=rule)).distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
-            for event in events:
+            for this_event in events:
                 # Hourly expenses are always generated without checking for overlapping windows, because
                 # the periods over which hourly expenses are defined are disjoint.  However, hourly expenses
                 # are allocated directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
-                replacements['name'] = event.name
-                replacements['dates'] = event.startTime.strftime('%Y-%m-%d')
-                if event.startTime.strftime('%Y-%m-%d') != event.endTime.strftime('%Y-%m-%d'):
-                    replacements['dates'] += ' %s %s' % (_('to'),event.endTime.strftime('%Y-%m-%d'))
+                replacements['name'] = this_event.name
+                replacements['dates'] = ensure_localtime(this_event.startTime).strftime('%Y-%m-%d')
+                if (
+                    ensure_localtime(event.startTime).strftime('%Y-%m-%d') != \
+                    ensure_localtime(this_event.endTime).strftime('%Y-%m-%d')
+                ):
+                    replacements['dates'] += ' %s %s' % (
+                        _('to'), ensure_localtime(this_event.endTime).strftime('%Y-%m-%d')
+                    )
 
                 ExpenseItem.objects.create(
-                    event=event,
+                    event=this_event,
                     category=rental_category,
                     payTo=loc_party,
                     expenseRule=rule,
                     description='%(type)s %(of)s %(location)s %(for)s: %(name)s, %(dates)s' % replacements,
                     submissionUser=submissionUser,
-                    total=event.duration * rule.rentalRate,
-                    accrualDate=event.startTime,
+                    total=this_event.duration * rule.rentalRate,
+                    accrualDate=this_event.startTime,
                 )
                 generate_count += 1
         else:
@@ -239,7 +246,7 @@ def createExpenseItemsForVenueRental(request=None,datetimeTuple=None,rule=None):
     return generate_count
 
 
-def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
+def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, event=None):
     '''
     For each StaffMember-related Repeated Expense Rule, look for EventStaffMember
     instances in the designated time window that do not already have expenses associated
@@ -264,18 +271,23 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
         rule_filters).distinct().order_by('-staffmemberwageinfo__category','-staffdefaultwage__category')
 
     # These are the filters placed on Events that overlap the window in which expenses are being generated.
+    event_timefilters = Q()
+
     if datetimeTuple and len(datetimeTuple) == 2:
         timelist = list(datetimeTuple)
         timelist.sort()
-        event_timefilters = Q(event__startTime__gte=timelist[0]) & Q(event__startTime__lte=timelist[1])
-    else:
-        event_timefilters = Q()
+        event_timefilters = event_timefilters & (
+            Q(event__startTime__gte=timelist[0]) & Q(event__startTime__lte=timelist[1])
+        )
+
+    if event:
+        event_timefilters = event_timefilters & Q(event__id=event.id)
 
     # Now, we loop through the set of rules that need to be applied, then loop through the
     # Events in the window in question that involved the staff member indicated by the rule.
     for rule in rulesToCheck:
-        staffMember = getattr(rule,'staffMember',None)
-        staffCategory = getattr(rule,'category',None)
+        staffMember = getattr(rule, 'staffMember',None)
+        staffCategory = getattr(rule, 'category',None)
 
         # No need to continue if expenses are not to be generated
         if (
@@ -432,7 +444,7 @@ def createExpenseItemsForEvents(request=None,datetimeTuple=None,rule=None):
     return generate_count
 
 
-def createGenericExpenseItems(request=None,datetimeTuple=None,rule=None):
+def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
     '''
     Generic repeated expenses are created by just entering an
     expense at each exact point specified by the rule, without
