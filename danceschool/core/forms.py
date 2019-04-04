@@ -76,7 +76,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
     To make an option part of a separate "override" choice set, add a dictionary key {'override': True}
     """
 
-    def render(self, name, value, attrs=None, choices=()):
+    def render(self, name, value, attrs=None, renderer=None, choices=()):
         if value is None:
             value = []
         has_id = attrs and 'id' in attrs
@@ -697,6 +697,29 @@ class DoorAmountForm(forms.Form):
                 raise ValidationError(_('Must specify the email address of the invoice recipient.'))
 
         return form_data
+
+
+class CustomerGuestAutocompleteForm(forms.Form):
+    '''
+    This form can be used to search for customers and names on the guest
+    list for a night or event.
+    '''
+
+    name = forms.ModelChoiceField(
+        queryset=Customer.objects.all(),
+        widget=autocomplete.ModelSelect2(
+            url='autocompleteCustomer',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter a name'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 2,
+                'data-max-results': 10,
+                'class': 'modern-style',
+            }
+        )
+    )
 
 
 class EventAutocompleteForm(forms.Form):

@@ -110,7 +110,8 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
         required=True
     )
-    invoice = forms.ModelChoiceField(queryset=Invoice.objects.all(),required=True)
+    registration = forms.ModelChoiceField(queryset=TemporaryRegistration.objects.all())
+    invoice = forms.ModelChoiceField(queryset=Invoice.objects.all())
     instance = forms.ModelChoiceField(queryset=PayAtDoorFormModel.objects.all(),required=True)
 
     amountPaid = forms.FloatField(label=_('Amount Paid'),required=True,min_value=0)
@@ -142,11 +143,9 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
 
     def __init__(self,*args,**kwargs):
         subUser = kwargs.pop('user','')
-        instance = kwargs.pop('instance',None)
-        invoiceId = kwargs.pop('invoice',None)
-
-        # Registration is not used for this form, but pop it out of kwargs to avoid issues.
-        kwargs.pop('registration',None)
+        instance = kwargs.pop('instance', None)
+        invoiceId = kwargs.pop('invoice', None)
+        regId = kwargs.pop('registration', None)
 
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -161,14 +160,15 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
                     </h6>
                     <div class="card-body">
                 """),
-            Hidden('submissionUser',subUser),
-            Hidden('instance',instance),
-            Hidden('invoice',invoiceId),
+            Hidden('submissionUser', subUser),
+            Hidden('instance', instance),
+            Hidden('invoice', invoiceId),
+            Hidden('registration', regId),
             'amountPaid',
             'paymentMethod',
             'payerEmail',
             'receivedBy',
-            Submit('submit',_('Submit')),
+            Submit('submit', _('Submit')),
             HTML("""
                     </div>
                 </div>
@@ -179,11 +179,17 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
             'receivedBy': subUser,
         })
 
-        super(DoorPaymentForm,self).__init__(*args, **kwargs)
+        super(DoorPaymentForm, self).__init__(*args, **kwargs)
 
     def clean_submissionUser(self):
-        user = super(DoorPaymentForm,self).clean_submissionUser()
+        user = super(DoorPaymentForm, self).clean_submissionUser()
 
         if not user.has_perm('core.accept_door_payments'):
             raise ValidationError(_('Invalid user submitted door payment.'))
         return user
+
+    def clean_invoice(self):
+        print('About to super')
+        invoice = super(DoorPaymentForm, self).clean_invoice()
+        print('Invoice is: %s' % invoice)
+        return invoice

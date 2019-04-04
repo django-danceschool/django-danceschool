@@ -109,10 +109,14 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'invoiceitem','role','registration__invoice',
         ).order_by('registration__firstName', 'registration__lastName')
 
-        extras = get_eventregistration_data.send(sender=EventRegistrationSummaryView,eventregistrations=registrations)
         extras_dict = {x: [] for x in registrations.values_list('id',flat=True)}
-        for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras]]):
-            extras_dict[k].extend(v)
+
+        if registrations:
+            extras = get_eventregistration_data.send(
+                sender=EventRegistrationSummaryView, eventregistrations=registrations
+            )
+            for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
+                extras_dict[k].extend(v)
 
         context = {
             'event': self.object,

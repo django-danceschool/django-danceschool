@@ -44,7 +44,9 @@ def handle_payatdoor(request):
     logger.info('Received request for At-the-door payment.')
     form = DoorPaymentForm(request.POST)
 
+
     if form.is_valid():
+        tr = form.cleaned_data.get('registration')
         invoice = form.cleaned_data.get('invoice')
         amountPaid = form.cleaned_data.get('amountPaid')
         subUser = form.cleaned_data.get('submissionUser')
@@ -53,6 +55,17 @@ def handle_payatdoor(request):
         paymentMethod = form.cleaned_data.get('paymentMethod')
         payerEmail = form.cleaned_data.get('payerEmail')
         receivedBy = form.cleaned_data.get('receivedBy')
+
+        if not tr and not invoice:
+            return HttpResponseBadRequest()
+
+        if not invoice:
+            invoice = Invoice.get_or_create_from_registration(
+                tr,
+                submissionUser=form.cleaned_data.get('submissionUser'),
+            )
+            invoice.finalRegistration = tr.finalize()
+            invoice.save()
 
         this_cash_payment = CashPaymentRecord.objects.create(
             invoice=invoice,amount=amountPaid,
@@ -74,4 +87,6 @@ def handle_payatdoor(request):
         if returnPage.get('url'):
             return HttpResponseRedirect(returnPage['url'])
         return HttpResponseRedirect(reverse('registration'))
+
+    print(form.errors)
     return HttpResponseBadRequest()
