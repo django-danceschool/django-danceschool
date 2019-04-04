@@ -9,7 +9,10 @@
 <div class="col-12">
 
 	{% if event %}
-		<a href="{% url 'financesByEvent' %}" class="btn btn-primary float-right">{% trans "Return to Event Summary" %}</a>
+		<div class="btn-group float-right" role="group" aria-label="Event Links">
+			<a href="{% url 'financesByEvent' %}" class="btn btn-primary">{% trans "Return to Event Summary" %}</a>
+			<a href="{% url 'admin:core_event_change' event.id %}" class="btn btn-outline-primary">{% trans "Edit Event" %}</a>
+		</div>	
 	{% else %}
 		<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
 	{% endif %}

@@ -16,10 +16,15 @@ from crispy_forms.layout import Layout, Field, Div, Submit, HTML
 from dal import autocomplete
 import logging
 
-from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
+from danceschool.core.models import (
+    InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
+)
 from danceschool.core.forms import EventAutocompleteForm
 
-from .models import ExpenseItem, ExpenseCategory, RevenueItem, StaffMemberWageInfo, TransactionParty
+from .models import (
+    ExpenseItem, ExpenseCategory, RevenueItem, RepeatedExpenseRule, GenericRepeatedExpense,
+    LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo, TransactionParty
+)
 from .autocomplete_light_registry import get_method_list
 
 
@@ -27,8 +32,9 @@ from .autocomplete_light_registry import get_method_list
 logger = logging.getLogger(__name__)
 
 PAYBY_CHOICES = (
-                (1,_('Hours of Work/Rental (paid at default rate)')),
-                (2,_('Flat Payment')),)
+    (1,_('Hours of Work/Rental (paid at default rate)')),
+    (2,_('Flat Payment')),
+)
 
 class ExpenseCategoryWidget(Select):
     '''
@@ -385,7 +391,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         ]
 
     class Media:
-        js = ('js/revenue_reporting.js','jquery-ui/jquery-ui.min.js',)
+        js = ('js/revenue_reporting.js', 'jquery-ui/jquery-ui.min.js',)
         css = {
             'all': ('jquery-ui/jquery-ui.min.css',),
         }
@@ -429,3 +435,33 @@ class CompensationRuleResetForm(forms.Form):
             self.fields['category_%s' % cat.id] = forms.BooleanField(required=False,label=this_label,help_text=this_help_text)
 
         self.fields['resetHow'] = forms.ChoiceField(label=_('For each selected category:'), choices=(('COPY',_('Copy default rules to each staff member')),('DELETE',_('Delete existing custom rules'))))
+
+
+class ExpenseRuleGenerationForm(forms.Form):
+    ''' Generate a form with all expense rules '''
+
+    staff = forms.BooleanField(required=False, initial=True, label=_('Generate expense items for event staff'))
+    venues = forms.BooleanField(required=False, initial=True, label=_('Generate expense items for venue rental'))
+    generic = forms.BooleanField(required=False, initial=True, label=_('Generate expense items for generic rules'))
+    registrations = forms.BooleanField(required=False, initial=True, label=_('Generate revenue items for registrations'))
+
+    def __init__(self, *args, **kwargs):
+
+        # Initialize a default form to fill by rule
+        super(ExpenseRuleGenerationForm, self).__init__(*args, **kwargs)
+
+        for rule in RepeatedExpenseRule.objects.filter(disabled=False).order_by('id'):
+            prefix = 'genericrule'
+
+            if isinstance(rule, LocationRentalInfo):
+                prefix = 'locationrule'
+            elif isinstance(rule, RoomRentalInfo):
+                prefix = 'roomrule'
+            elif isinstance(rule, StaffDefaultWage):
+                prefix = 'staffdefaultrule'
+            elif isinstance(rule, StaffMemberWageInfo):
+                prefix = 'staffmemberule'
+
+            self.fields['%s_%s' % (prefix, rule.id)] = forms.BooleanField(
+                required=False, initial=True, label=rule.ruleName
+            )

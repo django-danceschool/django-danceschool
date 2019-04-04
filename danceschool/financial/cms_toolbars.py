@@ -44,6 +44,10 @@ class FinancialToolbar(CMSToolbar):
             menu, newPosition = self.addTheMenu()
             menu.add_link_item(_('Submit Revenues'), url=reverse('submitRevenues'), position=newPosition)
             addBreak = True
+        if self.request.user.has_perm('financial.can_generate_repeated_expenses'):
+            menu, newPosition = self.addTheMenu()
+            menu.add_link_item(_('Generate Repeated Items'), url=reverse('generateFinancialItems'), position=newPosition)
+            addBreak = True
         if hasattr(self.request.user,'staffmember') and self.request.user.staffmember and self.request.user.has_perm('core.view_own_instructor_finances'):
             menu, newPosition = self.addTheMenu()
             menu.add_link_item(_('Your Payment History'), url=reverse('staffMemberPayments'), position=newPosition)

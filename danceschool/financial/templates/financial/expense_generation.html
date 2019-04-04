@@ -1,0 +1,121 @@
+{% extends "cms/admin_home.html" %}
+{% load crispy_forms_tags sekizai_tags i18n %}
+
+{% block content %}
+{% if form_title %}<h1>{{ form_title }}</h1>{% endif %}
+{% if form_description %}<p>{{ form_description }}</p>{% endif %}
+
+<form method="POST">
+
+    {% csrf_token %}
+
+    <input type="submit" class="btn btn-primary float-right my-4" value="{% trans "Submit" %}" />
+
+    <table class="table table-hover">
+        {% if staff_keys %}
+            <thead>
+                <tr data-toggle="collapse" data-target="#accordionstaff" class="clickable">
+                    <th class="top-level">{{ form.staff }}</th><th>{{ form.staff.label }} ({% trans "Click to expand" %})</th>
+                </tr>
+            </thead>
+            <tbody id="accordionstaff" class="collapse">
+                {% for field in form %}
+                    {% if "staffdefaultrule_" in field.name %}
+                    <tr>
+                        <td>{{ field }}</td><td>{{ field.label }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+                {% for field in form %}
+                    {% if "staffmemberrule_" in field.name %}
+                    <tr>
+                        <td>{{ field }}</td><td>{{ field.label }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>    
+        {% endif %}
+
+        {% if venue_keys %}
+            <thead>
+                <tr data-toggle="collapse" data-target="#accordionvenue" class="clickable">
+                    <th class="top-level">{{ form.venues }}</th><th>{{ form.venues.label }} ({% trans "Click to expand" %})</th>
+                </tr>
+            </thead>
+            <tbody id="accordionvenue" class="collapse">
+                {% for field in form %}
+                    {% if field.name in venue_keys %}
+                        <tr>
+                            <td>{{ field }}</td><td>{{ field.label }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        {% endif %}
+
+        {% if generic_keys %}
+            <thead>
+                <tr data-toggle="collapse" data-target="#accordiongeneric" class="clickable">
+                    <th class="top-level">{{ form.generic }}</th><th>{{ form.generic.label }} ({% trans "Click to expand" %})</th>
+                </tr>
+            </thead>
+            <tbody id="accordiongeneric" class="collapse">
+                {% for field in form %}
+                    {% if field.name in generic_keys %}
+                        <tr>
+                            <td>{{ field }}</td><td>{{ field.label }}</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        {% endif %}
+
+        <thead>
+            <tr class="clickable">
+                <th>{{ form.registrations }}</th><th>{{ form.registrations.label }}</th>
+            </tr>
+        </thead>
+    </table>
+
+    <input type="submit" class="btn btn-primary float-right my-4" value="{% trans "Submit" %}" />
+
+</form>
+
+{% addtoblock "js" %}
+    <script type="text/javascript">
+    $(document).ready(function(){
+
+        $('th.top-level input').change(function() {
+            var checked = $(this).is(':checked');
+            var children = $(this).closest('thead').nextUntil('thead').find('input');
+
+            $(children).each(function() {
+                $(this).prop("checked",checked);
+            })
+        });
+
+        $('tbody input').change(function() {
+            var checked = $(this).is(':checked');
+            var siblings = $(this).closest('tr').siblings('tr').find('td input');
+            var parent = $(this).closest('tbody').prev('thead').find('input');
+
+            var allSiblings = $(siblings).length;
+            var checkedSiblings = $(siblings).filter(':checked').length;
+
+            if (checked && (checkedSiblings == allSiblings)) {
+                $(parent).prop('indeterminate', false);
+                $(parent).prop('checked', true);
+            }
+            else if (!(checked) && (checkedSiblings == 0)) {
+                $(parent).prop('indeterminate', false);
+                $(parent).prop('checked', false);
+            }
+            else {
+                $(parent).prop('indeterminate', true);
+            }
+        });
+    });
+    </script>
+{% endaddtoblock %}
+
+{% endblock %}

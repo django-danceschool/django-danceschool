@@ -1,6 +1,11 @@
 from django.conf.urls import url
 
-from .views import StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView, ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView, CompensationRuleResetView
+from .views import (
+    StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView,
+    FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV, FinancialDetailView,
+    ExpenseReportingView, RevenueReportingView, CompensationRuleUpdateView,
+    CompensationRuleResetView, ExpenseRuleGenerationView
+)
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import PaymentMethodAutoComplete, TransactionPartyAutoComplete
 
@@ -14,6 +19,7 @@ urlpatterns = [
 
     url(r'^submit-expenses/$', ExpenseReportingView.as_view(), name='submitExpenses'),
     url(r'^submit-revenues/$', RevenueReportingView.as_view(), name='submitRevenues'),
+    url(r'^finances/generate-items/$', ExpenseRuleGenerationView.as_view(), name='generateFinancialItems'),
 
     # These URLs are for Ajax/autocomplete functionality
     url(r'^submit-revenues/eventfilter/$', updateEventRegistrations, name='ajaxhandler_updateEventRegistrations'),

@@ -1,6 +1,15 @@
 Version History
 ===============
 
+0.8.5 - April 3, 2019
+-------------------------
+
+- Added view for manual generation of repeated financial items, customizable by rule. 
+- Fixed event not editable on RevenueItem admin.
+- Improved reference links in admin between revenue/expense items, events, and event financial detail views.
+- Fixed #139, instance_of reference in EventAutocompleteForm creating issues with initial migration because of content_type reference.
+- Re: #140, pinned Huey to version <2.0 to avoid compatibility issues.
+
 0.8.4 - March 22, 2019
 -------------------------
 
