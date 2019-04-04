@@ -12,7 +12,7 @@ from calendar import month_name
 
 from danceschool.core.constants import getConstant
 from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room, StaffMember
-from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
+from danceschool.core.utils.timezone import ensure_timezone
 
 from .constants import EXPENSE_BASES
 from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule, RoomRentalInfo, TransactionParty
@@ -199,13 +199,13 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
                 # are allocated directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
                 replacements['name'] = this_event.name
-                replacements['dates'] = ensure_localtime(this_event.startTime).strftime('%Y-%m-%d')
+                replacements['dates'] = this_event.localStartTime.strftime('%Y-%m-%d')
                 if (
-                    ensure_localtime(event.startTime).strftime('%Y-%m-%d') != \
-                    ensure_localtime(this_event.endTime).strftime('%Y-%m-%d')
+                    event.localStartTime.strftime('%Y-%m-%d') != \
+                    this_event.localEndTime.strftime('%Y-%m-%d')
                 ):
                     replacements['dates'] += ' %s %s' % (
-                        _('to'), ensure_localtime(this_event.endTime).strftime('%Y-%m-%d')
+                        _('to'), this_event.localEndTime.strftime('%Y-%m-%d')
                     )
 
                 ExpenseItem.objects.create(
@@ -224,7 +224,7 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
             # occurs, and removing from that interval any intervals in which an expense has already been
             # generated under this rule (so, for example, monthly rentals will now show up multiple times).
             # So, we just need to construct the set of intervals for which to construct expenses
-            intervals = [(ensure_localtime(x.startTime), ensure_localtime(x.endTime)) for x in EventOccurrence.objects.filter(event__in=events)]
+            intervals = [(x.localStartTime, x.localEndTime) for x in EventOccurrence.objects.filter(event__in=events)]
             remaining_intervals = rule.getWindowsAndTotals(intervals)
 
             for startTime, endTime, total, description in remaining_intervals:
@@ -419,7 +419,7 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                     }
                 )[0]
 
-                intervals = [(ensure_localtime(x.startTime), ensure_localtime(x.endTime)) for x in EventOccurrence.objects.filter(event__in=events)]
+                intervals = [(x.localStartTime, x.localEndTime) for x in EventOccurrence.objects.filter(event__in=events)]
                 remaining_intervals = rule.getWindowsAndTotals(intervals)
 
                 for startTime, endTime, total, description in remaining_intervals:
