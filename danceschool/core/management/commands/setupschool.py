@@ -266,7 +266,7 @@ if you do not ask students to register for a particular role, then answer 'No' b
         if define_roles:
             DanceRole.objects.get_or_create(name='Leader',defaults={'pluralName': 'Leaders', 'order':1.0})
             DanceRole.objects.get_or_create(name='Follower',defaults={'pluralName': 'Followers', 'order': 2.0})
-            initial_dancetype_object[0].roles = DanceRole.objects.filter(name__in=['Leader','Follower'])
+            initial_dancetype_object[0].roles.set(DanceRole.objects.filter(name__in=['Leader','Follower']))
             initial_dancetype_object[0].save()
 
         self.stdout.write(
