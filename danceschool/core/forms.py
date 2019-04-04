@@ -25,7 +25,6 @@ from .models import (
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 from .utils.emails import get_text_for_html
-from .utils.timezone import ensure_localtime
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -285,7 +284,7 @@ class ClassChoiceForm(forms.Form):
                     field_features.update(['dropin'])
                     for occurrence in event.eventoccurrence_set.filter(**occurrence_filters):
                         this_label = {
-                            'label': _('Drop-in: ') + ensure_localtime(occurrence.startTime).strftime('%B %-d'),
+                            'label': _('Drop-in: ') + occurrence.localStartTime.strftime('%B %-d'),
                             'type': 'dropin',
                         }
                         if b:
