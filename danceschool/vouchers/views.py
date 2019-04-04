@@ -5,7 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 
 from easy_pdf.views import PDFTemplateView
 import re

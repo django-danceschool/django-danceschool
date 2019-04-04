@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from django.contrib.sites.models import Site
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Q, Sum
 from django.core.validators import MinValueValidator, MaxValueValidator

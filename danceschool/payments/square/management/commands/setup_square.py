@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.apps import apps
 from django.conf import settings
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.contrib.sites.models import Site
 
 from six.moves import input

@@ -2,7 +2,7 @@ from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, ListView
 from django.db.models import Min, Q, Count
 from django.utils.translation import ugettext_lazy as _

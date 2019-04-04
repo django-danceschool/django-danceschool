@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect, ModelMultipleChoiceField, ModelChoiceField
 from django.utils.safestring import mark_safe
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.template.response import SimpleTemplateResponse
 from django.contrib.contenttypes.models import ContentType

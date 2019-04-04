@@ -2,7 +2,7 @@
 This file contains basic tests for the core app.
 """
 
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.utils import timezone
 
 from datetime import timedelta
