@@ -91,7 +91,7 @@ class EventAutoComplete(autocomplete.Select2QuerySetView):
         return format_html(
             '{}: {} {} <br /><small>{}</small>',
             result.name, result.getMonthName, result.year,
-            ', '.join([x.startTime.strftime('%b. %d') for x in result.eventoccurrence_set.all()])
+            ', '.join([x.localStartTime.strftime('%b. %d') for x in result.eventoccurrence_set.all()])
         )
 
     def get_selected_result_label(self, result):
