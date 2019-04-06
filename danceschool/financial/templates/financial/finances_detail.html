@@ -34,6 +34,14 @@
 <div class="col-12">
 
 <h1 class="my-4 text-center">{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
+{% if event %}
+	<h4 class="text-center">
+	{% if event.eventoccurrence_set.count == 1 %}{% trans "Date" %}{% else %}{% trans "Dates" %}{% endif %}:
+	{% for occurrence in event.eventoccurrence_set.all %}
+		{{occurrence.startTime|date:'N jS' }}{% if not forloop.last %}, {% endif %}
+	{% endfor %}
+	</h4>
+{% endif %}
 
 <h3 class="mt-5 mb-3">{% trans "Period Summary" %}</h3>
 
