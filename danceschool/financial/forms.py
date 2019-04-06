@@ -120,10 +120,14 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
                     'approved',
                     'paid',
                     Div(
-                        Field('paymentDate', css_class='datepicker', wrapper_class='col-md-3'),
-                        Field('paymentMethod', wrapper_class='col-md-6'),
+                        Field('paymentDate', css_class='datepicker'),
+                        HTML('<div style="margin: auto 1em;"><button id="payment-event-start" class="btn btn-outline-secondary">%s</button></div>' %
+                            _('Event Start Date')
+                        ),
                         css_class='form-row',
                     ),
+                    'paymentMethod',
+
                     # The hidden input of accrual date must be passed as a naive datetime.
                     # Django will take care of converting it to local time
                     Field('accrualDate', type="hidden",value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()),
@@ -329,6 +333,9 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
                     'received',
                     Div(
                         Field('receivedDate', css_class='datepicker'),
+                        HTML('<div style="margin: auto 1em;"><button id="received-event-start" class="btn btn-outline-secondary">%s</button></div>' %
+                            _('Event Start Date')
+                        ),
                         css_class='form-row',
                     ),
                     'currentlyHeldBy',

@@ -5,6 +5,14 @@ $(document).ready(function(){
 	// Make payment date field a datepicker
 	$('#id_paymentDate').datepicker();
 
+	$('#payment-event-start').click(function(event) {
+		event.preventDefault();
+		var startDate = $($('#id_event :selected').text()).data().startDate;
+		if (startDate) {
+			$('#id_paymentDate').val(startDate);
+		}
+	});
+
 	$('input[name=payBy]').change(function(){
 		var this_payBy = $('#div_id_payBy input:checked').val();
 
