@@ -27,7 +27,7 @@ from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule, StaffMemberWageInfo
 from .helpers import (
-    prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByMonth,
+    prepareFinancialStatement, getExpenseItemsCSV, getRevenueItemsCSV, prepareStatementByPeriod,
     prepareStatementByEvent, createExpenseItemsForEvents, createExpenseItemsForVenueRental, createGenericExpenseItems,
     createRevenueItemsForRegistrations
 )
@@ -228,17 +228,17 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
         sorted(role_list, key=lambda x: (x is None, x))
         context['roles'] = role_list
 
-        return super(self.__class__,self).get_context_data(**context)
+        return super().get_context_data(**context)
 
     def dispatch(self, request, *args, **kwargs):
         if 'as_csv' in kwargs:
             self.as_csv = True
-        return super(self.__class__, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def render_to_response(self, context, **response_kwargs):
         if self.as_csv:
             return self.render_to_csv(context)
-        return super(self.__class__, self).render_to_response(context, **response_kwargs)
+        return super().render_to_response(context, **response_kwargs)
 
     def render_to_csv(self, context):
         statement = context['statement']
@@ -284,12 +284,15 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
         return response
 
 
-class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
+class FinancesByPeriodView(PermissionRequiredMixin, TemplateView):
     permission_required = 'financial.view_finances_bymonth'
     cache_timeout = 3600
-    template_name = 'financial/finances_bymonth.html'
+    template_name = 'financial/finances_byperiod.html'
     as_csv = False
     paginate_by = 24
+    period_type = None
+    base_view = None
+    base_view_csv = None
 
     def get_paginate_by(self,queryset=None):
         if self.as_csv:
@@ -314,15 +317,17 @@ class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
         if kwargs.get('basis') not in EXPENSE_BASES.keys():
             kwargs['basis'] = 'accrualDate'
 
-        return super(self.__class__,self).get(request,*args,**kwargs)
+        return super().get(request, *args, **kwargs)
 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         context = {}
 
         # Determine the period over which the statement should be produced.
         year = kwargs.get('year')
 
-        eligible_years = list(set([x.year for x in ExpenseItem.objects.values_list('accrualDate',flat=True).distinct()]))
+        eligible_years = list(set(
+            [x.year for x in ExpenseItem.objects.values_list('accrualDate',flat=True).distinct()]
+        ))
         eligible_years.sort(reverse=True)
 
         if year and year not in eligible_years:
@@ -334,35 +339,44 @@ class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
             'year': year,
             'current_year': year or 'all',
             'eligible_years': eligible_years,
+            'period_type': self.period_type,
+            'base_view': self.base_view,
+            'base_view_csv': self.base_view_csv,
         })
 
         page = self.kwargs.get('page') or self.request.GET.get('page') or 1
 
         context['statement'] = prepareFinancialStatement(year=year)
-        paginator, page_obj, statementByMonth, is_paginated = prepareStatementByMonth(year=year,basis=context['basis'],page=page,paginate_by=self.get_paginate_by())
+        paginator, page_obj, statementByPeriod, is_paginated = prepareStatementByPeriod(
+            year=year, basis=context['basis'], type=self.period_type,
+            page=page, paginate_by=self.get_paginate_by()
+        )
         context.update({
             'paginator': paginator,
             'page_obj': page_obj,
             'is_paginated': is_paginated,
         })
-        context['statement']['statementByMonth'] = statementByMonth
+        context['statement']['statementByPeriod'] = statementByPeriod
 
-        return super(self.__class__,self).get_context_data(**context)
+        return super().get_context_data(**context)
 
     def dispatch(self, request, *args, **kwargs):
         if 'as_csv' in kwargs:
             self.as_csv = True
-        return super(self.__class__, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def render_to_response(self, context, **response_kwargs):
         if self.as_csv:
             return self.render_to_csv(context)
-        return super(self.__class__, self).render_to_response(context, **response_kwargs)
+        return super().render_to_response(context, **response_kwargs)
 
     def render_to_csv(self, context):
         statement = context['statement']
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="financialStatementByMonth.csv"'
+        response['Content-Disposition'] = \
+            'attachment; filename="financialStatementBy{}.csv"'.format(
+                str(self.period_type).title()
+            )
 
         writer = csv.writer(response, csv.excel)
         response.write(u'\ufeff'.encode('utf8'))  # BOM (optional...Excel needs it to open UTF-8 file properly)
@@ -379,9 +393,9 @@ class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
         ]
         writer.writerow(header_list)
 
-        for x in statement['statementByMonth']:
+        for x in statement['statementByPeriod']:
             this_row_data = [
-                x['month_name'],
+                x['period_name'],
                 x['revenues'],
                 x['expenses']['instruction'],
                 x['expenses']['venue'],
@@ -393,6 +407,18 @@ class FinancesByMonthView(PermissionRequiredMixin, TemplateView):
             writer.writerow(this_row_data)
 
         return response
+
+
+class FinancesByMonthView(FinancesByPeriodView):
+    period_type = 'month'
+    base_view = 'financesByMonth'
+    base_view_csv = 'financesByMonthCSV'
+
+
+class FinancesByDateView(FinancesByPeriodView):
+    period_type = 'date'
+    base_view = 'financesByDate'
+    base_view_csv = 'financesByDateCSV'
 
 
 class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, TemplateView):

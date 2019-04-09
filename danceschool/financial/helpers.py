@@ -1,5 +1,6 @@
+from django.conf import settings
 from django.db.models import Sum, Count, Q
-from django.db.models.functions import ExtractYear, ExtractMonth
+from django.db.models.functions import TruncDate, TruncMonth
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -9,9 +10,12 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
 from calendar import month_name
+import pytz
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room, StaffMember
+from danceschool.core.models import (
+    Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room, StaffMember
+)
 from danceschool.core.utils.timezone import ensure_timezone
 
 from .constants import EXPENSE_BASES
@@ -27,7 +31,8 @@ def getExpenseItemsCSV(queryset, scope='instructor'):
         response['Content-Disposition'] = 'attachment; filename="expenseHistory.csv"'
 
     writer = csv.writer(response, csv.excel)
-    response.write(u'\ufeff'.encode('utf8'))  # BOM (optional...Excel needs it to open UTF-8 file properly)
+    # BOM (optional...Excel needs it to open UTF-8 file properly)
+    response.write(u'\ufeff'.encode('utf8'))
 
     header_list = [
         _('Description'),
@@ -75,7 +80,8 @@ def getRevenueItemsCSV(queryset):
     response['Content-Disposition'] = 'attachment; filename="revenueHistory.csv"'
 
     writer = csv.writer(response, csv.excel)
-    response.write(u'\ufeff'.encode('utf8'))  # BOM (optional...Excel needs it to open UTF-8 file properly)
+    # BOM (optional...Excel needs it to open UTF-8 file properly)
+    response.write(u'\ufeff'.encode('utf8'))
 
     header_list = [
         _('Description'),
@@ -123,7 +129,7 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
     '''
 
     # These are used repeatedly, so they are put at the top
-    submissionUser = getattr(request,'user',None)
+    submissionUser = getattr(request, 'user', None)
     rental_category = getConstant('financial__venueRentalExpenseCat')
 
     # Return the number of new expense items created
@@ -136,13 +142,16 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
         rule_filters = rule_filters & Q(id=rule.id)
     rulesToCheck = RepeatedExpenseRule.objects.filter(rule_filters).distinct()
 
-    # These are the filters place on Events that overlap the window in which expenses are being generated.
+    # These are the filters place on Events that overlap the window in which
+    # expenses are being generated.
     event_timefilters = Q()
 
     if datetimeTuple and len(datetimeTuple) == 2:
         timelist = list(datetimeTuple)
         timelist.sort()
-        event_timefilters = event_timefilters & Q(startTime__gte=timelist[0]) & Q(startTime__lte=timelist[1])
+        event_timefilters = event_timefilters & (
+            Q(startTime__gte=timelist[0]) & Q(startTime__lte=timelist[1])
+        )
     if event:
         event_timefilters = event_timefilters & Q(id=event.id)
 
@@ -150,33 +159,47 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
     # Events in the window in question that occurred at the location indicated by the rule.
     for rule in rulesToCheck:
 
-        venue = getattr(rule, 'location', None) if isinstance(rule,RoomRentalInfo) else getattr(rule, 'location', None)
-        loc = getattr(venue,'location') if isinstance(venue,Room) else venue
-        event_locfilter = Q(room=venue) if isinstance(venue,Room) else Q(location=venue)
+        venue = (
+            getattr(rule, 'location', None) if
+            isinstance(rule, RoomRentalInfo) else
+            getattr(rule, 'location', None)
+        )
+        loc = getattr(venue, 'location') if isinstance(venue, Room) else venue
+        event_locfilter = Q(room=venue) if isinstance(venue, Room) else Q(location=venue)
 
         # Find or create the TransactionParty associated with the location.
-        loc_party = TransactionParty.objects.get_or_create(location=loc,defaults={'name': loc.name})[0]
+        loc_party = TransactionParty.objects.get_or_create(
+            location=loc, defaults={'name': loc.name}
+        )[0]
 
         if rule.advanceDays:
             if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & Q(endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+                event_timefilters = event_timefilters & \
+                    Q(endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
             elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & Q(startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+                event_timefilters = event_timefilters & \
+                    Q(startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays:
             if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & Q(endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+                event_timefilters = event_timefilters & \
+                    Q(endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
             elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & Q(startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+                event_timefilters = event_timefilters & \
+                    Q(startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
         if rule.startDate:
-            event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
-                year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
-                hour=0,minute=0,second=0,microsecond=0,
-            ))
+            event_timefilters = event_timefilters & Q(
+                event__startTime__gte=timezone.now().replace(
+                    year=rule.startDate.year, month=rule.startDate.month, day=rule.startDate.day,
+                    hour=0, minute=0, second=0, microsecond=0,
+                )
+            )
         if rule.endDate:
-            event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now().replace(
-                year=rule.endDate.year,month=rule.endDate.month,day=rule.endDate.day,
-                hour=0,minute=0,second=0,microsecond=0,
-            ))
+            event_timefilters = event_timefilters & Q(
+                event__startTime__lte=timezone.now().replace(
+                    year=rule.endDate.year, month=rule.endDate.month, day=rule.endDate.day,
+                    hour=0, minute=0, second=0, microsecond=0,
+                )
+            )
 
         # For construction of expense descriptions
         replacements = {
@@ -186,23 +209,25 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
             'for': _('for'),
         }
 
-        # Loop through Events for which there are not already directly allocated expenses under this rule,
-        # and create new ExpenseItems for them depending on whether the rule requires hourly expenses or
-        # non-hourly ones to be generated.
+        # Loop through Events for which there are not already directly allocated
+        # expenses under this rule, and create new ExpenseItems for them depending
+        # on whether the rule requires hourly expenses or non-hourly ones to
+        # be generated.
         events = Event.objects.filter(event_locfilter & event_timefilters).exclude(
             Q(expenseitem__expenseRule=rule)).distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
             for this_event in events:
-                # Hourly expenses are always generated without checking for overlapping windows, because
-                # the periods over which hourly expenses are defined are disjoint.  However, hourly expenses
-                # are allocated directly to events, so we just need to create expenses for any events
+                # Hourly expenses are always generated without checking for
+                # overlapping windows, because the periods over which hourly expenses
+                # are defined are disjoint.  However, hourly expenses are allocated
+                # directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
                 replacements['name'] = this_event.name
                 replacements['dates'] = this_event.localStartTime.strftime('%Y-%m-%d')
                 if (
-                    event.localStartTime.strftime('%Y-%m-%d') != \
-                    this_event.localEndTime.strftime('%Y-%m-%d')
+                        event.localStartTime.strftime('%Y-%m-%d') != \
+                        this_event.localEndTime.strftime('%Y-%m-%d')
                 ):
                     replacements['dates'] += ' %s %s' % (
                         _('to'), this_event.localEndTime.strftime('%Y-%m-%d')
@@ -213,18 +238,24 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
                     category=rental_category,
                     payTo=loc_party,
                     expenseRule=rule,
-                    description='%(type)s %(of)s %(location)s %(for)s: %(name)s, %(dates)s' % replacements,
+                    description='%(type)s %(of)s %(location)s %(for)s: %(name)s, %(dates)s' % \
+                        replacements,
                     submissionUser=submissionUser,
                     total=this_event.duration * rule.rentalRate,
                     accrualDate=this_event.startTime,
                 )
                 generate_count += 1
         else:
-            # Non-hourly expenses are generated by constructing the time intervals in which the occurrence
-            # occurs, and removing from that interval any intervals in which an expense has already been
-            # generated under this rule (so, for example, monthly rentals will now show up multiple times).
-            # So, we just need to construct the set of intervals for which to construct expenses
-            intervals = [(x.localStartTime, x.localEndTime) for x in EventOccurrence.objects.filter(event__in=events)]
+            # Non-hourly expenses are generated by constructing the time
+            # intervals in which the occurrence occurs, and removing from that
+            # interval any intervals in which an expense has already been
+            # generated under this rule (so, for example, monthly rentals will
+            # now show up multiple times). So, we just need to construct the set
+            # of intervals for which to construct expenses
+            intervals = [
+                (x.localStartTime, x.localEndTime) for x in \
+                    EventOccurrence.objects.filter(event__in=events)
+            ]
             remaining_intervals = rule.getWindowsAndTotals(intervals)
 
             for startTime, endTime, total, description in remaining_intervals:
@@ -257,7 +288,7 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
     '''
 
     # This is used repeatedly, so it is put at the top
-    submissionUser = getattr(request,'user',None)
+    submissionUser = getattr(request, 'user', None)
 
     # Return the number of new expense items created
     generate_count = 0
@@ -268,9 +299,12 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
     if rule:
         rule_filters = rule_filters & Q(id=rule.id)
     rulesToCheck = RepeatedExpenseRule.objects.filter(
-        rule_filters).distinct().order_by('-staffmemberwageinfo__category','-staffdefaultwage__category')
+        rule_filters).distinct().order_by(
+            '-staffmemberwageinfo__category', '-staffdefaultwage__category'
+        )
 
-    # These are the filters placed on Events that overlap the window in which expenses are being generated.
+    # These are the filters placed on Events that overlap the window in which
+    # expenses are being generated.
     event_timefilters = Q()
 
     if datetimeTuple and len(datetimeTuple) == 2:
@@ -283,16 +317,20 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
     if event:
         event_timefilters = event_timefilters & Q(event__id=event.id)
 
-    # Now, we loop through the set of rules that need to be applied, then loop through the
-    # Events in the window in question that involved the staff member indicated by the rule.
+    # Now, we loop through the set of rules that need to be applied, then loop
+    # through the Events in the window in question that involved the staff
+    # member indicated by the rule.
     for rule in rulesToCheck:
-        staffMember = getattr(rule, 'staffMember',None)
-        staffCategory = getattr(rule, 'category',None)
+        staffMember = getattr(rule, 'staffMember', None)
+        staffCategory = getattr(rule, 'category', None)
 
         # No need to continue if expenses are not to be generated
         if (
-            (not staffMember and not staffCategory) or
-            (not staffMember and not getConstant('financial__autoGenerateFromStaffCategoryDefaults'))
+                (not staffMember and not staffCategory) or
+                (
+                    not staffMember and not
+                    getConstant('financial__autoGenerateFromStaffCategoryDefaults')
+                )
         ):
             continue
 
@@ -312,7 +350,10 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                 eventstaff_filter = Q(staffMember=staffMember) & Q(category=staffCategory)
             elif getConstant('financial__autoGenerateFromStaffCategoryDefaults'):
                 # Any staff member who does not already have a rule specified this category
-                eventstaff_filter = Q(category=staffCategory) & ~Q(staffMember__expenserules__category=staffCategory)
+                eventstaff_filter = (
+                    Q(category=staffCategory) &
+                    ~Q(staffMember__expenserules__category=staffCategory)
+                )
             replacements['type'] = staffCategory.name
 
             # For standard categories of staff, map the EventStaffCategory to
@@ -321,8 +362,8 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
             if staffCategory == getConstant('general__eventStaffCategoryAssistant'):
                 expense_category = getConstant('financial__assistantClassInstructionExpenseCat')
             elif staffCategory in [
-                getConstant('general__eventStaffCategoryInstructor'),
-                getConstant('general__eventStaffCategorySubstitute')
+                    getConstant('general__eventStaffCategoryInstructor'),
+                    getConstant('general__eventStaffCategorySubstitute')
             ]:
                 expense_category = getConstant('financial__classInstructionExpenseCat')
 
@@ -331,55 +372,71 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
             # rule and a non-limited rule for the same person, so we have to construct the list
             # of categories that are to be excluded if no category is specified by this rule.
             coveredCategories = list(staffMember.expenserules.filter(
-                category__isnull=False).values_list('category__id',flat=True))
+                category__isnull=False).values_list('category__id', flat=True))
             eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
         if rule.advanceDays is not None:
             if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & Q(event__endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+                event_timefilters = event_timefilters & Q(
+                    event__endTime__lte=timezone.now() + timedelta(days=rule.advanceDays)
+                )
             elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+                event_timefilters = event_timefilters & Q(
+                    event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays)
+                )
         if rule.priorDays is not None:
             if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & Q(event__endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+                event_timefilters = event_timefilters & Q(
+                    event__endTime__gte=timezone.now() - timedelta(days=rule.priorDays)
+                )
             elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+                event_timefilters = event_timefilters & Q(
+                    event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays)
+                )
         if rule.startDate:
             event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
-                year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
-                hour=0,minute=0,second=0,microsecond=0,
+                year=rule.startDate.year, month=rule.startDate.month, day=rule.startDate.day,
+                hour=0, minute=0, second=0, microsecond=0,
             ))
         if rule.endDate:
             event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now().replace(
-                year=rule.endDate.year,month=rule.endDate.month,day=rule.endDate.day,
-                hour=0,minute=0,second=0,microsecond=0,
+                year=rule.endDate.year, month=rule.endDate.month, day=rule.endDate.day,
+                hour=0, minute=0, second=0, microsecond=0,
             ))
 
-        # Loop through EventStaffMembers for which there are not already directly allocated expenses under this rule,
-        # and create new ExpenseItems for them depending on whether the rule requires hourly expenses or
-        # non-hourly ones to be generated.
+        # Loop through EventStaffMembers for which there are not already
+        # directly allocated expenses under this rule, and create new
+        # ExpenseItems for them depending on whether the rule requires hourly
+        # expenses or non-hourly ones to be generated.
 
         staffers = EventStaffMember.objects.filter(eventstaff_filter & event_timefilters).exclude(
             Q(event__expenseitem__expenseRule=rule)).distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
             for staffer in staffers:
-                # Hourly expenses are always generated without checking for overlapping windows, because
-                # the periods over which hourly expenses are defined are disjoint.  However, hourly expenses
-                # are allocated directly to events, so we just need to create expenses for any events
-                # that do not already have an Expense Item generate under this rule.
+                # Hourly expenses are always generated without checking for
+                # overlapping windows, because the periods over which hourly
+                # expenses are defined are disjoint.  However, hourly expenses
+                # are allocated directly to events, so we just need to create
+                # expenses for any events that do not already have an Expense
+                # Item generate under this rule.
                 replacements['event'] = staffer.event.name
                 replacements['name'] = staffer.staffMember.fullName
                 replacements['dates'] = staffer.event.startTime.strftime('%Y-%m-%d')
-                if staffer.event.startTime.strftime('%Y-%m-%d') != staffer.event.endTime.strftime('%Y-%m-%d'):
-                    replacements['dates'] += ' %s %s' % (_('to'),staffer.event.endTime.strftime('%Y-%m-%d'))
+                if (
+                        staffer.event.startTime.strftime('%Y-%m-%d') !=
+                        staffer.event.endTime.strftime('%Y-%m-%d')
+                ):
+                    replacements['dates'] += ' %s %s' % (
+                        _('to'), staffer.event.endTime.strftime('%Y-%m-%d')
+                    )
 
                 # Find or create the TransactionParty associated with the staff member.
                 staffer_party = TransactionParty.objects.get_or_create(
                     staffMember=staffer.staffMember,
                     defaults={
                         'name': staffer.staffMember.fullName,
-                        'user': getattr(staffer.staffMember,'userAccount',None)
+                        'user': getattr(staffer.staffMember, 'userAccount', None)
                     }
                 )[0]
 
@@ -387,7 +444,8 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                     'event': staffer.event,
                     'category': expense_category,
                     'expenseRule': rule,
-                    'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
+                    'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % \
+                        replacements,
                     'submissionUser': submissionUser,
                     'hours': staffer.netHours,
                     'wageRate': rule.rentalRate,
@@ -399,12 +457,15 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                 ExpenseItem.objects.create(**params)
                 generate_count += 1
         else:
-            # Non-hourly expenses are generated by constructing the time intervals in which the occurrence
-            # occurs, and removing from that interval any intervals in which an expense has already been
-            # generated under this rule (so, for example, monthly rentals will now show up multiple times).
-            # So, we just need to construct the set of intervals for which to construct expenses.  We first
-            # need to split the set of EventStaffMember objects by StaffMember (in case this rule is not
-            # person-specific) and then run this provedure separated by StaffMember.
+            # Non-hourly expenses are generated by constructing the time
+            # intervals in which the occurrence occurs, and removing from that
+            # interval any intervals in which an expense has already been
+            # generated under this rule (so, for example, monthly rentals will
+            # now show up multiple times). So, we just need to construct the set
+            # of intervals for which to construct expenses.  We first need to
+            # split the set of EventStaffMember objects by StaffMember (in case
+            # this rule is not person-specific) and then run this provedure
+            # separated by StaffMember.
             members = StaffMember.objects.filter(eventstaffmember__in=staffers)
 
             for member in members:
@@ -415,11 +476,14 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                     staffMember=member,
                     defaults={
                         'name': member.fullName,
-                        'user': getattr(member,'userAccount',None)
+                        'user': getattr(member, 'userAccount', None)
                     }
                 )[0]
 
-                intervals = [(x.localStartTime, x.localEndTime) for x in EventOccurrence.objects.filter(event__in=events)]
+                intervals = [
+                    (x.localStartTime, x.localEndTime) for x in
+                    EventOccurrence.objects.filter(event__in=events)
+                ]
                 remaining_intervals = rule.getWindowsAndTotals(intervals)
 
                 for startTime, endTime, total, description in remaining_intervals:
@@ -453,7 +517,7 @@ def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
     '''
 
     # These are used repeatedly, so they are put at the top
-    submissionUser = getattr(request,'user',None)
+    submissionUser = getattr(request, 'user', None)
 
     # Return the number of new expense items created
     generate_count = 0
@@ -465,7 +529,8 @@ def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
         rule_filters = rule_filters & Q(id=rule.id)
     rulesToCheck = RepeatedExpenseRule.objects.filter(rule_filters).distinct()
 
-    # These are the filters place on Events that overlap the window in which expenses are being generated.
+    # These are the filters place on Events that overlap the window in which
+    # expenses are being generated.
     if datetimeTuple and len(datetimeTuple) == 2:
         timelist = list(datetimeTuple)
         timelist.sort()
@@ -480,43 +545,47 @@ def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
         limits = timelist or [ensure_timezone(datetime.min), ensure_timezone(datetime.max)]
 
         if rule.advanceDays:
-            limits[1] = min(limits[1],timezone.now() + timedelta(days=rule.advanceDays))
+            limits[1] = min(limits[1], timezone.now() + timedelta(days=rule.advanceDays))
         if rule.priorDays:
-            limits[0] = max(limits[0],timezone.now() - timedelta(days=rule.priorDays))
+            limits[0] = max(limits[0], timezone.now() - timedelta(days=rule.priorDays))
 
         if rule.startDate:
             limits[0] = max(
                 limits[0],
                 timezone.now().replace(
-                    year=rule.startDate.year,month=rule.startDate.month,day=rule.startDate.day,
-                    hour=0,minute=0,second=0,microsecond=0,
+                    year=rule.startDate.year, month=rule.startDate.month, day=rule.startDate.day,
+                    hour=0, minute=0, second=0, microsecond=0,
                 )
             )
         if rule.endDate:
             limits[1] = min(
                 limits[1],
                 timezone.now().replace(
-                    year=rule.endDate.year,month=rule.endDate.month,day=rule.endDate.day,
-                    hour=0,minute=0,second=0,microsecond=0,
+                    year=rule.endDate.year, month=rule.endDate.month, day=rule.endDate.day,
+                    hour=0, minute=0, second=0, microsecond=0,
                 )
             )
 
         # Find the first start time greater than the lower bound time.
         if rule.applyRateRule == RepeatedExpenseRule.RateRuleChoices.hourly:
-            this_time = limits[0].replace(minute=0,second=0,microsecond=0)
+            this_time = limits[0].replace(minute=0, second=0, microsecond=0)
             if this_time < limits[0]:
                 this_time += timedelta(hours=1)
         elif rule.applyRateRule == RepeatedExpenseRule.RateRuleChoices.daily:
-            this_time = limits[0].replace(hour=rule.dayStarts,minute=0,second=0,microsecond=0)
+            this_time = limits[0].replace(hour=rule.dayStarts, minute=0, second=0, microsecond=0)
             if this_time < limits[0]:
                 this_time += timedelta(days=1)
         elif rule.applyRateRule == RepeatedExpenseRule.RateRuleChoices.weekly:
             offset = limits[0].weekday() - rule.weekStarts
-            this_time = limits[0].replace(day=limits[0].day - offset, hour=rule.dayStarts,minute=0,second=0,microsecond=0)
+            this_time = limits[0].replace(
+                day=limits[0].day - offset, hour=rule.dayStarts, minute=0, second=0, microsecond=0
+            )
             if this_time < limits[0]:
                 this_time += timedelta(days=7)
         else:
-            this_time = limits[0].replace(day=rule.monthStarts,hour=rule.dayStarts,minute=0,second=0,microsecond=0)
+            this_time = limits[0].replace(
+                day=rule.monthStarts, hour=rule.dayStarts, minute=0, second=0, microsecond=0
+            )
             if this_time < limits[0]:
                 this_time += relativedelta(months=1)
 
@@ -529,12 +598,12 @@ def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
                 'accrualDate': this_time,
                 'payTo': rule.payTo,
             }
-            item = ExpenseItem.objects.get_or_create(
+            item, created = ExpenseItem.objects.get_or_create(
                 expenseRule=rule,
                 periodStart=this_time,
                 periodEnd=this_time,
                 defaults=defaults_dict
-            )[0]
+            )
             if created:
                 generate_count += 1
             if rule.applyRateRule == RepeatedExpenseRule.RateRuleChoices.hourly:
@@ -549,9 +618,9 @@ def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
     return generate_count
 
 
-def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
+def createRevenueItemsForRegistrations(request=None, datetimeTuple=None):
 
-    if hasattr(request,'user'):
+    if hasattr(request, 'user'):
         submissionUser = request.user
     else:
         submissionUser = None
@@ -564,12 +633,18 @@ def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
         timelist = list(datetimeTuple)
         timelist.sort()
 
-        filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = timelist[0]
-        filters_events['finalEventRegistration__event__eventoccurrence__startTime__lte'] = timelist[1]
+        filters_events[
+            'finalEventRegistration__event__eventoccurrence__startTime__gte'
+        ] = timelist[0]
+        filters_events[
+            'finalEventRegistration__event__eventoccurrence__startTime__lte'
+        ] = timelist[1]
     else:
         c = getConstant('financial__autoGenerateRevenueRegistrationsWindow') or 0
         if c > 0:
-            filters_events['finalEventRegistration__event__eventoccurrence__startTime__gte'] = timezone.now() - relativedelta(months=c)
+            filters_events[
+                'finalEventRegistration__event__eventoccurrence__startTime__gte'
+            ] = timezone.now() - relativedelta(months=c)
 
     for item in InvoiceItem.objects.filter(**filters_events).distinct():
         if item.finalRegistration.paidOnline:
@@ -577,7 +652,9 @@ def createRevenueItemsForRegistrations(request=None,datetimeTuple=None):
         else:
             received = False
 
-        revenue_description = _('Event Registration ') + str(item.finalEventRegistration.id) + ': ' + item.invoice.finalRegistration.fullName
+        revenue_description = _('Event Registration ') + \
+            str(item.finalEventRegistration.id) + ': ' + \
+            item.invoice.finalRegistration.fullName
         RevenueItem.objects.create(
             invoiceItem=item,
             category=this_category,
@@ -597,11 +674,21 @@ def prepareFinancialStatement(year=None):
     else:
         filter_year = timezone.now().year
 
-    expenses_ytd = list(ExpenseItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values())[0]
-    revenues_ytd = list(RevenueItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values())[0]
-    expenses_awaiting_approval = list(ExpenseItem.objects.filter(approved=False,paid=False).aggregate(Sum('total')).values())[0]
-    expenses_awaiting_payment = list(ExpenseItem.objects.filter(approved=True,paid=False).aggregate(Sum('total')).values())[0]
-    expenses_paid_notapproved = list(ExpenseItem.objects.filter(approved=False,paid=True).aggregate(Sum('total')).values())[0]
+    expenses_ytd = list(
+        ExpenseItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values()
+    )[0]
+    revenues_ytd = list(
+        RevenueItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values()
+    )[0]
+    expenses_awaiting_approval = list(
+        ExpenseItem.objects.filter(approved=False, paid=False).aggregate(Sum('total')).values()
+    )[0]
+    expenses_awaiting_payment = list(
+        ExpenseItem.objects.filter(approved=True, paid=False).aggregate(Sum('total')).values()
+    )[0]
+    expenses_paid_notapproved = list(
+        ExpenseItem.objects.filter(approved=False, paid=True).aggregate(Sum('total')).values()
+    )[0]
 
     return {
         'expenses_ytd': expenses_ytd,
@@ -612,26 +699,54 @@ def prepareFinancialStatement(year=None):
     }
 
 
-def prepareStatementByMonth(**kwargs):
+def prepareStatementByPeriod(**kwargs):
     basis = kwargs.get('basis')
     if basis not in EXPENSE_BASES.keys():
         basis = 'accrualDate'
 
     rev_basis = basis
-    if rev_basis in ['paymentDate','approvalDate']:
+    if rev_basis in ['paymentDate', 'approvalDate']:
         rev_basis = 'receivedDate'
 
+    # Used to filter the set of observations shown
     start_date = kwargs.get('start_date')
     end_date = kwargs.get('end_date')
     year = kwargs.get('year')
 
-    # In order to provide major calculations, it's easiest to just get all the Expense and Revenue line items at once
-    # To avoid too many unnecessary calls, be sure to filter off these querysets rather than pulling them again.
-    expenseitems = ExpenseItem.objects.select_related('event').annotate(year=ExtractYear(basis,'year'),month=ExtractMonth(basis))
-    revenueitems = RevenueItem.objects.select_related('event').annotate(year=ExtractYear(rev_basis,'year'),month=ExtractMonth(rev_basis))
+    # Needed to ensure that everything is in local time.
+    localTimeZone = None
+    if getattr(settings, 'TIME_ZONE', None):
+        localTimeZone = pytz.timezone(getattr(settings, 'TIME_ZONE'))
 
-    timeFilters = {}
-    rev_timeFilters = {}
+    # Currently supported period types include month and date.  The variables
+    # values, annotations, and order_by are used repeatedly for constructing
+    # queries.
+    period_type = kwargs.get('type', 'month')
+    values = ('basisDate',)
+    order_by = ('-basisDate',)
+
+    def date_for_month(*args,**kwargs):
+        return TruncDate(TruncMonth(*args,**kwargs))
+
+    # NOTE: Django 2.1 introduces "TruncWeek", which should be added to the
+    # options once the project requires Django 2.1.
+    if period_type == 'month':
+        DateFunc = date_for_month
+    elif period_type == 'date':
+        DateFunc = TruncDate
+    else:
+        raise ValueError(_('Invalid period type passed as kwarg.'))
+
+    time_annotations = {'basisDate': DateFunc(basis, tzinfo=localTimeZone)}
+    rev_time_annotations = {'basisDate': DateFunc(rev_basis, tzinfo=localTimeZone)}
+    reg_time_annotations = {
+        'basisDate': DateFunc(
+            'eventregistration__event__startTime', tzinfo=localTimeZone
+        )
+    }
+
+    timeFilters = {'%s__isnull' % basis: False}
+    rev_timeFilters = {'%s__isnull' % rev_basis: False}
     if start_date:
         timeFilters['%s__gte' % basis] = start_date
         rev_timeFilters['%s__gte' % rev_basis] = start_date
@@ -640,104 +755,162 @@ def prepareStatementByMonth(**kwargs):
         rev_timeFilters['%s__lt' % rev_basis] = end_date
 
     if year and not (start_date or end_date):
-        start_limit = ensure_timezone(datetime(year,1,1))
-        end_limit = ensure_timezone(datetime(year + 1,1,1))
+        start_limit = ensure_timezone(datetime(year, 1, 1))
+        end_limit = ensure_timezone(datetime(year + 1, 1, 1))
 
         timeFilters['%s__gte' % basis] = start_limit
         rev_timeFilters['%s__gte' % rev_basis] = start_limit
         timeFilters['%s__lt' % basis] = end_limit
         rev_timeFilters['%s__lt' % rev_basis] = end_limit
 
-    if timeFilters:
-        expenseitems = expenseitems.filter(**timeFilters)
-        revenueitems = revenueitems.filter(**rev_timeFilters)
+    # In order to provide major calculations, it's easiest to just get all the
+    # Expense and Revenue line items at once To avoid too many unnecessary
+    # calls, be sure to filter off these querysets rather than pulling them
+    # again.
+    expenseitems = ExpenseItem.objects.select_related('event').annotate(
+        **time_annotations
+    ).filter(**timeFilters)
+    revenueitems = RevenueItem.objects.select_related('event').annotate(
+        **rev_time_annotations
+    ).filter(**rev_timeFilters)
 
-    # Get the set of possible month tuples.  If we are not given a date window, default to the last 12 months.
-    allMonths = [(x.year,x.month) for x in revenueitems.dates(rev_basis,'month')]
-    allMonths.sort(reverse=True)
+    # Get the set of possible dates or months.
+    all_periods_set = set()
 
-    paginator = Paginator(allMonths,kwargs.get('paginate_by',50))
+    for qs in [expenseitems, revenueitems]:
+        all_periods_set.update(list(
+            qs.order_by().values('basisDate').annotate(n=Count('pk')).values_list('basisDate')
+        ))
+
+    all_periods = [x[0] for x in all_periods_set]
+    all_periods.sort(reverse=True)
+
+    paginator = Paginator(all_periods, kwargs.get('paginate_by', 50))
     try:
-        paged_months = paginator.page(kwargs.get('page',1))
+        paged_periods = paginator.page(kwargs.get('page', 1))
     except PageNotAnInteger:
         if kwargs.get('page') == 'last':
-            paged_months = paginator.page(paginator.num_pages)
+            paged_periods = paginator.page(paginator.num_pages)
         else:
-            paged_months = paginator.page(1)
+            paged_periods = paginator.page(1)
     except EmptyPage:
-        paged_months = paginator.page(paginator.num_pages)
+        paged_periods = paginator.page(paginator.num_pages)
+
+    # Define common annotations used repeatedly in queries.
+    sum_annotations = (Sum('total'), Sum('adjustments'), Sum('fees'))
 
     # Get everything by month in one query each, then pull from this.
-    totalExpensesByMonth = expenseitems.values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
-    instructionExpensesByMonth = expenseitems.filter(category__in=[getConstant('financial__classInstructionExpenseCat'),getConstant('financial__assistantClassInstructionExpenseCat')]).values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
-    venueExpensesByMonth = expenseitems.filter(category=getConstant('financial__venueRentalExpenseCat')).values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
-    totalRevenuesByMonth = revenueitems.values_list('year','month').annotate(Sum('total'),Sum('adjustments'),Sum('fees')).order_by('-year','-month')
+    totalExpensesByPeriod = expenseitems.values(*values).annotate(
+        *sum_annotations
+    ).order_by(*order_by)
+
+    instructionExpensesByPeriod = expenseitems.filter(
+        category__in=[
+            getConstant('financial__classInstructionExpenseCat'),
+            getConstant('financial__assistantClassInstructionExpenseCat')
+        ]
+    ).values(*values).annotate(*sum_annotations).order_by(*order_by)
+
+    venueExpensesByPeriod = expenseitems.filter(
+        category=getConstant('financial__venueRentalExpenseCat')
+    ).values(*values).annotate(*sum_annotations).order_by(*order_by)
+
+    totalRevenuesByPeriod = revenueitems.values(*values).annotate(
+        *sum_annotations
+    ).order_by(*order_by)
 
     # This includes only registrations in which a series was registered for (and was not cancelled)
-    registrationsByMonth = Registration.objects.filter(eventregistration__cancelled=False).annotate(year=ExtractYear('dateTime'),month=ExtractMonth('dateTime')).values_list('year','month').annotate(count=Count('id')).order_by('-year','-month')
+    registrationsByPeriod = Registration.objects.filter(
+        eventregistration__cancelled=False
+    ).annotate(
+        **reg_time_annotations
+    ).values(*values).annotate(count=Count('id')).order_by(*order_by)
 
-    # This little helper function avoids 0-item list issues and encapsulates the
-    # needed list iterator for readability
-    def valueOf(resultset,month,values=1):
-        this = [x[2:(2 + values)] for x in resultset if x[0] == month[0] and x[1] == month[1]]
-        if this and values != 1:
-            return this[0]
-        elif this:
-            return this[0][0]
-        elif values != 1:
-            return [0] * values
-        else:
-            return 0
+    periodStatement = []
 
-    monthlyStatement = []
+    for this_period in paged_periods:
+        thisPeriodStatement = {}
+        thisPeriodStatement['period'] = this_period
+        this_period_date = datetime.combine(this_period, datetime.min.time())
 
-    for this_month in paged_months:
-        thisMonthlyStatement = {}
-        thisMonthlyStatement['month'] = this_month
-        thisMonthlyStatement['month_name'] = month_name[this_month[1]] + ' ' + str(this_month[0])
-        thisMonthlyStatement['month_date'] = datetime(this_month[0],this_month[1],1)
+        if period_type == 'month':
+            thisPeriodStatement.update({
+                'period_date': this_period_date,
+                'period_name': this_period_date.strftime('%B %Y'),
+            })
+        elif period_type == 'date':
+            thisPeriodStatement.update({
+                'period_date': this_period_date,
+                'period_name': this_period.strftime('%b. %-d, %Y'),
+            })
 
-        revenueList = valueOf(totalRevenuesByMonth,this_month,values=3)
-        thisMonthlyStatement['revenues'] = revenueList[0] + revenueList[1] - revenueList[2]
+        def get_net(this_dict):
+            '''
+            Convenience function to calculate net value incorporating adjustments and fees.
+            '''
+            if not isinstance(this_dict,dict):
+                this_dict = {}
+            return this_dict.get('total__sum',0) + \
+                this_dict.get('adjustments__sum',0) - \
+                this_dict.get('fees__sum',0)
 
-        totalExpenseList = valueOf(totalExpensesByMonth,this_month,values=3)
-        instructionExpenseList = valueOf(instructionExpensesByMonth,this_month,values=3)
-        venueExpenseList = valueOf(venueExpensesByMonth,this_month,values=3)
-
-        thisMonthlyStatement['expenses'] = {
-            'total': (totalExpenseList[0] or 0) + (totalExpenseList[1] or 0) - (totalExpenseList[2] or 0),
-            'instruction': (instructionExpenseList[0] or 0) + (instructionExpenseList[1] or 0) - (instructionExpenseList[2] or 0),
-            'venue': (venueExpenseList[0] or 0) + (venueExpenseList[1] or 0) - (venueExpenseList[2] or 0),
+        thisPeriodStatement['revenues'] = get_net(
+            totalRevenuesByPeriod.filter(basisDate=this_period).first()
+        )
+        thisPeriodStatement['expenses'] = {
+            'total': get_net(totalExpensesByPeriod.filter(basisDate=this_period).first()),
+            'instruction': get_net(
+                instructionExpensesByPeriod.filter(basisDate=this_period).first()
+            ),
+            'venue': get_net(
+                venueExpensesByPeriod.filter(basisDate=this_period).first()
+            ),
         }
-        thisMonthlyStatement['expenses']['other'] = thisMonthlyStatement['expenses']['total'] - thisMonthlyStatement['expenses']['instruction'] - thisMonthlyStatement['expenses']['venue']
+        thisPeriodStatement['expenses']['other'] = (
+            thisPeriodStatement['expenses']['total'] -
+            thisPeriodStatement['expenses']['instruction'] -
+            thisPeriodStatement['expenses']['venue']
+        )
 
-        thisMonthlyStatement['registrations'] = valueOf(registrationsByMonth,this_month)
-        thisMonthlyStatement['net_profit'] = thisMonthlyStatement['revenues'] - thisMonthlyStatement['expenses']['total']
-        monthlyStatement.append(thisMonthlyStatement)
+        thisPeriodStatement['registrations'] = (
+            registrationsByPeriod.filter(basisDate=this_period).first() or {}
+        ).get('count',0)
+        thisPeriodStatement['net_profit'] = (
+            thisPeriodStatement['revenues'] - thisPeriodStatement['expenses']['total']
+        )
+        periodStatement.append(thisPeriodStatement)
 
-    monthlyStatement.sort(key=lambda x: x['month'], reverse=True)
+    periodStatement.sort(key=lambda x: x['period_date'], reverse=True)
 
-    # Return not just the statement, but also the paginator in the style of ListView's paginate_queryset()
-    return (paginator, paged_months, monthlyStatement, paged_months.has_other_pages())
+    # Return not just the statement, but also the paginator in the style of
+    # ListView's paginate_queryset()
+    return (paginator, paged_periods, periodStatement, paged_periods.has_other_pages())
 
 
 def prepareStatementByEvent(**kwargs):
-    all_events = Event.objects.prefetch_related('expenseitem_set','expenseitem_set__category','revenueitem_set','revenueitem_set__category')
+    all_events = Event.objects.prefetch_related(
+        'expenseitem_set', 'expenseitem_set__category',
+        'revenueitem_set', 'revenueitem_set__category'
+    )
 
     start_date = kwargs.get('start_date')
     end_date = kwargs.get('end_date')
     year = kwargs.get('year')
 
     if start_date:
-        all_events = all_events.filter(year__gte=start_date.year).exclude(year=start_date.year,month__lt=start_date.month)
+        all_events = all_events.filter(year__gte=start_date.year).exclude(
+            year=start_date.year, month__lt=start_date.month
+        )
     if end_date:
-        all_events = all_events.filter(year__lte=end_date.year).exclude(year=end_date.year,month__gt=end_date.month)
+        all_events = all_events.filter(year__lte=end_date.year).exclude(
+            year=end_date.year, month__gt=end_date.month
+        )
     if year and not (start_date or end_date):
         all_events = all_events.filter(year=year)
 
-    paginator = Paginator(all_events,kwargs.get('paginate_by',50))
+    paginator = Paginator(all_events, kwargs.get('paginate_by', 50))
     try:
-        paged_events = paginator.page(kwargs.get('page',1))
+        paged_events = paginator.page(kwargs.get('page', 1))
     except PageNotAnInteger:
         if kwargs.get('page') == 'last':
             paged_events = paginator.page(paginator.num_pages)
@@ -761,9 +934,12 @@ def prepareStatementByEvent(**kwargs):
         this_event_statement['registrations'] = {'total': event.numRegistered,}
         this_event_statement['registrations'].update(event.numRegisteredByRole)
 
-        # The calculation of net vs. gross revenue for each registration item is done
-        # in models.py via model methods.  Any discounts are applied equally to each event.
-        event_revs = event.revenueitem_set.aggregate(Sum('grossTotal'),Sum('total'),Sum('adjustments'),Sum('fees'))
+        # The calculation of net vs. gross revenue for each registration item is
+        # done in models.py via model methods.  Any discounts are applied
+        # equally to each event.
+        event_revs = event.revenueitem_set.aggregate(
+            Sum('grossTotal'), Sum('total'), Sum('adjustments'), Sum('fees')
+        )
 
         this_event_statement['revenues'] = {
             'gross': event_revs['grossTotal__sum'] or 0,
@@ -771,23 +947,38 @@ def prepareStatementByEvent(**kwargs):
             'adjustments': event_revs['adjustments__sum'] or 0,
             'fees': event_revs['fees__sum'] or 0,
         }
-        this_event_statement['revenues']['net'] = sum([this_event_statement['revenues']['netOfDiscounts'],
-                                                       this_event_statement['revenues']['adjustments'],
-                                                       -1 * this_event_statement['revenues']['fees']])
+        this_event_statement['revenues']['net'] = sum([
+            this_event_statement['revenues']['netOfDiscounts'],
+            this_event_statement['revenues']['adjustments'],
+            -1 * this_event_statement['revenues']['fees']
+        ])
 
         this_event_statement['expenses'] = {
-            'instruction': event.expenseitem_set.filter(category=getConstant('financial__classInstructionExpenseCat')).aggregate(Sum('total'))['total__sum'] or 0,
-            'venue': event.expenseitem_set.filter(category=getConstant('financial__venueRentalExpenseCat')).aggregate(Sum('total'))['total__sum'] or 0,
-            'other': event.expenseitem_set.exclude(category=getConstant('financial__venueRentalExpenseCat')).exclude(category=getConstant('financial__classInstructionExpenseCat')).aggregate(Sum('total'))['total__sum'] or 0,
+            'instruction': event.expenseitem_set.filter(
+                category=getConstant('financial__classInstructionExpenseCat')
+            ).aggregate(Sum('total'))['total__sum'] or 0,
+            'venue': event.expenseitem_set.filter(
+                category=getConstant('financial__venueRentalExpenseCat')
+            ).aggregate(Sum('total'))['total__sum'] or 0,
+            'other': event.expenseitem_set.exclude(
+                category=getConstant('financial__venueRentalExpenseCat')
+            ).exclude(
+                category=getConstant('financial__classInstructionExpenseCat')
+            ).aggregate(Sum('total'))['total__sum'] or 0,
             'fees': event.expenseitem_set.aggregate(Sum('fees'))['fees__sum'] or 0
         }
-        this_event_statement['expenses']['total'] = sum([this_event_statement['expenses']['instruction'],
-                                                         this_event_statement['expenses']['venue'],
-                                                         this_event_statement['expenses']['other'],
-                                                         this_event_statement['expenses']['fees']])
-        this_event_statement['net_profit'] = this_event_statement['revenues']['net'] - this_event_statement['expenses']['total']
+        this_event_statement['expenses']['total'] = sum([
+            this_event_statement['expenses']['instruction'],
+            this_event_statement['expenses']['venue'],
+            this_event_statement['expenses']['other'],
+            this_event_statement['expenses']['fees']
+        ])
+        this_event_statement['net_profit'] = (
+            this_event_statement['revenues']['net'] - this_event_statement['expenses']['total']
+        )
 
         statementByEvent.append(this_event_statement)
 
-    # Return not just the statement, but also the paginator in the style of ListView's paginate_queryset()
+    # Return not just the statement, but also the paginator in the style of
+    # ListView's paginate_queryset()
     return (paginator, paged_events, statementByEvent, paged_events.has_other_pages())
