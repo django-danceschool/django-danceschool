@@ -51,7 +51,7 @@
 	<tr>
 		<td>{{ this_event.month_name }}</td>
 		<td>
-			<a href="{% url 'financialEventView' this_event.event.id %}">{{ this_event.event_name }}</a>
+			<a href="{% url 'financialEventDetailView' this_event.event.id %}">{{ this_event.event_name }}</a>
 			<br />
 			<small>
 				{% for occurrence in this_event.event.eventoccurrence_set.all %}

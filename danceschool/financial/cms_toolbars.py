@@ -55,12 +55,19 @@ class FinancialToolbar(CMSToolbar):
         if addBreak:
             menu.add_break('post_submission_break', position=newPosition + 1)
 
-        if self.request.user.has_perm('financial.view_finances_bymonth'):
+        if (
+            self.request.user.has_perm('financial.view_finances_bymonth') or
+            self.request.user.has_perm('financial.view_finances_byevent')            
+        ):
             menu, newPosition = self.addTheMenu()
-            menu.add_link_item(_('View Monthly Financial Summary'), url=reverse('financesByMonth'), position=newPosition)
-        if self.request.user.has_perm('financial.view_finances_byevent'):
-            menu, newPosition = self.addTheMenu()
-            menu.add_link_item(_('View Financial Summary By Event'), url=reverse('financesByEvent'), position=newPosition)
+            periodic_submenu = menu.get_or_create_menu('financial-periodic',_('Financial Summaries'), position=newPosition)
+
+            if self.request.user.has_perm('financial.view_finances_bymonth'):
+                periodic_submenu.add_link_item(_('Monthly Financial Summary'), url=reverse('financesByMonth'))
+            if self.request.user.has_perm('financial.view_finances_bydate'):
+                periodic_submenu.add_link_item(_('Daily Financial Summary'), url=reverse('financesByDate'))
+            if self.request.user.has_perm('financial.view_finances_byevent'):
+                periodic_submenu.add_link_item(_('Financial Summary By Event'), url=reverse('financesByEvent'))
 
         if self.request.user.has_perm('financial.view_finances_detail'):
             menu, newPosition = self.addTheMenu()
