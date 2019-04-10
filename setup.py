@@ -25,7 +25,7 @@ setup(
         'Django>=1.11,<2.0',
         'django-admin-sortable2>=0.6.10',
         'django-allauth>=0.31.0',
-        'django-autocomplete-light>=3.3.2',
+        'django-autocomplete-light==3.2.10',
         'django-braces>=1.8.1',
         'django-choices>=1.5.0',
         'django-ckeditor>=5.4.0',
@@ -77,5 +77,5 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Topic :: Internet :: WWW/HTTP',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content'
-    ]
+    ],
 )
