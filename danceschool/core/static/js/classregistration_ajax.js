@@ -38,7 +38,7 @@ $(document).ready(function(){
         }
     });
 
-    $('.register-role').click(function(event) {
+    $('.register-ajax').click(function(event) {
         event.preventDefault();
         var this_data = $(this).data();
         var this_role = (typeof this_data['roleId'] === 'undefined') ? null : this_data['roleId'];
