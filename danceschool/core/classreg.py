@@ -67,8 +67,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         Check that registration is online before proceeding.  If this is a POST
         request, determine whether the response should be provided in JSON form.
         '''
-        if request.POST.get('json') in ['true', True]:
-            self.returnJson = True
+        self.returnJson = (request.POST.get('json') in ['true', True])
 
         regonline = getConstant('registration__registrationEnabled')
         if not regonline:
