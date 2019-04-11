@@ -239,7 +239,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
     )
     readonly_fields = (
         'netRevenue', 'submissionUserLink', 'relatedRevItemsLink', 'eventLink',
-        'paymentMethod', 'invoiceNumber', 'invoiceLink'
+        'invoiceNumber', 'invoiceLink'
     )
     actions = ('markReceived', 'markNotReceived')
 
