@@ -73,6 +73,7 @@ class NightlyRegisterView(PermissionRequiredMixin, ClassRegistrationView):
 
         context = self.get_listing()
         context.update({
+            'voucherField': getConstant('nightlydoor__enableVoucherEntry'),
             'showDescriptionRule': getConstant('registration__showDescriptionRule') or 'all',
             'year': year,
             'month': month,

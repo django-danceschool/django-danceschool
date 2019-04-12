@@ -31,7 +31,12 @@ $(document).ready(function() {
                     window.location.href = response.redirect;
                 }
                 else {
-                    window.location.href = registerUrl;
+                    var errorText = '<ul>';
+                    for (const [key, error] of Object.entries(response.errors)) {
+                        errorText += '<li>' + error + '</li>';
+                    }
+                    errorText += '</ul>';
+                    addAlert(errorText);
                 }
             },
         });
@@ -60,6 +65,15 @@ $(document).ready(function() {
         return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
     }
 
+    function addAlert(message) {
+        $('#alert-box').append(
+            '<div class="alert alert-danger my-1 alert-dismissible fade show" role="alert">' +
+            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+            '<span aria-hidden="true">&times;</span></button>' +
+            '<span class="register-alert-text">' + message + '</span>'
+        );
+    }
+
     // Ensure that CSRF token is passed
     $.ajaxSetup({
         beforeSend: function(xhr, settings) {
@@ -71,13 +85,24 @@ $(document).ready(function() {
 
     // Add Item to Cart
     $('.add').click(function (){
-        itemCount ++;
 
-        $('#itemCount').text(itemCount).css('display', 'block');
-
+        // Before proceeding, validate to ensure that
         var this_data = $(this).data();
-        var this_name = this_data['name'];
-        var this_price = this_data['price'];
+        var this_key = 'event_' + this_data['id'];
+        existing_data = regData[this_key];
+
+        if (existing_data) {
+            addAlert(multipleRegisterString);
+            return;
+        }
+
+        // Since no errors were found, proceed.
+        itemCount ++;
+        $('#itemCount').text(itemCount).css('display', 'block');
+        $('#cart-submit').removeClass('invisible');
+
+        var this_name = this_data['name'] + ': ' + this_data['roleName'];
+        var this_price = parseFloat(this_data['price']);
 
         // Add the data from the button to the regData
         regData['event_' + this_data['id']] = this_data;
@@ -86,14 +111,15 @@ $(document).ready(function() {
                 this_name +
             '</td><td>' + 
                 currencySymbol + this_price +
-            '</td><td><button class="btn btn-outline-secondary removeItem">' + 
-                removeText + 
-            '</button></td></tr>'
+            '<button type="button" class="close removeItem" aria-label="Close"><span aria-hidden="true">&times;</span></button></td></tr>'
         );
 
         // Calculate Total Price
         priceTotal += this_price;
         $('#cartTotal').text(totalString + ": " + currencySymbol + priceTotal);
+
+        // Remove any existing alerts.
+        $('.alert').alert('close')
     }); 
 
     // Hide and Show Cart Items
@@ -105,10 +131,14 @@ $(document).ready(function() {
     $('#emptyCart').click(function() {
         itemCount = 0;
         priceTotal = 0;
+        regData = {};
 
+        // Clear everything and remove any existing alerts
         $('#itemCount').css('display', 'none');
         $('#cartItems').text('');
         $('#cartTotal').text(totalString + ": " + currencySymbol + priceTotal);
+        $('#cart-submit').addClass('invisible');
+        $('.alert').alert('close');
     }); 
 
     // Remove Item From Cart
@@ -123,12 +153,16 @@ $(document).ready(function() {
         $('#itemCount').text(itemCount);
 
         // Remove Cost of Deleted Item from Total Price
-        priceTotal -= this_data['price'];
+        priceTotal -= parseFloat(this_data['price']);
         $('#cartTotal').text(totalString + ": " + currencySymbol + priceTotal);
-
+        
         if (itemCount == 0) {
             $('#itemCount').css('display', 'none');
+            $('#cart-submit').addClass('invisible');
         }
+
+        // Remove any existing alerts.
+        $('.alert').alert('close')
     });
 
     // Submit registration

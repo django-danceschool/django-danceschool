@@ -28,17 +28,6 @@ class RequireFullRegistration(ChoicePreference):
 
 
 @global_preferences_registry.register
-class AllowMultipleItems(BooleanPreference):
-    section = nightlydoor
-    name = 'allowMultipleItems'
-    verbose_name = _('Allow registration for multiple items at once')
-    default = True
-    help_text = _(
-        'If this option is enabled, then the at-the-door register page will show a simple shopping cart view.'
-    )
-
-
-@global_preferences_registry.register
 class EnableVoucherEntry(BooleanPreference):
     section = nightlydoor
     name = 'enableVoucherEntry'
