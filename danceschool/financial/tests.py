@@ -221,10 +221,10 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
     def test_annual_detailview(self):
         ei, ri = self.create_initial_items()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year})
+        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year}))
         self.assertEqual(response.status_code, 302)
         self.client.login(username=self.superuser.username,password='pass')
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year})
+        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year}))
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -236,14 +236,14 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ri.accrualDate = timezone.now() + timedelta(days=-366)
         ri.save()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year})
+        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year}))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data.get('otherExpenseItems'))
         self.assertFalse(response.context_data.get('otherRevenueItems'))
 
         # Change the basis to payment/received basis and ensure
         # that the items still show up
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'basis': 'paymentDate'})
+        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year,}) + '?basis=paymentDate')
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -251,10 +251,10 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
     def test_monthly_detailview(self):
         ei, ri = self.create_initial_items()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month})
+        response = self.client.get(reverse('financialMonthDetailView', kwargs={'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month}))
         self.assertEqual(response.status_code, 302)
         self.client.login(username=self.superuser.username,password='pass')
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month})
+        response = self.client.get(reverse('financialMonthDetailView', kwargs={'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month}))
         self.assertEqual(response.status_code, 200)
 
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
@@ -267,14 +267,18 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ri.accrualDate = timezone.now() + timedelta(days=-32)
         ri.save()
 
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month})
+        response = self.client.get(reverse('financialMonthDetailView', kwargs={'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month}))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data.get('otherExpenseItems'))
         self.assertFalse(response.context_data.get('otherRevenueItems'))
 
         # Change the basis to payment/received basis and ensure
         # that the items still show up
-        response = self.client.get(reverse('financialDetailView'),{'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month, 'basis': 'paymentDate'})
+        response = self.client.get(
+            reverse('financialMonthDetailView', kwargs={
+                'year': ensure_localtime(timezone.now()).year,
+                'month': ensure_localtime(timezone.now()).month,
+            }) + '?basis=paymentDate')
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))

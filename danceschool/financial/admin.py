@@ -41,7 +41,7 @@ class EventLinkMixin(object):
                 ),
                 str(self.get_admin_change_link('core', 'event', s.id, str(_('Edit Event')))),
                 '<a href="%s">%s</a>' % (
-                    reverse('financialEventView', args=(s.id,)),
+                    reverse('financialEventDetailView', args=(s.id,)),
                     str(_('Financial Summary'))
                 ),
             ]
@@ -239,7 +239,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
     )
     readonly_fields = (
         'netRevenue', 'submissionUserLink', 'relatedRevItemsLink', 'eventLink',
-        'paymentMethod', 'invoiceNumber', 'invoiceLink'
+        'invoiceNumber', 'invoiceLink'
     )
     actions = ('markReceived', 'markNotReceived')
 

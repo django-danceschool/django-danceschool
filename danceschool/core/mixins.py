@@ -286,8 +286,8 @@ class PluginTemplateMixin(object):
                 ''' Add Select2 custom behavior only if user has permissions to need it. '''
                 if self.request and self.request.user.has_perm('core.choose_custom_plugin_template'):
                     return Media(
-                        css={'all':('select2/select2.min.css',)},
-                        js=('select2/select2.min.js','js/select2_newtemplate.js')
+                        css={'all':('autocomplete_light/select2.css',)},
+                        js=('autocomplete_light/select2.js','js/select2_newtemplate.js')
                     )
                 return Media()
             media = property(_media)

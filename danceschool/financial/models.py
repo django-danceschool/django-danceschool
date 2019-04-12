@@ -1008,6 +1008,7 @@ class RevenueItem(models.Model):
             ('mark_revenues_received',_('Mark revenues as received at the time of submission')),
             ('export_financial_data',_('Export detailed financial transaction information to CSV')),
             ('view_finances_bymonth',_('View school finances month-by-month')),
+            ('view_finances_bydate',_('View school finances day-by-day')),
             ('view_finances_byevent',_('View school finances by Event')),
             ('view_finances_detail',_('View school finances as detailed statement')),
         )

@@ -55,12 +55,19 @@ class FinancialToolbar(CMSToolbar):
         if addBreak:
             menu.add_break('post_submission_break', position=newPosition + 1)
 
-        if self.request.user.has_perm('financial.view_finances_bymonth'):
+        if (
+            self.request.user.has_perm('financial.view_finances_bymonth') or
+            self.request.user.has_perm('financial.view_finances_byevent')            
+        ):
             menu, newPosition = self.addTheMenu()
-            menu.add_link_item(_('View Monthly Financial Summary'), url=reverse('financesByMonth'), position=newPosition)
-        if self.request.user.has_perm('financial.view_finances_byevent'):
-            menu, newPosition = self.addTheMenu()
-            menu.add_link_item(_('View Financial Summary By Event'), url=reverse('financesByEvent'), position=newPosition)
+            periodic_submenu = menu.get_or_create_menu('financial-periodic',_('Financial Summaries'), position=newPosition)
+
+            if self.request.user.has_perm('financial.view_finances_bymonth'):
+                periodic_submenu.add_link_item(_('Monthly Financial Summary'), url=reverse('financesByMonth'))
+            if self.request.user.has_perm('financial.view_finances_bydate'):
+                periodic_submenu.add_link_item(_('Daily Financial Summary'), url=reverse('financesByDate'))
+            if self.request.user.has_perm('financial.view_finances_byevent'):
+                periodic_submenu.add_link_item(_('Financial Summary By Event'), url=reverse('financesByEvent'))
 
         if self.request.user.has_perm('financial.view_finances_detail'):
             menu, newPosition = self.addTheMenu()
@@ -72,15 +79,15 @@ class FinancialToolbar(CMSToolbar):
             three_months_ago = now - relativedelta(months=3)
             year_ago = now - relativedelta(years=1)
 
-            detail_submenu.add_link_item(_('Year To Date'), url=reverse('financialDetailView', kwargs={'year': str(now.year)}))
-            detail_submenu.add_link_item(_('%s' % year_ago.year), url=reverse('financialDetailView',kwargs={'year': str(year_ago.year)}))
+            detail_submenu.add_link_item(_('Year To Date'), url=reverse('financialYearDetailView', kwargs={'year': str(now.year)}))
+            detail_submenu.add_link_item(_('%s' % year_ago.year), url=reverse('financialYearDetailView',kwargs={'year': str(year_ago.year)}))
 
             detail_submenu.add_break('post_annual_break')
 
-            detail_submenu.add_link_item(_('Month To Date'), url=reverse('financialDetailView',kwargs={'year': str(now.year), 'month': month_name[now.month]}))
-            detail_submenu.add_link_item(_('%s %s' % (month_name[month_ago.month], month_ago.year)), url=reverse('financialDetailView',kwargs={'year': str(month_ago.year), 'month': month_name[month_ago.month]}))
-            detail_submenu.add_link_item(_('%s %s' % (month_name[two_months_ago.month], two_months_ago.year)), url=reverse('financialDetailView',kwargs={'year': str(two_months_ago.year), 'month': month_name[two_months_ago.month]}))
-            detail_submenu.add_link_item(_('%s %s' % (month_name[three_months_ago.month], three_months_ago.year)), url=reverse('financialDetailView',kwargs={'year': str(three_months_ago.year), 'month': month_name[three_months_ago.month]}))
+            detail_submenu.add_link_item(_('Month To Date'), url=reverse('financialMonthDetailView',kwargs={'year': str(now.year), 'month': month_name[now.month]}))
+            detail_submenu.add_link_item(_('%s %s' % (month_name[month_ago.month], month_ago.year)), url=reverse('financialMonthDetailView',kwargs={'year': str(month_ago.year), 'month': month_name[month_ago.month]}))
+            detail_submenu.add_link_item(_('%s %s' % (month_name[two_months_ago.month], two_months_ago.year)), url=reverse('financialMonthDetailView',kwargs={'year': str(two_months_ago.year), 'month': month_name[two_months_ago.month]}))
+            detail_submenu.add_link_item(_('%s %s' % (month_name[three_months_ago.month], three_months_ago.year)), url=reverse('financialMonthDetailView',kwargs={'year': str(three_months_ago.year), 'month': month_name[three_months_ago.month]}))
 
         if menu and (
             self.request.user.has_perm('financial.change_expenseitem') or self.request.user.has_perm('financial.change_revenueitem') or

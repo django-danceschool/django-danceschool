@@ -7,9 +7,9 @@
 	<h4>{% trans "Choose Financial Basis" %}</h4>
 
 	<div class="btn-group" role="group" aria-label="Financial Bases">
-	  <a href="{% url 'financesByMonth' current_year %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
-	  <a href="{% url 'financesByMonth' current_year %}?basis=paymentDate" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
-	  <a href="{% url 'financesByMonth' current_year %}?basis=submissionDate" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
+			<a href="{% url base_view current_year %}" type="button" class="btn btn-outline-secondary {% if basis == 'accrualDate' %}active{% endif %}">{% trans "Accrual Date (Default)" %}</a>
+			<a href="{% url base_view current_year %}?basis=paymentDate" type="button" class="btn btn-outline-secondary {% if basis == 'paymentDate' %}active{% endif %}">{% trans "Payment/Receipt Date" %}</a>
+			<a href="{% url base_view current_year %}?basis=submissionDate" type="button" class="btn btn-outline-secondary {% if basis == 'submissionDate' %}active{% endif %}">{% trans "Submission Date" %}</a>
 	</div>
 
 </div>
@@ -33,7 +33,7 @@
 <div class="col-sm-4">
 	<h5>{% trans "Export Financial Data (CSV)" %}</h5>
 	<div class="btn-group" role="group" aria-label="...">
-	  <a href="{% url 'financesByMonthCSV' %}" class="btn btn-outline-secondary">{% trans "This View" %}</a>
+	  <a href="{% url base_view_csv current_year %}" class="btn btn-outline-secondary">{% trans "This View" %}</a>
 	  <a href="{% url 'allexpensesCSV' current_year %}" class="btn btn-outline-secondary">{% trans "All Expenses" %}</a>
 	  <a href="{% url 'allrevenuesCSV' current_year %}" class="btn btn-outline-secondary">{% trans "All Revenues" %}</a>
 	</div>
@@ -44,7 +44,7 @@
 <div class="card mt-4">
 <h4 class="card-header">{% trans "School Performance Over Time" %}</h4>
 <div class="card-body">
-	<div id="monthlychart"></div>
+	<div id="periodicchart"></div>
 	<div class="btn-group" role="group" aria-label="..." id='chartselector_buttons'>
 	  <button type="button" class="btn btn-outline-secondary active" data-y-accessor='profit'>{% trans "Profits" %}</button>
 	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='registrations'>{% trans "Registrations" %}</button>
@@ -56,7 +56,7 @@
 
 
 <div class="card mt-4">
-<h4 class="card-header">{% trans "Details By Month" %}</h4>
+<h4 class="card-header">{% trans "Details By Period" %}</h4>
 <div class="card-body">
 	<table class="table">
 	<thead>
@@ -68,16 +68,30 @@
 		</tr>
 	</thead>
 	<tbody>
-	{% for this_month in statement.statementByMonth %}
+	{% for this_period in statement.statementByPeriod %}
 		<tr>
-			<td>{% if perms.financial.view_finances_detail %}<a href="{% url 'financialDetailView' this_month.month.0 this_month.month.1 %}{% if basis != 'accrualDate' %}?basis={{ basis }}{% endif %}">{{ this_month.month_name }}</a>{% else %}{{ this_month.month_name }}{% endif %}</td>
-			<td>{{ this_month.registrations }}</td>
-			<td>{{ this_month.revenues|floatformat:2 }}</td>
-			<td>{{ this_month.expenses.instruction|floatformat:2 }}</td>
-			<td>{{ this_month.expenses.venue|floatformat:2 }}</td>
-			<td>{{ this_month.expenses.other|floatformat:2 }}</td>
-			<td>{{ this_month.expenses.total|floatformat:2 }}</td>
-			<td>{{ this_month.net_profit|floatformat:2 }}</td>
+			<td>
+				{% if perms.financial.view_finances_detail %}
+				<a href="{% spaceless %}
+					{% if period_type == 'date' %}
+						{% url 'financialDateDetailView' this_period.period_date.year this_period.period_date.month this_period.period_date.day %}
+					{% else %}
+						{% url 'financialMonthDetailView' this_period.period_date.year this_period.period_date.month %}
+					{% endif %}
+					{% endspaceless %}">
+					{{ this_period.period_name }}
+				</a>
+				{% else %}
+					{{ this_period.period_name }}
+				{% endif %}
+			</td>
+			<td>{{ this_period.registrations }}</td>
+			<td>{{ this_period.revenues|floatformat:2 }}</td>
+			<td>{{ this_period.expenses.instruction|floatformat:2 }}</td>
+			<td>{{ this_period.expenses.venue|floatformat:2 }}</td>
+			<td>{{ this_period.expenses.other|floatformat:2 }}</td>
+			<td>{{ this_period.expenses.total|floatformat:2 }}</td>
+			<td>{{ this_period.net_profit|floatformat:2 }}</td>
 		</tr>
 	{% endfor %}
 	</tbody>
@@ -100,7 +114,7 @@
 	        </span>
 	    </div>
 	{% endif %}
-	
+
 </div>
 </div>
 
@@ -118,25 +132,25 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
 	<script type="text/javascript">
-	var monthly_data = [
-	{% for this_month in statement.statementByMonth reversed %}
+	var period_data = [
+	{% for this_period in statement.statementByPeriod reversed %}
 		{
-			'date': new Date('{{ this_month.month_date|date:"Y-m-d" }}'),
-			'profit': {{ this_month.net_profit }},
-			'registrations': {{ this_month.registrations }},
-			'revenues': {{ this_month.revenues }},
-			'expenses': {{ this_month.expenses.total }},
+			'date': new Date('{{ this_period.period_date|date:"Y-m-d" }}'),
+			'profit': {{ this_period.net_profit }},
+			'registrations': {{ this_period.registrations }},
+			'revenues': {{ this_period.revenues }},
+			'expenses': {{ this_period.expenses.total }},
 		},
 	{% endfor %}
 	]
 
 	var chart_params = {
-	  title: "{% trans 'School Performance By Month' %}",
-	  description: "{% trans 'Monthly Profits, Revenues, Expenses, and Total Registrations' %}",
-	  data: monthly_data,
+	  title: "{% trans 'School Performance By Period' %}",
+	  description: "{% trans 'Profits, Revenues, Expenses, and Total Registrations' %}",
+	  data: period_data,
 	  full_width: true,
 	  height: 300,
-	  target: "#monthlychart",
+	  target: "#periodicchart",
 	  x_accessor: "date",
 	  y_accessor: "profit",
 	  interpolate: "monotone",
