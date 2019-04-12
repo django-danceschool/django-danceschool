@@ -33,7 +33,7 @@ class RegistrationOfflineView(TemplateView):
 
 class ClassRegistrationReferralView(RedirectView):
 
-    def get(self,request,*args,**kwargs):
+    def get(self, request, *args, **kwargs):
 
         # Always redirect to the classes page
         self.url = reverse('registration')
@@ -41,17 +41,17 @@ class ClassRegistrationReferralView(RedirectView):
         # Voucher IDs are used for the referral program.
         # Marketing IDs are used for tracking click-through registrations.
         # They are put directly into session data immediately.
-        voucher_id = kwargs.pop('voucher_id',None)
-        marketing_id = kwargs.pop('marketing_id',None)
+        voucher_id = kwargs.pop('voucher_id', None)
+        marketing_id = kwargs.pop('marketing_id', None)
 
         if marketing_id or voucher_id:
             ''' Put these things into the session data. '''
             regSession = self.request.session.get(REG_VALIDATION_STR, {})
-            regSession['voucher_id'] = voucher_id or regSession.get('voucher_id',None)
-            regSession['marketing_id'] = marketing_id or regSession.get('marketing_id',None)
+            regSession['voucher_id'] = voucher_id or regSession.get('voucher_id', None)
+            regSession['marketing_id'] = marketing_id or regSession.get('marketing_id', None)
             self.request.session[REG_VALIDATION_STR] = regSession
 
-        return super(ClassRegistrationReferralView,self).get(request,*args,**kwargs)
+        return super(ClassRegistrationReferralView, self).get(request, *args, **kwargs)
 
 
 class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin, FormView):
@@ -83,7 +83,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         return super().dispatch(request, *args, **kwargs)
 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         ''' Add the event and series listing data '''
         context = self.get_listing()
         context['showDescriptionRule'] = getConstant('registration__showDescriptionRule') or 'all'
@@ -91,14 +91,14 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # Update the site session data so that registration processes know to send return links to
         # the registration page.  set_return_page() is in SiteHistoryMixin.
-        self.set_return_page('registration',_('Registration'))
+        self.set_return_page('registration', _('Registration'))
 
         return super().get_context_data(**context)
 
     def get_form_kwargs(self, **kwargs):
         ''' Tell the form which fields to render '''
         kwargs = super().get_form_kwargs(**kwargs)
-        kwargs['user'] = self.request.user if hasattr(self.request,'user') else None
+        kwargs['user'] = self.request.user if hasattr(self.request, 'user') else None
 
         listing = self.get_listing()
 
@@ -119,7 +119,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             })
         return super().form_invalid(form)
 
-    def form_valid(self,form):
+    def form_valid(self, form):
         '''
         If the form is valid, pass its contents on to the next view.  In order to permit the registration
         form to be overridden flexibly, but without permitting storage of arbitrary data keys that could
@@ -131,16 +131,16 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        permitted_keys = getattr(form,'permitted_event_keys',['role',])
+        permitted_keys = getattr(form, 'permitted_event_keys',['role',])
 
         try:
             event_listing = {
-                int(key.split("_")[-1]): {k:v for k,v in json.loads(value[0]).items() if k in permitted_keys}
-                for key,value in form.cleaned_data.items() if 'event' in key and value
+                int(key.split("_")[-1]): {k:v for k, v in json.loads(value[0]).items() if k in permitted_keys}
+                for key, value in form.cleaned_data.items() if 'event' in key and value
             }
-            non_event_listing = {key: value for key,value in form.cleaned_data.items() if 'event' not in key}
+            non_event_listing = {key: value for key, value in form.cleaned_data.items() if 'event' not in key}
         except (ValueError, TypeError) as e:
-            form.add_error(None,ValidationError(_('Invalid event information passed.'),code='invalid'))
+            form.add_error(None, ValidationError(_('Invalid event information passed.'),code='invalid'))
             return self.form_invalid(form)
 
         associated_events = Event.objects.filter(id__in=[k for k in event_listing.keys()])
@@ -162,7 +162,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         reg.data = non_event_listing or {}
 
         if regSession.get('marketing_id'):
-            reg.data.update({'marketing_id': regSession.pop('marketing_id',None)})
+            reg.data.update({'marketing_id': regSession.pop('marketing_id', None)})
 
         # Reset the list of event registrations (if it's not empty) and build it
         # from the form submission data.
@@ -174,13 +174,13 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
             # Check if registration is still feasible based on both completed registrations
             # and registrations that are not yet complete
-            this_role_id = value.get('role',None) if 'role' in permitted_keys else None
-            soldOut = this_event.soldOutForRole(role=this_role_id,includeTemporaryRegs=True)
+            this_role_id = value.get('role', None) if 'role' in permitted_keys else None
+            soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
 
             if soldOut:
                 if self.request.user.has_perm('core.override_register_soldout'):
                     # This message will be displayed on the Step 2 page by default.
-                    messages.warning(self.request,_(
+                    messages.warning(self.request, _(
                         'Registration for \'%s\' is sold out. Based on your user permission level, ' % this_event.name +
                         'you may proceed with registration.  However, if you do not wish to exceed ' +
                         'the listed capacity of the event, please do not proceed.'
@@ -191,7 +191,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                     form.add_error(None, ValidationError(_('Registration for "%s" is tentatively sold out while others complete their registration.  Please try again later.' % this_event.name),code='invalid'))
                     return self.form_invalid(form)
 
-            dropInList = [int(k.split("_")[-1]) for k,v in value.items() if k.startswith('dropin_') and v is True]
+            dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
 
             # If nothing is sold out, then proceed to create a TemporaryRegistration and
             # TemporaryEventRegistration objects for the items selected by this form.  The
@@ -207,7 +207,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                     event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role_id=this_role_id
                 )
             # If it's possible to store additional data and such data exist, then store them.
-            tr.data = {k: v for k,v in value.items() if k in permitted_keys and k != 'role'}
+            tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
             self.event_registrations.append(tr)
             grossPrice += tr.price
 
@@ -238,7 +238,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         logic
         '''
 
-        if not hasattr(self,'allEvents'):
+        if not hasattr(self, 'allEvents'):
             timeFilters = {'endTime__gte': timezone.now()}
             if getConstant('registration__displayLimitDays') or 0 > 0:
                 timeFilters['startTime__lte'] = timezone.now() + timedelta(days=getConstant('registration__displayLimitDays'))
@@ -264,7 +264,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         This function gets all of the information that we need to either render or
         validate the form.  It is structured to avoid duplicate DB queries
         '''
-        if not hasattr(self,'listing'):
+        if not hasattr(self, 'listing'):
             allEvents = self.get_allEvents()
 
             openEvents = allEvents.filter(registrationOpen=True)
@@ -310,7 +310,7 @@ class SingleClassRegistrationView(ClassRegistrationView):
 
     def get_allEvents(self):
         try:
-            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid','')).exclude(status=Event.RegStatus.hidden)
+            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid', '')).exclude(status=Event.RegStatus.hidden)
         except ValueError:
             raise Http404()
 
@@ -323,7 +323,7 @@ class SingleClassRegistrationView(ClassRegistrationView):
 class RegistrationSummaryView(FinancialContextMixin, TemplateView):
     template_name = 'core/registration_summary.html'
 
-    def dispatch(self,request,*args,**kwargs):
+    def dispatch(self, request, *args, **kwargs):
         ''' Always check that the temporary registration has not expired '''
         regSession = self.request.session.get(REG_VALIDATION_STR,{})
 
@@ -335,23 +335,23 @@ class RegistrationSummaryView(FinancialContextMixin, TemplateView):
                 id=self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
             )
         except ObjectDoesNotExist:
-            messages.error(request,_('Invalid registration identifier passed to summary view.'))
+            messages.error(request, _('Invalid registration identifier passed to summary view.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry',''),
+            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry', ''),
         )
         if not expiry or expiry < timezone.now():
-            messages.info(request,_('Your registration session has expired. Please try again.'))
+            messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
         # If OK, pass the registration and proceed
         kwargs.update({
             'reg': reg,
         })
-        return super(RegistrationSummaryView,self).dispatch(request, *args, **kwargs)
+        return super(RegistrationSummaryView, self).dispatch(request, *args, **kwargs)
 
-    def get(self,request,*args,**kwargs):
+    def get(self, request, *args, **kwargs):
         reg = kwargs.get('reg')
 
         initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
@@ -379,10 +379,10 @@ class RegistrationSummaryView(FinancialContextMixin, TemplateView):
 
         try:
             if discount_responses:
-                discount_responses.sort(key=lambda k: min([getattr(x,'net_price',initial_price) for x in k.items] + [initial_price]) if k and hasattr(k,'items') else initial_price)
+                discount_responses.sort(key=lambda k: min([getattr(x, 'net_price', initial_price) for x in k.items] + [initial_price]) if k and hasattr(k, 'items') else initial_price)
                 discount_codes = getattr(discount_responses[0],'items',[])
                 if discount_codes:
-                    discounted_total = min([getattr(x,'net_price',initial_price) for x in discount_codes]) + getattr(discount_responses[0],'ineligible_total',0)
+                    discounted_total = min([getattr(x, 'net_price', initial_price) for x in discount_codes]) + getattr(discount_responses[0],'ineligible_total', 0)
                     total_discount_amount = initial_price - discounted_total
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
@@ -440,26 +440,26 @@ class RegistrationSummaryView(FinancialContextMixin, TemplateView):
         regSession['total_voucher_amount'] = adjustment_amount
         request.session[REG_VALIDATION_STR] = regSession
 
-        return super(RegistrationSummaryView,self).get(request,*args,**kwargs)
+        return super(RegistrationSummaryView, self).get(request, *args, **kwargs)
 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         ''' Pass the initial kwargs, then update with the needed registration info. '''
-        context_data = super(RegistrationSummaryView,self).get_context_data(**kwargs)
+        context_data = super(RegistrationSummaryView, self).get_context_data(**kwargs)
 
         regSession = self.request.session[REG_VALIDATION_STR]
         reg_id = regSession["temp_reg_id"]
         reg = TemporaryRegistration.objects.get(id=reg_id)
 
-        discount_codes = regSession.get('discount_codes',None)
-        discount_amount = regSession.get('total_discount_amount',0)
+        discount_codes = regSession.get('discount_codes', None)
+        discount_amount = regSession.get('total_discount_amount', 0)
         voucher_names = regSession.get('voucher_names',[])
-        total_voucher_amount = regSession.get('total_voucher_amount',0)
+        total_voucher_amount = regSession.get('total_voucher_amount', 0)
         addons = regSession.get('addons',[])
 
         if reg.priceWithDiscount == 0:
             # Create a new Invoice if one does not already exist.
-            new_invoice = Invoice.get_or_create_from_registration(reg,status=Invoice.PaymentStatus.paid)
-            new_invoice.processPayment(0,0,forceFinalize=True)
+            new_invoice = Invoice.get_or_create_from_registration(reg, status=Invoice.PaymentStatus.paid)
+            new_invoice.processPayment(0, 0, forceFinalize=True)
             isFree = True
         else:
             isFree = False
@@ -510,20 +510,20 @@ class StudentInfoView(FormView):
                 id=self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
             )
         except ObjectDoesNotExist:
-            messages.error(request,_('Invalid registration identifier passed to sign-up form.'))
+            messages.error(request, _('Invalid registration identifier passed to sign-up form.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry',''),
+            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry', ''),
         )
         if not expiry or expiry < timezone.now():
-            messages.info(request,_('Your registration session has expired. Please try again.'))
+            messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
-        return super(StudentInfoView,self).dispatch(request,*args,**kwargs)
+        return super(StudentInfoView, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context_data = super(StudentInfoView,self).get_context_data(**kwargs)
+        context_data = super(StudentInfoView, self).get_context_data(**kwargs)
         reg = self.temporaryRegistration
 
         initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
@@ -551,10 +551,10 @@ class StudentInfoView(FormView):
 
         try:
             if discount_responses:
-                discount_responses.sort(key=lambda k: min([getattr(x,'net_price',initial_price) for x in k.items] + [initial_price]) if k and hasattr(k,'items') else initial_price)
+                discount_responses.sort(key=lambda k: min([getattr(x, 'net_price', initial_price) for x in k.items] + [initial_price]) if k and hasattr(k, 'items') else initial_price)
                 discount_codes = getattr(discount_responses[0],'items',[])
                 if discount_codes:
-                    discounted_total = min([getattr(x,'net_price',initial_price) for x in discount_codes]) + getattr(discount_responses[0],'ineligible_total',0)
+                    discounted_total = min([getattr(x, 'net_price', initial_price) for x in discount_codes]) + getattr(discount_responses[0],'ineligible_total', 0)
                     total_discount_amount = initial_price - discounted_total
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
@@ -605,7 +605,7 @@ class StudentInfoView(FormView):
     def get_success_url(self):
         return reverse('showRegSummary')
 
-    def form_valid(self,form):
+    def form_valid(self, form):
         '''
         Even if this form is valid, the handlers for this form may have added messages
         to the request.  In that case, then the page should be handled as if the form
@@ -627,9 +627,9 @@ class StudentInfoView(FormView):
         reg.lastName = form.cleaned_data.pop('lastName')
         reg.email = form.cleaned_data.pop('email')
         reg.phone = form.cleaned_data.pop('phone', None)
-        reg.student = form.cleaned_data.pop('student',False)
-        reg.comments = form.cleaned_data.pop('comments',None)
-        reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs',None)
+        reg.student = form.cleaned_data.pop('student', False)
+        reg.comments = form.cleaned_data.pop('comments', None)
+        reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs', None)
 
         # Anything else in the form goes to the TemporaryRegistration data.
         reg.data.update(form.cleaned_data)
@@ -637,5 +637,5 @@ class StudentInfoView(FormView):
 
         # This signal (formerly the post_temporary_registration signal) allows
         # vouchers to be applied temporarily, and it can be used for other tasks
-        post_student_info.send(sender=StudentInfoView,registration=reg)
+        post_student_info.send(sender=StudentInfoView, registration=reg)
         return HttpResponseRedirect(self.get_success_url())  # Redirect after POST
