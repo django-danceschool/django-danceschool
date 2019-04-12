@@ -179,6 +179,21 @@ class CheckboxSeriesChoiceField(forms.MultipleChoiceField):
         self.features = kwargs.pop('features',{})
         super(CheckboxSeriesChoiceField, self).__init__(*args, **kwargs)
 
+    def valid_value(self, value):
+        '''
+        Browser-produced JSON may not have the same spacing between key and
+        value as Django-produced JSON. For views that submit this form via Ajax,
+        this can be a problem.  So, before cleaning the form, we ensure that the
+        spacing on all event ChoiceFields matches the choices provided by the
+        form itself, to prevent validation issues.
+        '''
+        try:
+            value = json.dumps(json.loads(value))
+        except JSONDecodeError:
+            pass
+
+        return super().valid_value(value)
+
 
 class ClassChoiceForm(forms.Form):
     '''
@@ -309,7 +324,7 @@ class ClassChoiceForm(forms.Form):
             )
 
     def clean(self):
-        # Check that the registration is not empty
+        ''' Check that the registration is not empty. '''
         cleaned_data = super(ClassChoiceForm, self).clean()
         hasContent = False
 
