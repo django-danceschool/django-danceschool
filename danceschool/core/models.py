@@ -3243,10 +3243,10 @@ class EventListPluginModel(CMSPlugin):
     template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
 
     def copy_relations(self, oldinstance):
-        self.location = oldinstance.location.all()
-        self.eventCategories = oldinstance.eventCategories.all()
-        self.seriesCategories = oldinstance.seriesCategories.all()
-        self.levels = oldinstance.levels.all()
+        self.location.set(oldinstance.location.all())
+        self.eventCategories.set(oldinstance.eventCategories.all())
+        self.seriesCategories.set(oldinstance.seriesCategories.all())
+        self.levels.set(oldinstance.levels.all())
 
     def get_short_description(self):
         desc = self.title or ''
