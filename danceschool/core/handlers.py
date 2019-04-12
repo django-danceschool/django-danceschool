@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(email_confirmed)
-def linkUserToMostRecentCustomer(sender,**kwargs):
+def linkUserToMostRecentCustomer(sender, **kwargs):
     '''
     If a new primary email address has just been confirmed, check if the user
     associated with that email has an associated customer object yet.  If not,
@@ -64,7 +64,10 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
     """
     registration = kwargs.get('registration', None)
 
-    if not registration or (hasattr(registration.customer,'user') and registration.customer.user):
+    if (
+        not getattr(registration,'customer',None) or
+        (hasattr(registration.customer,'user') and registration.customer.user)
+    ):
         return
 
     logger.debug('Checking for User for Customer with no associated registration.')

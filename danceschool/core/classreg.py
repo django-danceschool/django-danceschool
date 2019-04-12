@@ -60,10 +60,12 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     '''
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
+    returnJson = False
 
-    # The list of event registrations is kept as an attribute of the view so
-    # that it may be used in subclassed versions of methods like
-    # get_success_url() (see e.g. the nightlydoor app).
+    # The temporary registration and the  list of event registrations is kept
+    # as an attribute of the view so that it may be used in subclassed versions
+    # of methods like get_success_url() (see e.g. the nightlydoor app).
+    temporaryRegistration = None
     event_registrations = []
 
     def dispatch(self, request, *args, **kwargs):
@@ -217,6 +219,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         for er in self.event_registrations:
             er.registration = reg
             er.save()
+
+        # Put this in a property in case the get_success_url() method needs it.
+        self.temporaryRegistration = reg
 
         regSession["temporaryRegistrationId"] = reg.id
         regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
