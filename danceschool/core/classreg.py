@@ -61,6 +61,11 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
 
+    # The list of event registrations is kept as an attribute of the view so
+    # that it may be used in subclassed versions of methods like
+    # get_success_url() (see e.g. the nightlydoor app).
+    event_registrations = []
+
     def dispatch(self, request, *args, **kwargs):
         '''
         Check that registration is online before proceeding.  If this is a POST
@@ -88,11 +93,11 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         # the registration page.  set_return_page() is in SiteHistoryMixin.
         self.set_return_page('registration',_('Registration'))
 
-        return super(ClassRegistrationView,self).get_context_data(**context)
+        return super().get_context_data(**context)
 
     def get_form_kwargs(self, **kwargs):
         ''' Tell the form which fields to render '''
-        kwargs = super(ClassRegistrationView, self).get_form_kwargs(**kwargs)
+        kwargs = super().get_form_kwargs(**kwargs)
         kwargs['user'] = self.request.user if hasattr(self.request,'user') else None
 
         listing = self.get_listing()
@@ -136,7 +141,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             non_event_listing = {key: value for key,value in form.cleaned_data.items() if 'event' not in key}
         except (ValueError, TypeError) as e:
             form.add_error(None,ValidationError(_('Invalid event information passed.'),code='invalid'))
-            return super(ClassRegistrationView,self).form_invalid(form)
+            return self.form_invalid(form)
 
         associated_events = Event.objects.filter(id__in=[k for k in event_listing.keys()])
 
@@ -147,8 +152,8 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             submissionUser = None
 
         reg = TemporaryRegistration(
-            submissionUser=submissionUser,dateTime=timezone.now(),
-            payAtDoor=non_event_listing.pop('payAtDoor',False),
+            submissionUser=submissionUser, dateTime=timezone.now(),
+            payAtDoor=non_event_listing.pop('payAtDoor', False),
             expirationDate=expiry,
         )
 
@@ -159,10 +164,12 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         if regSession.get('marketing_id'):
             reg.data.update({'marketing_id': regSession.pop('marketing_id',None)})
 
-        eventRegs = []
+        # Reset the list of event registrations (if it's not empty) and build it
+        # from the form submission data.
+        self.event_registrations = []
         grossPrice = 0
 
-        for key,value in event_listing.items():
+        for key, value in event_listing.items():
             this_event = associated_events.get(id=key)
 
             # Check if registration is still feasible based on both completed registrations
@@ -182,7 +189,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                     # For users without permissions, don't allow registration for sold out things
                     # at all.
                     form.add_error(None, ValidationError(_('Registration for "%s" is tentatively sold out while others complete their registration.  Please try again later.' % this_event.name),code='invalid'))
-                    return super(ClassRegistrationView,self).form_invalid(form)
+                    return self.form_invalid(form)
 
             dropInList = [int(k.split("_")[-1]) for k,v in value.items() if k.startswith('dropin_') and v is True]
 
@@ -201,13 +208,13 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                 )
             # If it's possible to store additional data and such data exist, then store them.
             tr.data = {k: v for k,v in value.items() if k in permitted_keys and k != 'role'}
-            eventRegs.append(tr)
+            self.event_registrations.append(tr)
             grossPrice += tr.price
 
         # If we got this far with no issues, then save
         reg.priceWithDiscount = grossPrice
         reg.save()
-        for er in eventRegs:
+        for er in self.event_registrations:
             er.registration = reg
             er.save()
 
