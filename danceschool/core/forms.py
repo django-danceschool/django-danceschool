@@ -263,9 +263,13 @@ class ClassChoiceForm(forms.Form):
                 this_label = {
                     'label': this_label_text,
                     'type': 'role',
+                    'roleName': role.name,
                 }
                 if event.soldOutForRole(role):
-                    this_label = {'label': _('%s sold out!') % role.pluralName, 'disabled': True}
+                    this_label.update({
+                        'label': _('%s sold out!') % role.pluralName,
+                        'disabled': True,
+                    })
                     if user.has_perm('core.override_register_soldout'):
                         this_label['disabled'] = False
                         this_label['override'] = True
@@ -280,6 +284,7 @@ class ClassChoiceForm(forms.Form):
                 this_label = {
                     'label': _('Register (%s registered)') % event.numRegistered,
                     'type': 'general',
+                    'roleName': _('General'),
                 }
                 if event.soldOut:
                     this_label = {'label': _('Sold out!'), 'disabled': True}
@@ -306,6 +311,7 @@ class ClassChoiceForm(forms.Form):
                         this_label = {
                             'label': _('Drop-in: ') + occurrence.localStartTime.strftime('%B %-d'),
                             'type': 'dropin',
+                            'roleName': _('Drop in'),
                         }
                         if b:
                             this_label['override'] = True 
