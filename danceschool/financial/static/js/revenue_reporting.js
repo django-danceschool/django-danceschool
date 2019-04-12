@@ -54,6 +54,14 @@ $(document).ready(function(){
 		$(this).data("previous", currentGross);
 	});
 
+	$('#received-event-start').click(function(event) {
+		event.preventDefault();
+		var startDate = $($('#id_event :selected').text()).data().startDate;
+		if (startDate) {
+			$('#id_receivedDate').val(startDate);
+		}
+	});
+
 	$('#id_event').change(function(event) {
 		event.preventDefault();
 

@@ -127,6 +127,17 @@ def numRegisteredForRole(event, role):
 
 
 @register.simple_tag
+def soldOutForRole(event, role):
+    '''
+    This tag allows one to determine whether any event is sold out for any
+    particular role.
+    '''
+    if not isinstance(event, Event) or not isinstance(role, DanceRole):
+        return None
+    return event.soldOutForRole(role)
+
+
+@register.simple_tag
 def numRegisteredForRoleName(event, roleName):
     '''
     This tag allows one to access the number of registrations

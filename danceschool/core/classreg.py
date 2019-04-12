@@ -2,7 +2,7 @@ from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import messages
 from django.db.models import Q
-from django.http import HttpResponseRedirect, Http404
+from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.views.generic import FormView, RedirectView, TemplateView
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
@@ -61,13 +61,23 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
 
-    def get(self, request, *args, **kwargs):
-        ''' Check that registration is online before proceeding '''
+    def dispatch(self, request, *args, **kwargs):
+        '''
+        Check that registration is online before proceeding.  If this is a POST
+        request, determine whether the response should be provided in JSON form.
+        '''
+        if request.POST.get('json') in ['true', True]:
+            self.returnJson = True
+
         regonline = getConstant('registration__registrationEnabled')
         if not regonline:
-            return HttpResponseRedirect(reverse('registrationOffline'))
+            returnUrl = reverse('registrationOffline')
 
-        return super(ClassRegistrationView,self).get(request,*args,**kwargs)
+            if self.returnJson:
+                return JsonResponse({'status': 'success', 'redirect': returnUrl})
+            return HttpResponseRedirect(returnUrl)
+
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self,**kwargs):
         ''' Add the event and series listing data '''
@@ -93,6 +103,17 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             'closedEvents': listing['closedEvents'],
         })
         return kwargs
+
+    def form_invalid(self, form):
+        if self.returnJson:
+            context = self.get_context_data(form=form)
+            print(context)
+
+            return JsonResponse({
+                'status': 'failure',
+                'errors': form.errors,
+            })
+        return super().form_invalid(form)
 
     def form_valid(self,form):
         '''
@@ -194,6 +215,11 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         regSession["temporaryRegistrationId"] = reg.id
         regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
+
+        if self.returnJson:
+            return JsonResponse({
+                'status': 'success', 'redirect': self.get_success_url()
+            })
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
