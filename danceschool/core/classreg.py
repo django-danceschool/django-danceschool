@@ -113,7 +113,6 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     def form_invalid(self, form):
         if self.returnJson:
             context = self.get_context_data(form=form)
-            print(context)
 
             return JsonResponse({
                 'status': 'failure',
