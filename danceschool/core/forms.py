@@ -467,10 +467,15 @@ class RegistrationContactForm(forms.Form):
             error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in already_registered_list])
             raise ValidationError(ugettext(mark_safe('You are already registered for:\n<ul>\n%s\n</ul>\nIf you are registering another person, please enter their name.' % error_list)))
 
-        # Allow other handlers to add validation errors to the form.  Also, by passing the request, we allow
-        # those handlers to add messages to the request, which (for this form) are treated like errors in that
+        # Allow other handlers to add validation errors to the form.  Also, by
+        # passing the request, we allow those handlers to add messages to the
+        # request, which (for this form) are treated like errors in that
         # they prevent the form from being considered valid.
-        check_student_info.send(sender=RegistrationContactForm, instance=self, formData=self.cleaned_data, request=self._request, registration=self._registration)
+        check_student_info.send(
+            sender=RegistrationContactForm,
+            instance=self, formData=self.cleaned_data, request=self._request,
+            registration=self._registration
+        )
 
         return self.cleaned_data
 
