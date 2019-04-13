@@ -68,15 +68,15 @@ def handle_payatdoor(request):
             invoice.save()
 
         this_cash_payment = CashPaymentRecord.objects.create(
-            invoice=invoice,amount=amountPaid,
+            invoice=invoice, amount=amountPaid,
             status=CashPaymentRecord.PaymentStatus.collected,
             paymentMethod=paymentMethod,
             payerEmail=payerEmail,
-            submissionUser=subUser,collectedByUser=receivedBy,
+            submissionUser=subUser, collectedByUser=receivedBy,
         )
         invoice.processPayment(
-            amount=amountPaid,fees=0,paidOnline=False,methodName=paymentMethod,
-            submissionUser=subUser,collectedByUser=receivedBy,
+            amount=amountPaid, fees=0, paidOnline=False, methodName=paymentMethod,
+            submissionUser=subUser, collectedByUser=receivedBy,
             methodTxn='CASHPAYMENT_%s' % this_cash_payment.recordId,
             forceFinalize=True,
         )

@@ -460,13 +460,45 @@ class RegistrationSummaryView(FinancialContextMixin, TemplateView):
         total_voucher_amount = regSession.get('total_voucher_amount', 0)
         addons = regSession.get('addons',[])
 
-        if reg.priceWithDiscount == 0:
+        isFree = (reg.priceWithDiscount == 0)
+        isComplete = (isFree or regSession.get('direct_payment', False) is True)
+
+        if isComplete:
             # Create a new Invoice if one does not already exist.
-            new_invoice = Invoice.get_or_create_from_registration(reg, status=Invoice.PaymentStatus.paid)
-            new_invoice.processPayment(0, 0, forceFinalize=True)
-            isFree = True
-        else:
-            isFree = False
+            new_invoice = Invoice.get_or_create_from_registration(
+                reg, status=Invoice.PaymentStatus.paid
+            )
+
+            # Include the submission user if the user is authenticated
+            if self.request.user.is_authenticated:
+                submissionUser = self.request.user
+            else:
+                submissionUser = None
+
+            if isFree:
+                new_invoice.processPayment(
+                    amount=0, fees=0, submissionUser=submissionUser,
+                    forceFinalize=True
+                )
+            else:
+                amountPaid = reg.priceWithDiscount
+                paymentMethod = regSession.get('direct_payment_method', 'Cash')
+
+                this_cash_payment = CashPaymentRecord.objects.create(
+                    invoice=new_invoice, amount=amountPaid,
+                    status=CashPaymentRecord.PaymentStatus.collected,
+                    paymentMethod=paymentMethod,
+                    payerEmail=reg.email,
+                    submissionUser=submissionUser,
+                    collectedByUser=submissionUser,
+                )
+                new_invoice.processPayment(
+                    amount=amountPaid, fees=0, paidOnline=False,
+                    methodName=paymentMethod, submissionUser=submissionUser,
+                    collectedByUser=submissionUser,
+                    methodTxn='CASHPAYMENT_%s' % this_cash_payment.recordId,
+                    forceFinalize=True,
+                )
 
         context_data.update({
             'registration': reg,
@@ -482,6 +514,7 @@ class RegistrationSummaryView(FinancialContextMixin, TemplateView):
             "total_discount_amount": discount_amount + total_voucher_amount,
             "currencyCode": getConstant('general__currencyCode'),
             'payAtDoor': reg.payAtDoor,
+            'is_complete': isComplete,
             'is_free': isFree,
         })
 

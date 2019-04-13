@@ -16,7 +16,7 @@
 	{% block summary %}
 
 	    <h2>
-	    	{% blocktrans with name=registration.firstName %}
+	    	{% blocktrans with name=registration.firstName|default_if_none:"Friend" %}
 	    	Hi {{ name }}!
 	    	{% endblocktrans %}
 	    </h2>
@@ -89,8 +89,8 @@
 	{% block payment_info %}
 
 	    <p>
-	     {% if is_free %}
-	        {% trans "Thanks! You're all set." %}
+	     {% if is_complete or is_free %}
+			{% trans "Thanks! You're all set." %}
 	     {% else %}
 		     {% trans "In order to complete your registration you must click on the button below to make a payment." %}</p>
 

@@ -27,6 +27,8 @@ $(document).ready(function() {
             type: "POST",
             data: regData,
             success: function(response){
+                console.log(response);
+
                 if(response.status == "success" && response.redirect) {
                     window.location.href = response.redirect;
                 }
@@ -116,7 +118,7 @@ $(document).ready(function() {
 
         // Calculate Total Price
         priceTotal += this_price;
-        $('#cartTotal').text(totalString + ": " + currencySymbol + priceTotal);
+        $('#cartTotal').text(priceTotal);
 
         // Remove any existing alerts.
         $('.alert').alert('close')
@@ -136,7 +138,7 @@ $(document).ready(function() {
         // Clear everything and remove any existing alerts
         $('#itemCount').css('display', 'none');
         $('#cartItems').text('');
-        $('#cartTotal').text(totalString + ": " + currencySymbol + priceTotal);
+        $('#cartTotal').text(priceTotal);
         $('#cart-submit').addClass('invisible');
         $('.alert').alert('close');
     }); 
@@ -154,7 +156,7 @@ $(document).ready(function() {
 
         // Remove Cost of Deleted Item from Total Price
         priceTotal -= parseFloat(this_data['price']);
-        $('#cartTotal').text(totalString + ": " + currencySymbol + priceTotal);
+        $('#cartTotal').text(priceTotal);
         
         if (itemCount == 0) {
             $('#itemCount').css('display', 'none');

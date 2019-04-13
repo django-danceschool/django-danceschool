@@ -7,7 +7,7 @@
     <div class="row mt-4">
         <div class="col-lg-9">
             <h1>{% trans "Nightly Register" %}: {{ today|date:"F jS, Y" }}</h1>
-            <button class="btn btn-primary btn-lg submit-button my-4" id="cart-submit">{% trans "Submit" %}</button>
+            <button class="btn btn-primary btn-lg submit-button invisible my-4" id="cart-submit">{% trans "Submit" %}</button>
         </div>
         <div class="col-lg-3">
             <a class="btn btn-outline-secondary" data-toggle="collapse" href="#cart-container" role="button" aria-expanded="false" aria-controls="cart-container">
@@ -23,7 +23,13 @@
             <div class="collapse" id="cart-container">
                 <div class="card">
                     <div class="card-header">
-                        <h4>{% trans "Your Shopping Cart" %}<button class="btn btn-outline-secondary float-right" id="emptyCart">{% trans "Empty" %}</button></h4>
+                        <h4>{% trans "Your Shopping Cart" %}
+                            <div class="btn-group float-right">
+                                <button class="btn btn-outline-secondary" id="emptyCart">{% trans "Empty" %}</button>
+                                <button class="btn btn-outline-secondary" id="hideCart" data-toggle="collapse" href="#cart-container" role="button" aria-expanded="false" aria-controls="cart-container">^</span>
+                            </div>
+
+                        </h4>
                     </div>
                     <div class="card-body" id="cartItemsContainer">
                         <table class="table">
@@ -32,7 +38,7 @@
                             </thead>
                             <tbody id="cartItems"></tbody>
                         </table>
-                        <span id="cartTotal"></span>
+                        <strong>{% trans "Total" %}:</strong>&nbsp;{{ currencySymbol }}<span id="cartTotal"></span>
                     </div>
                 </div>
             </div>
@@ -80,7 +86,6 @@
 
     // Define global variables that are used by the register script.
     var currencySymbol = "{{ currencySymbol }}";
-    var totalString = "{% trans 'Total' %}";
     var multipleRegisterString = "{% trans 'You can only register for one role per event. Please remove the existing item from your cart and try again.' %}";
     var registerUrl = "{% url 'nightlyRegister' year month day %}";
 
