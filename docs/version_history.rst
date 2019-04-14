@@ -104,7 +104,7 @@ version 0.8.0.
 - Updated use of Square API to reflect new method of loading access token.
 
 0.6.0 - September 9, 2018
--------------------
+-------------------------
 
 - **New:** Themes app for easier customization of your initial site
   templates.  The project
@@ -156,7 +156,7 @@ version 0.8.0.
 - Fixed duplicate listing of venue expense items in FinancialDetailView.
 
 0.5.2 - February 21, 2018
------------------------
+-------------------------
 
 - Discounts now show up on the registration cart page, not just the final page (#79)
 - Fixed issue with change in name of CKEditor theme (#83)
@@ -165,7 +165,7 @@ version 0.8.0.
 
 
 0.5.1 - February 7, 2018
------------------------
+------------------------
 
 - Updated to use Django 1.11 and Django CMS 3.5
 - Overhaul and simplification of event templates

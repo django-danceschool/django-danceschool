@@ -1,10 +1,14 @@
 Basic Usage
 ===========
 
-This page provides an overview of some of the key back-end functionality of the project, so that you can get started using the project right away.  Since this project is built on the Django CMS framework, many basic usage tasks are much more thoroughly documented in the `Django CMS documentation <http://docs.django-cms.org/>`_.  It may also be helpful to have an understanding of the Django admin site, which is documented `here <https://docs.djangoproject.com/en/dev/ref/contrib/admin/>`_.
+This page provides an overview of some of the key back-end functionality of the 
+project, so that you can get started using the project right away.  Since this 
+project is built on the Django CMS framework, many basic usage tasks are much more 
+thoroughly documented in the 
+`Django CMS documentation <http://docs.django-cms.org/>`_.  
 
-This 
-
+It may also be helpful to have an understanding of the Django admin site, which is 
+documented `here <https://docs.djangoproject.com/en/dev/ref/contrib/admin/>`_.
 
 Adding/Editing Pages
 --------------------
@@ -59,25 +63,29 @@ FAQs on Adding a Class
 ----------------------
 
 What's a Class Description/Where Do I Enter The Class Description?
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-It is typical for a class series to be offered multiple times.  To reduce the amount of duplicated effort in setting up each class series, class descriptions are set up to be reusable.  If you have not yet created the class description that you would like, click the "Add" button (plus sign) next to the class description field and create one.
+It is typical for a class series to be offered multiple times. To reduce the amount
+of duplicated effort in setting up each class series, class descriptions are set up 
+to be reusable. If you have not yet created the class description that you would 
+like, click the "Add" button (plus sign) next to the class description field and 
+create one.
 
 What's a pricing tier/How do I set prices?
-""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Most classes use a common pricing structure.  Additionally, if you are using the discounts app, it's often desirable to create discounts that apply to only certain types of classes or events.  Therefore, instead of custom per-series pricing, each class or event that has registration requires a Pricing Tier, which defines the base prices for both online registration and at-the-door registration.  There is no limit on the number of tiers, so if you need custom pricing for a specific event for some reason, just create a new pricing tier.
 
 If you haven't yet created any pricing tiers, click the "Add" button (plus sign) next to the pricing tier field and create one.
 
 How do I close a series for registration?
-"""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 By default, Series close for registration a number of days after the first occurrence.  This can be set per-event, or it can be set in the site's global settings.  To close a series manually, click "Override Display/Registration/Capacity," and then select a value for "Status" such as "Registration disabled" that closes registration.
 
 
 How do I hide a series from the registration page?
-""""""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Click "Override Display/Registration/Capacity," and under "Status," choose "Event hidden and registration closed," or one of the other choices that hides the event from the registration page.
 
