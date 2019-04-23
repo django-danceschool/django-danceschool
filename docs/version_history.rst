@@ -1,6 +1,16 @@
 Version History
 ===============
 
+
+0.8.6 - April 22, 2019
+-------------------------
+
+- **NEW:** Financial performance by date (uses same view as financial performance by month)
+- Added ability to submit class registrations via Ajax and receive a JSON response
+- Fixed RevenueItem paymentMethod not editable in admin
+- Documentation improvements re: emails
+- Miscellaneous bug fixes
+
 0.8.5 - April 3, 2019
 -------------------------
 
