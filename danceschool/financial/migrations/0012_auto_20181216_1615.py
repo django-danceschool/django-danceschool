@@ -16,9 +16,9 @@ def getFullName(obj):
     get_full_name() method for Users, since those methods are not available
     in the migration.
     '''
-    if hasattr(obj,'firstName') and hasattr(obj,'lastName'):
-        return ' '.join([obj.firstName or '',obj.lastName or ''])
-    return ' '.join([getattr(obj,'first_name',''),getattr(obj,'last_name','')])
+    if hasattr(obj, 'firstName') and hasattr(obj, 'lastName'):
+        return ' '.join([obj.firstName or '', obj.lastName or ''])
+    return ' '.join([getattr(obj, 'first_name', ''),getattr(obj, 'last_name', '')])
 
 
 def createPartyFromName(apps, name):
@@ -30,17 +30,17 @@ def createPartyFromName(apps, name):
     '''
 
     TransactionParty = apps.get_model('financial', 'TransactionParty')
-    StaffMember = apps.get_model('core','StaffMember')
-    User = apps.get_model('auth','User')
+    StaffMember = apps.get_model('core', 'StaffMember')
+    User = apps.get_model('auth', 'User')
 
     firstName = name.split(' ')[0]
     lastName = ' '.join(name.split(' ')[1:])
 
     members = StaffMember.objects.filter(
-        firstName__istartswith=firstName,lastName__istartswith=lastName
+        firstName__istartswith=firstName, lastName__istartswith=lastName
     )
     users = User.objects.filter(
-        first_name__istartswith=firstName,last_name__istartswith=lastName
+        first_name__istartswith=firstName, last_name__istartswith=lastName
     )
 
     if members.count() == 1:
@@ -49,7 +49,7 @@ def createPartyFromName(apps, name):
             staffMember=this_member,
             defaults={
                 'name': getFullName(this_member),
-                'staffMember': this_member.userAccount,
+                'user': this_member.userAccount,
             }
         )[0]
     elif users.count() == 1:
@@ -58,7 +58,7 @@ def createPartyFromName(apps, name):
             user=this_user,
             defaults={
                 'name': getFullName(this_user),
-                'staffMember': getattr(this_user,'staffmember',None),
+                'staffMember': getattr(this_user, 'staffmember', None),
             }
         )[0]
     else:
@@ -89,23 +89,23 @@ def update_payTo(apps, schema_editor):
             Q(payToUser__isnull=False) | Q(payToLocation__isnull=False) | Q(payToName__isnull=False)
         ),
     ):
-        if getattr(item,'payToUser',None):
+        if getattr(item, 'payToUser', None):
             party = TransactionParty.objects.get_or_create(
                 user=item.payToUser,
                 defaults={
                     'name': getFullName(item.payToUser),
-                    'staffMember': getattr(item.payToUser,'staffmember',None),
+                    'staffMember': getattr(item.payToUser, 'staffmember', None),
                 }
             )[0]
-        elif getattr(item,'payToLocation',None):
+        elif getattr(item, 'payToLocation', None):
             party = TransactionParty.objects.get_or_create(
                 location=item.payToLocation,
                 defaults={
                     'name': item.payToLocation.name,
                 }
             )[0]
-        elif getattr(item,'payToName',None):
-            party = createPartyFromName(apps,item.payToName)
+        elif getattr(item, 'payToName', None):
+            party = createPartyFromName(apps, item.payToName)
 
         item.payTo = party
         item.save()
@@ -114,7 +114,7 @@ def update_payTo(apps, schema_editor):
     for item in RevenueItem.objects.filter(
         Q(receivedFromName__isnull=False)
     ):
-        party = createPartyFromName(apps,item.receivedFromName)
+        party = createPartyFromName(apps, item.receivedFromName)
         item.receivedFrom = party
         item.save()
 
