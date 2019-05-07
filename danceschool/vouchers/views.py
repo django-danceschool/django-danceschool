@@ -66,7 +66,7 @@ class GiftCertificateCustomizeView(FormView):
             currency_symbol = getConstant('general__currencySymbol')
             voucher = Voucher.create_new_code(
                 prefix='GC_',
-                name=_('Gift certificate: %s%s for %s' % (currency_symbol, self.amount, emailTo)),
+                name=_('Gift certificate: {currency_symbol}{amount} for {email_recipient}').format(x=y, etc),
                 category=getConstant('vouchers__giftCertCategory'),
                 originalAmount=self.amount,
                 singleUse=False,
