@@ -85,7 +85,12 @@
 			{% for item in event.list|dictsort:"basisDate" %}
 				<tr>
 					<td>{% if 'financial.change_revenueitem' in perms %}<a href="{% url 'admin:financial_revenueitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}</td>
-					<td>{{ item.description }}</td>
+					<td>
+						{{ item.description }}{% spaceless %}
+						{% if not item.received %}
+							&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
+						{% endif %}{% endspaceless %}
+					</td>
 					<td>{{ currencySymbol }}{{ item.net|floatformat:"2" }}</td>
 				</tr>
 			{% endfor %}
@@ -120,7 +125,12 @@
 				{% for item in category.list|dictsort:"basisDate" %}
 					<tr>
 						<td>{% if 'financial.change_revenueitem' in perms %}<a href="{% url 'admin:financial_revenueitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}</td>
-						<td>{{ item.description }}</td>
+						<td>
+							{{ item.description }}{% spaceless %}
+							{% if not item.received %}
+								&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
+							{% endif %}{% endspaceless %}
+						</td>
 						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
 					</tr>
 				{% endfor %}
@@ -163,7 +173,14 @@
 						<td>
 						{% if 'financial.change_expenseitem' in perms %}<a href="{% url 'admin:financial_expenseitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}
 						</td>
-						<td>{{ item.description }}</td>
+						<td>
+							{{ item.description }}{% spaceless %}
+							{% if not item.paid %}
+								&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+							{% elif not item.approved %}
+								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+							{% endif %}{% endspaceless %}
+						</td>
 						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
 					</tr>
 				{% endfor %}
@@ -199,7 +216,14 @@
 				{% for item in venue.list|dictsort:"basisDate" %}
 					<tr>
 						<td>{% if 'financial.change_expenseitem' in perms %}<a href="{% url 'admin:financial_expenseitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}</td>
-						<td>{{ item.description }}</td>
+						<td>
+							{{ item.description }}{% spaceless %}
+							{% if not item.paid %}
+								&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+							{% elif not item.approved %}
+								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+							{% endif %}{% endspaceless %}
+						</td>
 						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
 					</tr>
 				{% endfor %}
@@ -238,7 +262,14 @@
 					<tr>
 						<td>{% if 'financial.change_expenseitem' in perms %}<a href="{% url 'admin:financial_expenseitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}</td>
 						<td>{{ item.payTo.name }}</td>
-						<td>{{ item.description }}</td>
+						<td>
+							{{ item.description }}{% spaceless %}
+							{% if not item.paid %}
+								&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+							{% elif not item.approved %}
+								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+							{% endif %}{% endspaceless %}
+						</td>
 						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
 					</tr>
 				{% endfor %}
