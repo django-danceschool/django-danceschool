@@ -610,6 +610,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     endTime = models.DateTimeField(_('End time (last occurrence)'),null=True,blank=True)
     duration = models.FloatField(_('Duration in hours'),null=True,blank=True,validators=[MinValueValidator(0)])
 
+    # PostgreSQL can store arbitrary additional information associated with this customer
+    # in a JSONfield, but to remain database agnostic we are using django-jsonfield
+    data = JSONField(_('Additional data'),default={},blank=True)
+
     @property
     def localStartTime(self):
         return ensure_localtime(self.startTime)

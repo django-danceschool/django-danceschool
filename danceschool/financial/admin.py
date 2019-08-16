@@ -132,6 +132,10 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
             'classes': ('collapse',),
             'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','expenseRule')
         }),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
+        }),
     )
 
     def payToName(self,obj):
@@ -261,6 +265,10 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         (_('Approval/Payment Status'), {
             'classes': ('collapse',),
             'fields': ('submissionUserLink', 'currentlyHeldBy', 'received', 'receivedDate', 'accrualDate')
+        }),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
         }),
     )
 
