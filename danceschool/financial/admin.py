@@ -140,7 +140,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
 
     def payToName(self,obj):
         ''' Avoids widget issues with list_display '''
-        return obj.payTo.name
+        return getattr(obj.payTo,'name','')
     payToName.short_description = _('Pay to')
 
     # for inherited eventLink() method
