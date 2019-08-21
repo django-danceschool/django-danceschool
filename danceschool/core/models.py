@@ -1063,8 +1063,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         modified = False
         open = self.registrationOpen
 
-        startTime = self.startTime or getattr(self.eventoccurrence_set.order_by('startTime').first(),'startTime',None)
-        endTime = self.endTime or getattr(self.eventoccurrence_set.order_by('-endTime').first(),'endTime',None)
+        startTime = ensure_localtime(self.startTime) or getattr(self.eventoccurrence_set.order_by('startTime').first(),'startTime',None)
+        endTime = ensure_localtime(self.endTime) or getattr(self.eventoccurrence_set.order_by('-endTime').first(),'endTime',None)
 
         # If set to these codes, then registration will be held closed
         force_closed_codes = [
