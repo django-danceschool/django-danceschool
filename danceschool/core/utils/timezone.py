@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.utils.timezone import make_naive, make_aware, is_naive, is_aware, localtime
 
+from datetime import datetime
+
 
 def ensure_timezone(dateTime,timeZone=None):
     '''
@@ -8,6 +10,10 @@ def ensure_timezone(dateTime,timeZone=None):
     and naive environments, this utility just returns a datetime as either
     aware or naive depending on whether time zone support is enabled.
     '''
+
+    # Handle NoneType and other non-datetime values elegantly
+    if not isinstance(dateTime, datetime):
+        return None
 
     if is_aware(dateTime) and not getattr(settings,'USE_TZ',False):
         return make_naive(dateTime,timezone=timeZone)
@@ -18,6 +24,10 @@ def ensure_timezone(dateTime,timeZone=None):
 
 
 def ensure_localtime(dateTime):
+
+    # Handle NoneType and other non-datetime values elegantly
+    if not isinstance(dateTime, datetime):
+        return None
 
     if not getattr(settings,'USE_TZ',False):
         return make_naive(dateTime) if is_aware(dateTime) else dateTime
