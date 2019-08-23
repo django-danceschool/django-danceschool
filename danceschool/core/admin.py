@@ -864,6 +864,10 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
             'classes': ('collapse',),
             'fields': ('status','closeAfterDays','capacity',),
         }),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
+        }),
     )
 
     # This allows us to save the obj reference in order to process related objects in an inline (substitute teachers)
@@ -934,7 +938,11 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         (_('Registration/Visibility'), {
             'fields': ('status',('pricingTier','capacity'),),
         }),
-        (_('Description/Link'), {'fields': ('descriptionField','shortDescriptionField','link','uuidLink',)})
+        (_('Description/Link'), {'fields': ('descriptionField','shortDescriptionField','link','uuidLink',)}),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
+        }),
     )
 
     # This allows us to save the obj reference in order to process related objects in an inline (substitute teachers)

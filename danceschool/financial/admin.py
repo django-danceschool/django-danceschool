@@ -132,11 +132,15 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
             'classes': ('collapse',),
             'fields': ('periodStart','periodEnd','approved','approvalDate','paid','paymentDate','paymentMethod','accrualDate','expenseRule')
         }),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
+        }),
     )
 
     def payToName(self,obj):
         ''' Avoids widget issues with list_display '''
-        return obj.payTo.name
+        return getattr(obj.payTo,'name','')
     payToName.short_description = _('Pay to')
 
     # for inherited eventLink() method
@@ -261,6 +265,10 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         (_('Approval/Payment Status'), {
             'classes': ('collapse',),
             'fields': ('submissionUserLink', 'currentlyHeldBy', 'received', 'receivedDate', 'accrualDate')
+        }),
+        (_('Additional data'), {
+            'classes': ('collapse',),
+            'fields': ('data',),
         }),
     )
 

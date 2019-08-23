@@ -613,6 +613,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     endTime = models.DateTimeField(_('End time (last occurrence)'),null=True,blank=True)
     duration = models.FloatField(_('Duration in hours'),null=True,blank=True,validators=[MinValueValidator(0)])
 
+    # PostgreSQL can store arbitrary additional information associated with this customer
+    # in a JSONfield, but to remain database agnostic we are using django-jsonfield
+    data = JSONField(_('Additional data'),default={},blank=True)
+
     @property
     def localStartTime(self):
         return ensure_localtime(self.startTime)
@@ -1067,8 +1071,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         modified = False
         open = self.registrationOpen
 
-        startTime = self.startTime or getattr(self.eventoccurrence_set.order_by('startTime').first(),'startTime',None)
-        endTime = self.endTime or getattr(self.eventoccurrence_set.order_by('-endTime').first(),'endTime',None)
+        startTime = ensure_localtime(self.startTime) or getattr(self.eventoccurrence_set.order_by('startTime').first(),'startTime',None)
+        endTime = ensure_localtime(self.endTime) or getattr(self.eventoccurrence_set.order_by('-endTime').first(),'endTime',None)
 
         # If set to these codes, then registration will be held closed
         force_closed_codes = [

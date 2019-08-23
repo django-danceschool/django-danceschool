@@ -62,31 +62,28 @@ REST API Setup
 4. Next steps depend on whether you have performed a production
    installation or a development/manual installation of the project:
 
-   - **Development/manual installation**: Edit ``settings.py`` to add:
-     -  ``INSTALLED_APPS``: Uncomment/enter ``danceschool.payments.paypal``
-     -  ``PAYPAL_MODE``: Either "sandbox" or "live"
-     -  ``PAYPAL_CLIENT_ID``: The value of "Client ID"
-     -  ``PAYPAL_CLIENT_SECRET``: The value of "Secret".  **Do not share
-        this value with anyone, or store it anywhere that could be publicly
-        accessed**
-
-    - **Production template installation**: Instead of modifying ``settings.py``,
-      you can add the values of ``PAYPAL_MODE``, ``PAYPAL_CLIENT_ID``, and
-      ``PAYPAL_CLIENT_SECRET`` as environment variables in the environment
-      where Django operates:
-      - For Docker, uncomment and enter the values of ``PAYPAL_MODE``,
-        ``PAYPAL_CLIENT_ID``, and ``PAYPAL_CLIENT_SECRET`` into
-        ``env.default``, using the guidelines above.  These values
-        will be loaded into the environment of your Docker container.
-      - For Heroku, use the web interface to add the environment variables
+- **Development/manual installation**: Edit ``settings.py`` to add:
+    -  ``INSTALLED_APPS``: Uncomment/enter ``danceschool.payments.paypal``
+    -  ``PAYPAL_MODE``: Either "sandbox" or "live"
+    -  ``PAYPAL_CLIENT_ID``: The value of "Client ID"
+    -  ``PAYPAL_CLIENT_SECRET``: The value of "Secret".  **Do not share this value 
+      with anyone, or store it anywhere that could be publicly accessed**
+- **Production template installation**: Instead of modifying ``settings.py``, you 
+  can add the values of ``PAYPAL_MODE``, ``PAYPAL_CLIENT_ID``, and 
+  ``PAYPAL_CLIENT_SECRET`` as environment variables in the environment where Django 
+  operates:
+    - For Docker, uncomment and enter the values of ``PAYPAL_MODE``, 
+      ``PAYPAL_CLIENT_ID``, and ``PAYPAL_CLIENT_SECRET`` into ``env.default``, 
+      using the guidelines above. These values will be loaded into the environment 
+      of your Docker container.
+    - For Heroku, use the web interface to add the environment variables
         ``PAYPAL_MODE``, ``PAYPAL_CLIENT_ID``, and ``PAYPAL_CLIENT_SECRET``
-        using the guidelnes above.
-      - Once these environment variables are specified, the
-        ``danceschool.payments.paypal`` app will then be automatically
-        enabled.
+        using the guidelines above.
+    - Once these environment variables are specified, the 
+      ``danceschool.payments.paypal`` app will then be automatically enabled.
 
 Adding a Paypal "Pay Now" button to the registration page
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Because this project is designed to be configurable and to accept
 different payment providers, the "Pay Now" button is not included by
@@ -160,10 +157,8 @@ Stripe API Setup
    - **Development/manual installation**: Edit ``settings.py`` to add:
      -  ``INSTALLED_APPS``: Uncomment/enter ``danceschool.payments.stripe``
      -  ``STRIPE_PUBLIC_KEY``: Your publishable key.
-     -  ``STRIPE_PRIVATE_KEY``: Your secret key.  **Do not share
-        this value with anyone, or store it anywhere that could be publicly
-        accessed**
-
+     -  ``STRIPE_PRIVATE_KEY``: Your secret key.  **Do not share this value with 
+       anyone, or store it anywhere that could be publicly accessed**
     - **Production template installation**: Instead of modifying ``settings.py``,
       you can add the values of ``STRIPE_PUBLIC_KEY`` and
       ``STRIPE_PRIVATE_KEY`` as environment variables in the environment
@@ -180,7 +175,7 @@ Stripe API Setup
         enabled.
 
 Adding a Stripe "Checkout Now" button to the registration page
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Because this project is designed to be configurable and to accept
 different payment providers, the "Checkout Now" button is not included by

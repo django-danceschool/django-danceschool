@@ -13,6 +13,7 @@ from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
 from datetime import time, timedelta
 from dateutil.relativedelta import relativedelta
+from jsonfield import JSONField
 from intervaltree import IntervalTree
 
 from danceschool.core.models import StaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room
@@ -708,6 +709,11 @@ class ExpenseItem(models.Model):
     # is used.
     accrualDate = models.DateTimeField(_('Accrual date'))
 
+    # PostgreSQL can store arbitrary additional information associated with this customer
+    # in a JSONfield, but to remain database agnostic we are using django-jsonfield
+    data = JSONField(_('Additional data'),default={},blank=True)
+
+
     @property
     def netExpense(self):
         return self.total + self.adjustments + self.fees
@@ -906,6 +912,10 @@ class RevenueItem(models.Model):
     # is used.
     accrualDate = models.DateTimeField(_('Accrual date'))
 
+    # PostgreSQL can store arbitrary additional information associated with this customer
+    # in a JSONfield, but to remain database agnostic we are using django-jsonfield
+    data = JSONField(_('Additional data'),default={},blank=True)
+
     @property
     def relatedItems(self):
         '''
@@ -947,8 +957,12 @@ class RevenueItem(models.Model):
                 min_event_time = self.invoiceItem.finalEventRegistration.event.eventoccurrence_set.filter(**{'startTime__month':self.invoiceItem.finalEventRegistration.event.month}).first().startTime
                 self.accrualDate = min_event_time
             elif self.event:
-                self.accrualDate = self.event.eventoccurrence_set.order_by('startTime').filter(**{'startTime__month': self.event.month}).last().startTime
-            elif self.invoiceItem:
+                self.accrualDate = getattr(
+                    self.event.eventoccurrence_set.order_by('startTime').filter(
+                        startTime__month=self.event.month
+                    ).last(),'startTime',None)
+
+            if not self.accrualDate and self.invoiceItem:
                 self.accrualDate = self.invoiceItem.invoice.creationDate
             elif self.receivedDate:
                 self.accrualDate = self.receivedDate

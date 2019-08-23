@@ -1,5 +1,7 @@
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
+from django.middleware.csrf import get_token
+
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
@@ -123,6 +125,10 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         context = super(EventListPlugin,self).render(context,instance,placeholder)
+
+        # Ensure that the CSRF protection cookie is set for all lists of events.
+        # Useful for things like buttons that go directly into the registration process.
+        get_token(context.get('request'))
 
         listing = Event.objects.exclude(status__in=[Event.RegStatus.hidden, Event.RegStatus.linkOnly])
 
