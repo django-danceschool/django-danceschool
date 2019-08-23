@@ -76,7 +76,7 @@ class EventAutoComplete(autocomplete.Select2QuerySetView):
                 month_dict = {v: k for k,v in enumerate(month_name)}
                 month_value = next(value for key, value in month_dict.items() if key.startswith(self.q.title()))
             except StopIteration:
-                month_value = ''
+                month_value = 0
 
             qs = qs.filter(
                 Q(series__classDescription__title__icontains=self.q) | 
