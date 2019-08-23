@@ -11,16 +11,40 @@ $(document).ready(function() {
 
         for (var property in regData) {
             if (regData.hasOwnProperty(property)) {
+
+                // If all items are set for direct payment, then pass this to the
+                // NightlyRegisterView.
+                if (
+                    regData[property].hasOwnProperty('directPayment') &&
+                    regData['direct_payment'] != true
+                ) {
+                    regData['direct_payment'] = true;
+                    regData['direct_payment_method'] = regData[property]['directPaymentMethod'] || 'Cash';
+                }
+                else {
+                    regData['direct_payment'] = false;
+                }
+
                 if (regData[property].hasOwnProperty('field')) {
                     regData[property] = JSON.stringify(regData[property]['field']);
                 }
                 else {
                     delete regData[property]['id'];
                     delete regData[property]['name'];
-                    delete regData[property]['price'];    
+                    delete regData[property]['price'];
+                    delete regData[property]['directPayment'];
+                    delete regData[property]['directPaymentMethod'];
                 }
             }
         }
+
+        // All registrations through this view are at-the-door registrations.
+        regData['payAtDoor'] = true;
+
+        // Populate the voucher code field in regData if it is specified.
+        regData['gift'] = $('#id_gift').val() || '';
+
+        console.log(regData);
 
         $.ajax({
             url: registerUrl,
@@ -30,7 +54,7 @@ $(document).ready(function() {
                 console.log(response);
 
                 if(response.status == "success" && response.redirect) {
-                    window.location.href = response.redirect;
+                    // window.location.href = response.redirect;
                 }
                 else {
                     var errorText = '<ul>';
@@ -42,7 +66,7 @@ $(document).ready(function() {
                 }
             },
         });
-    }    
+    }
 
     // Use Jquery to get the cookie value of the CSRF token
     function getCookie(name) {
@@ -111,7 +135,7 @@ $(document).ready(function() {
         $('#cartItems').append(
             '<tr data-id="' + this_data['id'] + '"><td>' +
                 this_name +
-            '</td><td>' + 
+            '</td><td>' +
                 currencySymbol + this_price +
             '<button type="button" class="close removeItem" aria-label="Close"><span aria-hidden="true">&times;</span></button></td></tr>'
         );
@@ -122,7 +146,7 @@ $(document).ready(function() {
 
         // Remove any existing alerts.
         $('.alert').alert('close')
-    }); 
+    });
 
     // Hide and Show Cart Items
     $('.openCloseCart').click(function(){
@@ -141,7 +165,7 @@ $(document).ready(function() {
         $('#cartTotal').text(priceTotal);
         $('#cart-submit').addClass('invisible');
         $('.alert').alert('close');
-    }); 
+    });
 
     // Remove Item From Cart
     $('#shoppingCart').on('click', '.removeItem', function(){
@@ -157,7 +181,7 @@ $(document).ready(function() {
         // Remove Cost of Deleted Item from Total Price
         priceTotal -= parseFloat(this_data['price']);
         $('#cartTotal').text(priceTotal);
-        
+
         if (itemCount == 0) {
             $('#itemCount').css('display', 'none');
             $('#cart-submit').addClass('invisible');
@@ -165,6 +189,39 @@ $(document).ready(function() {
 
         // Remove any existing alerts.
         $('.alert').alert('close')
+    });
+
+    // Lookup customer
+    $('#id_name').change(function() {
+        var ajaxData = {
+            customer: $(this).val(),
+            date: registerDate,
+        };
+
+        customerId =
+        $.ajax({
+            url: regJsonUrl,
+            type: "GET",
+            data: ajaxData,
+            success: function(response){
+                console.log(response);
+
+                $.each(response, function() {
+                    $('#customerInfoExample tr').clone().appendTo($('#customerInfoTable'));
+                    var this_row = $('#customerInfoTable tr:last');
+                    this_row.find('.customerInfoItem').text(this.registration.customer.fullName);
+                    this_row.find('.customerInfoRegistration').text(this.registration.priceWithDiscount);
+                    this_row.find('.customerInfoRole').text(this.role.name);
+                    this_row.find('.customerInfoStudent').text(this.registration.student);
+                    this_row.find('.customerInfoEmail').text(this.registration.customer.email);
+                    this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
+                    this_row.find('.customerRegistrationLink').attr('href',this.registration.url);
+                });
+
+
+
+            },
+        });
     });
 
     // Submit registration

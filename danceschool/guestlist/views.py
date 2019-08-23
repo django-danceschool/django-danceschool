@@ -1,5 +1,5 @@
 from django.utils.translation import ugettext_lazy as _
-from django.views.generic import DetailView
+from django.views.generic import TemplateView
 from django.shortcuts import get_object_or_404
 from django.http import Http404, JsonResponse
 
@@ -8,35 +8,47 @@ from braces.views import PermissionRequiredMixin
 from .models import GuestList, Event
 
 
-class GuestListView(PermissionRequiredMixin,DetailView):
+class GuestListView(PermissionRequiredMixin, TemplateView):
     '''
     This view is used to access the guest list for a given series or event
     '''
     template_name = 'guestlist/guestlist.html'
     permission_required = 'guestlist.view_guestlist'
+    event = None
+    guest_list = None
+    date = None
 
-    def get_object(self, queryset=None):
-        ''' Get the guest list from the URL '''
-        return get_object_or_404(
-            GuestList.objects.filter(id=self.kwargs.get('guestlist_id')))
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            self.date = (request.GET.get('date') or '').strptime('%Y-%m-%d')
+        except ValueError:
+            self.date = None
 
-    def get_context_data(self,**kwargs):
-        ''' Add the list of names for the given guest list '''
-        event = Event.objects.filter(id=self.kwargs.get('event_id')).first()
-        if self.kwargs.get('event_id') and not self.object.appliesToEvent(event):
+        self.guest_list = GuestList.objects.filter(
+            id=self.kwargs.get('guestlist_id', None)).first()
+        self.event = Event.objects.filter(
+            id=self.kwargs.get('event_id',None)).first() or \
+                getattr(self.guest_list, 'currentEvent', None)
+
+        if (
+            self.guest_list and self.event and not
+            self.guest_list.appliesToEvent(self.event)
+        ):
             raise Http404(_('Invalid event.'))
 
-        # Use the most current event if nothing has been specified.
-        if not event:
-            event = self.object.currentEvent
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        ''' Add the list of names for the given guest list '''
 
         context = {
             'guestList': self.object,
-            'event': event,
+            'event': self.event,
+            'date': self.date,
             'names': self.object.getListForEvent(event),
         }
         context.update(kwargs)
-        return super(GuestListView,self).get_context_data(**context)
+        return super(GuestListView, self).get_context_data(**context)
 
 
 class GuestListJsonView(GuestListView):
@@ -48,8 +60,8 @@ class GuestListJsonView(GuestListView):
     def render_to_response(self, context, **response_kwargs):
         json_context = {
             'names': context.get('names'),
-            'guestlist_id': getattr(context.get('guestList'),'id'),
-            'event_id': getattr(context.get('event'),'id'),            
+            'guestlist_id': getattr(context.get('guestList'), 'id'),
+            'event_id': getattr(context.get('event'), 'id'),
         }
 
         return JsonResponse(json_context)

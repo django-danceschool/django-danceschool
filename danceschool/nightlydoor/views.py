@@ -1,16 +1,18 @@
 from django.utils.translation import ugettext_lazy as _
-from django.http import HttpResponseRedirect, Http404
+from django.http import Http404
 from django.urls import reverse
 from django.db.models import Q
 
 from braces.views import PermissionRequiredMixin
 from datetime import datetime, timedelta
 
-from danceschool.core.constants import getConstant
+from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.models import Event, Series, PublicEvent
 from danceschool.core.classreg import ClassRegistrationView
 from danceschool.core.signals import post_student_info
+
+from .forms import CustomerGuestAutocompleteForm
 
 
 class NightlyRegisterView(PermissionRequiredMixin, ClassRegistrationView):
@@ -54,7 +56,7 @@ class NightlyRegisterView(PermissionRequiredMixin, ClassRegistrationView):
     def get_form_kwargs(self, **kwargs):
         '''
         Tell the form not to include counts in field labels.  Also, if the apppropriate
-        preference is set, then tell the form to include the voucher field.        
+        preference is set, then tell the form to include the voucher field.
         '''
         kwargs = super().get_form_kwargs(**kwargs)
         kwargs.update({
@@ -63,6 +65,18 @@ class NightlyRegisterView(PermissionRequiredMixin, ClassRegistrationView):
             'interval': self.interval,
             'voucherField': getConstant('nightlydoor__enableVoucherEntry'),
         })
+
+        if kwargs.get('data',{}).pop('direct_payment', None) in [True, 'true']:
+            direct_payment_method = kwargs.get('data', {}).pop(
+                'direct_payment_method', 'Cash'
+            )
+            regSession = self.request.session[REG_VALIDATION_STR]
+            regSession.update({
+                'direct_payment': True,
+                'direct_payment_method': direct_payment_method
+            })
+            self.request.session[REG_VALIDATION_STR] = regSession
+
         return kwargs
 
     def get_context_data(self,**kwargs):
@@ -70,15 +84,17 @@ class NightlyRegisterView(PermissionRequiredMixin, ClassRegistrationView):
         year = int(self.kwargs.get('year'))
         month = int(self.kwargs.get('month'))
         day = int(self.kwargs.get('day'))
+        today = datetime(year, month, day)
 
         context = self.get_listing()
         context.update({
+            'customerSearchForm': CustomerGuestAutocompleteForm(date=today),
             'voucherField': getConstant('nightlydoor__enableVoucherEntry'),
             'showDescriptionRule': getConstant('registration__showDescriptionRule') or 'all',
             'year': year,
             'month': month,
             'day': day,
-            'today': datetime(year, month, day)
+            'today': today
         })
         context.update(kwargs)
 
@@ -111,8 +127,12 @@ class NightlyRegisterView(PermissionRequiredMixin, ClassRegistrationView):
         ):
             # This signal (formerly the post_temporary_registration signal) allows
             # vouchers to be applied temporarily, and it can be used for other tasks
+
+            print('Here is the data:')
+            print(self.temporaryRegistration.data)
+
             post_student_info.send(
-                sender=NightlyRegisterView, 
+                sender=NightlyRegisterView,
                 registration=self.temporaryRegistration,
             )
             return reverse('showRegSummary')

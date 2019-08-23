@@ -1,5 +1,5 @@
 {% extends "cms/admin_home.html" %}
-{% load danceschool_tags sekizai_tags i18n staticfiles %}
+{% load danceschool_tags sekizai_tags i18n staticfiles crispy_forms_tags %}
 
 {% block main %}
 
@@ -42,6 +42,43 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="col-12 my-1" id="shoppingCart">
+            <div class="card">
+                <div class="card-body item">
+                    {% crispy customerSearchForm %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 my-1 hide" id="customerInfo">
+            <table id="customerInfoExample" class="d-none">
+                <tr>
+                    {% if 'core.checkin_customers' in perms %}
+                    <td>
+                        <input type="checkbox" name="reg_id" />
+                    </td>
+                    {% endif %}
+                    <td class="customerInfoItem"></td>
+                    <td class="customerInfoRegistration"></td>
+                    <td class="customerInfoRole"></td>
+                    <td class="customerInfoStudent"></td>
+                    <td class="customerInfoEmail"></td>
+                    <td class="customerInfoLinks">
+                            <div class="btn-group">
+                                {% if 'core.view_all_invoices' in perms %}
+                                    <a class="btn btn-outline-secondary btn-sm" class="customerInvoiceLink">{% trans "Invoice" %}</a>
+                                {% endif %}
+                                {% if 'core.change_registration' in perms %}
+                                    <a class="btn btn-outline-secondary btn-sm" class="customerRegistrationLink">{% trans "Registration" %}</a>
+                                {% endif %}
+                            </div>
+                    </td>
+                </tr>
+            </table>
+            <table id="customerInfoTable" class="table">
+            </table>
         </div>
 
         <div class="col-12 my-1">
@@ -88,6 +125,8 @@
     var currencySymbol = "{{ currencySymbol }}";
     var multipleRegisterString = "{% trans 'You can only register for one role per event. Please remove the existing item from your cart and try again.' %}";
     var registerUrl = "{% url 'nightlyRegister' year month day %}";
+    var regJsonUrl = "{% url 'viewregistrations_json' %}";
+    var registerDate = "{{ year }}-{{ month }}-{{ day }}";
 
 </script>
 {% endaddtoblock %}

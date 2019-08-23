@@ -41,7 +41,7 @@ from .mixins import (EmailRecipientMixin, StaffMemberObjectMixin, FinancialConte
                      AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin)
 from .signals import get_customer_data, get_eventregistration_data
 from .utils.requests import getIntFromGet
-from .utils.timezone import ensure_timezone
+from .utils.timezone import ensure_timezone, ensure_localtime
 
 
 # Define logger for this file
@@ -177,19 +177,23 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
 
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
-            'id','checkedIn','dropIn','price','netPrice','refundFlag','warningFlag',
-            ('registration',[
-                'id','priceWithDiscount','student','refundFlag','totalPrice','fullName','discounted',
-                ('customer',['id','fullName','email','numClassSeries']),
-                ('invoice',['id','adjustments','outstandingBalance','statusLabel']),
+            'id', 'checkedIn', 'dropIn', 'price', 'netPrice', 'refundFlag', 'warningFlag',
+            ('registration', [
+                'id', 'priceWithDiscount', 'student', 'refundFlag', 'totalPrice',
+                'fullName', 'discounted', 'url',
+                ('customer', ['id', 'fullName', 'email', 'numClassSeries']),
+                ('invoice', ['id', 'adjustments', 'outstandingBalance', 'statusLabel', 'url']),
             ]),
-            ('invoiceitem', ['id','adjustments','revenueMismatch','revenueNotYetReceived','revenueReceived','revenueReported']),
-            ('role',['id','name']),
+            ('invoiceitem', [
+                'id', 'adjustments', 'revenueMismatch', 'revenueNotYetReceived',
+                'revenueReceived', 'revenueReported'
+            ]),
+            ('role', ['id', 'name']),
         ]
 
-        extras = get_eventregistration_data.send(sender=EventRegistrationJsonView,eventregistrations=queryset)
-        extras_dict = {x: [] for x in queryset.values_list('id',flat=True)}
-        for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras]]):
+        extras = get_eventregistration_data.send(sender=EventRegistrationJsonView, eventregistrations=queryset)
+        extras_dict = {x: [] for x in queryset.values_list('id', flat=True)}
+        for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]]):
             extras_dict[k].extend(v)
 
         this_listing = [recurse_listing(attributeList,q,extras=extras_dict) for q in queryset]

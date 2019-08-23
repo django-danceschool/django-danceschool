@@ -324,7 +324,7 @@ class SingleClassRegistrationView(ClassRegistrationView):
         return self.allEvents
 
 
-class RegistrationSummaryView(FinancialContextMixin, TemplateView):
+class RegistrationSummaryView(FinancialContextMixin, SiteHistoryMixin, TemplateView):
     template_name = 'core/registration_summary.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -501,6 +501,9 @@ class RegistrationSummaryView(FinancialContextMixin, TemplateView):
                 )
 
         context_data.update({
+            'returnPage': self.get_return_page().get(
+                'url',reverse('registration')
+            ),
             'registration': reg,
             "totalPrice": reg.totalPrice,
             'subtotal': reg.priceWithDiscount,

@@ -87,34 +87,21 @@
 	{% endblock %}
 
 	{% block payment_info %}
-
-	    <p>
 	     {% if is_complete or is_free %}
-			{% trans "Thanks! You're all set." %}
-	     {% else %}
-		     {% trans "In order to complete your registration you must click on the button below to make a payment." %}</p>
+			<p>{% trans "Thanks! You're all set." %}</p>
 
-		     {% if payAtDoor %}
-		        <form action="" method="post">
-		            {% crispy form %}
-		        </form>
-		     {% endif %}
+			<p><a href="{{ returnPage }}" class="btn btn-primary btn-lg">{% trans "Return" %}</a></p>
+		 {% else %}
+		 	<p>
+			 {% trans "In order to complete your registration you must click on the button below to make a payment." %}
+			</p>
 
 		 	{% if payAtDoor %}
-		 		<div class="card mt-4">
-	 				<h6 class="card-header">{% trans "Immediate Payment" %}</h6>
-		 			<div class="card-body">
-
-					{% static_placeholder "registration_payatdoor_placeholder" %}
-					{% static_placeholder "registration_invoice_placeholder" %}
+				{% static_placeholder "registration_payatdoor_placeholder" %}
+				{% static_placeholder "registration_invoice_placeholder" %}
 			{% else %}
 				{% static_placeholder "registration_payment_placeholder" %}
 			{% endif %}
-
-		 	{% if payAtDoor %}
-		 			</div>
-	 			</div>
-		 	{% endif %} 
 	    {% endif %}
 
 	{% endblock %}

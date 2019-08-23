@@ -778,7 +778,12 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        return [x.registration.customer.email for x in self.eventregistration_set.filter(cancelled=False)]
+        return [
+            x.registration.customer.email for x in self.eventregistration_set.filter(
+                cancelled=False,
+                registration__customer__isnull=False,
+            )
+        ]
 
     def get_email_context(self,**kwargs):
         ''' Overrides EmailRecipientMixin '''
@@ -1997,10 +2002,15 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         # If sendEmail is passed as False, then we won't send an email
         sendEmail = kwargs.pop('sendEmail', True)
 
-        customer, created = Customer.objects.update_or_create(
-            first_name=self.firstName,last_name=self.lastName,
-            email=self.email,defaults={'phone': self.phone}
-        )
+        # Customer is no longer required for Registrations, but we will create
+        # one if we have the information needed for it (name and email).
+        if self.firstName and self.lastName and self.email:
+            customer, created = Customer.objects.update_or_create(
+                first_name=self.firstName,last_name=self.lastName,
+                email=self.email,defaults={'phone': self.phone}
+            )
+        else:
+            customer = None
 
         regArgs = {
             'customer': customer,
@@ -2043,7 +2053,8 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
             registration=realreg
         )
 
-        if sendEmail:
+        # Send the email if there is a customer to send it to.
+        if sendEmail and realreg.customer:
             if getConstant('email__disableSiteEmails'):
                 logger.info('Sending of confirmation emails is disabled.')
             else:
@@ -2137,7 +2148,7 @@ class Registration(EmailRecipientMixin, models.Model):
 
     @property
     def fullName(self):
-        return self.customer.fullName
+        return getattr(self.customer,'fullName',_('Unknown'))
     fullName.fget.short_description = _('Name')
 
     @property
@@ -2147,7 +2158,7 @@ class Registration(EmailRecipientMixin, models.Model):
         registrations or temporary registrations without requiring separate logic
         for each class.
         '''
-        return self.customer.email
+        return getattr(self.customer,'email',None)
     email.fget.short_description = _('Email address')
 
     @property
@@ -2260,7 +2271,8 @@ class Registration(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        return [self.customer.email,]
+        this_email = getattr(self.customer,'email',None)
+        return [this_email,] if this_email else []
 
     def get_email_context(self,**kwargs):
         ''' Overrides EmailRecipientMixin '''
@@ -2281,10 +2293,13 @@ class Registration(EmailRecipientMixin, models.Model):
         return context
 
     def __str__(self):
-        if self.dateTime:
+        if self.dateTime and self.customer:
             return '%s #%s: %s, %s' % (_('Registration'), self.id, self.customer.fullName, self.dateTime.strftime('%b. %Y'))
+        elif self.dateTime or self.customer:
+            x = self.dateTime or getattr(self.customer,'fullName',None)
+            return '%s #%s: %s' % (_('Registration'), self.id, x)
         else:
-            return '%s #%s: %s' % (_('Registration'), self.id, self.customer.fullName)
+            return '%s #%s' % (_('Registration'), self.id)
 
     class Meta:
         ordering = ('-dateTime',)
@@ -2375,7 +2390,8 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        return [self.registration.customer.email,]
+        this_email = getattr(self.registration.customer,'email',None)
+        return [this_email,] if this_email else []
 
     def get_email_context(self,**kwargs):
         ''' Overrides EmailRecipientMixin '''
@@ -2419,7 +2435,8 @@ class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        return [self.registration.customer.email,]
+        this_email = getattr(self.registration.customer,'email',None)
+        return [this_email,] if this_email else []
 
     def get_email_context(self,**kwargs):
         ''' Overrides EmailRecipientMixin '''
@@ -2602,9 +2619,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         status = kwargs.pop('status',Invoice.PaymentStatus.unpaid)
 
         new_invoice = cls(
-            firstName=reg.firstName,
-            lastName=reg.lastName,
-            email=reg.email,
+            firstName=reg.firstName or kwargs.pop('firstName',None),
+            lastName=reg.lastName or kwargs.pop('lastName', None),
+            email=reg.email or kwargs.pop('email',None),
             grossTotal=reg.totalPrice,
             total=reg.priceWithDiscount,
             submissionUser=submissionUser,
@@ -2731,14 +2748,17 @@ class Invoice(EmailRecipientMixin, models.Model):
         return reverse('viewInvoice', args=[self.id,])
 
     def get_default_recipients(self):
-        ''' Overrides EmailRecipientMixin '''
-        if self.email:
-            return [self.email,]
-        if self.finalRegistration:
-            return [self.finalRegistration.customer.email,]
-        elif self.temporaryRegistration:
-            return [self.temporaryRegistration.email,]
-        return []
+        '''
+        Overrides EmailRecipientMixin by getting the set of associated email
+        addresses and removing blanks.
+        '''
+        email_set = set([
+            self.email,
+            getattr(getattr(self.finalRegistration,'customer',None),'email',None),
+            getattr(self.temporaryRegistration,'email',None),
+        ])
+        email_set.difference_update([None,''])
+        return list(email_set)
 
     def get_email_context(self,**kwargs):
         ''' Overrides EmailRecipientMixin '''
@@ -2916,7 +2936,8 @@ class Invoice(EmailRecipientMixin, models.Model):
         amountDue = kwargs.pop('amountDue', self.outstandingBalance)
 
         if not payerEmail and not self.get_default_recipients():
-            raise ValueError(_('Cannot send notification email because no recipient has been specified.'))
+            logger.info('Cannot send notification email because no recipient has been specified.')
+            return
 
         template = getConstant('email__invoiceTemplate')
 

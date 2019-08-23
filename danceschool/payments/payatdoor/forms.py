@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.urls import reverse
 from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
@@ -40,10 +40,11 @@ class CashPaymentMixin(object):
         invoice_id = self.data.get('invoice') or None
 
         if invoice_id:
-            invoice = Invoice.objects.get(id=invoice_id)
-        if not invoice_id or not invoice:
-            raise ValidationError(_('Invoice not found.'))
-        return invoice
+            try:
+                invoice = Invoice.objects.get(id=invoice_id)
+                return invoice
+            except ObjectDoesNotExist:
+                raise ValidationError(_('Invoice not found.'))
 
 
 class WillPayAtDoorForm(forms.Form):
@@ -111,8 +112,7 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         required=True
     )
     registration = forms.ModelChoiceField(queryset=TemporaryRegistration.objects.all())
-    invoice = forms.ModelChoiceField(queryset=Invoice.objects.all())
-    instance = forms.ModelChoiceField(queryset=PayAtDoorFormModel.objects.all(),required=True)
+    invoice = forms.ModelChoiceField(queryset=Invoice.objects.all(), required=False)
 
     amountPaid = forms.FloatField(label=_('Amount Paid'),required=True,min_value=0)
     paymentMethod = forms.ChoiceField(
@@ -143,7 +143,6 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
 
     def __init__(self,*args,**kwargs):
         subUser = kwargs.pop('user','')
-        instance = kwargs.pop('instance', None)
         invoiceId = kwargs.pop('invoice', None)
         regId = kwargs.pop('registration', None)
 
@@ -161,7 +160,6 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
                     <div class="card-body">
                 """),
             Hidden('submissionUser', subUser),
-            Hidden('instance', instance),
             Hidden('invoice', invoiceId),
             Hidden('registration', regId),
             'amountPaid',
@@ -187,9 +185,3 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         if not user.has_perm('core.accept_door_payments'):
             raise ValidationError(_('Invalid user submitted door payment.'))
         return user
-
-    def clean_invoice(self):
-        print('About to super')
-        invoice = super(DoorPaymentForm, self).clean_invoice()
-        print('Invoice is: %s' % invoice)
-        return invoice

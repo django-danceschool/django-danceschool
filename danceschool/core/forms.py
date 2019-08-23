@@ -729,29 +729,6 @@ class DoorAmountForm(forms.Form):
         return form_data
 
 
-class CustomerGuestAutocompleteForm(forms.Form):
-    '''
-    This form can be used to search for customers and names on the guest
-    list for a night or event.
-    '''
-
-    name = forms.ModelChoiceField(
-        queryset=Customer.objects.all(),
-        widget=autocomplete.ModelSelect2(
-            url='autocompleteCustomer',
-            attrs={
-                # This will set the input placeholder attribute:
-                'data-placeholder': _('Enter a name'),
-                # This will set the yourlabs.Autocomplete.minimumCharacters
-                # options, the naming conversion is handled by jQuery
-                'data-minimum-input-length': 2,
-                'data-max-results': 10,
-                'class': 'modern-style',
-            }
-        )
-    )
-
-
 class EventAutocompleteForm(forms.Form):
     '''
     This form can be used for views that autocomplete events (e.g. viewing
