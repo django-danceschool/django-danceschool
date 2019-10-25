@@ -14,9 +14,10 @@ from danceschool.core.utils.timezone import ensure_localtime
 
 
 class InstructorPrivateLessonDetails(models.Model):
-    instructor = models.OneToOneField(StaffMember)
+    instructor = models.OneToOneField(StaffMember, on_delete=models.CASCADE)
     defaultPricingTier = models.ForeignKey(
-        PricingTier,verbose_name=_('Default Pricing Tier'),null=True,blank=True
+        PricingTier, verbose_name=_('Default Pricing Tier'), null=True,
+        blank=True, on_delete=models.SET_NULL
     )
     roles = models.ManyToManyField(DanceRole,blank=True)
 
@@ -39,7 +40,10 @@ class PrivateLessonEvent(Event):
     associated with other types of events (location, etc.)
     '''
 
-    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing Tier'),null=True,blank=True)
+    pricingTier = models.ForeignKey(
+        PricingTier, verbose_name=_('Pricing Tier'), null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
     participants = models.PositiveSmallIntegerField(_('Expected # of Participants'),null=True,blank=True,default=1)
     comments = models.TextField(
         _('Comments/Notes'),null=True,blank=True,help_text=_('For internal use and recordkeeping.')
@@ -194,8 +198,12 @@ class PrivateLessonCustomer(models.Model):
     without payment, this just provides a record that they signed up for
     the lesson.
     '''
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
-    lesson = models.ForeignKey(PrivateLessonEvent,verbose_name=_('Lesson'))
+    customer = models.ForeignKey(
+        Customer, verbose_name=_('Customer'), on_delete=models.CASCADE
+    )
+    lesson = models.ForeignKey(
+        PrivateLessonEvent, verbose_name=_('Lesson'), on_delete=models.CASCADE
+    )
 
     def __str__(self):
         return str(_('Private lesson customer: %s for lesson #%s' % (self.customer.fullName, self.lesson.id)))

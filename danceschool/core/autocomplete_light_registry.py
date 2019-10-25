@@ -6,7 +6,7 @@ from django.db.models import Q
 from dal import autocomplete
 from calendar import month_name
 
-from .models import Customer, StaffMember, Series, PublicEvent, Event
+from .models import Customer, StaffMember, Series, PublicEvent, Event, ClassDescription
 
 
 class UserAutoComplete(autocomplete.Select2QuerySetView):
@@ -51,6 +51,24 @@ class CustomerAutoComplete(autocomplete.Select2QuerySetView):
             qs = qs.filter(
                 Q(first_name__istartswith=firstName) | Q(last_name__istartswith=lastName) |
                 Q(email__istartswith=self.q)
+            )
+
+        return qs
+
+
+class ClassDescriptionAutoComplete(autocomplete.Select2QuerySetView):
+
+    def get_queryset(self):
+        # Filter out results for unauthenticated users.
+        if not self.request.user.has_perm('core.change_series'):
+            return ClassDescription.objects.none()
+
+        qs = ClassDescription.objects.all()
+
+        if self.q:
+            qs = qs.filter(
+                Q(title__icontains=self.q) | Q(shortDescription__icontains=self.q) |
+                Q(description__icontains=self.q)
             )
 
         return qs

@@ -419,9 +419,8 @@ class TemporaryRegistrationAdmin(admin.ModelAdmin):
 
 @admin.register(ClassDescription)
 class ClassDescriptionAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
-    list_display = ['title','danceTypeLevel','oneTimeSeries']
-    list_filter = ('danceTypeLevel','oneTimeSeries')
-    list_editable = ('oneTimeSeries',)
+    list_display = ['title','danceTypeLevel',]
+    list_filter = ('danceTypeLevel',)
     search_fields = ('title',)
     prepopulated_fields = {"slug": ("title",)}
 
@@ -808,6 +807,22 @@ class SeriesAdminForm(ModelForm):
         self.fields['room'].widget.can_add_related = False
         self.fields['room'].widget.can_change_related = False
 
+        self.fields['classDescription'] = ModelChoiceField(
+            queryset=ClassDescription.objects.all(),
+            widget=autocomplete.ModelSelect2(
+                url='autocompleteClassDescription',
+                attrs={
+                    # This will set the input placeholder attribute:
+                    'data-placeholder': _('Enter an existing class series title or description'),
+                    # This will set the yourlabs.Autocomplete.minimumCharacters
+                    # options, the naming conversion is handled by jQuery
+                    'data-minimum-input-length': 2,
+                    'data-max-results': 10,
+                    'class': 'modern-style',
+                },
+            )
+        )
+
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out former locations for new records
@@ -815,9 +830,6 @@ class SeriesAdminForm(ModelForm):
 
             # Filter out Pricing Tiers that are expired (i.e. no longer in use)
             self.fields['pricingTier'].queryset = PricingTier.objects.filter(expired=False)
-
-            # Filter out one-time class descriptions
-            self.fields['classDescription'].queryset = ClassDescription.objects.filter(oneTimeSeries=False)
 
             # Set initial values for capacity here because they will automatically update if the
             # constant is changed.  Through Javascript, this should also change when the Location is changed.

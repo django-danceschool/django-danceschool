@@ -168,7 +168,7 @@ class StaffMember(models.Model):
     privateEmail = models.CharField(_('Private Email Address'),max_length=100,help_text=_('This is the personal email address of the instructor for the instructor directory.'),blank=True)
     phone = models.CharField(_('Telephone'),max_length=25,help_text=_('Instructor phone numbers are for the instructor directory only, and should not be given to students.'),blank=True,null=True)
 
-    image = FilerImageField(verbose_name=_('Staff photo'),blank=True,null=True,related_name='staff_image')
+    image = FilerImageField(verbose_name=_('Staff photo'),blank=True,null=True,on_delete=models.SET_NULL,related_name='staff_image')
     bio = HTMLField(verbose_name=_('Bio text'),help_text=_('Insert the instructor\'s bio here.  Use HTML to include videos, formatting, etc.'),null=True,blank=True)
 
     categories = models.ManyToManyField(

@@ -26,8 +26,14 @@ class Requirement(models.Model):
 
     name = models.CharField(_('Requirement name/description'),max_length=300,help_text=_('If a customer does not meet the requirement for a series, then this description will be used to explain the issue (e.g. \'Must have taken Lindy 1 to take Lindy 2\').'))
 
-    applicableClass = models.ForeignKey(ClassDescription,verbose_name=_('Applies to class'),null=True,blank=True)
-    applicableLevel = models.ForeignKey(DanceTypeLevel,verbose_name=_('Applies to dance type/level'),null=True,blank=True)
+    applicableClass = models.ForeignKey(
+        ClassDescription, verbose_name=_('Applies to class'), null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    applicableLevel = models.ForeignKey(
+        DanceTypeLevel, verbose_name=_('Applies to dance type/level'), null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
 
     booleanRule = models.CharField(
         max_length=3,choices=BooleanChoice.choices,default=BooleanChoice.booleanAnd,
@@ -35,7 +41,11 @@ class Requirement(models.Model):
         help_text=_('If you select an option other than \'Must meet all requirements\', then you can still enforce multiple requirements by adding another Requirement item.'))
     enforcementMethod = models.CharField(_('Enforcement method'),max_length=1,choices=EnforcementChoice.choices,default=EnforcementChoice.warning)
 
-    applicableRole = models.ForeignKey(DanceRole,verbose_name=_('Applies only to role (optional)'),help_text=_('Most requirements apply identically to all dance roles.  If this requirement does not, then specify the role to which it applies here.'),null=True,blank=True)
+    applicableRole = models.ForeignKey(
+        DanceRole, verbose_name=_('Applies only to role (optional)'),
+        help_text=_('Most requirements apply identically to all dance roles.  If this requirement does not, then specify the role to which it applies here.'),
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
     roleEnforced = models.BooleanField(_('Same dance role enforced'),default=False,help_text=_('If checked, then in order to meet the requirement, the customer must have met all individual requirements in the same dance role, and that must be the dance role for which they are registering.'))
 
     submissionDate = models.DateTimeField(_('Submission date'),auto_now_add=True)
@@ -148,7 +158,9 @@ class Requirement(models.Model):
 class RequirementItem(models.Model):
     ''' Each component of a requirement is one of these '''
 
-    requirement = models.ForeignKey(Requirement,verbose_name=_('Requirement'),null=True)
+    requirement = models.ForeignKey(
+        Requirement, verbose_name=_('Requirement'), null=True, on_delete=models.CASCADE
+    )
 
     class ConcurrencyRule(DjangoChoices):
         prohibited = ChoiceItem('P',_('Must have previously taken'))
@@ -158,8 +170,14 @@ class RequirementItem(models.Model):
         required = ChoiceItem('R',_('Concurrent registration required'))
 
     quantity = models.PositiveSmallIntegerField(_('Quantity'),default=1)
-    requiredLevel = models.ForeignKey(DanceTypeLevel,null=True,blank=True,verbose_name=_('Required Dance type/level'))
-    requiredClass = models.ForeignKey(ClassDescription,null=True,blank=True,verbose_name=_('Required class'))
+    requiredLevel = models.ForeignKey(
+        DanceTypeLevel, null=True, blank=True, verbose_name=_('Required Dance type/level'),
+        on_delete=models.SET_NULL
+    )
+    requiredClass = models.ForeignKey(
+        ClassDescription, null=True, blank=True, verbose_name=_('Required class'),
+        on_delete=models.SET_NULL
+    )
 
     concurrentRule = models.CharField(_('Concurrency Rule'),max_length=1,choices=ConcurrencyRule.choices,default=ConcurrencyRule.prohibited)
 
@@ -178,9 +196,17 @@ class CustomerRequirement(models.Model):
     '''
     This class allows for override of requirements on a per-customer basis.
     '''
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
-    requirement = models.ForeignKey(Requirement,verbose_name=_('Requirement'))
-    role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'),help_text=_('Role must be specified only for requirements for which roles are enforced.'))
+    customer = models.ForeignKey(
+        Customer, verbose_name=_('Customer'), on_delete=models.CASCADE
+    )
+    requirement = models.ForeignKey(
+        Requirement, verbose_name=_('Requirement'), on_delete=models.CASCADE
+    )
+    role = models.ForeignKey(
+        DanceRole, null=True, blank=True, verbose_name=_('Dance role'),
+        help_text=_('Role must be specified only for requirements for which roles are enforced.'),
+        on_delete=models.SET_NULL
+    )
 
     met = models.BooleanField(_('Meets Requirement'),default=True,help_text=_('If unchecked, then the customer explicitly does not meet the requirement, regardless of whether they meet its parameters.'))
     comments = models.TextField(_('Comments/Notes'),null=True,blank=True)

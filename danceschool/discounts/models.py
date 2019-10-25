@@ -27,8 +27,13 @@ class PricingTierGroup(models.Model):
     from the PricingTier objects of the core app to the PointGroup objects used
     in constructing discounts.
     '''
-    group = models.ForeignKey(PointGroup,verbose_name=_('Point group'))
-    pricingTier = models.OneToOneField(PricingTier,verbose_name=_('Pricing tier'))
+    group = models.ForeignKey(
+        PointGroup,verbose_name=_('Point group'), on_delete=models.CASCADE
+    )
+    pricingTier = models.OneToOneField(
+        PricingTier,verbose_name=_('Pricing tier'),
+        on_delete=models.CASCADE
+    )
     points = models.PositiveIntegerField(_('# of Points'),default=0)
 
     def __str__(self):
@@ -102,7 +107,8 @@ class DiscountCombo(models.Model):
     active = models.BooleanField(_('Active'),default=True,help_text=_('Uncheck this to \'turn off\' this discount'))
     category = models.ForeignKey(
         DiscountCategory,verbose_name=_('Discount category'),
-        help_text=_('One discount can be applied per category, and the order in which discounts are applied depends on the order parameter of the categories.')
+        help_text=_('One discount can be applied per category, and the order in which discounts are applied depends on the order parameter of the categories.'),
+        on_delete=models.SET_NULL, null=True
     )
 
     # If null, then there is no expiration date
@@ -261,15 +267,30 @@ class DiscountComboComponent(models.Model):
     # For weekday-specific discounts
     DAYS_CHOICES = [(None,''),] + [(k,x) for k,x in enumerate(day_name)]
 
-    discountCombo = models.ForeignKey(DiscountCombo,verbose_name=_('Discount'))
+    discountCombo = models.ForeignKey(
+        DiscountCombo, verbose_name=_('Discount'),
+        on_delete=models.CASCADE
+    )
 
-    pointGroup = models.ForeignKey(PointGroup,verbose_name=_('Pricing Tier Point Group'))
+    pointGroup = models.ForeignKey(
+        PointGroup, verbose_name=_('Pricing Tier Point Group'),
+        on_delete=models.CASCADE
+    )
 
-    allWithinPointGroup = models.BooleanField(verbose_name=_('Applies to all within Point Group'),help_text=_('If checked, then this discount applies to this quantity or more within the point group.  Use, for example, for all-in passes.'))
+    allWithinPointGroup = models.BooleanField(
+        verbose_name=_('Applies to all within Point Group'),
+        help_text=_('If checked, then this discount applies to this quantity or more within the point group.  Use, for example, for all-in passes.')
+    )
 
     quantity = models.PositiveSmallIntegerField(_('Quantity'),default=1)
-    level = models.ForeignKey(DanceTypeLevel,null=True,blank=True,verbose_name=_('Dance type/level'))
-    weekday = models.PositiveSmallIntegerField(_('Weekday'),choices=DAYS_CHOICES,blank=True,null=True,help_text=_('Leave this blank for no restriction on days of the week'))
+    level = models.ForeignKey(
+        DanceTypeLevel, null=True, blank=True, verbose_name=_('Dance type/level'),
+        on_delete=models.SET_NULL
+    )
+    weekday = models.PositiveSmallIntegerField(
+        _('Weekday'), choices=DAYS_CHOICES, blank=True, null=True,
+        help_text=_('Leave this blank for no restriction on days of the week')
+    )
 
     class Meta:
         verbose_name = _('Required component of discount')
@@ -277,8 +298,13 @@ class DiscountComboComponent(models.Model):
 
 
 class TemporaryRegistrationDiscount(models.Model):
-    registration = models.ForeignKey(TemporaryRegistration,verbose_name=_('Temporary registration'))
-    discount = models.ForeignKey(DiscountCombo,verbose_name=_('Discount'))
+    registration = models.ForeignKey(
+        TemporaryRegistration, verbose_name=_('Temporary registration'),
+        on_delete=models.CASCADE
+    )
+    discount = models.ForeignKey(
+        DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
+    )
     discountAmount = models.FloatField(verbose_name=_('Amount of discount'),validators=[MinValueValidator(0)])
 
     class Meta:
@@ -288,8 +314,12 @@ class TemporaryRegistrationDiscount(models.Model):
 
 
 class RegistrationDiscount(models.Model):
-    registration = models.ForeignKey(Registration,verbose_name=_('Registration'))
-    discount = models.ForeignKey(DiscountCombo,verbose_name=_('Discount'))
+    registration = models.ForeignKey(
+        Registration,verbose_name=_('Registration'), on_delete=models.CASCADE
+    )
+    discount = models.ForeignKey(
+        DiscountCombo,verbose_name=_('Discount'), on_delete=models.CASCADE
+    )
     discountAmount = models.FloatField(verbose_name=_('Amount of discount'),validators=[MinValueValidator(0)])
 
     class Meta:
@@ -300,8 +330,12 @@ class RegistrationDiscount(models.Model):
 
 class CustomerGroupDiscount(models.Model):
     ''' Some discounts are only available for specific customer groups '''
-    group = models.ForeignKey(CustomerGroup,verbose_name=_('Customer group'))
-    discountCombo = models.ForeignKey(DiscountCombo,verbose_name=_('Discount'))
+    group = models.ForeignKey(
+        CustomerGroup, verbose_name=_('Customer group'), on_delete=models.CASCADE
+    )
+    discountCombo = models.ForeignKey(
+        DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Group-specific discount restriction')
@@ -310,8 +344,12 @@ class CustomerGroupDiscount(models.Model):
 
 class CustomerDiscount(models.Model):
     ''' Some discounts are only available for specific customers. '''
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'))
-    discountCombo = models.ForeignKey(DiscountCombo,verbose_name=_('Discount'))
+    customer = models.ForeignKey(
+        Customer, verbose_name=_('Customer'), on_delete=models.CASCADE
+    )
+    discountCombo = models.ForeignKey(
+        DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Customer-specific discount restriction')
