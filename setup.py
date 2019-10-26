@@ -53,6 +53,7 @@ setup(
         'huey>=1.3.1,<2.0',
         'icalendar>=3.9.0',
         'intervaltree>=2.1.0',
+        'jsonfield2>=3.0.3',
         'paypalrestsdk>=1.12.0',
         'peewee>=2.10.1',
         'persisting-theory>=0.2.1',
