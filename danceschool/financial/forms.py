@@ -188,12 +188,19 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         paid = self.cleaned_data.get('paid')
         paymentDate = self.cleaned_data.get('paymentDate')
 
+        event = self.cleaned_data.get('event')
+
         # Automatically marks expenses that are paid
         # upon submission as accruing at the date of payment.
         if paid and paymentDate:
             self.cleaned_data['accrualDate'] = paymentDate
         else:
             self.cleaned_data.pop('paymentDate',None)
+
+        # If an event has been specified, then that takes precedence for setting
+        # the accrual date of the expense.
+        if event and getattr(event,'startTime',None):
+            self.cleaned_data['accrualDate'] = event.startTime
 
         if payBy == '1' and total:
             self.cleaned_data.pop('total',None)
