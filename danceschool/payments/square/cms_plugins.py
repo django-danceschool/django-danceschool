@@ -20,7 +20,22 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
         context = super(SquareCheckoutFormPlugin, self).render(context, instance, placeholder)
 
         context.update({
+            'allow_amount_entry': False,
             'squareApplicationId': getattr(settings,'SQUARE_APPLICATION_ID',''),
+        })
+
+        return context
+
+
+class SquareGiftCertificateFormPlugin(SquareCheckoutFormPlugin):
+    name = _('Square Gift Certificate Form')
+
+    def render(self, context, instance, placeholder):
+        context = super(SquareGiftCertificateFormPlugin, self).render(context, instance, placeholder)
+
+        context.update({
+            'allow_amount_entry': True,
+            'transaction_type': 'Gift Certificate',
         })
 
         return context
@@ -45,4 +60,5 @@ class SquarePointOfSalePlugin(CMSPluginBase):
 
 
 plugin_pool.register_plugin(SquareCheckoutFormPlugin)
+plugin_pool.register_plugin(SquareGiftCertificateFormPlugin)
 plugin_pool.register_plugin(SquarePointOfSalePlugin)

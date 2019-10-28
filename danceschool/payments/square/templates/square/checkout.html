@@ -32,6 +32,10 @@
         <input type="hidden" name="customerEmail" value="{{ registration.email }}">
       {% elif invoice %}
         <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+      {% elif allow_amount_entry %}
+        <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
+        <label>{% trans "Enter Amount" %}</label>
+        <input id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" /></p>
       {% endif %}
       <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
       <input class="btn btn-primary mt-2" type="submit" value="{% trans 'Pay Now' %}" onclick="requestCardNonce(event)">
