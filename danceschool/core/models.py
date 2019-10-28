@@ -313,7 +313,7 @@ class ClassDescription(models.Model):
         '''
         Returns the start time of the last time this series was offered
         '''
-        return self.event_set.order_by('-startTime').first().startTime
+        return self.series_set.order_by('-startTime').first().startTime
     lastOffered.fget.short_description = _('Last offered')
 
     @property
@@ -323,7 +323,7 @@ class ClassDescription(models.Model):
         in which the first class begins, so this returns a (year,month) tuple
         that can be used in admin instead.
         '''
-        lastOfferedSeries = self.event_set.order_by('-startTime').first()
+        lastOfferedSeries = self.series_set.order_by('-startTime').first()
         return (lastOfferedSeries.year,lastOfferedSeries.month)
     lastOfferedMonth.fget.short_description = _('Last offered')
 

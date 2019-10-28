@@ -15,8 +15,8 @@ class PrivateEventCategory(EventCategory):
     though the schema is the same because they both inherit from EventCategory.
     '''
     requiredGroup = models.ForeignKey(
-        Group, verbose_name=_('Group required to add events to this category.'), 
-        null=True, blank=True, on_delete=models.SET_NULL,
+        Group, verbose_name=_('Group required to add events to this category.'),
+        null=True, blank=True, on_delete=models.SET_NULL
     )
     displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
 
@@ -60,9 +60,13 @@ class PrivateEvent(Event):
     displayToGroup = models.ForeignKey(
         Group, null=True, blank=True, verbose_name=_('Display to group'),
         help_text=_('If this is set, then only these users will see this event on their calendar.'),
-        on_delete=models.SET_NULL,
+        on_delete=models.SET_NULL
     )
-    displayToUsers = models.ManyToManyField(User,verbose_name=_('Display to users'),limit_choices_to={'is_staff': True},blank=True,help_text=_('If this is set, then only chosen users will see this event on their calendar.'))
+    displayToUsers = models.ManyToManyField(
+        User, verbose_name=_('Display to users'),
+        limit_choices_to={'is_staff': True}, blank=True,
+        help_text=_('If this is set, then only chosen users will see this event on their calendar.')
+    )
 
     def __str__(self):
         try:
@@ -83,9 +87,12 @@ class PrivateEvent(Event):
 
 
 class EventReminder(models.Model):
-    event = models.ForeignKey(Event, verbose_name=_('Event'), on_delete=models.CASCADE)
+    event = models.ForeignKey(
+        Event, verbose_name=_('Event'), on_delete=models.CASCADE
+    )
     eventOccurrence = models.ForeignKey(
-        EventOccurrence, verbose_name=_('Event Occurrence'), on_delete=models.CASCADE
+        EventOccurrence, verbose_name=_('Event Occurrence'),
+        on_delete=models.CASCADE
     )
 
     time = models.DateTimeField(_('Date/Time'))

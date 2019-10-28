@@ -468,7 +468,7 @@ class RoomRentalInfo(RepeatedExpenseRule):
     then the location's rental rate and parameters are used instead.
     '''
     room = models.OneToOneField(
-        Room,related_name='rentalinfo',verbose_name=_('Room'),
+        Room, related_name='rentalinfo', verbose_name=_('Room'),
         on_delete=models.CASCADE
     )
 
@@ -530,7 +530,7 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
     for individual staff members staffed in particular ways.
     '''
     staffMember = models.ForeignKey(
-        StaffMember,related_name='expenserules',verbose_name=_('Staff member'),
+        StaffMember, related_name='expenserules', verbose_name=_('Staff member'),
         on_delete=models.CASCADE,
     )
     category = models.ForeignKey(
@@ -871,7 +871,7 @@ class RevenueItem(models.Model):
     # With the invoice system in the core app, Revenue Items need only link with Invoice Items
     invoiceItem = models.OneToOneField(
         InvoiceItem, null=True, blank=True, verbose_name=_('Associated invoice item'),
-        on_delete = models.SET_NULL,
+        on_delete=models.SET_NULL,
     )
 
     event = models.ForeignKey(

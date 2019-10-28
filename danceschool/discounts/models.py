@@ -278,14 +278,20 @@ class DiscountComboComponent(models.Model):
         on_delete=models.CASCADE,
     )
 
-    allWithinPointGroup = models.BooleanField(verbose_name=_('Applies to all within Point Group'),help_text=_('If checked, then this discount applies to this quantity or more within the point group.  Use, for example, for all-in passes.'))
+    allWithinPointGroup = models.BooleanField(
+        verbose_name=_('Applies to all within Point Group'),
+        help_text=_('If checked, then this discount applies to this quantity or more within the point group.  Use, for example, for all-in passes.')
+    )
 
     quantity = models.PositiveSmallIntegerField(_('Quantity'),default=1)
     level = models.ForeignKey(
         DanceTypeLevel, null=True, blank=True,
         verbose_name=_('Dance type/level'), on_delete=models.SET_NULL
     )
-    weekday = models.PositiveSmallIntegerField(_('Weekday'),choices=DAYS_CHOICES,blank=True,null=True,help_text=_('Leave this blank for no restriction on days of the week'))
+    weekday = models.PositiveSmallIntegerField(
+        _('Weekday'), choices=DAYS_CHOICES, blank=True, null=True,
+        help_text=_('Leave this blank for no restriction on days of the week')
+    )
 
     class Meta:
         verbose_name = _('Required component of discount')
@@ -313,7 +319,7 @@ class RegistrationDiscount(models.Model):
         Registration,verbose_name=_('Registration'), on_delete=models.CASCADE
     )
     discount = models.ForeignKey(
-        DiscountCombo,verbose_name=_('Discount'),
+        DiscountCombo, verbose_name=_('Discount'),
         on_delete=models.CASCADE,
     )
     discountAmount = models.FloatField(verbose_name=_('Amount of discount'),validators=[MinValueValidator(0)])
@@ -327,10 +333,10 @@ class RegistrationDiscount(models.Model):
 class CustomerGroupDiscount(models.Model):
     ''' Some discounts are only available for specific customer groups '''
     group = models.ForeignKey(
-        CustomerGroup,verbose_name=_('Customer group'), on_delete=models.CASCADE,
+        CustomerGroup, verbose_name=_('Customer group'), on_delete=models.CASCADE
     )
     discountCombo = models.ForeignKey(
-        DiscountCombo,verbose_name=_('Discount'), on_delete=models.CASCADE,
+        DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
     )
 
     class Meta:

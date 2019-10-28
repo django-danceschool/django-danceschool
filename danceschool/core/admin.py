@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin.widgets import RelatedFieldWidgetWrapper
 from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect, ModelMultipleChoiceField, ModelChoiceField
 from django.utils.safestring import mark_safe
 from django.urls import reverse
@@ -419,7 +420,7 @@ class TemporaryRegistrationAdmin(admin.ModelAdmin):
 
 @admin.register(ClassDescription)
 class ClassDescriptionAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
-    list_display = ['title','danceTypeLevel']
+    list_display = ['title','danceTypeLevel',]
     list_filter = ('danceTypeLevel',)
     search_fields = ('title',)
     prepopulated_fields = {"slug": ("title",)}
@@ -807,6 +808,28 @@ class SeriesAdminForm(ModelForm):
         self.fields['room'].widget.can_add_related = False
         self.fields['room'].widget.can_change_related = False
 
+        self.fields['classDescription'] = ModelChoiceField(
+            queryset=ClassDescription.objects.all(),
+            widget=RelatedFieldWidgetWrapper(
+                autocomplete.ModelSelect2(
+                    url='autocompleteClassDescription',
+                    attrs={
+                        # This will set the input placeholder attribute:
+                        'data-placeholder': _('Enter an existing class series title or description'),
+                        # This will set the yourlabs.Autocomplete.minimumCharacters
+                        # options, the naming conversion is handled by jQuery
+                        'data-minimum-input-length': 2,
+                        'data-max-results': 10,
+                        'class': 'modern-style',
+                    },
+                ),
+                rel=Series._meta.get_field('classDescription').rel,
+                admin_site=self.admin_site,
+                can_add_related=True,
+                can_change_related=True,
+            )
+        )
+
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance',None):
             # Filter out former locations for new records
@@ -882,7 +905,9 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     def get_form(self, request, obj=None, **kwargs):
         # just save obj reference for future processing in Inline
         request._obj_ = obj
-        return super(SeriesAdmin, self).get_form(request, obj, **kwargs)
+        form = super(SeriesAdmin, self).get_form(request, obj, **kwargs)
+        form.admin_site = self.admin_site
+        return form
 
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user

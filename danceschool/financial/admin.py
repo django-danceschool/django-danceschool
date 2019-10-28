@@ -467,6 +467,12 @@ class StaffMemberWageInfoAdmin(RepeatedExpenseRuleChildAdmin):
     extra_fieldset_title = None
 
 
+@admin.register(StaffDefaultWage)
+class StaffDefaultWageAdmin(RepeatedExpenseRuleChildAdmin):
+    base_model = StaffDefaultWage
+    extra_fieldset_title = None
+
+
 class GenericRepeatedExpenseAdminForm(ModelForm):
 
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
@@ -510,7 +516,10 @@ class GenericRepeatedExpenseAdmin(RepeatedExpenseRuleChildAdmin):
 @admin.register(RepeatedExpenseRule)
 class RepeatedExpenseRuleAdmin(PolymorphicParentModelAdmin):
     base_model = RepeatedExpenseRule
-    child_models = (LocationRentalInfo,RoomRentalInfo,StaffMemberWageInfo,GenericRepeatedExpense)
+    child_models = (
+        LocationRentalInfo, RoomRentalInfo, StaffMemberWageInfo,
+        StaffDefaultWage, GenericRepeatedExpense
+    )
     polymorphic_list = True
 
     list_display = ('ruleName','applyRateRule','rentalRate','_enabled','lastRun')

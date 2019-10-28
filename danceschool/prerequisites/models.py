@@ -162,8 +162,8 @@ class RequirementItem(models.Model):
     ''' Each component of a requirement is one of these '''
 
     requirement = models.ForeignKey(
-        Requirement, verbose_name=_('Requirement'),
-        null=True, on_delete=models.SET_NULL,
+        Requirement, verbose_name=_('Requirement'), null=True,
+        on_delete=models.CASCADE
     )
 
     class ConcurrencyRule(DjangoChoices):
@@ -201,16 +201,15 @@ class CustomerRequirement(models.Model):
     This class allows for override of requirements on a per-customer basis.
     '''
     customer = models.ForeignKey(
-        Customer,verbose_name=_('Customer'), on_delete=models.CASCADE
+        Customer, verbose_name=_('Customer'), on_delete=models.CASCADE
     )
     requirement = models.ForeignKey(
-        Requirement,verbose_name=_('Requirement'),
-        on_delete=models.CASCADE
+        Requirement, verbose_name=_('Requirement'), on_delete=models.CASCADE
     )
     role = models.ForeignKey(
         DanceRole, null=True, blank=True, verbose_name=_('Dance role'),
         help_text=_('Role must be specified only for requirements for which roles are enforced.'),
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL
     )
 
     met = models.BooleanField(_('Meets Requirement'),default=True,help_text=_('If unchecked, then the customer explicitly does not meet the requirement, regardless of whether they meet its parameters.'))

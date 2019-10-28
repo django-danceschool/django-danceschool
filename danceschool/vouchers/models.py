@@ -256,9 +256,11 @@ class ClassVoucher(models.Model):
 
 class SeriesCategoryVoucher(models.Model):
     seriesCategory = models.ForeignKey(
-        SeriesCategory, verbose_name=_('Series Category'), on_delete=models.CASCADE,
+        SeriesCategory, verbose_name=_('Series Category'), on_delete=models.CASCADE
     )
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,)
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Series category-specific voucher restriction')
@@ -267,9 +269,12 @@ class SeriesCategoryVoucher(models.Model):
 
 class PublicEventCategoryVoucher(models.Model):
     publicEventCategory = models.ForeignKey(
-        PublicEventCategory, verbose_name=_('Public Event Category'), on_delete=models.CASCADE,
+        PublicEventCategory, verbose_name=_('Public Event Category'),
+        on_delete=models.CASCADE
     )
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,)
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Public event category-specific voucher restriction')
@@ -278,9 +283,11 @@ class PublicEventCategoryVoucher(models.Model):
 
 class SessionVoucher(models.Model):
     session = models.ForeignKey(
-        EventSession, verbose_name=_('Event Session'), on_delete=models.CASCADE,
+        EventSession, verbose_name=_('Event Session'), on_delete=models.CASCADE
     )
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,)
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Session-specific voucher restriction')
@@ -289,9 +296,11 @@ class SessionVoucher(models.Model):
 
 class CustomerGroupVoucher(models.Model):
     group = models.ForeignKey(
-        CustomerGroup, verbose_name=_('Customer group'), on_delete=models.CASCADE,
+        CustomerGroup, verbose_name=_('Customer group'), on_delete=models.CASCADE
     )
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Group-specific voucher restriction')
@@ -299,8 +308,12 @@ class CustomerGroupVoucher(models.Model):
 
 
 class CustomerVoucher(models.Model):
-    customer = models.ForeignKey(Customer, verbose_name=_('Customer'), on_delete=models.CASCADE)
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
+    customer = models.ForeignKey(
+        Customer, verbose_name=_('Customer'), on_delete=models.CASCADE
+    )
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
 
     class Meta:
         verbose_name = _('Customer-specific voucher restriction')
@@ -308,7 +321,9 @@ class CustomerVoucher(models.Model):
 
 
 class VoucherCredit(models.Model):
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
     amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
     description = models.TextField(_('Description'),null=True, blank=True)
     creationDate = models.DateTimeField(_('Date of credit'),auto_now_add=True,null=True)
@@ -322,7 +337,9 @@ class TemporaryVoucherUse(models.Model):
     registration = models.ForeignKey(
         TemporaryRegistration, verbose_name=_('Registration'), on_delete=models.CASCADE
     )
-    voucher = models.ForeignKey(Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE)
+    voucher = models.ForeignKey(
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
+    )
     amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
     creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
 

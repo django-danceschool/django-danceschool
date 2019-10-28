@@ -110,6 +110,13 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
 
         self.helper = FormHelper()
 
+        # The hidden input of accrual date must be passed as a naive datetime.
+        # Django will take care of converting it to local time
+        accrualDate_field = Field(
+            'accrualDate', type="hidden",
+            value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()
+        )
+
         if user and user.has_perm('financial.mark_expenses_paid'):
             payment_section = Div(
                 Div(
@@ -127,10 +134,6 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
                         css_class='form-row',
                     ),
                     'paymentMethod',
-
-                    # The hidden input of accrual date must be passed as a naive datetime.
-                    # Django will take care of converting it to local time
-                    Field('accrualDate', type="hidden",value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()),
                     HTML('<p style="margin-top: 30px;"><strong>%s</strong> %s</p>' % (_('Note:'),_('For accounting purposes, please do not mark expenses as paid unless they have already been paid to the recipient.'))),
                     css_class='card-body collapse',
                     id='collapsepayment',
@@ -167,6 +170,7 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
             'total',
             'event',
             'reimbursement',
+            accrualDate_field,
             payment_section,
             'attachment',
             Submit('submit',_('Submit')),
@@ -184,12 +188,19 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         paid = self.cleaned_data.get('paid')
         paymentDate = self.cleaned_data.get('paymentDate')
 
+        event = self.cleaned_data.get('event')
+
         # Automatically marks expenses that are paid
         # upon submission as accruing at the date of payment.
         if paid and paymentDate:
             self.cleaned_data['accrualDate'] = paymentDate
         else:
             self.cleaned_data.pop('paymentDate',None)
+
+        # If an event has been specified, then that takes precedence for setting
+        # the accrual date of the expense.
+        if event and getattr(event,'startTime',None):
+            self.cleaned_data['accrualDate'] = event.startTime
 
         if payBy == '1' and total:
             self.cleaned_data.pop('total',None)

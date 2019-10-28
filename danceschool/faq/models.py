@@ -25,8 +25,8 @@ class FAQCategory(models.Model):
 class FAQ(models.Model):
 
     category = models.ForeignKey(
-        FAQCategory,null=True,verbose_name=_('Category'),
-        on_delete=models.SET_NULL,
+        FAQCategory, null=True, verbose_name=_('Category'),
+        on_delete=models.SET_NULL
     )
 
     question = models.CharField(_('Question'),max_length=200)
@@ -51,8 +51,7 @@ class FAQ(models.Model):
 
 class FAQCategoryPluginModel(CMSPlugin):
     category = models.ForeignKey(
-        FAQCategory,verbose_name=_('Category'),
-        on_delete=models.CASCADE,
+        FAQCategory, verbose_name=_('Category'), on_delete=models.CASCADE
     )
     showTitle = models.BooleanField(verbose_name=_('Show Category Title'),default=False)
 
@@ -61,7 +60,10 @@ class FAQCategoryPluginModel(CMSPlugin):
 
 
 class FAQSinglePluginModel(CMSPlugin):
-    question = models.ForeignKey(FAQ, verbose_name=_('Question'), on_delete=models.CASCADE)
+    question = models.ForeignKey(
+        FAQ, verbose_name=_('Question'),
+        on_delete=models.CASCADE
+    )
 
     def get_short_description(self):
         return self.question
