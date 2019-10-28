@@ -1,6 +1,7 @@
 {% load cms_tags sekizai_tags i18n %}
 
 {% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
+{% url "customizeGiftCertificate" as certificate_url %}
 
 <div id="error_payment"></div>
 
@@ -32,7 +33,12 @@
           <input class="sq-input full-width" id="id_email" type="email" name="customerEmail">
           <label>{% trans "Enter Card Details" %}</label>
         {% endif %}
-        <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
+        {% if transaction_type == "Gift Certificate" and certificate_url %}
+          <input type="hidden" name="successUrl" value="{{ certificate_url }}">
+          <input type="hidden" name="addSessionInfo" value="True">
+        {% else %}
+          <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
+        {% endif %}
       </form>
 
       {# This is the div in which Square places the iframe with everything it needs to create a card nonce. #}
