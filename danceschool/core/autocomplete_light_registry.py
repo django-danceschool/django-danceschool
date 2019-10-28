@@ -6,7 +6,7 @@ from django.db.models import Q
 from dal import autocomplete
 from calendar import month_name
 
-from .models import Customer, StaffMember, Series, PublicEvent, Event
+from .models import Customer, StaffMember, Series, PublicEvent, Event, ClassDescription
 
 
 class UserAutoComplete(autocomplete.Select2QuerySetView):
@@ -56,6 +56,24 @@ class CustomerAutoComplete(autocomplete.Select2QuerySetView):
         return qs
 
 
+class ClassDescriptionAutoComplete(autocomplete.Select2QuerySetView):
+
+    def get_queryset(self):
+        # Filter out results for unauthenticated users.
+        if not self.request.user.has_perm('core.change_series'):
+            return ClassDescription.objects.none()
+
+        qs = ClassDescription.objects.all()
+
+        if self.q:
+            qs = qs.filter(
+                Q(title__icontains=self.q) | Q(description__icontains=self.q) |
+                Q(shortDescription__icontains=self.q)
+            )
+
+        return qs
+
+
 class EventAutoComplete(autocomplete.Select2QuerySetView):
     '''
     Allow the user to filter autocomplates on the name of the series/event and
@@ -76,7 +94,7 @@ class EventAutoComplete(autocomplete.Select2QuerySetView):
                 month_dict = {v: k for k,v in enumerate(month_name)}
                 month_value = next(value for key, value in month_dict.items() if key.startswith(self.q.title()))
             except StopIteration:
-                month_value = ''
+                month_value = 0
 
             qs = qs.filter(
                 Q(series__classDescription__title__icontains=self.q) | 
