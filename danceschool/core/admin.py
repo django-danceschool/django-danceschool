@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin.widgets import RelatedFieldWidgetWrapper
 from django.forms import ModelForm, SplitDateTimeField, HiddenInput, RadioSelect, ModelMultipleChoiceField, ModelChoiceField
 from django.utils.safestring import mark_safe
 from django.urls import reverse
@@ -809,17 +810,23 @@ class SeriesAdminForm(ModelForm):
 
         self.fields['classDescription'] = ModelChoiceField(
             queryset=ClassDescription.objects.all(),
-            widget=autocomplete.ModelSelect2(
-                url='autocompleteClassDescription',
-                attrs={
-                    # This will set the input placeholder attribute:
-                    'data-placeholder': _('Enter an existing class series title or description'),
-                    # This will set the yourlabs.Autocomplete.minimumCharacters
-                    # options, the naming conversion is handled by jQuery
-                    'data-minimum-input-length': 2,
-                    'data-max-results': 10,
-                    'class': 'modern-style',
-                },
+            widget=RelatedFieldWidgetWrapper(
+                autocomplete.ModelSelect2(
+                    url='autocompleteClassDescription',
+                    attrs={
+                        # This will set the input placeholder attribute:
+                        'data-placeholder': _('Enter an existing class series title or description'),
+                        # This will set the yourlabs.Autocomplete.minimumCharacters
+                        # options, the naming conversion is handled by jQuery
+                        'data-minimum-input-length': 2,
+                        'data-max-results': 10,
+                        'class': 'modern-style',
+                    },
+                ),
+                rel=Series._meta.get_field('classDescription').rel,
+                admin_site=self.admin_site,
+                can_add_related=True,
+                can_change_related=True,
             )
         )
 
@@ -886,7 +893,9 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     def get_form(self, request, obj=None, **kwargs):
         # just save obj reference for future processing in Inline
         request._obj_ = obj
-        return super(SeriesAdmin, self).get_form(request, obj, **kwargs)
+        form = super(SeriesAdmin, self).get_form(request, obj, **kwargs)
+        form.admin_site = self.admin_site
+        return form
 
     def save_model(self,request,obj,form,change):
         obj.submissionUser = request.user
