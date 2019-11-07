@@ -75,6 +75,8 @@ class ClassDescriptionAutoComplete(autocomplete.Select2QuerySetView):
         return qs
 
     def get_result_label(self, result):
+        if not result.lastOffered: 
+            return result.title
         return format_html(
             '{} ({} {})',
             result.title, _('Last offered'), result.lastOffered.strftime('%Y-%m-%d')

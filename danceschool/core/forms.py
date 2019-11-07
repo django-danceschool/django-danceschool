@@ -416,7 +416,9 @@ class RegistrationContactForm(forms.Form):
         super(RegistrationContactForm, self).__init__(*args, **kwargs)
         self._session = session
 
+        # Setting use_custom_control to False to avoid issues with django-crispy-forms Bootstrap integration.
         self.helper = FormHelper()
+        self.helper.use_custom_control=False
         self.helper.form_method = 'post'
         self.helper.form_tag = False  # Our template must explicitly include the <form tag>
 
@@ -617,7 +619,9 @@ class DoorAmountForm(forms.Form):
 
         subUser = getattr(user, 'id', None)
 
+        # Setting use_custom_control to False to avoid issues with django-crispy-forms Bootstrap integration.
         self.helper = FormHelper()
+        self.helper.use_custom_control=False
         self.helper.form_method = 'post'
         self.helper.form_tag = False  # Our template must explicitly include the <form tag>
 

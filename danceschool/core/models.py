@@ -313,7 +313,7 @@ class ClassDescription(models.Model):
         '''
         Returns the start time of the last time this series was offered
         '''
-        return self.series_set.order_by('-startTime').first().startTime
+        return getattr(self.series_set.order_by('-startTime').first(),'startTime',None)
     lastOffered.fget.short_description = _('Last offered')
 
     @property
@@ -324,7 +324,10 @@ class ClassDescription(models.Model):
         that can be used in admin instead.
         '''
         lastOfferedSeries = self.series_set.order_by('-startTime').first()
-        return (lastOfferedSeries.year,lastOfferedSeries.month)
+        return (
+            getattr(lastOfferedSeries,'year',None),
+            getattr(lastOfferedSeries,'month',None)
+        )
     lastOfferedMonth.fget.short_description = _('Last offered')
 
     def __str__(self):
