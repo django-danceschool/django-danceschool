@@ -44,7 +44,6 @@ setup(
         'django-sekizai>=0.10.0',
         'djangocms-admin-style>=1.2.6.2',
         'djangocms-bootstrap4>=1.1.1',
-        'djangocms-forms>=0.2.5',
         'djangocms-icon>=1.0.0',
         'djangocms-link>=2.3.1',
         'djangocms-picture>=2.1.3',
