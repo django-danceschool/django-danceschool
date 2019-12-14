@@ -22,7 +22,7 @@ setup(
     author_email='lee.c.tucker@gmail.com',
     install_requires=[
         'beautifulsoup4>=4.6.0',
-        'Django>=1.11,<2.0',
+        'Django>=2.2,<3.0',
         'django-admin-sortable2>=0.6.10',
         'django-allauth>=0.31.0',
         'django-autocomplete-light==3.2.10',
@@ -30,7 +30,7 @@ setup(
         'django-choices>=1.5.0',
         'django-ckeditor>=5.4.0',
         'django-ckeditor-filebrowser-filer>=0.2.4',
-        'django-cms>=3.6.0',
+        'django-cms>=3.7.0',
         'django-colorful>=1.2',
         'django-crispy-forms>=1.6.0',
         'django-daterange-filter>=1.2.0',
