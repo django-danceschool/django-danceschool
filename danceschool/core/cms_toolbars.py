@@ -180,9 +180,6 @@ class ContentToolbar(CMSToolbar):
         if self.request.user.has_perm('core.change_emailtemplate'):
             menu.add_link_item(_('Manage Email Templates'), reverse('admin:core_emailtemplate_changelist'))
 
-        if apps.is_installed('djangocms_forms') and self.request.user.has_perm('djangocms_forms.export_formsubmission'):
-            menu.add_link_item(_('View/Export Survey Responses'), reverse('admin:djangocms_forms_formsubmission_changelist'))
-
 
 @toolbar_pool.register
 class CoreFinancesToolbar(CMSToolbar):
