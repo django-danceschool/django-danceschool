@@ -823,7 +823,7 @@ class SeriesAdminForm(ModelForm):
                         'class': 'modern-style',
                     },
                 ),
-                rel=Series._meta.get_field('classDescription').rel,
+                rel=Series._meta.get_field('classDescription').remote_field,
                 admin_site=self.admin_site,
                 can_add_related=True,
                 can_change_related=True,

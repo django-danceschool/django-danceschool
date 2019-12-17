@@ -61,8 +61,8 @@ if apps.is_installed('danceschool.financial'):
 if apps.is_installed('danceschool.guestlist'):
     urlpatterns.append(url(r'^guest-list/', include('danceschool.guestlist.urls')),)
 
-if apps.is_installed('danceschool.prerequisites'):
-    urlpatterns.append(url(r'^nightly/', include('danceschool.nightlydoor.urls')),)
+if apps.is_installed('danceschool.door'):
+    urlpatterns.append(url(r'^door/', include('danceschool.door.urls')),)
 
 if apps.is_installed('danceschool.prerequisites'):
     urlpatterns.append(url(r'^prerequisites/', include('danceschool.prerequisites.urls')),)
