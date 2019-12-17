@@ -75,7 +75,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
     To make an option part of a separate "override" choice set, add a dictionary key {'override': True}
     """
 
-    def render(self, name, value, attrs=None, renderer=None, choices=()):
+    def render(self, name, value, attrs=None, choices=(), renderer=None):
         if value is None:
             value = []
         has_id = attrs and 'id' in attrs

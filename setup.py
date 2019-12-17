@@ -22,15 +22,15 @@ setup(
     author_email='lee.c.tucker@gmail.com',
     install_requires=[
         'beautifulsoup4>=4.6.0',
-        'Django>=2.1.7,<2.2',
+        'Django>=2.2,<3.0',
         'django-admin-sortable2>=0.6.10',
         'django-allauth>=0.31.0',
-        'django-autocomplete-light==3.2.10',
+        'django-autocomplete-light>=3.5.0',
         'django-braces>=1.8.1',
         'django-choices>=1.5.0',
         'django-ckeditor>=5.4.0',
         'django-ckeditor-filebrowser-filer>=0.3.0',
-        'django-cms>=3.6.0',
+        'django-cms>=3.7.0',
         'django-colorful>=1.2',
         'django-crispy-forms>=1.6.0',
         'django-daterange-filter>=1.2.0',
@@ -43,14 +43,8 @@ setup(
         'django-polymorphic>=1.0.2',
         'django-sekizai>=0.10.0',
         'djangocms-admin-style>=1.2.6.2',
-<<<<<<< HEAD
         'djangocms-bootstrap4>=1.3.1',
         'djangocms-icon>=1.3.0',
-=======
-        'djangocms-bootstrap4>=1.1.1',
-        'djangocms-forms>=0.2.5',
-        'djangocms-icon>=1.0.0',
->>>>>>> ea8dcfad9a6b703d11c1d4b550335130d533a43f
         'djangocms-link>=2.3.1',
         'djangocms-picture>=2.1.3',
         'djangocms-text-ckeditor>=3.7.0',

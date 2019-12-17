@@ -1,13 +1,13 @@
 beautifulsoup4>=4.6.0
-Django>=2.1.7,<2.2
+Django>=2.2,<3.0
 django-admin-sortable2>=0.6.10
 django-allauth>=0.31.0
-git+https://github.com/yourlabs/django-autocomplete-light.git@3.2.10
+django-autocomplete-light>=3.5.0
 django-braces>=1.8.1
 django-choices>=1.5.0
 django-ckeditor>=5.4.0
 django-ckeditor-filebrowser-filer>=0.3.0
-django-cms>=3.6.0
+django-cms>=3.7.0
 django-colorful>=1.2
 django-crispy-forms>=1.6.0
 django-daterange-filter>=1.2.0
