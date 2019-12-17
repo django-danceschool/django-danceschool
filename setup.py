@@ -29,7 +29,7 @@ setup(
         'django-braces>=1.8.1',
         'django-choices>=1.5.0',
         'django-ckeditor>=5.4.0',
-        'django-ckeditor-filebrowser-filer>=0.2.4',
+        'django-ckeditor-filebrowser-filer>=0.3.0',
         'django-cms>=3.7.0',
         'django-colorful>=1.2',
         'django-crispy-forms>=1.6.0',
