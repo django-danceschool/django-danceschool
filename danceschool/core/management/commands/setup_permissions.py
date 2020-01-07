@@ -82,6 +82,7 @@ Note: This process may take a minute or two to complete.
             for this_app in [
                 'danceschool.financial',
                 'danceschool.discounts',
+                'danceschool.door',
                 'danceschool.faq',
                 'danceschool.guestlist',
                 'danceschool.news',
@@ -91,8 +92,10 @@ Note: This process may take a minute or two to complete.
                 'danceschool.stats',
                 'danceschool.vouchers',
                 'danceschool.banlist',
+                'danceschool.payments.payatdoor',
                 'danceschool.payments.paypal',
                 'danceschool.payments.stripe',
+                'danceschool.payments.square',
             ]:
                 if apps.is_installed(this_app):
                     app_add_list.append(this_app.split('.')[1])
@@ -121,6 +124,7 @@ Note: This process may take a minute or two to complete.
                 ('view_all_invoices','core','invoice'),
                 ('accept_door_payments', 'core', 'registration'),
                 ('checkin_customers', 'core', 'registration'),
+                ('ajax_registration', 'core', 'registration'),
                 ('override_register_closed', 'core', 'registration'),
                 ('override_register_dropins', 'core', 'registration'),
                 ('override_register_soldout', 'core', 'registration'),
@@ -172,6 +176,7 @@ Note: This process may take a minute or two to complete.
                 ('override_register_closed', 'core', 'registration'),
                 ('override_register_dropins', 'core', 'registration'),
                 ('override_register_soldout', 'core', 'registration'),
+                ('ajax_registration', 'core', 'registration'),
                 ('register_dropins', 'core', 'registration'),
                 ('view_registration_summary', 'core', 'registration'),
                 ('view_staff_directory', 'core', 'staffmember'),

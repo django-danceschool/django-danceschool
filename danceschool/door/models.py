@@ -137,7 +137,7 @@ class DoorRegisterEventPluginModel(CMSPlugin):
     )
 
     occursWithinDays = models.PositiveSmallIntegerField(
-        _('Limit number'), null=True, blank=True, default=0,
+        _('Event occurs within __ days'), null=True, blank=True, default=0,
         help_text=_(
             'If set, then the register will only include events that have an ' +
             'occurrence within this many days in the future of the register date' +

@@ -25,6 +25,9 @@ class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
     permission_required = 'core.accept_door_payments'
     template_name = 'door/register.html'
 
+    # For Restricting to this day's register only.
+    today = False
+
     def get_allEvents(self):
         '''
         Exclude hidden and link-only events by default, as well as private
@@ -46,11 +49,24 @@ class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
         return self.allEvents
 
     def get_context_data(self,**kwargs):
-        ''' Add the event and series listing data '''
-        year = int(self.kwargs.get('year'))
-        month = int(self.kwargs.get('month'))
-        day = int(self.kwargs.get('day'))
-        today = datetime(year, month, day)
+        ''' 
+        Add the event and series listing data.  If If "today" is specified,
+        then use today instead of passed arguments.
+        '''
+
+        if self.today:
+            today = ensure_localtime(
+                datetime.now()
+            ).replace(hour=0, minute=0, second=0, microsecond=0)
+            year, month, day = (today.year, today.month, today.day,)
+        else:
+            try:
+                year = int(self.kwargs.get('year'))
+                month = int(self.kwargs.get('month'))
+                day = int(self.kwargs.get('day'))
+                today = datetime(year, month, day)
+            except (TypeError, ValueError):
+                raise Http404(_('Invalid date.'))
 
         try:
             register =  DoorRegister.objects.get(slug=self.kwargs.get('slug'), enabled=True)

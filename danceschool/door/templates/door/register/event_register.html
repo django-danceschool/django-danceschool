@@ -1,10 +1,11 @@
 {% load sekizai_tags i18n crispy_forms_tags %}
 
 <div class="col-12 my-1 event-register-set {{instance.cssClasses}}">
+    {% if instance.title and register_choices %}<h4 class="event-register-set-title">{{ instance.title }}</h4>{% endif %}
     {% for key,item in register_choices.items %}
         <div class="card">
             <div class="card-body item">
-                <h5 class="cart-title">{{ item.event.name }}</h5>
+                {% block cart_title %}<h5 class="cart-title">{{ item.event.name }}</h5>{% endblock %}
 
                 <div class="btn-group">
                 {% for choice in item.primary_options %}
