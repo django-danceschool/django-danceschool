@@ -1,9 +1,52 @@
-{% load crispy_forms_tags sekizai_tags %}
-<form action="{{ form.helper.form_action }}" method="POST" class="my-4">
+{% load i18n crispy_forms_tags sekizai_tags %}
+<div class="card mt-4">
+    <h6 class="card-header" role="tab" id="door_headingOne">
+        {% trans "Cash Payment" %}
+    </h6>
+    <div class="card-body">
+        <div id="auto-submit-message" class="d-none">
+          <p>  
+            {% trans "You have recorded a cash payment in the amount of" %}:
+            <strong>{{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</strong>
+          </p>
+          <p>{% trans "You be returned to registration in 2 seconds." %}</p>
+        </div>
+        <form id="cash-payment-form" action="{{ form.helper.form_action }}" method="POST" class="my-4">
+          {% crispy form %}
 
-  {% crispy form %}
+          {% addtoblock "js" %}
+            {{ form.media }}
+          {% endaddtoblock %}          
+        </form>
+    </div>
+</div>
 
 {% addtoblock "js" %}
-	{{ form.media }}
+<script type="text/javascript">
+ 
+    var regParams = {
+      payAtDoor: "{{ payAtDoor }}",
+      autoSubmit: "{{ autoSubmit }}",
+      paymentMethod: "{{ paymentMethod }}",
+      netPrice: "{{ netPrice|floatformat:'-2' }}"
+    }
+
+    $(document).ready(function() {
+        if (
+          regParams.autoSubmit == "True" && 
+          regParams.payAtDoor == "True" && 
+          regParams.paymentMethod !== ""
+        ) {
+            $('#cash-payment-form').addClass('d-none');
+            $('#auto-submit-message').removeClass('d-none');
+
+            setTimeout(function(){
+              $("#id_amountPaid").val(regParams.netPrice)
+              $("#id_paymentMethod").val(regParams.paymentMethod);
+              $('#submit-id-submit').click();
+            }, 2000)
+        }
+    });
+
+</script>
 {% endaddtoblock %}
-</form>

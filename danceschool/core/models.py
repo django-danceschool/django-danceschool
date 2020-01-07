@@ -2252,6 +2252,12 @@ class Registration(EmailRecipientMixin, models.Model):
         return max([x.event.endTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
     lastSeriesEndTime.fget.short_description = _('Last class series ends')
 
+    @property
+    def url(self):
+        if self.id:
+            return reverse('admin:core_registration_change', args=[self.id,])
+    url.fget.short_description = _('Reg. Admin URL')
+
     def getTimeOfClassesRemaining(self,numClasses=0):
         '''
         For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
@@ -2321,6 +2327,7 @@ class Registration(EmailRecipientMixin, models.Model):
             ('override_register_closed',_('Can register students for series/events that are closed for registration by the public')),
             ('override_register_soldout',_('Can register students for series/events that are officially sold out')),
             ('override_register_dropins',_('Can register students for drop-ins even if the series does not allow drop-in registration.')),
+            ('ajax_registration',_('Can register using the Ajax registration view (needed for the door register)')),
         )
 
 
@@ -2822,13 +2829,16 @@ class Invoice(EmailRecipientMixin, models.Model):
                 adjusted_total = self.total / (1 + tax_rate)
                 self.taxes = adjusted_total * tax_rate
 
-    def processPayment(self, amount, fees, paidOnline=True, methodName=None, methodTxn=None, submissionUser=None, collectedByUser=None, forceFinalize=False, status=None, notify=None):
+    def processPayment(
+        self, amount, fees, paidOnline=True, methodName=None, methodTxn=None,
+        submissionUser=None, collectedByUser=None, forceFinalize=False,
+        status=None, notify=None, epsilon=0.01
+    ):
         '''
         When a payment processor makes a successful payment against an invoice, it can call this method
         which handles status updates, the creation of a final registration object (if applicable), and
         the firing of appropriate registration-related signals.
         '''
-        epsilon = .01
 
         paymentTime = timezone.now()
 
@@ -2890,9 +2900,9 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         # If there were transaction fees, then these also need to be allocated among the InvoiceItems
         # All fees from payments are allocated proportionately.
-        self.allocateFees()
+        self.allocateFees(epsilon=epsilon)
 
-    def allocateFees(self):
+    def allocateFees(self, epsilon=0.01):
         '''
         Fees are allocated across invoice items based on their discounted
         total price net of adjustments as a proportion of the overall
@@ -2901,11 +2911,11 @@ class Invoice(EmailRecipientMixin, models.Model):
         items = list(self.invoiceitem_set.all())
 
         # Check that totals and adjusments match.  If they do not, raise an error.
-        if self.total != sum([x.total for x in items]):
+        if abs(self.total - sum([x.total for x in items])) > epsilon:
             msg = _('Invoice item totals do not match invoice total.  Unable to allocate fees.')
             logger.error(str(msg))
             raise ValidationError(msg)
-        if self.adjustments != sum([x.adjustments for x in items]):
+        if abs(self.adjustments - sum([x.adjustments for x in items])) > epsilon:
             msg = _('Invoice item adjustments do not match invoice adjustments.  Unable to allocate fees.')
             logger.error(str(msg))
             raise ValidationError(msg)

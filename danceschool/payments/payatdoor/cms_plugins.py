@@ -8,6 +8,7 @@ from danceschool.core.constants import getConstant
 
 from .models import PayAtDoorFormModel
 from .forms import WillPayAtDoorForm, DoorPaymentForm
+from .constants import ATTHEDOOR_PAYMENTMETHOD_CHOICES
 
 
 class WillPayAtDoorFormPlugin(CMSPluginBase):
@@ -44,11 +45,24 @@ class PayAtDoorFormPlugin(CMSPluginBase):
     name = _('At-the-door payment form')
     module = _('Payments')
     cache = False
-    render_template = 'cms/forms/plugin_crispy_form.html'
+    render_template = 'payatdoor/checkout.html'
 
     def render(self, context, instance, placeholder):
         ''' Add the cart-specific context to this form '''
         context = super().render(context, instance, placeholder)
+
+        methodChoices = [str(x[0]) for x in ATTHEDOOR_PAYMENTMETHOD_CHOICES]
+
+        reg_data = getattr(context.get('registration', None), 'data', {})
+        paymentMethod = reg_data.get('paymentMethod', None)
+        autoSubmit = reg_data.get('autoSubmit', False)
+
+        # Only permit auto-submit for specific valid payment methods (e.g. Cash)
+        if paymentMethod in methodChoices and autoSubmit:
+            context.update({
+                'paymentMethod': paymentMethod,
+                'autoSubmit': autoSubmit,
+            })
 
         context.update({
             'business_name': getConstant('contact__businessName'),
@@ -62,9 +76,11 @@ class PayAtDoorFormPlugin(CMSPluginBase):
         registration = getattr(context.get('registration', None), 'id', '')
         invoice = str(getattr(context.get('invoice', None), 'id', ''))
         user = getattr(context.get('user', None), 'id', '')
+        initialAmount = context.get('netPrice',None)
 
         return DoorPaymentForm(
-            user=user, invoice=invoice, registration=registration
+            user=user, invoice=invoice, registration=registration,
+            initialAmount=round(initialAmount,2)
         )
 
 

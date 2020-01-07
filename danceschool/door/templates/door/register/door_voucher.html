@@ -1,0 +1,16 @@
+{% load i18n %}
+
+<div class="col-12 my-1">
+<div class="card">
+    <div class="card-header">{% trans "Enter voucher code" %}</div>
+    <div class="card-body item">
+        <div class="voucherDetail form-inline">
+            <div class="form-group mx-sm-3 mb-2">
+                <label for="id_gift" class="sr-only">{% trans "Voucher ID" %}</label>
+                <input type="text" class="form-control" name="gift" id="id_gift">
+            </div>
+            <button class="btn btn-outline-primary add-voucher mb-2 mr-2" >{% trans "Add Voucher" %}</button>
+        </div>
+    </div>
+</div>
+</div>

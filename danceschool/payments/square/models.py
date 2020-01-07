@@ -87,7 +87,6 @@ class SquarePaymentRecord(PaymentRecord):
                 sum([x.amount_money.amount / 100 for x in transaction.refunds or []])
 
         refundData = []
-        print('Beginning refund process.')
 
         remains_to_refund = amount
         tender_index = 0
@@ -123,8 +122,6 @@ class SquarePaymentRecord(PaymentRecord):
                 refundData.append({'status': 'error', 'errors': e})
                 break
 
-            print('Refund was successful?  Data is: %s' % response)
-
             # Note that fees are often 0 or missing here, but we enqueue the task
             # retrieve and update them afterward.
             refundData.append({
@@ -142,7 +139,6 @@ class SquarePaymentRecord(PaymentRecord):
             # in the future.
             updateSquareFees.schedule(args=(self,), delay=60)
 
-        print('Ready to return: %s' % refundData)
         return refundData
 
     class Meta:

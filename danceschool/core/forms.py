@@ -246,14 +246,9 @@ class ClassChoiceForm(forms.Form):
             # are provided, those will be used.  Or, if the DanceType of a Series
             # provides default roles, those will be used.  Otherwise, a single role will
             # be defined as 'Register' .
-            eventRoles = event.eventrole_set.all()
-            roles = []
-            if eventRoles.count() > 0:
+            roles = event.availableRoles
+            if len(roles) > 0:
                 field_features.update(['roles'])
-                roles = [x.role for x in eventRoles]
-            elif isinstance(event, Series) and event.classDescription.danceTypeLevel.danceType.roles.count() > 0:
-                field_features.update(['roles'])
-                roles = event.classDescription.danceTypeLevel.danceType.roles.all()
 
             # Add one choice per role
             for role in roles:
@@ -422,8 +417,8 @@ class RegistrationContactForm(forms.Form):
         self.helper.form_method = 'post'
         self.helper.form_tag = False  # Our template must explicitly include the <form tag>
 
+        # Input existing info for users who are logged in and have signed up before
         if user and hasattr(user, 'customer') and user.customer and not session.get('payAtDoor', False):
-            # Input existing info for users who are logged in and have signed up before
             self.fields['firstName'].initial = user.customer.first_name or user.first_name
             self.fields['lastName'].initial = user.customer.last_name or user.last_name
             self.fields['email'].initial = user.customer.email or user.email
@@ -438,10 +433,17 @@ class RegistrationContactForm(forms.Form):
 
         # If a voucher ID was passed (i.e. a referral code), then populate the form
         # and clear the passed session value
-        session['gift'] = ''
-        if session.get('voucher_id'):
+        if session.get('voucher_id') and self.fields.get('gift',None):
             self.fields['gift'].initial = session.get('voucher_id')
-            session['voucher_id'] = None
+            self.fields['gift'].widget.attrs['readonly'] = True
+            session.pop('voucher_id', None)
+            session.pop('voucher_names', None)
+            session.pop('total_voucher_amount',None)
+
+        # Pass along whether the individual is a student if this has already
+        # been set.
+        if self._registration and self.fields.get('student',None):
+            self.fields['student'].initial = self._registration.student
 
     def is_valid(self):
         '''

@@ -23,7 +23,7 @@
 			<tbody>
 				{% for addon in addonItems %}
 				<tr class="addons">
-					<th>{% trans "Free Add-On" %}:</th><td>{{ addon.name }}</td>
+					<td><strong>{% trans "Free Add-On" %}:</strong> {{ addon }}</td><td></td>
 				</tr>
 				{% endfor %}
 			</tbody>
@@ -32,10 +32,18 @@
 			<tbody>
 				{% for code in discount_codes %}
 					<tr>
-						<th>{% trans "Discount Code Applied" %}: {{ code.0 }}</th>
+						<td><strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}</td>
 						<td>-{{ currencySymbol }}{{ code.2|floatformat:2 }}</td>
 					</tr>
 				{% endfor %}
+			</tbody>
+			{% endif %}
+			{% if voucher_amount %}
+			<tbody>
+				<tr>
+					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher_name }} ({{ voucher_id }})</td>
+					<td>-{{ currencySymbol }}{{ voucher_amount|floatformat:2 }}</td>
+				</tr>
 			</tbody>
 			{% endif %}
 			<tbody>

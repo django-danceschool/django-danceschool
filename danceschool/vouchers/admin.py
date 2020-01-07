@@ -147,7 +147,7 @@ class VoucherCreditInline(admin.TabularInline):
 class VoucherAdmin(admin.ModelAdmin):
     inlines = [DanceTypeVoucherInline,ClassVoucherInline,SeriesCategoryVoucherInline,PublicEventCategoryVoucherInline,EventSessionVoucherInline,CustomerGroupVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
     list_display = ['voucherId','name','category','amountLeft','maxAmountPerUse','expirationDate','isEnabled','restrictions']
-    list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly']
+    list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly', 'doorOnly']
     search_fields = ['voucherId','name','description']
     readonly_fields = ['refundAmount','creationDate']
     actions = ['enableVoucher','disableVoucher']
@@ -157,7 +157,7 @@ class VoucherAdmin(admin.ModelAdmin):
             'fields': (('voucherId','category'),'name','description',('originalAmount','maxAmountPerUse'),),
         }),
         (_('Voucher Restrictions'), {
-            'fields': ('expirationDate',('singleUse','forFirstTimeCustomersOnly','forPreviousCustomersOnly','disabled')),
+            'fields': ('expirationDate',('singleUse','forFirstTimeCustomersOnly','forPreviousCustomersOnly','doorOnly','disabled')),
         }),
         (_('Other Info'), {
             'classes': ('collapse',),
@@ -178,6 +178,8 @@ class VoucherAdmin(admin.ModelAdmin):
             text.append(_('First-time customer'))
         if obj.forPreviousCustomersOnly:
             text.append(_('Previous customer'))
+        if obj.doorOnly:
+            text.append(_('At-the-door only'))
         if obj.customervoucher_set.all().exists():
             text.append(_('Specific customer'))
         if obj.classvoucher_set.all().exists():

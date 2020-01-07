@@ -9,7 +9,7 @@ import filer.fields.image
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0025_auto_20181109_1631'),
+        ('core', '0026_event_data'),
     ]
 
     operations = [

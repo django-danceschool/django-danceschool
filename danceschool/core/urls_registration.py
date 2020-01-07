@@ -1,7 +1,15 @@
 from django.conf.urls import url
 
-from .views import EventRegistrationSummaryView, EventRegistrationSelectView, EventRegistrationJsonView, RefundProcessingView, RefundConfirmationView, ViewInvoiceView, InvoiceNotificationView
-from .classreg import RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView, ClassRegistrationReferralView,RegistrationSummaryView, StudentInfoView
+from .views import (
+    EventRegistrationSummaryView, EventRegistrationSelectView,
+    EventRegistrationJsonView, RefundProcessingView, RefundConfirmationView,
+    ViewInvoiceView, InvoiceNotificationView
+)
+from .classreg import (
+    RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
+    ClassRegistrationReferralView,RegistrationSummaryView, StudentInfoView,
+    AjaxClassRegistrationView
+)
 from .ajax import processCheckIn
 
 urlpatterns = [
@@ -9,6 +17,7 @@ urlpatterns = [
     # This view allows the passing of a voucher code in the URL to the class registration page
     # so that Referrers can provide a direct URL to get their referral benefits
     url(r'^$', ClassRegistrationView.as_view(), name='registration'),
+    url(r'^ajax/$', AjaxClassRegistrationView.as_view(), name='ajaxRegistration'),
     url(r'^id/(?P<marketing_id>[\w\-_]+)/$', ClassRegistrationReferralView.as_view(), name='registrationWithMarketingId'),
     url(r'^referral/(?P<voucher_id>[\w\-_]+)/$', ClassRegistrationReferralView.as_view(), name='registrationWithVoucher'),
     url(r'^event/(?P<uuid>[\w\-_]+)/$', SingleClassRegistrationView.as_view(), name='singleClassRegistration'),

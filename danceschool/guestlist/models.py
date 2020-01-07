@@ -149,46 +149,48 @@ class GuestList(models.Model):
 
         return Q(filters & intervalFilters)
 
-    def getListForEvent(self, event=None):
-        ''' Get the list of names associated with a particular event. '''
-        names = list(self.guestlistname_set.annotate(
+    def getListForEvent(self, event=None, filters=Q(), includeRegistrants=True):
+        '''
+        Get a union-ed queryset with a list of names associated with a particular event.
+        '''
+        names = self.guestlistname_set.annotate(
             guestType=Case(
                 When(notes__isnull=False, then=F('notes')),
                 default=Value(ugettext('Manually Added')),
                 output_field=models.CharField()
             )
-        ).values('firstName','lastName','guestType'))
+        ).filter(filters).values('id','firstName','lastName','guestType').order_by()
 
         # Component-by-component, OR append filters to an initial filter that always
         # evaluates to False.
         components = self.guestlistcomponent_set.all()
-        filters = Q(pk__isnull=True)
+        component_filters = Q(pk__isnull=True)
 
         # Add prior staff based on the component rule.
         for component in components:
             if event and self.appliesToEvent(event):
-                filters = filters | self.getComponentFilters(component,event=event)
+                component_filters = component_filters | self.getComponentFilters(component,event=event)
             else:
-                filters = filters | self.getComponentFilters(component,dateTime=timezone.now())
+                component_filters = component_filters | self.getComponentFilters(component,dateTime=timezone.now())
 
         # Add all event staff if that box is checked (no need for separate components)
         if self.includeStaff and event and self.appliesToEvent(event):
-            filters = filters | Q(eventstaffmember__event=event)
+            component_filters = component_filters | Q(eventstaffmember__event=event)
 
         # Execute the constructed query and add the names of staff
-        names += list(StaffMember.objects.filter(filters).annotate(
+        names = names.union(StaffMember.objects.filter(component_filters).filter(filters).annotate(
             guestType=Case(
                 When(eventstaffmember__event=event, then=Concat(Value('Event Staff: '), 'eventstaffmember__category__name')),
                 default=Value(ugettext('Other Staff')),
                 output_field=models.CharField()
             )
-        ).distinct().values('firstName','lastName','guestType'))
+        ).distinct().values('id','firstName','lastName','guestType').order_by())
 
-        if self.includeRegistrants and event and self.appliesToEvent(event):
-            names += list(Registration.objects.filter(eventregistration__event=event).annotate(
+        if includeRegistrants and self.includeRegistrants and event and self.appliesToEvent(event):
+            names = names.union(Registration.objects.filter(filters & Q(eventregistration__event=event)).annotate(
                 guestType=Value(_('Registered'),output_field=models.CharField())
-            ).values('firstName','lastName','guestType'))
-        return names
+            ).values('id','firstName','lastName','guestType').order_by())
+        return names.order_by('lastName','firstName')
 
 
     def __str__(self):

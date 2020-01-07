@@ -23,6 +23,7 @@ from .constants import getConstant
 from .tasks import sendEmail
 from .registries import plugin_templates_registry
 from .helpers import getReturnPage
+from .signals import request_discounts, apply_addons
 
 
 class EmailRecipientMixin(object):
@@ -488,3 +489,78 @@ class SiteHistoryMixin(object):
         ''' This is just a wrapper for the getReturnPage helper function. '''
         siteHistory = self.request.session.get('SITE_HISTORY',{})
         return getReturnPage(siteHistory,prior=prior)
+
+
+class RegistrationAdjustmentsMixin(object):
+    '''
+    This mixin provides convenience methods for the standard request of discounts,
+    vouchers, and addons that happens in each step of the registration process.
+    These methods reference a TemporaryRegistration object, but they do not modify
+    it; that should be done in the view itself.
+    '''
+
+    def getDiscounts(self, reg, initial_price):
+        '''
+        This method takes a registration and an initial price, and it returns an
+        '''
+
+        # If the discounts app is enabled, then the return value to this signal
+        # will contain information on the discounts to be applied, as well as
+        # the total price of discount-ineligible items to be added to the
+        # price.  These should be in the form of a named tuple such as the
+        # DiscountApplication namedtuple defined in the discounts app, with
+        # 'items' and 'ineligible_total' keys.
+        discount_responses = request_discounts.send(
+            sender=RegistrationAdjustmentsMixin,
+            registration=reg,
+        )
+        discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
+
+        # This signal handler is designed to handle a single non-null response,
+        # and that response must be in the form of a list of namedtuples, each
+        # with a with a code value, a net_price value, and a discount_amount value
+        # (as with the DiscountInfo namedtuple provided by the DiscountCombo class). If more
+        # than one response is received, then the one with the minumum net price is applied
+        discount_codes = []
+        discounted_total = initial_price
+        total_discount_amount = 0
+
+        try:
+            if discount_responses:
+                discount_responses.sort(
+                    key=lambda k: 
+                    min(
+                        [getattr(x, 'net_price', initial_price) for x in k.items] +
+                        [initial_price]
+                    ) if k and hasattr(k, 'items') else initial_price
+                )
+                discount_codes = getattr(discount_responses[0],'items',[])
+                if discount_codes:
+                    discounted_total = min(
+                        [getattr(x, 'net_price', initial_price) for x in discount_codes]
+                    ) + getattr(discount_responses[0],'ineligible_total', 0)
+                    total_discount_amount = initial_price - discounted_total
+        except (IndexError, TypeError) as e:
+            logger.error('Error in applying discount responses: %s' % e)
+
+        return (discount_codes, total_discount_amount, discounted_total)
+
+
+    def getAddons(self, reg):
+        '''
+        Return a list of any free add-on items that should be applied.
+        '''
+
+        addon_responses = apply_addons.send(
+            sender=RegistrationAdjustmentsMixin,
+            registration=reg
+        )
+        addons = []
+        for response in addon_responses:
+            try:
+                if response[1]:
+                    addons += list(response[1])
+            except (IndexError, TypeError) as e:
+                logger.error('Error in applying addons: %s' % e)
+
+        return addons

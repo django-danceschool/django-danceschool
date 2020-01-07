@@ -149,7 +149,16 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
                 if isinstance(item,str):
                     this_dict[item] = getattr(obj,item,None)
                 elif isinstance(item,tuple) and len(item) == 2 and isinstance(item[0],str):
-                    this_dict[item[0]] = recurse_listing(item[1],getattr(obj,item[0],None))
+                    this_item = getattr(obj,item[0],None)
+
+                    # Added because of issues with polymorphic queries; we need
+                    # to ensure we have the child model.
+                    if item[0] == 'event':
+                        this_item = getattr(
+                            this_item, this_item.polymorphic_ctype.model, None
+                        )
+
+                    this_dict[item[0]] = recurse_listing(item[1],this_item)
 
             if (
                 isinstance(obj,EventRegistration) and
@@ -167,9 +176,9 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
             except ValueError:
                 logger.warning('Invalid date passed to EventRegistrationJsonView.')
 
-        if self.request.GET.get('customer',None):
+        if self.request.GET.get('id',None):
             try:
-                self.customer = Customer.objects.get(id=self.request.GET.get('customer'))
+                self.customer = Customer.objects.get(id=self.request.GET.get('id'))
             except ObjectDoesNotExist:
                 logger.warning('Invalid customer passed to EventRegistrationJsonView.')
 
@@ -178,6 +187,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
             'id', 'checkedIn', 'dropIn', 'price', 'netPrice', 'refundFlag', 'warningFlag',
+            ('event', ['id', 'name', 'url']),
             ('registration', [
                 'id', 'priceWithDiscount', 'student', 'refundFlag', 'totalPrice',
                 'fullName', 'discounted', 'url',

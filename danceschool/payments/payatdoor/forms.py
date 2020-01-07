@@ -145,6 +145,7 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         subUser = kwargs.pop('user','')
         invoiceId = kwargs.pop('invoice', None)
         regId = kwargs.pop('registration', None)
+        initialAmount = kwargs.pop('initialAmount',None)
 
         self.helper = FormHelper()
         self.helper.form_method = 'post'
@@ -152,13 +153,6 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         self.helper.form_action = reverse('doorPaymentHandler')
 
         self.helper.layout = Layout(
-            HTML("""
-                <div class="card mt-4">
-                    <h6 class="card-header" role="tab" id="door_headingOne">
-                        """ + str(_('Cash Payment')) + """
-                    </h6>
-                    <div class="card-body">
-                """),
             Hidden('submissionUser', subUser),
             Hidden('invoice', invoiceId),
             Hidden('registration', regId),
@@ -167,14 +161,11 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
             'payerEmail',
             'receivedBy',
             Submit('submit', _('Submit')),
-            HTML("""
-                    </div>
-                </div>
-            """),
         )
 
         kwargs.update(initial={
             'receivedBy': subUser,
+            'amountPaid': initialAmount
         })
 
         super(DoorPaymentForm, self).__init__(*args, **kwargs)

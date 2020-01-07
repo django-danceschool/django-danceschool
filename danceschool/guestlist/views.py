@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404, JsonResponse
 
 from braces.views import PermissionRequiredMixin
+from datetime import datetime
 
 from .models import GuestList, Event
 
@@ -20,7 +21,7 @@ class GuestListView(PermissionRequiredMixin, TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            self.date = (request.GET.get('date') or '').strptime('%Y-%m-%d')
+            self.date = datetime.strptime(request.GET.get('date') or '','%Y-%m-%d')
         except ValueError:
             self.date = None
 
@@ -42,10 +43,10 @@ class GuestListView(PermissionRequiredMixin, TemplateView):
         ''' Add the list of names for the given guest list '''
 
         context = {
-            'guestList': self.object,
+            'guestList': self.guest_list,
             'event': self.event,
             'date': self.date,
-            'names': self.object.getListForEvent(event),
+            'names': self.guest_list.getListForEvent(self.event),
         }
         context.update(kwargs)
         return super(GuestListView, self).get_context_data(**context)

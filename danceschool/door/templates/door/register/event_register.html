@@ -1,0 +1,55 @@
+{% load sekizai_tags i18n crispy_forms_tags %}
+
+<div class="col-12 my-1 event-register-set {{instance.cssClasses}}">
+    {% for key,item in register_choices.items %}
+        <div class="card">
+            <div class="card-body item">
+                <h5 class="cart-title">{{ item.event.name }}</h5>
+
+                <div class="btn-group">
+                {% for choice in item.primary_options %}
+                    <button class="btn btn-outline-primary my-2 mx-2 add-item"
+                        data-event="{{ item.event.id }}" data-name="{{ item.event.name }}" 
+                        data-price="{{ choice.price }}"
+                        data-role-id="{{ choice.roleId|default_if_none:'' }}" data-role-name="{{ choice.roleName|default_if_none:'' }}"
+                        data-require-full="{{ choice.requireFullRegistration }}"
+                        {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
+                        {% if choice.dropIn %}data-drop-in="{{ choice.dropIn }}"{% endif %}
+                        {% if choice.student %}data-student="{{ choice.student }}"{% endif %}
+                        {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
+                    >
+                        {{ choice.label }}
+                    </button>
+                {% endfor %}
+                </div>
+                {% if item.additional_options %}
+                    <div class="btn-group pull-right">
+                    <button class="btn btn-outline-secondary dropdown-toggle my-2" type="button" data-toggle="dropdown" id="additionalChoices_{{ item.event.id }}" aria-haspopup="true" aria-expanded="false">
+                            {% trans "Additional Options" %}
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="additionalChoices_{{ item.event.id }}">
+                            {% for choice in item.additional_options %}
+                                <a href="#" class="dropdown-item add add-item"
+                                    data-event="{{ item.event.id }}" data-name="{{ item.event.name }}"
+                                    data-price="{{ choice.price }}"
+                                    data-role-id="{{ choice.roleId|default_if_none:'' }}" data-role-name="{{ choice.roleName|default_if_none:'' }}"
+                                    data-require-full="{{ choice.requireFullRegistration }}"
+                                    {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
+                                    {% if choice.dropIn %}data-drop-in="{{ choice.dropIn }}"{% endif %}
+                                    {% if choice.student %}data-student="{{ choice.student }}"{% endif %}
+                                    {% if choice.paymentMethod %}
+                                        data-payment-method="{{ choice.paymentMethod }}"
+                                        data-auto-submit="{{ choice.autoSubmit }}"
+                                    {% endif %}
+                                    {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
+                                >
+                                    {{ choice.label }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>

@@ -1,0 +1,57 @@
+{% load sekizai_tags i18n crispy_forms_tags %}
+
+<div class="col-12 my-1" id="guestSearch">
+    <div class="card">
+        <div class="card-header">
+            {% trans "Guest Search" %}
+        </div>
+        <div class="card-body item">
+            {% crispy customerSearchForm %}
+        </div>
+
+        <div id="customerInfoCard" class="card-body item d-none">
+            <table id="customerInfoExample" class="d-none">
+                <tr>
+                    {% if 'core.checkin_customers' in perms %}
+                    <td>
+                        <input class="customerCheckIn" type="checkbox" name="reg_id" />
+                    </td>
+                    {% endif %}
+                    <td class="customerInfoEvent"></td>
+                    <td class="customerInfoRole"></td>
+                    <td class="customerInfoStudent"></td>
+                    <td class="customerInfoPaymentStatus"></td>
+                    <td class="customerInfoLinks">
+                            <div class="btn-group">
+                                {% if 'core.view_all_invoices' in perms %}
+                                    <a class="btn btn-outline-secondary btn-sm customerInvoiceLink">{% trans "Invoice" %}</a>
+                                {% endif %}
+                                {% if 'core.change_registration' in perms %}
+                                    <a class="btn btn-outline-secondary btn-sm customerRegistrationLink">{% trans "Registration" %}</a>
+                                {% endif %}
+                            </div>
+                    </td>
+                </tr>
+            </table>
+            <table id="customerInfoTable" class="table d-none">
+                <thead><tr>
+                    {% if 'core.checkin_customers' in perms %}
+                    <th>{% trans "Check-in" %}</th>
+                    {% endif %}
+                    <th>{% trans "Event" %}</th>
+                    <th>{% trans "Role" %}</th>
+                    <th>{% trans "Student" %}</th>
+                    <th>{% trans "Payment Status" %}</th>
+                    <th>{% trans "Links" %}</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+            <table id="guestInfoTable" class="table d-none">
+                <thead><tr>
+                    <th>{% trans "Guest List Name" %}</th>
+                </tr></thead>
+                <tbody><tr><td></td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>

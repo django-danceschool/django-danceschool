@@ -211,7 +211,6 @@ def processPointOfSalePayment(request):
     Please note that this will only work if you have set up your callback
     URL in Square to point to this view.
     '''
-    print('Request data is: %s' % request.GET)
 
     # iOS transactions put all response information in the data key:
     data = json.loads(request.GET.get('data','{}'))

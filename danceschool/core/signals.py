@@ -20,6 +20,15 @@ post_student_info = Signal(providing_args=['registration',])
 # cart, in tuple form as (object, discounted_price).
 request_discounts = Signal(providing_args=['registration'])
 
+# Fires in the AjaxClassRegistrationView to check the validity of a voucher code
+# if it is passed.  Unlike the vouchers handler for check_student_info, the vouchers
+# app handler for this signal does not raise ValidationErrors, but instead returns
+# a JSON object that indicates if the voucher is invalid as well as the max.
+# amount that it can be used for.
+check_voucher = Signal(
+    providing_args=['registration','voucherId','customer','validateCustomer']
+)
+
 # Fires after a discount has been actually applied, so that a hooked in discounts
 # app can make a record of the discount having been applied.  Note that the core
 # app by default records the discounted price of a registration, net of all discounts
