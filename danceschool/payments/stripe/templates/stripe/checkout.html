@@ -1,5 +1,6 @@
 {% load cms_tags i18n %}
 
+<div class="door-payment-section">
 <form action="{% url 'stripeHandler' %}" method="POST" class="my-4">
 {% csrf_token %}
 <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
@@ -31,3 +32,4 @@
   {% endif %}
 </script>
 </form>
+</div>

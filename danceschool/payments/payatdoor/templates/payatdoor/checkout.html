@@ -1,17 +1,23 @@
 {% load i18n crispy_forms_tags sekizai_tags %}
-<div class="card mt-4">
+<div class="card mt-4 door-payment-section" id="payatdoor-payment-form-card">
     <h6 class="card-header" role="tab" id="door_headingOne">
         {% trans "Cash Payment" %}
     </h6>
     <div class="card-body">
-        <div id="auto-submit-message" class="d-none">
+        <div id="payatdoor-auto-submit-message" class="d-none">
           <p>  
-            {% trans "You have recorded a cash payment in the amount of" %}:
-            <strong>{{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</strong>
+            {% blocktrans %}
+            You have reported a {{ paymentMethod }} payment in the amount of:
+            {% endblocktrans %}
+            <strong>{{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</strong>.
           </p>
-          <p>{% trans "You be returned to registration in 2 seconds." %}</p>
+          <p>
+            <button class="btn btn-primary" id="submit-quick">
+              {% trans "Record Payment" %}: {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}
+            </button>
+          </p>
         </div>
-        <form id="cash-payment-form" action="{{ form.helper.form_action }}" method="POST" class="my-4">
+        <form id="payatdoor-payment-form" action="{{ form.helper.form_action }}" method="POST" class="my-4">
           {% crispy form %}
 
           {% addtoblock "js" %}
@@ -37,14 +43,15 @@
           regParams.payAtDoor == "True" && 
           regParams.paymentMethod !== ""
         ) {
-            $('#cash-payment-form').addClass('d-none');
-            $('#auto-submit-message').removeClass('d-none');
+            $('.door-payment-section').not('#payatdoor-payment-form-card').addClass('d-none');
+            $('#payatdoor-payment-form').addClass('d-none');
+            $('#payatdoor-auto-submit-message').removeClass('d-none');
+            $("#id_amountPaid").val(regParams.netPrice);
+            $("#id_paymentMethod").val(regParams.paymentMethod);
 
-            setTimeout(function(){
-              $("#id_amountPaid").val(regParams.netPrice)
-              $("#id_paymentMethod").val(regParams.paymentMethod);
+            $('#submit-quick').click(function() {
               $('#submit-id-submit').click();
-            }, 2000)
+            });
         }
     });
 

@@ -2,8 +2,10 @@
 
 {% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
 
+<div class="door-payment-section">
 <div id="error_payment"></div>
 <div id="paypal-button" class="my-4"></div>
+</div>
 
 {% addtoblock "js" %}
     <script src="https://www.paypalobjects.com/api/checkout.js"></script>
