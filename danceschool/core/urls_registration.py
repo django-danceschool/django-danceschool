@@ -1,4 +1,5 @@
 from django.conf.urls import url
+from django.urls import path
 
 from .views import (
     EventRegistrationSummaryView, EventRegistrationSelectView,
@@ -8,7 +9,7 @@ from .views import (
 from .classreg import (
     RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
     ClassRegistrationReferralView,RegistrationSummaryView, StudentInfoView,
-    AjaxClassRegistrationView
+    AjaxClassRegistrationView, SingleClassRegistrationReferralView
 )
 from .ajax import processCheckIn
 
@@ -20,7 +21,9 @@ urlpatterns = [
     url(r'^ajax/$', AjaxClassRegistrationView.as_view(), name='ajaxRegistration'),
     url(r'^id/(?P<marketing_id>[\w\-_]+)/$', ClassRegistrationReferralView.as_view(), name='registrationWithMarketingId'),
     url(r'^referral/(?P<voucher_id>[\w\-_]+)/$', ClassRegistrationReferralView.as_view(), name='registrationWithVoucher'),
-    url(r'^event/(?P<uuid>[\w\-_]+)/$', SingleClassRegistrationView.as_view(), name='singleClassRegistration'),
+    path('event/<uuid:uuid>/', SingleClassRegistrationView.as_view(), name='singleClassRegistration'),
+    path('event/<uuid:uuid>/id/<slug:marketing_id>/', SingleClassRegistrationReferralView.as_view(), name='singleClassReferralRegistration'),
+    path('event/<uuid:uuid>/referral/<slug:voucher_id>/', SingleClassRegistrationReferralView.as_view(), name='singleClassReferralRegistration'),
 
     # This is the view that is redirected to when registration is offline.
     url(r'^offline/$', RegistrationOfflineView.as_view(),name='registrationOffline'),

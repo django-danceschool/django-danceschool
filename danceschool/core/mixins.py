@@ -19,7 +19,7 @@ from six import string_types
 import re
 from datetime import timedelta
 
-from .constants import getConstant
+from .constants import getConstant, REG_VALIDATION_STR
 from .tasks import sendEmail
 from .registries import plugin_templates_registry
 from .helpers import getReturnPage
@@ -564,3 +564,40 @@ class RegistrationAdjustmentsMixin(object):
                 logger.error('Error in applying addons: %s' % e)
 
         return addons
+
+
+class ReferralInfoMixin(object):
+    '''
+    Gets marketing ids and voucher ids from the URL kwargs or HTTP GET parameters
+    and add them to the session data.
+    '''
+
+    def get(self, request, *args, **kwargs):
+
+        # Voucher IDs are used for the referral program.
+        # Marketing IDs are used for tracking click-through registrations.
+        # They are put directly into session data immediately.
+        voucher_id = kwargs.pop('voucher_id', None)
+        marketing_id = kwargs.pop('marketing_id', None)
+
+        # GET parameters are also usable, but the URL pattern takes precedence.
+        if not voucher_id:
+            voucher_id = request.GET.get('referral',None)
+        if not marketing_id:
+            marketing_id = request.GET.get('id',None)
+
+        # Ignore voucher and marketing IDs that contain disallowed characters.
+        pattern = re.compile('^[a-zA-Z\-_0-9]+$')
+        if (voucher_id and not pattern.match(voucher_id)):
+            voucher_id = None
+        if (marketing_id and not pattern.match(marketing_id)):
+            marketing_id = None
+
+        if marketing_id or voucher_id:
+            ''' Put these things into the session data. '''
+            regSession = self.request.session.get(REG_VALIDATION_STR, {})
+            regSession['voucher_id'] = voucher_id or regSession.get('voucher_id', None)
+            regSession['marketing_id'] = marketing_id or regSession.get('marketing_id', None)
+            self.request.session[REG_VALIDATION_STR] = regSession
+
+        return super().get(request, *args, **kwargs)

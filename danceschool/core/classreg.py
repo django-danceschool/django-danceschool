@@ -25,7 +25,7 @@ from .signals import (
 )
 from .mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
-    RegistrationAdjustmentsMixin
+    RegistrationAdjustmentsMixin, ReferralInfoMixin
 )
 
 
@@ -40,27 +40,11 @@ class RegistrationOfflineView(TemplateView):
     template_name = 'core/registration/registration_offline.html'
 
 
-class ClassRegistrationReferralView(RedirectView):
+class ClassRegistrationReferralView(ReferralInfoMixin, RedirectView):
 
-    def get(self, request, *args, **kwargs):
-
-        # Always redirect to the classes page
-        self.url = reverse('registration')
-
-        # Voucher IDs are used for the referral program.
-        # Marketing IDs are used for tracking click-through registrations.
-        # They are put directly into session data immediately.
-        voucher_id = kwargs.pop('voucher_id', None)
-        marketing_id = kwargs.pop('marketing_id', None)
-
-        if marketing_id or voucher_id:
-            ''' Put these things into the session data. '''
-            regSession = self.request.session.get(REG_VALIDATION_STR, {})
-            regSession['voucher_id'] = voucher_id or regSession.get('voucher_id', None)
-            regSession['marketing_id'] = marketing_id or regSession.get('marketing_id', None)
-            self.request.session[REG_VALIDATION_STR] = regSession
-
-        return super(ClassRegistrationReferralView, self).get(request, *args, **kwargs)
+    def get_redirect_url(self, *args, **kwargs):
+        ''' Always redirects to the classes page. '''
+        return reverse('registration')
 
 
 class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin, FormView):
@@ -735,7 +719,16 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         return JsonResponse(response_dict)
 
 
-class SingleClassRegistrationView(ClassRegistrationView):
+class SingleClassRegistrationReferralView(ReferralInfoMixin, RedirectView):
+    '''
+    Single class registration can accept marketing IDs and voucher codes.
+    '''
+
+    def get_redirect_url(self, *args, **kwargs):
+        return reverse('singleClassRegistration', kwargs=kwargs)
+
+
+class SingleClassRegistrationView(ReferralInfoMixin, ClassRegistrationView):
     '''
     This view is called only via a link, and it allows a person to register for a single
     class without seeing all other classes.

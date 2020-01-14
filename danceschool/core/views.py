@@ -5,7 +5,10 @@ from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from django.core.serializers.json import DjangoJSONEncoder
-from django.views.generic import FormView, CreateView, UpdateView, DetailView, TemplateView, ListView
+from django.views.generic import (
+    FormView, CreateView, UpdateView, DetailView, TemplateView, ListView,
+    RedirectView
+)
 from django.db.models import Min, Q, Count
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
@@ -37,8 +40,11 @@ from .forms import (
     RepeatEventForm, InvoiceNotificationForm, CreateInvoiceForm, EventAutocompleteForm
 )
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
-from .mixins import (EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin,
-                     AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin)
+from .mixins import (
+    EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin,
+    AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin,
+    ReferralInfoMixin
+)
 from .signals import get_customer_data, get_eventregistration_data
 from .utils.requests import getIntFromGet
 from .utils.timezone import ensure_timezone, ensure_localtime
@@ -967,7 +973,41 @@ class OtherInstructorStatsView(InstructorStatsView):
 # Individual Class Series/Event Views
 
 
-class IndividualClassView(FinancialContextMixin, TemplateView):
+class IndividualClassReferralView(ReferralInfoMixin, RedirectView):
+
+    def get_redirect_url(self, *args, **kwargs):
+        if (
+            self.kwargs.get('session_slug', None) and
+            self.kwargs.get('year', None) and
+            self.kwargs.get('month', None)
+        ):
+            return reverse('classViewSessionMonth', kwargs=kwargs)
+        elif (
+            self.kwargs.get('session_slug', None)
+        ):
+            return reverse('classViewSession', kwargs=kwargs)
+        else:
+            return reverse('classView', kwargs=kwargs)
+
+
+class IndividualEventReferralView(ReferralInfoMixin, RedirectView):
+
+    def get_redirect_url(self, *args, **kwargs):
+        if (
+            self.kwargs.get('session_slug', None) and
+            self.kwargs.get('year', None) and
+            self.kwargs.get('month', None)
+        ):
+            return reverse('eventViewSessionMonth', kwargs=kwargs)
+        elif (
+            self.kwargs.get('session_slug', None)
+        ):
+            return reverse('eventViewSession', kwargs=kwargs)
+        else:
+            return reverse('eventView', kwargs=kwargs)
+
+
+class IndividualClassView(ReferralInfoMixin, FinancialContextMixin, TemplateView):
     template_name = 'core/individual_class.html'
 
     def get(self, request, *args, **kwargs):
@@ -1008,7 +1048,7 @@ class IndividualClassView(FinancialContextMixin, TemplateView):
         return super(IndividualClassView, self).get(request, *args, **kwargs)
 
 
-class IndividualEventView(FinancialContextMixin, TemplateView):
+class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView):
     template_name = 'core/individual_event.html'
 
     def get(self, request, *args, **kwargs):

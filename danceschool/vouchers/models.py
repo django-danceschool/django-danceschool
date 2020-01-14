@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 import random
@@ -27,7 +27,10 @@ class VoucherCategory(models.Model):
 
 class Voucher(models.Model):
     # unique identifier
-    voucherId = models.CharField(_('Voucher Code'),max_length=100,unique=True)
+    voucherId = models.CharField(
+        _('Voucher Code'), max_length=100, unique=True,
+        validators=[RegexValidator(regex='^[a-zA-Z\-_0-9]+$')]
+    )
 
     # i.e. Social Living April 2013
     name = models.CharField(
