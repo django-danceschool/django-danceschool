@@ -17,6 +17,10 @@
                         {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
                         {% if choice.dropIn %}data-drop-in="{{ choice.dropIn }}"{% endif %}
                         {% if choice.student %}data-student="{{ choice.student }}"{% endif %}
+                        {% if choice.paymentMethod %}
+                            data-payment-method="{{ choice.paymentMethod }}"
+                            data-auto-submit="{{ choice.autoSubmit }}"
+                        {% endif %}
                         {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
                     >
                         {{ choice.label }}
