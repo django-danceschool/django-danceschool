@@ -337,7 +337,8 @@ $(document).ready(function() {
             $('#guestInfoTable tbody tr td').empty();
             $('#guestInfoTable').addClass('d-none');
             $('#customerInfoTable tbody').empty();
-            $('#customerInfoCard').removeClass('d-none');
+            $('#customerInfoCard').removeClass('collapse');
+            $('#customerInfoCard').addClass('show');
 
             $.ajax({
                 url: regParams.guestLookupUrl,
@@ -360,7 +361,14 @@ $(document).ready(function() {
                         this_row.find('.customerCheckIn').attr('value', this.registration.id);
                         this_row.find('.customerCheckIn').data('event-id', this.event.id);
                         this_row.find('.customerInfoEvent').text(this.event.name);
-                        this_row.find('.customerInfoRole').text(this.role.name);
+                        var role_text = "";
+                        if (this.dropIn == true) {
+                            role_text += regParams.dropInString + ' ';
+                        }
+                        if (this.role.name) {
+                            role_text += this.role.name;
+                        }
+                        this_row.find('.customerInfoRole').text(role_text);
                         this_row.find('.customerInfoStudent').text(this.registration.student);
                         this_row.find('.customerInfoPaymentStatus').text(statusString);
                         this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
@@ -373,7 +381,8 @@ $(document).ready(function() {
         else if (this_data['type']) {
             $('#customerInfoTable tbody').empty();
             $('#customerInfoTable').addClass('d-none');
-            $('#customerInfoCard').removeClass('d-none');
+            $('#customerInfoCard').removeClass('collapse');
+            $('#customerInfoCard').addClass('show');
             $('#guestInfoTable tbody tr td').text($('#id_name').val());
             $('#guestInfoTable').removeClass('d-none');
         }

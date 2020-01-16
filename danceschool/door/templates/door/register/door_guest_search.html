@@ -9,7 +9,7 @@
             {% crispy customerSearchForm %}
         </div>
 
-        <div id="customerInfoCard" class="card-body item d-none">
+        <div id="customerInfoCard" class="card-body item collapse">
             <table id="customerInfoExample" class="d-none">
                 <tr>
                     {% if 'core.checkin_customers' in perms %}
@@ -42,13 +42,13 @@
                     <th>{% trans "Role" %}</th>
                     <th>{% trans "Student" %}</th>
                     <th>{% trans "Payment Status" %}</th>
-                    <th>{% trans "Links" %}</th>
+                    <th>{% trans "Links" %}<button class="float-right btn btn-sm" role="button" data-toggle="collapse" data-target="#customerInfoCard" aria-expanded="true" aria-controls="customerInfoCard" aria-label="Hide Table" title="Hide Table"><i class="fa fa-chevron-up" aria-hidden="true"></i></button></th>
                 </tr></thead>
                 <tbody></tbody>
             </table>
             <table id="guestInfoTable" class="table d-none">
                 <thead><tr>
-                    <th>{% trans "Guest List Name" %}</th>
+                    <th>{% trans "Guest List Name" %}<button class="float-right btn btn-sm" role="button" data-toggle="collapse" data-target="#customerInfoCard" aria-expanded="true" aria-controls="customerInfoCard" aria-label="Hide Table" title="Hide Table"><i class="fa fa-chevron-up" aria-hidden="true"></i></button></th>
                 </tr></thead>
                 <tbody><tr><td></td></tr></tbody>
             </table>
