@@ -89,9 +89,53 @@
         checkInUrl: "{% url 'formhandler_checkin' %}",
         registerDate: "{{ year }}-{{ month }}-{{ day }}",
     }
-
 </script>
 {% endaddtoblock %}
+
 {% addtoblock "js" %}<script type="text/javascript" src="{% static 'js/door_register.js' %}"></script>{% endaddtoblock %}
+
+{% addtoblock "css" %}
+    <style type="text/css">
+    .customerCheckInLabel {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+        background-color: #6C757D;
+        border-radius: 20px;
+        transition: all 0.3s;
+    }
+    .customerCheckInLabel::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius:50%;
+        background-color: white;
+        top: 1px;
+        left: 1px;
+        transition: all 0.3s;
+    }
+
+    .customerCheckIn:checked + .customerCheckInLabel::after {
+        left : 20px;
+    }
+    .customerCheckIn:checked + .customerCheckInLabel {
+        background-color: #28A745;
+    }
+
+    .customerCheckIn:disabled + .customerCheckInLabel {
+        background-color: #BFBFBF;
+    }
+
+    .customerCheckIn:disabled + .customerCheckInLabel::after {
+        background-color: #6C757D;
+    }
+
+    .customerCheckIn {
+    display : none;
+    }
+</style>
+{% endaddtoblock %}
 
 {% endblock %}

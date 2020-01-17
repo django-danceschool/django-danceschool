@@ -1,4 +1,4 @@
-{% load sekizai_tags i18n crispy_forms_tags %}
+{% load sekizai_tags i18n crispy_forms_tags static %}
 
 <div class="col-12 my-1" id="guestSearch">
     <div class="card">
@@ -15,6 +15,7 @@
                     {% if 'core.checkin_customers' in perms %}
                     <td>
                         <input class="customerCheckIn" type="checkbox" name="reg_id" />
+                        <label class="customerCheckInLabel"></label>
                     </td>
                     {% endif %}
                     <td class="customerInfoEvent"></td>

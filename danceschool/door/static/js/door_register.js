@@ -357,6 +357,8 @@ $(document).ready(function() {
                             statusString += ' (' + regParams.outstandingBalanceString + ' ' + regParams.currencySymbol + parseFloat(this.registration.invoice.outstandingBalance).toFixed(2) + ')';
                         }
 
+                        this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id);
+                        this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id);
                         this_row.find('.customerCheckIn').attr('checked', this.checkedIn);
                         this_row.find('.customerCheckIn').attr('value', this.registration.id);
                         this_row.find('.customerCheckIn').data('event-id', this.event.id);
