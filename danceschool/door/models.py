@@ -305,6 +305,11 @@ class DoorRegisterEventPluginChoice(models.Model):
         ('P',_('Primary choice')),
         ('A',_('Additional choice')),
     ]
+    OPEN_CHOICES = [
+        ('O',_('Open for registration only')),
+        ('C',_('Closed for registration only')),
+        ('B',_('Both open and closed events')),
+    ]
     SOLDOUT_CHOICES = [
         ('D', _('Display with label')),
         ('A', _('Move to additional choice drop-down')),
@@ -367,6 +372,11 @@ class DoorRegisterEventPluginChoice(models.Model):
         )
     )
 
+    registrationOpenDisplay = models.CharField(
+        _('Display if open/closed for registration only'), max_length=1,
+        choices=OPEN_CHOICES, default='B'
+    )
+
     soldOutRule = models.CharField(
         _('Rule for sold out choices'), max_length=1, default='D',
         choices=SOLDOUT_CHOICES,
@@ -411,6 +421,14 @@ class DoorRegisterEventPluginChoice(models.Model):
         '''
         primary_options = []
         additional_options = []
+
+        # No need to continue if the event open status does not match the choice
+        # requirements.
+        if (
+            (event.registrationOpen == False and self.registrationOpenDisplay == "O") or
+            (event.registrationOpen == True and self.registrationOpenDisplay == "C")
+        ):
+            return (primary_options, additional_options)
 
         # Create generic payment method if we don't have or need specific
         # payment methods.

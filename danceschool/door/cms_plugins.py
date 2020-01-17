@@ -23,7 +23,8 @@ class DoorRegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
     extra = 1
     fields = [
         'optionType', 'optionLabel', 'optionLocation',
-        ('byRole', 'byPaymentMethod', 'requireFullRegistration'),
+        ('byRole', 'byPaymentMethod',),
+        ('requireFullRegistration', 'registrationOpenDisplay', 'soldOutRule'),
         'voucherId', 'data'
     ]
 
@@ -53,7 +54,7 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
     fieldsets = (
         (None, {
             'fields': (
-                'title','eventType','occursWithinDays',
+                'title','eventType','occursWithinDays', 'registrationOpenLimit',
                 'requireFullRegistration', 'paymentMethods',
             )
         }),
