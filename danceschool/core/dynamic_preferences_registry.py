@@ -288,7 +288,7 @@ class RegistrationClosesAfterDays(FloatPreference):
     name = 'closeAfterDays'
     verbose_name = _('Close Registration Days After Beginning')
     help_text = _('By default, online registration closes automatically this many days from the beginning of an Event or Series (e.g. Enter 2.5 to close two days and twelve hours after beginning, or enter -3 to close three days before beginning).  This value can be overridden for individual Events.')
-    default = 7
+    default = 7.0
 
 
 @global_preferences_registry.register
