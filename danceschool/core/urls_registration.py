@@ -11,7 +11,7 @@ from .classreg import (
     ClassRegistrationReferralView,RegistrationSummaryView, StudentInfoView,
     AjaxClassRegistrationView, SingleClassRegistrationReferralView
 )
-from .ajax import processCheckIn
+from .ajax import ProcessCheckInView
 
 urlpatterns = [
 
@@ -36,7 +36,7 @@ urlpatterns = [
     url(r'^registrations/$',EventRegistrationSelectView.as_view(), name='viewregistrations_selectevent'),
     url(r'^registrations/(?P<event_id>[0-9]+)/$', EventRegistrationSummaryView.as_view(), name='viewregistrations'),
     url(r'^registrations/json/$', EventRegistrationJsonView.as_view(), name='viewregistrations_json'),
-    url(r'^registrations/checkin/$', processCheckIn, name='formhandler_checkin'),
+    url(r'^registrations/checkin/$', ProcessCheckInView.as_view(), name='ajax_checkin'),
 
 
     # These URLs are associated with viewing individual invoices and sending notifications

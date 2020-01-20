@@ -357,10 +357,13 @@ $(document).ready(function() {
                             statusString += ' (' + regParams.outstandingBalanceString + ' ' + regParams.currencySymbol + parseFloat(this.registration.invoice.outstandingBalance).toFixed(2) + ')';
                         }
 
+                        console.log(this);
+
                         this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id);
                         this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id);
                         this_row.find('.customerCheckIn').attr('checked', this.checkedIn);
-                        this_row.find('.customerCheckIn').attr('value', this.registration.id);
+                        this_row.find('.customerCheckIn').attr('value', this.id);
+                        this_row.find('.customerCheckIn').data('occurrence-id', this.event.getNextOccurrenceForDate);
                         this_row.find('.customerCheckIn').data('event-id', this.event.id);
                         this_row.find('.customerInfoEvent').text(this.event.name);
                         var role_text = "";
@@ -375,6 +378,8 @@ $(document).ready(function() {
                         this_row.find('.customerInfoPaymentStatus').text(statusString);
                         this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
                         this_row.find('.customerRegistrationLink').attr('href',this.registration.url);
+
+                        console.log(this_row.find('.customerCheckIn').data());
                     });
     
                 },
@@ -399,34 +404,55 @@ $(document).ready(function() {
     // Check-in customer.
     $(document).on("click", ".customerCheckIn", function() {
 
+        console.log($(this).data());
+
         $(this).attr("disabled", true);
+        var initial_status = ($(this).prop('checked') == false);
 
-        var postData = [
-            {name: "event_id", value: $(this).data('eventId')},
-            {name: "reg_id", value: $(this).attr("value")},
-        ];
-
+		var this_request = {
+			request: "update",
+			event_id: $(this).data('eventId'),
+            checkin_type: "O",
+            occurrence_id: $(this).data('occurrenceId'),
+			registrations: [
+                {
+                    id: $(this).attr("value"),
+                    cancelled: ($(this).prop('checked') == false),
+                },
+            ],
+        };
+        
 	    $.ajax(
 	    {
 	        url : regParams.checkInUrl,
 	        type: "POST",
-	        data : postData,
+            contentType: "application/json",
+            data: JSON.stringify(this_request),
 	        success:function(data, textStatus, jqXHR)
 	        {
-                setTimeout(function() {
-                    $(".customerCheckIn").removeAttr("disabled");
-                }, 1000);
+				if (data["status"] !== "success") {
+                    setTimeout(function() {
+                        $(".customerCheckIn").removeAttr("disabled");
+                    }, 500);
+				}
+				else {
+                    console.log('Update failure! Resetting to: ' + initial_status);
+                    setTimeout(function() {
+                        // Reset the checkbox before re-enabling it.
+                        $(this).prop('checked', initial_status);
+                        $(".customerCheckIn").removeAttr("disabled");
+                    }, 500);
+                }
 	        },
 	        error: function(jqXHR, textStatus, errorThrown)
 	        {
-                console.log('Update failure!')
+                console.log('Update failure! Resetting to: ' + initial_status);
                 setTimeout(function() {
+                    // Reset the checkbox before re-enabling it.
+                    $(this).prop('checked', initial_status);
                     $(".customerCheckIn").removeAttr("disabled");
-                }, 1000);
+                }, 500);
             }
 	    });
-
-
     });
-
 });

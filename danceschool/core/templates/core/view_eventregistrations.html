@@ -13,7 +13,18 @@
 </dl>
 
 {% if 'core.checkin_customers' in perms %}
-<form id="checkin_form" action="{% url 'formhandler_checkin' %}">
+<form id="checkin_form">
+
+<div class="form-group">
+	<label for="occurrenceSelect">{% trans "Select Event Occurrence for Check-In" %}</label>
+	<select id="occurrenceSelect" class="form-control">
+		{% for occ in event.eventoccurrence_set.all %}
+		<option value="{{ occ.id }}" {% if occ.id == event.nextOccurrenceForToday.id %}selected{% endif %}>{{ occ }}</option>
+		{% endfor %}
+		<option value="event">{% trans "Event-level check-in" %}</option>
+	</select>
+</div>
+
 {% endif %}
 
 <table class="classregsummary table table-striped table-responsive">
@@ -38,7 +49,7 @@
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
 		<td>
-			<input type="checkbox" name="reg_id" value="{{ reg.registration.id }}" {% if reg.checkedIn %}checked{% endif %}/>
+			<input type="checkbox" class="checkInCheckBox" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}" />
 		</td>
 		{% endif %}
 		<td>
@@ -143,7 +154,6 @@
 </table>
 
 {% if 'core.checkin_customers' in perms %}
-	<input type="hidden" name="event_id" value="{{event.id}}" />
 	<input class="btn btn-primary" type="submit" value="{% trans 'Submit Checkins' %}" />
 	</form>
 
@@ -161,14 +171,69 @@
 
 {% addtoblock "js" %}
 	<script type="text/javascript">
+
+	var $ = django.jQuery;
+
+	regParams = {
+		event: "{{ event.id }}",
+		ajaxUrl: "{% url 'ajax_checkin' %}",
+	}
+
+	function getCheckIns() {
+
+		var this_request = {
+			request: "get_all",
+			event_id: regParams.event,
+			checkin_type: "E",
+		};
+
+		var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
+		if (thisOccurrence !== "event") {
+			this_request["checkin_type"] = "O";
+			this_request["occurrence_id"] = thisOccurrence;
+		}
+
+	    $.ajax(
+	    {
+	        url : regParams.ajaxUrl,
+	        type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(this_request),
+			success: function(data, textStatus, jqXHR)
+	        {
+				if (data["status"] !== "success") {
+					$('#update_error').slideDown();
+				}
+				else {
+					$('.checkInCheckBox').prop('checked', false);
+					$.each(data['checkins'], function() {
+						var this_element = $('#reg_id_' + this.eventRegistration);
+						this_element.prop('checked', (this.cancelled == false));
+						this_element.data('existing',"true");
+					});
+				}
+			},
+	        error: function(jqXHR, textStatus, errorThrown)
+	        {
+	        	$('#update_error').slideDown();
+	        }
+	    });
+
+	}
+
 	$(function () {
 	  $('[data-toggle="popover"]').popover();
+	  getCheckIns();
 	});
 
-	{% if 'core.checkin_customers' in perms %}
-	$('input').click(function(){
+	$('.checkInCheckBox').click(function(){
 		$('#update_ok').slideUp();
 		$('#update_error').slideUp();
+	});
+
+	$('#occurrenceSelect').change(function() {
+		$('.checkInCheckbox').removeData('existing');
+		getCheckIns();
 	});
 
 	// Use Jquery to get the cookie value of the CSRF token
@@ -177,7 +242,7 @@
 	    if (document.cookie && document.cookie !== '') {
 	        var cookies = document.cookie.split(';');
 	        for (var i = 0; i < cookies.length; i++) {
-	            var cookie = jQuery.trim(cookies[i]);
+	            var cookie = django.jQuery.trim(cookies[i]);
 	            // Does this cookie string begin with the name we want?
 	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
 	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
@@ -203,28 +268,60 @@
 	    }
 	});
 
+
 	$('#checkin_form').submit(function(e) {
 		e.preventDefault(); //STOP default action
 
-		var postData = $(this).serializeArray();
-		var formURL = $(this).attr("action");
+		var this_request = {
+			request: "update",
+			event_id: regParams.event,
+			checkin_type: "E",
+			registrations: [],
+		};
+
+		var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
+		if (thisOccurrence !== "event") {
+			this_request["checkin_type"] = "O";
+			this_request["occurrence_id"] = thisOccurrence;
+		}
+
+		$.each($('.checkInCheckBox'), function() {
+			if ($(this).is(':checked') || $(this).data('existing') == "true") {
+				this_request.registrations.push({
+					id: $(this).val(),
+					cancelled: ($(this).prop('checked') == false),
+				});
+				$(this).data('existing',"true");
+			}
+		});
 
 	    $.ajax(
 	    {
-	        url : formURL,
+	        url : regParams.ajaxUrl,
 	        type: "POST",
-	        data : postData,
-	        success:function(data, textStatus, jqXHR)
+            contentType: "application/json",
+            data: JSON.stringify(this_request),
+			success: function(data, textStatus, jqXHR)
 	        {
-	            $('#update_ok').slideDown();
-	        },
+				if (data["status"] !== "success") {
+					$('#update_error').slideDown();
+				}
+				else {
+					$('#update_ok').slideDown();
+					$.each($('.checkInCheckBox'), function() {
+						if ($(this).is(':checked') || $(this).data('existing') == "true") {
+							$(this).data('existing',"true");
+						}
+					});
+				}
+			},
 	        error: function(jqXHR, textStatus, errorThrown)
 	        {
-	              $('#update_error').slideDown();
+				console.log(textStatus);
+				$('#update_error').slideDown();
 	        }
 	    });
 	});
-	{% endif %}
 	</script>
 {% endaddtoblock %}
 

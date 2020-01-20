@@ -193,7 +193,7 @@ class SeriesStaffMemberInline(EventStaffMemberInline):
 class EventRegistrationInline(admin.StackedInline):
     model = EventRegistration
     extra = 0
-    fields = ['event','role',('checkedIn','cancelled'),'dropIn','price','netPrice']
+    fields = ['event','role','cancelled','dropIn','price','netPrice']
     readonly_fields = ['event','price','netPrice','dropIn']
 
     # These ensure that registration changes happen through the regular registration

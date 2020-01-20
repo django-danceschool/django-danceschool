@@ -33,7 +33,7 @@ import json
 
 from .models import (
     Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
-    StaffMember, Instructor, Invoice, Customer
+    StaffMember, Instructor, Invoice, Customer, EventCheckIn
 )
 from .forms import (
     SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
@@ -142,18 +142,36 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
     def get(self,request,*args,**kwargs):
         ''' Parse the date and customer information that is passed. '''
 
-        def recurse_listing(listing,obj,extras=None):
+        def recurse_listing(listing, obj, extras=None, startTime=None, checkInType='O'):
             '''
             Recursively go through a list of model attributes, including attributes that
             are of linked models.
             '''
+
             this_dict = {}
             if not isinstance(listing,list):
                 raise ValueError('Invalid listing for recursion.')
 
             for item in listing:
                 if isinstance(item,str):
-                    this_dict[item] = getattr(obj,item,None)
+                    # Handle a couple of special cases
+                    if item == 'checkedIn':
+                        kwargs = {'checkInType': checkInType}
+                        if isinstance(startTime, datetime):
+                            kwargs['date'] = startTime.date()
+                        this_dict[item] = getattr(obj, item, None)(**kwargs)
+                    elif item == 'getNextOccurrenceForDate':
+                        # This view always uses the beginning of the current day
+                        # when searching for the next EventOccurrence, to avoid
+                        # unexpected behavior when using it for at-the-door
+                        # registration.
+                        this_dict[item] = getattr(
+                            getattr(obj, item, None)(startTime),
+                            'id', None
+                        )
+                    else:
+                        this_dict[item] = getattr(obj, item, None)
+
                 elif isinstance(item,tuple) and len(item) == 2 and isinstance(item[0],str):
                     this_item = getattr(obj,item[0],None)
 
@@ -164,7 +182,10 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
                             this_item, this_item.polymorphic_ctype.model, None
                         )
 
-                    this_dict[item[0]] = recurse_listing(item[1],this_item)
+                    this_dict[item[0]] = recurse_listing(
+                        item[1], this_item, startTime=startTime,
+                        checkInType=checkInType
+                    )
 
             if (
                 isinstance(obj,EventRegistration) and
@@ -188,12 +209,22 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
             except ObjectDoesNotExist:
                 logger.warning('Invalid customer passed to EventRegistrationJsonView.')
 
+        # Only set the attribute if passed, but the downstream uses of this
+        # attribute default to occurrence-based check-in unless otherwise
+        # specified. Ignore invalid choices.
+        if (
+            self.request.GET.get('checkInType',None) in
+            [x[0] for x in EventCheckIn.CHECKIN_TYPE_CHOICES]
+        ):
+            self.checkInType = self.request.GET.get('checkInType')
+
         queryset = self.get_queryset()
 
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
-            'id', 'checkedIn', 'dropIn', 'price', 'netPrice', 'refundFlag', 'warningFlag',
-            ('event', ['id', 'name', 'url']),
+            'id', 'dropIn', 'price', 'netPrice', 'refundFlag', 'warningFlag',
+            'checkedIn', 
+            ('event', ['id', 'name', 'url', 'getNextOccurrenceForDate']),
             ('registration', [
                 'id', 'priceWithDiscount', 'student', 'refundFlag', 'totalPrice',
                 'fullName', 'discounted', 'url',
@@ -212,7 +243,14 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]]):
             extras_dict[k].extend(v)
 
-        this_listing = [recurse_listing(attributeList,q,extras=extras_dict) for q in queryset]
+        this_listing = [
+            recurse_listing(
+                attributeList , q, extras=extras_dict,
+                startTime=getattr(self, 'startTime', None),
+                checkInType=getattr(self, 'checkInType', 'O')
+            )
+            for q in queryset
+        ]
 
         data = json.dumps(this_listing, cls=DjangoJSONEncoder)
         return HttpResponse(data, content_type='application/json')

@@ -587,7 +587,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     # Although this can be inferred from status, this field is set in the database
     # to allow simpler queryset operations
     registrationOpen = models.BooleanField(_('Registration is open'),default=False)
-    closeAfterDays = models.SmallIntegerField(
+    closeAfterDays = models.FloatField(
         _('Registration closes days from first occurrence'),
         default=get_closeAfterDays,
         null=True,
@@ -875,7 +875,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def nextOccurrence(self):
-        return self.eventoccurrence_set.filter(**{'startTime__gte': timezone.now()}).order_by('startTime').first()
+        return self.eventoccurrence_set.filter(
+            startTime__gte=timezone.now()
+        ).order_by('startTime').first()
     nextOccurrence.fget.short_description = _('Next occurrence')
 
     @property
@@ -884,6 +886,34 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             return self.nextOccurrence.localStartTime
         return None
     nextOccurrenceTime.fget.short_description = _('Next occurs')
+
+    @property
+    def nextOccurrenceForToday(self):
+        dateTime = ensure_localtime(timezone.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        return self.getNextOccurrence(dateTime)
+    nextOccurrenceForToday.fget.short_description = _(
+        'Next occurrence (including today)'
+    )
+
+    def getNextOccurrenceForDate(self, date=None):
+        if not date:
+            dateTime = ensure_localtime(timezone.now()).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        elif isinstance(date, datetime):
+            dateTime = ensure_localtime(date).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+        else:
+            dateTime = ensure_localtime(datetime(date.year, date.month, date.day))
+        return self.getNextOccurrence(dateTime)
+
+    def getNextOccurrence(self, dateTime):
+        return self.eventoccurrence_set.filter(
+            startTime__gte=dateTime
+        ).order_by('startTime').first()
 
     @property
     def lastOccurrence(self):
@@ -1290,10 +1320,18 @@ class EventStaffMember(models.Model):
         validators=[MinValueValidator(0)]
     )
 
+    # PostgreSQL can store arbitrary additional information associated with this
+    # event staff record in a JSONfield, but to remain database-agnostic we are
+    # using django-jsonfield.
+    data = JSONField(_('Additional data'), default={}, blank=True)
+
     # For keeping track of who submitted and when.
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submission User'),null=True,on_delete=models.SET_NULL)
-    creationDate = models.DateTimeField(_('Creation date'),auto_now_add=True)
-    modifyDate = models.DateTimeField(_('Last modified date'),auto_now=True)
+    submissionUser = models.ForeignKey(
+        User, verbose_name=_('Submission User'), null=True,
+        on_delete=models.SET_NULL
+    )
+    creationDate = models.DateTimeField(_('Creation date'), auto_now_add=True)
+    modifyDate = models.DateTimeField(_('Last modified date'), auto_now=True)
 
     @property
     def netHours(self):
@@ -2342,8 +2380,6 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     role = models.ForeignKey(DanceRole, null=True,blank=True,verbose_name=_('Dance role'),on_delete=models.SET_NULL)
     price = models.FloatField(_('Price before discounts'),default=0,validators=[MinValueValidator(0)])
 
-    checkedIn = models.BooleanField(_('Checked In'),default=False,help_text=_('Check to mark the individual as checked in.'))
-
     dropIn = models.BooleanField(_('Drop-in registration'),default=False,help_text=_('If true, this is a drop-in registration.'))
     cancelled = models.BooleanField(_('Cancelled'),default=False,help_text=_('Mark as cancelled so that this registration is not counted in student/attendee counts.'))
 
@@ -2401,6 +2437,20 @@ class EventRegistration(EmailRecipientMixin, models.Model):
             return True
         return False
     refundFlag.fget.short_description = _('Transaction was partially refunded')
+
+    def checkedIn(self, occurrence=None, date=None, checkInType='O'):
+        '''
+        Returns an indicator of whether this EventRegistration has been checked
+        in, either for a specified EventOccurrence, 
+        '''
+        filters = Q(cancelled=False) & Q(checkInType=checkInType)
+
+        if occurrence and checkInType=='O':
+            filters &= Q(occurrence=occurrence)
+        elif date and checkInType=='O':
+            filters &= Q(occurrence=self.event.getNextOccurrenceForDate(date=date))
+
+        return self.eventcheckin_set.filter(filters).exists()
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -2475,6 +2525,116 @@ class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
         unique_together = ['registration', 'event']
         verbose_name = _('Temporary event registration')
         verbose_name_plural = _('Temporary event registrations')
+
+
+class EventCheckIn(models.Model):
+    '''
+    For attendance purposes, an individual can be checked into an event or into
+    an event occurrence.  An individual is typically an event registrant, in
+    which case this check-in is linked to the EventRegistration.  However, a
+    check in may also contain only a name.  Database constraints exist to ensure
+    that a person will not be checked into the same event or event occurrence
+    more than once.
+    '''
+
+    CHECKIN_TYPE_CHOICES = [
+        ('E', _('Event')),
+        ('O', _('Event occurrence')),
+    ]
+
+    event = models.ForeignKey(
+        Event, verbose_name=_('Event'), on_delete=models.CASCADE,
+    )
+    occurrence = models.ForeignKey(
+        EventOccurrence, verbose_name=_('Event occurrence'),
+        null=True, blank=True, on_delete=models.SET_NULL,
+    )
+
+    checkInType = models.CharField(
+        _('Check-in type'), max_length=1, choices=CHECKIN_TYPE_CHOICES,
+    )
+
+    eventRegistration = models.ForeignKey(
+        EventRegistration, verbose_name=_('Event registration'),
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
+    firstName = models.CharField(_('First name'), max_length=100, null=True)
+    lastName = models.CharField(_('Last name'), max_length=100, null=True)
+
+    cancelled = models.BooleanField(
+        _('Check-in cancelled'), default=False, null=True, blank=True,
+    )
+
+    # PostgreSQL can store arbitrary additional information associated with this
+    # check-in in a JSONfield, but to remain database-agnostic we are using
+    # django-jsonfield.
+    data = JSONField(_('Additional data'),default={},blank=True)
+
+    creationDate = models.DateTimeField(
+        _('Creation date'), auto_now_add=True
+    )
+    modifiedDate = models.DateTimeField(
+        _('Last modified'), auto_now=True
+    )
+
+    # For keeping track of who submitted and when.
+    submissionUser = models.ForeignKey(
+        User, verbose_name=_('Submission User'), null=True,
+        on_delete=models.SET_NULL
+    )
+
+    @property
+    def fullName(self):
+        return ' '.join([self.firstName or '',self.lastName or ''])
+    fullName.fget.short_description = _('Name')
+
+    def __str__(self):
+        if self.checkInType == 'O':
+            return '{}: {}'.format(self.fullName, self.occurrence.__str__())
+        return '{}: {}'.format(self.fullName, self.event.name)
+
+    class Meta:
+        verbose_name = _('Event check-in')
+        verbose_name_plural = _('Event check-ins')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['event','eventRegistration'],
+                condition=Q(
+                    Q(checkInType='E') & Q(eventRegistration__isnull=False)
+                ),
+                name='unique_event_eventreg_checkin'
+            ),
+            models.UniqueConstraint(
+                fields=['event','occurrence','eventRegistration'],
+                condition=Q(
+                    Q(checkInType='O') &
+                    Q(occurrence__isnull=False) &
+                    Q(eventRegistration__isnull=False)
+                ),
+                name='unique_occurrence_eventreg_checkin'
+            ),
+            models.UniqueConstraint(
+                fields=['event','firstName','lastName'],
+                condition=Q(
+                    Q(checkInType='E') &
+                    Q(eventRegistration__isnull=True) &
+                    Q(firstName__isnull=False) &
+                    Q(lastName__isnull=False)
+                ),
+                name='unique_event_name_checkin'
+            ),
+            models.UniqueConstraint(
+                fields=['event','occurrence','firstName','lastName'],
+                condition=Q(
+                    Q(checkInType='O') &
+                    Q(occurrence__isnull=False) &
+                    Q(eventRegistration__isnull=True) &
+                    Q(firstName__isnull=False) &
+                    Q(lastName__isnull=False)
+                ),
+                name='unique_occurrence_name_checkin'
+            )
+        ]
 
 
 class EmailTemplate(models.Model):

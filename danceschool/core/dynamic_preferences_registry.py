@@ -283,11 +283,11 @@ class DefaultClassCapacity(IntegerPreference):
 
 
 @global_preferences_registry.register
-class RegistrationClosesAfterDays(IntegerPreference):
+class RegistrationClosesAfterDays(FloatPreference):
     section = registration
     name = 'closeAfterDays'
     verbose_name = _('Close Registration Days After Beginning')
-    help_text = _('By default, online registration closes automatically this many days from the beginning of an Event or Series (e.g. Enter 2 to close two days after beginning, or enter -3 to close three days before beginning).  This value can be overridden for individual Events.')
+    help_text = _('By default, online registration closes automatically this many days from the beginning of an Event or Series (e.g. Enter 2.5 to close two days and twelve hours after beginning, or enter -3 to close three days before beginning).  This value can be overridden for individual Events.')
     default = 7
 
 
