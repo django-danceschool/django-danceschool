@@ -125,16 +125,16 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        permitted_keys = getattr(form, 'permitted_event_keys',['role',])
+        permitted_keys = getattr(form, 'permitted_event_keys', ['role', ])
 
         try:
             event_listing = {
-                int(key.split("_")[-1]): {k:v for k, v in json.loads(value[0]).items() if k in permitted_keys}
+                int(key.split("_")[-1]): {k: v for k, v in json.loads(value[0]).items() if k in permitted_keys}
                 for key, value in form.cleaned_data.items() if 'event' in key and value
             }
             non_event_listing = {key: value for key, value in form.cleaned_data.items() if 'event' not in key}
         except (ValueError, TypeError) as e:
-            form.add_error(None, ValidationError(_('Invalid event information passed.'),code='invalid'))
+            form.add_error(None, ValidationError(_('Invalid event information passed.'), code='invalid'))
             return self.form_invalid(form)
 
         associated_events = Event.objects.filter(id__in=[k for k in event_listing.keys()])
@@ -182,7 +182,13 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                 else:
                     # For users without permissions, don't allow registration for sold out things
                     # at all.
-                    form.add_error(None, ValidationError(_('Registration for "%s" is tentatively sold out while others complete their registration.  Please try again later.' % this_event.name),code='invalid'))
+                    form.add_error(None, ValidationError(
+                        _(
+                            'Registration for "%s" is tentatively sold out while ' +
+                            'others complete their registration.  Please try ' +
+                            'again later.' % this_event.name
+                        ), code='invalid')
+                    )
                     return self.form_invalid(form)
 
             dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
@@ -238,7 +244,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         if not hasattr(self, 'allEvents'):
             timeFilters = {'endTime__gte': timezone.now()}
             if getConstant('registration__displayLimitDays') or 0 > 0:
-                timeFilters['startTime__lte'] = timezone.now() + timedelta(days=getConstant('registration__displayLimitDays'))
+                timeFilters['startTime__lte'] = timezone.now() + timedelta(
+                    days=getConstant('registration__displayLimitDays')
+                )
 
             # Get the Event listing here to avoid duplicate queries
             self.allEvents = Event.objects.filter(
@@ -327,7 +335,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         self.event_registrations = []
 
         return super().dispatch(request, *args, **kwargs)
-        
+
     def post(self, request, *args, **kwargs):
         '''
         Handle creation or update of a temporary registration.
@@ -345,7 +353,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             post_data = json.loads(request.body)
         except json.decoder.JSONDecodeError:
             errors.append({
-                'code':'invalid_json',
+                'code': 'invalid_json',
                 'message': _('Invalid JSON.')
             })
             return JsonResponse({
@@ -360,13 +368,13 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         reg_bool_keys = ['student', 'payAtDoor']
 
         # Determine whether to create a new registration or update an existing one.
-        reg_id = post_data.get('id',None)
+        reg_id = post_data.get('id', None)
         if reg_id:
             try:
                 reg = TemporaryRegistration.objects.get(id=reg_id)
             except ObjectDoesNotExist:
                 errors.append({
-                    'code':'invalid_id',
+                    'code': 'invalid_id',
                     'message': _('Invalid registration ID passed.')
                 })
                 return JsonResponse({
@@ -376,10 +384,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             # In order to update an existing registration, the ID passed in POST must
             # match the id contained in the current session data, and the existing
-            # registration must not have expired.  
+            # registration must not have expired.
             if reg.id != regSession.get('temporaryRegistrationId'):
                 errors.append({
-                    'code':'invalid_reg_id',
+                    'code': 'invalid_reg_id',
                     'message': _('Invalid registration ID passed.')
                 })
 
@@ -393,17 +401,17 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 })
         else:
             # Pass the POST and specify defaults.
-            reg_defaults = { key: post_data.get(key, None) for key in reg_nullable_keys }
-            reg_defaults.update({ key: post_data.get(key, False) for key in reg_bool_keys })
+            reg_defaults = {key: post_data.get(key, None) for key in reg_nullable_keys}
+            reg_defaults.update({key: post_data.get(key, False) for key in reg_bool_keys})
 
             reg_defaults.update({
                 'submissionUser': submissionUser,
                 'dateTime': timezone.now(),
-                'comments': post_data.get('comments',''),
+                'comments': post_data.get('comments', ''),
                 'data': {},
             })
 
-            if post_data.get('data',False):
+            if post_data.get('data', False):
                 if isinstance(post_data['data'], dict):
                     reg_defaults['data'] = post_data['data']
                 else:
@@ -442,7 +450,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         event_post = post_data.get('events')
         events = Event.objects.filter(
-            id__in=[x['event'] for x in event_post.values() if x.get('event',None)]
+            id__in=[x['event'] for x in event_post.values() if x.get('event', None)]
         )
 
         grossPrice = 0
@@ -453,16 +461,16 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         for e in event_post.values():
             try:
-                this_event = events.get(id=e.get('event',None))
+                this_event = events.get(id=e.get('event', None))
             except ObjectDoesNotExist:
                 errors.append({
-                    'code':'invalid_event_id',
+                    'code': 'invalid_event_id',
                     'message': _('Invalid event ID passed.')
                 })
                 continue
 
             if not (
-                this_event.registrationOpen or 
+                this_event.registrationOpen or
                 request.user.has_perm('core.override_register_closed')
             ):
                 errors.append({
@@ -479,10 +487,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     'message': _('Event {} is sold out.'.format(this_event.id))
                 })
 
-            this_role = e.get('roleId',None)
+            this_role = e.get('roleId', None)
             if (
                 this_event.soldOutForRole(this_role, includeTemporaryRegs=True) and not
-                request.user.has_perm('core.override_register_soldout')                
+                request.user.has_perm('core.override_register_soldout')
             ):
                 errors.append({
                     'code': 'sold_out_role',
@@ -491,12 +499,12 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             # Check that the user can register for drop-ins, and that drop-ins are
             # either enabled, or they have override permissions.
-            dropIn = e.get('dropIn',False)
+            dropIn = e.get('dropIn', False)
             if not isinstance(this_event, Series) and dropIn:
                 errors.append({
                     'code': 'invalid_dropin',
                     'message': _('Cannot register as a drop-in for events that are not class series.')
-                })                
+                })
             elif (dropIn and (
                     not request.user.has_perm('core.register_dropins') or
                     (
@@ -522,21 +530,21 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             if dropIn:
                 ter.dropIn = True
-                ter.price = price=this_event.getBasePrice(dropIns=1)
+                ter.price = price = this_event.getBasePrice(dropIns=1)
             else:
                 ter.dropIn = False
-                ter.price=this_event.getBasePrice(payAtDoor=reg.payAtDoor)
-                ter.role=DanceRole.objects.filter(id=this_role).first()
+                ter.price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
+                ter.role = DanceRole.objects.filter(id=this_role).first()
 
             # Sometimes requireFull is passed as a string and sometimes as boolean,
             # this just ensures that it works correctly either way.  Also,
             # record payment methods if they were passed.
             ter.data['requireFull'] = (str(e.get('requireFull', 'True')).lower() == 'true')
-            if e.get('paymentMethod',None):
+            if e.get('paymentMethod', None):
                 ter.data['paymentMethod'] = e['paymentMethod']
-                ter.data['autoSubmit'] = e.get('autoSubmit',None)
+                ter.data['autoSubmit'] = e.get('autoSubmit', None)
 
-            if e.get('data',False):
+            if e.get('data', False):
                 if isinstance(e['data'], dict):
                     ter.data.update(e['data'])
                 else:
@@ -586,7 +594,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     'dropIn': x.dropIn, 'roleId': getattr(x.role, 'id', None),
                     'roleName': getattr(x.role, 'name', None), 'price': x.price,
                     'requireFull': x.data.get('requireFull', True),
-                    'paymentMethod': x.data.get('paymentMethod',None),
+                    'paymentMethod': x.data.get('paymentMethod', None),
                     'autoSubmit': x.data.get('autoSubmit', None),
                 }
                 for x in self.event_registrations
@@ -622,7 +630,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'addonItems': addons,
             })
 
-        voucherId=post_data.get('voucherId',None)
+        voucherId = post_data.get('voucherId', None)
         if voucherId:
             # This will only find a customer if all three are specified.
             customer = Customer.objects.filter(
@@ -642,17 +650,17 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 logger.error('Received multiple voucher responses from signal handler.')
             elif voucher_response:
                 if (
-                    voucher_response[0].get('status',None) == 'valid' and
-                    voucher_response[0].get('available',0) > 0
+                    voucher_response[0].get('status', None) == 'valid' and
+                    voucher_response[0].get('available', 0) > 0
                 ):
                     total = max(
-                        0, discounted_total - voucher_response[0].get('available',0)
+                        0, discounted_total - voucher_response[0].get('available', 0)
                     )
                 else:
                     total = discounted_total
 
                 reg_response.update({
-                    'voucherId': voucher_response[0].get('id',None),
+                    'voucherId': voucher_response[0].get('id', None),
                     'voucher': voucher_response[0],
                     'voucher_amount': discounted_total - total,
                     'total': total,
@@ -665,7 +673,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         # Pass the redirect URL and send the voucher ID to session data if
         # this is being finalized.
-        if post_data.get('finalize') == True:
+        if post_data.get('finalize') is True:
 
             data_changed_flag = False
 
@@ -678,11 +686,11 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             # If all events are to be registered using the same payment method
             # and auto-submit is always True, then pass this info to the registration.
-            methods = [x.get('paymentMethod',None) for x in event_post.values()]
+            methods = [x.get('paymentMethod', None) for x in event_post.values()]
             if len(set(methods)) == 1 and methods[0]:
                 data_changed_flag = True
                 reg.data['paymentMethod'] = methods[0]
-                
+
                 if False not in [
                     x.get('autoSubmit', False) for x in event_post.values()
                 ]:
@@ -693,7 +701,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 # Update the registration to put the voucher code in data if
                 # needed so that the Temporary Voucher Use is created before
                 # we proceed to the summary page.
-                if response_dict['reg'].get('voucherId',None):
+                if response_dict['reg'].get('voucherId', None):
                     data_changed_flag = True
                     reg.data['gift'] = response_dict['reg']['voucherId']
 
@@ -710,7 +718,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     reg.save()
                 response_dict['redirect'] = reverse('getStudentInfo')
 
-            regSession["voucher_id"] = reg_response.get('voucherId',None)
+            regSession["voucher_id"] = reg_response.get('voucherId', None)
 
         regSession["temporaryRegistrationId"] = reg.id
         regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
@@ -737,7 +745,11 @@ class SingleClassRegistrationView(ReferralInfoMixin, ClassRegistrationView):
 
     def get_allEvents(self):
         try:
-            self.allEvents = Event.objects.filter(uuid=self.kwargs.get('uuid', '')).exclude(status=Event.RegStatus.hidden)
+            self.allEvents = Event.objects.filter(
+                uuid=self.kwargs.get('uuid', '')
+            ).exclude(
+                status=Event.RegStatus.hidden
+            )
         except ValueError:
             raise Http404()
 
@@ -754,7 +766,7 @@ class RegistrationSummaryView(
 
     def dispatch(self, request, *args, **kwargs):
         ''' Always check that the temporary registration has not expired '''
-        regSession = self.request.session.get(REG_VALIDATION_STR,{})
+        regSession = self.request.session.get(REG_VALIDATION_STR, {})
 
         if not regSession:
             return HttpResponseRedirect(reverse('registration'))
@@ -842,9 +854,9 @@ class RegistrationSummaryView(
 
         discount_codes = regSession.get('discount_codes', None)
         discount_amount = regSession.get('total_discount_amount', 0)
-        voucher_names = regSession.get('voucher_names',[])
+        voucher_names = regSession.get('voucher_names', [])
         total_voucher_amount = regSession.get('total_voucher_amount', 0)
-        addons = regSession.get('addons',[])
+        addons = regSession.get('addons', [])
 
         isFree = (reg.priceWithDiscount == 0)
         isComplete = (isFree or regSession.get('direct_payment', False) is True)
@@ -888,7 +900,7 @@ class RegistrationSummaryView(
 
         context_data.update({
             'returnPage': self.get_return_page().get(
-                'url',reverse('registration')
+                'url', reverse('registration')
             ),
             'registration': reg,
             "totalPrice": reg.totalPrice,
@@ -975,7 +987,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         })
 
         # Get a voucher ID to check from the current contents of the form
-        voucherId = getattr(context_data['form'].fields.get('gift'),'initial', None)
+        voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
 
         if voucherId:
             # This will only find a customer if all three are specified.
@@ -997,18 +1009,18 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
                 logger.error('Received multiple voucher responses from signal handler.')
             elif voucher_response:
                 if (
-                    voucher_response[0].get('status',None) == 'valid' and
-                    voucher_response[0].get('available',0) > 0
+                    voucher_response[0].get('status', None) == 'valid' and
+                    voucher_response[0].get('available', 0) > 0
                 ):
                     total = max(
-                        0, discounted_total - voucher_response[0].get('available',0)
+                        0, discounted_total - voucher_response[0].get('available', 0)
                     )
                 else:
                     total = discounted_total
 
                 context_data.update({
-                    'voucher_id': voucher_response[0].get('id',None),
-                    'voucher_name': voucher_response[0].get('name',None),
+                    'voucher_id': voucher_response[0].get('id', None),
+                    'voucher_name': voucher_response[0].get('name', None),
                     'voucher_amount': discounted_total - total,
                     'discounted_subtotal': total,
                 })
