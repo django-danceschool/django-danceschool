@@ -18,7 +18,7 @@ class PrivateEventCategory(EventCategory):
         Group, verbose_name=_('Group required to add events to this category.'),
         null=True, blank=True, on_delete=models.SET_NULL
     )
-    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
+    displayColor = RGBColorField(_('Calendar display color'), default='#0000FF')
 
     class Meta:
         verbose_name = _('Private events category')
@@ -30,7 +30,7 @@ class PrivateEvent(Event):
     Calendar events may have multiple occurrences.
     '''
 
-    title = models.CharField(_('Title'),max_length=100,help_text=_('Give the event a title'))
+    title = models.CharField(_('Title'), max_length=100, help_text=_('Give the event a title'))
     category = models.ForeignKey(
         PrivateEventCategory, null=True, blank=True, verbose_name=_('Category'),
         on_delete=models.SET_NULL,
@@ -43,7 +43,7 @@ class PrivateEvent(Event):
         '''
         return self.title
 
-    descriptionField = models.TextField(_('Description'),null=True,blank=True)
+    descriptionField = models.TextField(_('Description'), null=True, blank=True)
 
     @property
     def description(self):
@@ -54,8 +54,14 @@ class PrivateEvent(Event):
     description.fget.short_description = _('Description')
 
     # Private events can have a location entered other than an officially-listed location
-    locationString = models.CharField(_('Other location'),max_length=200,null=True,blank=True,help_text=_('If this event is not at a public event location, then enter it here.'))
-    link = models.URLField(_('Optional link'),blank=True,help_text=_('Optionally include the URL to anything that may be relevant for this event.'))
+    locationString = models.CharField(
+        _('Other location'), max_length=200, null=True, blank=True,
+        help_text=_('If this event is not at a public event location, then enter it here.')
+    )
+    link = models.URLField(
+        _('Optional link'), blank=True,
+        help_text=_('Optionally include the URL to anything that may be relevant for this event.')
+    )
 
     displayToGroup = models.ForeignKey(
         Group, null=True, blank=True, verbose_name=_('Display to group'),
@@ -70,7 +76,13 @@ class PrivateEvent(Event):
 
     def __str__(self):
         try:
-            return '%s: %s' % (self.name, getattr(self.eventoccurrence_set.first(),'startTime').strftime('%a., %B %d, %Y, %I:%M %p'))
+            return '%s: %s' % (
+                self.name,
+                getattr(
+                    self.eventoccurrence_set.first(),
+                    'startTime'
+                ).strftime('%a., %B %d, %Y, %I:%M %p')
+            )
         except AttributeError:
             # Event has no occurrences
             return self.name
@@ -79,7 +91,7 @@ class PrivateEvent(Event):
         ''' Set registration status to hidden if it is not specified otherwise '''
         if not self.status:
             self.status == Event.RegStatus.hidden
-        super(PrivateEvent, self).save(*args,**kwargs)
+        super(PrivateEvent, self).save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('Private event/calendar item')
@@ -104,19 +116,22 @@ class EventReminder(models.Model):
         _('Completed'), default=False, help_text=_('This will be set to true once the reminder has been sent.')
     )
 
-    def save(self,*args,**kwargs):
-        if hasattr(self,'event') and not hasattr(self,'eventOccurrence'):
+    def save(self, *args, **kwargs):
+        if hasattr(self, 'event') and not hasattr(self, 'eventOccurrence'):
             self.eventOccurrence = self.event.eventoccurrence_set.first()
-        if hasattr(self,'eventOccurrence') and not hasattr(self,'event'):
+        if hasattr(self, 'eventOccurrence') and not hasattr(self, 'event'):
             self.event = self.eventOccurrence.event
         if self.eventOccurrence.event != self.event:
             raise ValidationError(_('Event and EventOccurrence must match!'))
-        super(EventReminder,self).save(*args,**kwargs)
+        super(EventReminder, self).save(*args, **kwargs)
 
     def __str__(self):
-        return _('Reminder for ' + self.eventOccurrence.event.name + ': ' + ensure_localtime(self.time).strftime('%a., %B %d, %Y, %I:%M %p') or '')
+        return _(
+            'Reminder for ' + self.eventOccurrence.event.name + ': ' +
+            ensure_localtime(self.time).strftime('%a., %B %d, %Y, %I:%M %p') or ''
+        )
 
     class Meta:
-        ordering = ('time',)
+        ordering = ('time', )
         verbose_name = _('Event reminder')
         verbose_name_plural = _('Event reminders')

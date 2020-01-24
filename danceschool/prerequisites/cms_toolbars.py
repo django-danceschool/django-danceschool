@@ -14,5 +14,8 @@ class RequirementLinksToolbar(CMSToolbar):
             return
 
         menu = self.toolbar.get_or_create_menu('core-events', _('Events'))
-        related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-        related_menu.add_link_item(_('Registration Requirements/Prerequisites'), url=reverse('admin:prerequisites_requirement_changelist'))
+        related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+        related_menu.add_link_item(
+            _('Registration Requirements/Prerequisites'),
+            url=reverse('admin:prerequisites_requirement_changelist')
+        )

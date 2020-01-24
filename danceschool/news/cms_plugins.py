@@ -20,7 +20,7 @@ class LatestNewsItemPlugin(PluginTemplateMixin, CMSPluginBase):
     module = _('News')
 
     def render(self, context, instance, placeholder):
-        context = super(LatestNewsItemPlugin,self).render(context, instance, placeholder)
+        context = super(LatestNewsItemPlugin, self).render(context, instance, placeholder)
 
         listing = NewsItem.objects.all()
 

@@ -18,7 +18,7 @@ class StatsToolbar(CMSToolbar):
             except NoReverseMatch:
                 return
 
-            menu = self.toolbar.get_or_create_menu('core-events',_('Events'))
+            menu = self.toolbar.get_or_create_menu('core-events', _('Events'))
             position = menu.find_first(SubMenu, identifier='core-events-related') or 0
             menu.add_break('post_related_events_break', position=position + 1)
             menu.add_link_item(_('View School Performance Stats'), reverse('schoolStatsView'), position=position + 2)

@@ -7,7 +7,10 @@ from django.urls import reverse
 from datetime import timedelta
 from djchoices import DjangoChoices, ChoiceItem
 
-from danceschool.core.models import Instructor, Location, Room, DanceRole, Event, PricingTier, TemporaryEventRegistration, EventRegistration, Customer
+from danceschool.core.models import (
+    Instructor, Location, Room, DanceRole, Event, PricingTier,
+    TemporaryEventRegistration, EventRegistration, Customer
+)
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import EmailRecipientMixin
 from danceschool.core.utils.timezone import ensure_localtime
@@ -19,16 +22,16 @@ class InstructorPrivateLessonDetails(models.Model):
         PricingTier, verbose_name=_('Default Pricing Tier'), null=True,
         blank=True, on_delete=models.SET_NULL
     )
-    roles = models.ManyToManyField(DanceRole,blank=True)
+    roles = models.ManyToManyField(DanceRole, blank=True)
 
-    couples = models.BooleanField(_('Private lessons for couples'),default=True)
+    couples = models.BooleanField(_('Private lessons for couples'), default=True)
     smallGroups = models.BooleanField(_('Private lessons for small groups'), default=True)
 
     def __str__(self):
         return str(_('Instructor Private lesson details for %s' % self.instructor.fullName))
 
     class Meta:
-        ordering = ('instructor__lastName','instructor__firstName')
+        ordering = ('instructor__lastName', 'instructor__firstName')
         verbose_name = _('Instructor private lesson details')
         verbose_name_plural = _('Instructors\' private lesson details')
 
@@ -44,12 +47,12 @@ class PrivateLessonEvent(Event):
         PricingTier, verbose_name=_('Pricing Tier'), null=True, blank=True,
         on_delete=models.SET_NULL
     )
-    participants = models.PositiveSmallIntegerField(_('Expected # of Participants'),null=True,blank=True,default=1)
+    participants = models.PositiveSmallIntegerField(_('Expected # of Participants'), null=True, blank=True, default=1)
     comments = models.TextField(
-        _('Comments/Notes'),null=True,blank=True,help_text=_('For internal use and recordkeeping.')
+        _('Comments/Notes'), null=True, blank=True, help_text=_('For internal use and recordkeeping.')
     )
 
-    def getBasePrice(self,**kwargs):
+    def getBasePrice(self, **kwargs):
         '''
         This method overrides the method of the base Event class by
         checking the pricingTier associated with this PrivateLessonEvent and getting
@@ -57,12 +60,12 @@ class PrivateLessonEvent(Event):
         '''
         if not self.pricingTier:
             return None
-        return self.pricingTier.getBasePrice(**kwargs) * max(self.numSlots,1)
+        return self.pricingTier.getBasePrice(**kwargs) * max(self.numSlots, 1)
 
-    def finalizeBooking(self,**kwargs):
-        notifyStudent = kwargs.get('notifyStudent',True)
-        notifyTeachers = kwargs.get('notifyTeachers',getConstant('privateLessons__notifyInstructor'))
-        eventRegistration = kwargs.get('eventRegistration',None)
+    def finalizeBooking(self, **kwargs):
+        notifyStudent = kwargs.get('notifyStudent', True)
+        notifyTeachers = kwargs.get('notifyTeachers', getConstant('privateLessons__notifyInstructor'))
+        eventRegistration = kwargs.get('eventRegistration', None)
 
         affectedSlots = self.instructoravailabilityslot_set.all()
         affectedSlots.update(
@@ -147,9 +150,9 @@ class PrivateLessonEvent(Event):
         lesson points are based on the number of slots booked, this just returns
         the number of slots associated with this event (or 1).
         '''
-        return max(self.numSlots,1)
+        return max(self.numSlots, 1)
 
-    def nameAndDate(self,withDate=True):
+    def nameAndDate(self, withDate=True):
         teacherNames = ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()])
         if self.customers:
             customerNames = ' ' + ' and '.join([x.fullName for x in self.customers])
@@ -166,7 +169,10 @@ class PrivateLessonEvent(Event):
             teacherNames,
             _(' for ') if teacherNames and customerNames else '',
             customerNames,
-            ((', ' if (teacherNames or customerNames) else '') + self.startTime.strftime('%Y-%m-%d')) if withDate else ''
+            (
+                (', ' if (teacherNames or customerNames) else '') +
+                self.startTime.strftime('%Y-%m-%d')
+            ) if withDate else ''
         ))
 
     @property
@@ -177,14 +183,14 @@ class PrivateLessonEvent(Event):
         ''' Set registration status to hidden if it is not specified otherwise '''
         if not self.status:
             self.status == Event.RegStatus.hidden
-        super(PrivateLessonEvent,self).save(*args,**kwargs)
+        super(PrivateLessonEvent, self).save(*args, **kwargs)
 
     def __str__(self):
         return str(self.name)
 
     class Meta:
         permissions = (
-            ('view_others_lessons',_('Can view scheduled private lessons for all instructors')),
+            ('view_others_lessons', _('Can view scheduled private lessons for all instructors')),
         )
 
         verbose_name = _('Private lesson')
@@ -209,7 +215,7 @@ class PrivateLessonCustomer(models.Model):
         return str(_('Private lesson customer: %s for lesson #%s' % (self.customer.fullName, self.lesson.id)))
 
     class Meta:
-        unique_together = ('customer','lesson')
+        unique_together = ('customer', 'lesson')
         verbose_name = _('Private lesson customer')
         verbose_name_plural = _('Private lesson customers')
 
@@ -217,40 +223,40 @@ class PrivateLessonCustomer(models.Model):
 class InstructorAvailabilitySlot(models.Model):
 
     class SlotStatus(DjangoChoices):
-        available = ChoiceItem('A',_('Available'))
-        booked = ChoiceItem('B',_('Booked'))
-        tentative = ChoiceItem('T',_('Tentative Booking'))
-        unavailable = ChoiceItem('U',_('Unavailable'))
+        available = ChoiceItem('A', _('Available'))
+        booked = ChoiceItem('B', _('Booked'))
+        tentative = ChoiceItem('T', _('Tentative Booking'))
+        unavailable = ChoiceItem('U', _('Unavailable'))
 
-    instructor = models.ForeignKey(Instructor,verbose_name=_('Instructor'),on_delete=models.CASCADE)
+    instructor = models.ForeignKey(Instructor, verbose_name=_('Instructor'), on_delete=models.CASCADE)
     pricingTier = models.ForeignKey(
-        PricingTier,verbose_name=_('Pricing Tier'),null=True,blank=True,on_delete=models.SET_NULL
+        PricingTier, verbose_name=_('Pricing Tier'), null=True, blank=True, on_delete=models.SET_NULL
     )
     startTime = models.DateTimeField(_('Start time'))
-    duration = models.PositiveSmallIntegerField(_('Slot duration (minutes)'),default=30)
+    duration = models.PositiveSmallIntegerField(_('Slot duration (minutes)'), default=30)
     location = models.ForeignKey(
-        Location,verbose_name=_('Location'),null=True,blank=True,on_delete=models.SET_NULL,
+        Location, verbose_name=_('Location'), null=True, blank=True, on_delete=models.SET_NULL,
     )
     room = models.ForeignKey(
-        Room,verbose_name=_('Room'),null=True,blank=True,on_delete=models.SET_NULL,
+        Room, verbose_name=_('Room'), null=True, blank=True, on_delete=models.SET_NULL,
     )
 
-    status = models.CharField(max_length=1,choices=SlotStatus.choices,default=SlotStatus.available)
+    status = models.CharField(max_length=1, choices=SlotStatus.choices, default=SlotStatus.available)
 
     # We need both a link to the registrations and a link to the event because
     # in the event that an expired TemporaryRegistration is deleted, we still want to
     # be able to identify the Event that was created for this private lesson.
     lessonEvent = models.ForeignKey(
-        PrivateLessonEvent,verbose_name=_('Scheduled lesson'),null=True,blank=True,
+        PrivateLessonEvent, verbose_name=_('Scheduled lesson'), null=True, blank=True,
         on_delete=models.SET_NULL,
     )
     temporaryEventRegistration = models.ForeignKey(
-        TemporaryEventRegistration,verbose_name=_('Temporary event registration'),
-        null=True,blank=True,on_delete=models.SET_NULL,related_name='privateLessonSlots'
+        TemporaryEventRegistration, verbose_name=_('Temporary event registration'),
+        null=True, blank=True, on_delete=models.SET_NULL, related_name='privateLessonSlots'
     )
     eventRegistration = models.ForeignKey(
-        EventRegistration,verbose_name=_('Final event registration'),
-        null=True,blank=True,on_delete=models.SET_NULL,related_name='privateLessonSlots'
+        EventRegistration, verbose_name=_('Final event registration'),
+        null=True, blank=True, on_delete=models.SET_NULL, related_name='privateLessonSlots'
     )
 
     creationDate = models.DateTimeField(auto_now_add=True)
@@ -272,7 +278,7 @@ class InstructorAvailabilitySlot(models.Model):
             startTime__lte=self.startTime + timedelta(minutes=getConstant('privateLessons__maximumLessonLength')),
         ).exclude(id=self.id).order_by('startTime')
 
-        duration_list = [self.duration,]
+        duration_list = [self.duration, ]
         last_start = self.startTime
         last_duration = self.duration
         max_duration = self.duration
@@ -297,10 +303,10 @@ class InstructorAvailabilitySlot(models.Model):
         Some instructors only offer private lessons for certain roles, so we should only allow booking
         for the roles that have been selected for the instructor.
         '''
-        if not hasattr(self.instructor,'instructorprivatelessondetails'):
+        if not hasattr(self.instructor, 'instructorprivatelessondetails'):
             return []
         return [
-            [x.id,x.name] for x in
+            [x.id, x.name] for x in
             self.instructor.instructorprivatelessondetails.roles.all()
         ]
 
@@ -315,7 +321,11 @@ class InstructorAvailabilitySlot(models.Model):
             self.eventRegistration and (
                 self.status == self.SlotStatus.available or (
                     self.status == self.SlotStatus.tentative and
-                    getattr(getattr(self.temporaryEventRegistration,'registration',None),'expirationDate',timezone.now()) <= timezone.now()
+                    getattr(
+                        getattr(self.temporaryEventRegistration, 'registration', None),
+                        'expirationDate',
+                        timezone.now()
+                    ) <= timezone.now()
                 )
             )
         )
@@ -325,17 +335,21 @@ class InstructorAvailabilitySlot(models.Model):
 
     @property
     def name(self):
-        return _('%s: %s at %s') % (self.instructor.fullName, ensure_localtime(self.startTime).strftime('%b %-d, %Y %-I:%M %p'), self.location)
+        return _('%s: %s at %s') % (
+            self.instructor.fullName,
+            ensure_localtime(self.startTime).strftime('%b %-d, %Y %-I:%M %p'),
+            self.location
+        )
 
     def __str__(self):
         return str(self.name)
 
     class Meta:
-        ordering = ('-startTime','instructor__lastName','instructor__firstName')
+        ordering = ('-startTime', 'instructor__lastName', 'instructor__firstName')
         verbose_name = _('Private lesson availability slot')
         verbose_name_plural = _('Private lesson availability slots')
 
         permissions = (
-            ('edit_own_availability',_('Can edit one\'s own private lesson availability.')),
-            ('edit_others_availability',_('Can edit other instructors\' private lesson availability.')),
+            ('edit_own_availability', _('Can edit one\'s own private lesson availability.')),
+            ('edit_others_availability', _('Can edit other instructors\' private lesson availability.')),
         )

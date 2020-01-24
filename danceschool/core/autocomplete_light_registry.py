@@ -75,7 +75,7 @@ class ClassDescriptionAutoComplete(autocomplete.Select2QuerySetView):
         return qs
 
     def get_result_label(self, result):
-        if not result.lastOffered: 
+        if not result.lastOffered:
             return result.title
         return format_html(
             '{} ({} {})',
@@ -100,13 +100,16 @@ class EventAutoComplete(autocomplete.Select2QuerySetView):
 
         if self.q:
             try:
-                month_dict = {v: k for k,v in enumerate(month_name)}
-                month_value = next(value for key, value in month_dict.items() if key.startswith(self.q.title()))
+                month_dict = {v: k for k, v in enumerate(month_name)}
+                month_value = next(
+                    value for key, value in month_dict.items() if
+                    key.startswith(self.q.title())
+                )
             except StopIteration:
                 month_value = 0
 
             qs = qs.filter(
-                Q(series__classDescription__title__icontains=self.q) | 
+                Q(series__classDescription__title__icontains=self.q) |
                 Q(publicevent__title__icontains=self.q) |
                 Q(year__icontains=self.q) |
                 Q(month__icontains=month_value)
@@ -156,4 +159,4 @@ class StaffMemberAutoComplete(autocomplete.Select2QuerySetView):
             lastName = ' '.join(text.split(' ')[1:])
             return self.get_queryset().create(**{'firstName': firstName, 'lastName': lastName})
         else:
-            return super(StaffMemberAutoComplete,self).create_object(text)
+            return super(StaffMemberAutoComplete, self).create_object(text)

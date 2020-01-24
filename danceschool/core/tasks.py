@@ -48,21 +48,26 @@ def clearExpiredTemporaryRegistrations():
         return
 
     if getConstant('registration__deleteExpiredTemporaryRegistrations'):
-        TemporaryRegistration.objects.filter(expirationDate__lte=timezone.now() - timedelta(minutes=1)).delete()
+        TemporaryRegistration.objects.filter(
+            expirationDate__lte=timezone.now() - timedelta(minutes=1)
+        ).delete()
         call_command('clearsessions')
 
 
 @task(retries=3)
-def sendEmail(subject,content,from_address,from_name='',to=[],cc=[],bcc=[],attachment_name='attachment',attachment=None,html_content=None):
+def sendEmail(
+    subject, content, from_address, from_name='', to=[], cc=[], bcc=[],
+    attachment_name='attachment', attachment=None, html_content=None
+):
     # Ensure that email address information is in list form and that there are no empty values
     recipients = [x for x in to + cc if x]
     bcc = [x for x in bcc if x]
     from_email = from_name + ' <' + from_address + '>' if from_address else None
-    reply_to = [from_address,] if from_address else None
+    reply_to = [from_address, ] if from_address else None
 
-    logger.info('Sending email from %s to %s' % (from_address,recipients))
+    logger.info('Sending email from %s to %s' % (from_address, recipients))
 
-    if getattr(settings,'DEBUG',None):
+    if getattr(settings, 'DEBUG', None):
         logger.info('Email content:\n\n%s' % content)
         logger.info('Email HTML content:\n\n%s' % html_content)
 

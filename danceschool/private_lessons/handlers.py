@@ -3,7 +3,7 @@ from danceschool.core.signals import post_registration
 
 
 @receiver(post_registration)
-def finalizePrivateLessonRegistration(sender,**kwargs):
+def finalizePrivateLessonRegistration(sender, **kwargs):
     '''
     Once a private lesson registration is finalized, mark the slots that were
     used to book the private lesson as booked and associate them with the final
@@ -16,4 +16,4 @@ def finalizePrivateLessonRegistration(sender,**kwargs):
     for er in finalReg.eventregistration_set.filter(
         event__privatelessonevent__isnull=False
     ):
-        er.event.finalizeBooking(eventRegistration=er,notifyStudent=False)
+        er.event.finalizeBooking(eventRegistration=er, notifyStudent=False)

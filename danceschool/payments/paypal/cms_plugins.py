@@ -19,7 +19,7 @@ class GiftCertificateFormPlugin(CMSPluginBase):
         context = super(GiftCertificateFormPlugin, self).render(context, instance, placeholder)
 
         # Paypal "live" mode is "production" to checkout.js
-        mode = getattr(settings,'PAYPAL_MODE', 'sandbox')
+        mode = getattr(settings, 'PAYPAL_MODE', 'sandbox')
         if mode == 'live':
             mode = 'production'
 
@@ -42,7 +42,7 @@ class CartPaymentFormPlugin(CMSPluginBase):
         context = super(CartPaymentFormPlugin, self).render(context, instance, placeholder)
 
         # Paypal "live" mode is "production" to checkout.js
-        mode = getattr(settings,'PAYPAL_MODE', 'sandbox')
+        mode = getattr(settings, 'PAYPAL_MODE', 'sandbox')
         if mode == 'live':
             mode = 'production'
 

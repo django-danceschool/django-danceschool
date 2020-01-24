@@ -5,18 +5,18 @@ from .models import NewsItem
 
 
 class NewsItemAdmin(admin.ModelAdmin):
-    list_display = ('title','alert','pinThis','publicationDate','modifiedDate')
-    list_display_links = ('title',)
-    list_filter = ('publicationDate','modifiedDate','alert','pinThis')
-    readonly_fields = ('modifiedDate',)
+    list_display = ('title', 'alert', 'pinThis', 'publicationDate', 'modifiedDate')
+    list_display_links = ('title', )
+    list_filter = ('publicationDate', 'modifiedDate', 'alert', 'pinThis')
+    readonly_fields = ('modifiedDate', )
 
     fieldsets = (
         (None, {
-            'fields': ('title','content',('alert','pinThis'),('draft','hideThis'),)
+            'fields': ('title', 'content', ('alert', 'pinThis'), ('draft', 'hideThis'), )
         }),
-        (_('Dates'),{
-            'classes': ('collapse',),
-            'fields': ('publicationDate','modifiedDate'),
+        (_('Dates'), {
+            'classes': ('collapse', ),
+            'fields': ('publicationDate', 'modifiedDate'),
         }),
     )
 

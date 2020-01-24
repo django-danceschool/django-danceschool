@@ -11,7 +11,10 @@ except ImportError:
 
 
 class Command(BaseCommand):
-    help = 'Check Stripe settings and created necessary placeholders for Stripe Checkout integration.'
+    help = (
+        'Check Stripe settings and created necessary placeholders ' +
+        'for Stripe Checkout integration.'
+    )
 
     def boolean_input(self, question, default=None):
         '''
@@ -43,7 +46,10 @@ class Command(BaseCommand):
         ]
         for this_app in required_apps:
             if not apps.is_installed(this_app[0]):
-                self.stdout.write(self.style.ERROR('ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % this_app[1]))
+                self.stdout.write(self.style.ERROR(
+                    ('ERROR: %s is not installed or listed in ' % this_app[1]) +
+                    'INSTALLED_APPS. Please install before proceeding.'
+                ))
                 return None
 
         self.stdout.write(
@@ -53,8 +59,8 @@ CHECKING STRIPE INTEGRATION
             """
         )
 
-        client_id = getattr(settings,'STRIPE_PUBLIC_KEY','')
-        client_secret = getattr(settings,'STRIPE_PRIVATE_KEY','')
+        client_id = getattr(settings, 'STRIPE_PUBLIC_KEY', '')
+        client_secret = getattr(settings, 'STRIPE_PRIVATE_KEY', '')
 
         if client_id:
             self.stdout.write('Stripe public key set.')
@@ -69,7 +75,7 @@ CHECKING STRIPE INTEGRATION
         if client_id and client_secret:
             try:
                 import stripe
-                stripe.api_key = getattr(settings,'STRIPE_PRIVATE_KEY','')
+                stripe.api_key = getattr(settings, 'STRIPE_PRIVATE_KEY', '')
                 stripe.Charge.list(limit=1)
             except ImportError:
                 self.stdout.write(self.style.ERROR('Required Stripe API app ("stripe") not installed.'))
@@ -78,15 +84,21 @@ CHECKING STRIPE INTEGRATION
             else:
                 self.stdout.write(self.style.SUCCESS('Successfully connected to Stripe using API credentials.'))
 
-        add_stripe_checkout = self.boolean_input('Add Stripe Checkout link to the registration summary view to allow students to pay [Y/n]', True)
+        add_stripe_checkout = self.boolean_input(
+            'Add Stripe Checkout link to the registration summary view to ' +
+            'allow students to pay [Y/n]', True
+        )
         if add_stripe_checkout:
-            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
             if not home_page:
-                self.stdout.write(self.style.ERROR('Cannot add Stripe checkout link because a home page has not yet been set.'))
+                self.stdout.write(self.style.ERROR(
+                    'Cannot add Stripe checkout link because a home page has ' +
+                    'not yet been set.'
+                ))
             else:
                 placeholders = [
-                    ('registration_payment_placeholder','online registrations'),
-                    ('registration_payatdoor_placeholder','at-the-door payments')
+                    ('registration_payment_placeholder', 'online registrations'),
+                    ('registration_payatdoor_placeholder', 'at-the-door payments')
                 ]
 
                 for p in in placeholders:

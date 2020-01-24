@@ -2,7 +2,10 @@ from django.contrib import admin
 from django.forms import ModelForm, HiddenInput
 from django.utils.translation import ugettext_lazy as _
 
-from .models import InstructorPrivateLessonDetails, InstructorAvailabilitySlot, PrivateLessonEvent, PrivateLessonCustomer
+from .models import (
+    InstructorPrivateLessonDetails, InstructorAvailabilitySlot,
+    PrivateLessonEvent, PrivateLessonCustomer
+)
 
 from danceschool.core.models import Instructor, EventStaffMember, StaffMember
 from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline, EventRegistrationInline
@@ -35,23 +38,29 @@ class PrivateLessonCustomerInline(admin.StackedInline):
 
 class PrivateLessonTeacherInlineForm(ModelForm):
     def __init__(self, *args, **kwargs):
-        super(PrivateLessonTeacherInlineForm,self).__init__(*args,**kwargs)
+        super(PrivateLessonTeacherInlineForm, self).__init__(*args, **kwargs)
 
         self.fields['staffMember'].label = _('Instructor')
         self.fields['category'].initial = getConstant('privateLessons__eventStaffCategoryPrivateLesson').id
 
         # Impose restrictions on new records, but not on existing ones.
-        if not kwargs.get('instance',None):
+        if not kwargs.get('instance', None):
             # Filter out retired teachers
             self.fields['staffMember'].queryset = StaffMember.objects.filter(
                 instructor__isnull=False,
             ).exclude(
-                instructor__status__in=[Instructor.InstructorStatus.retired,Instructor.InstructorStatus.hidden,Instructor.InstructorStatus.retiredGuest]
+                instructor__status__in=[
+                    Instructor.InstructorStatus.retired,
+                    Instructor.InstructorStatus.hidden,
+                    Instructor.InstructorStatus.retiredGuest
+                ]
             )
         else:
             self.fields['staffMember'].queryset = StaffMember.objects.all()
 
-        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by('instructor__status','firstName','lastName')
+        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by(
+            'instructor__status', 'firstName', 'lastName'
+        )
 
     class Meta:
         widgets = {
@@ -62,10 +71,10 @@ class PrivateLessonTeacherInlineForm(ModelForm):
 class PrivateLessonTeacherInline(admin.StackedInline):
     model = EventStaffMember
     form = PrivateLessonTeacherInlineForm
-    exclude = ('replacedStaffMember','occurrences','submissionUser')
+    exclude = ('replacedStaffMember', 'occurrences', 'submissionUser')
     extra = 0
 
-    def save_model(self,request,obj,form,change):
+    def save_model(self, request, obj, form, change):
         obj.replacedStaffMember = None
         obj.occurrences = obj.event.eventoccurrence_set.all()
         obj.submissionUser = request.user
@@ -74,8 +83,8 @@ class PrivateLessonTeacherInline(admin.StackedInline):
 
 class PrivateLessonEventRegistrationInline(EventRegistrationInline):
     ''' View/edit but do not add/delete EventRegistrations from here. '''
-    fields = ['role','cancelled','price','netPrice']
-    readonly_fields = ['price','netPrice']
+    fields = ['role', 'cancelled', 'price', 'netPrice']
+    readonly_fields = ['price', 'netPrice']
 
 
 class PrivateLessonEventAdminForm(ModelForm):
@@ -87,13 +96,16 @@ class PrivateLessonEventAdminForm(ModelForm):
 
     class Meta:
         model = PrivateLessonEvent
-        exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen','capacity','status']
+        exclude = [
+            'month', 'year', 'startTime', 'endTime', 'duration',
+            'submissionUser', 'registrationOpen', 'capacity', 'status'
+        ]
         widgets = {
             'location': LocationWithDataWidget,
         }
 
     class Media:
-        js = ('js/serieslocation_capacity_change.js','js/location_related_objects_lookup.js')
+        js = ('js/serieslocation_capacity_change.js', 'js/location_related_objects_lookup.js')
 
 
 @admin.register(PrivateLessonEvent)
@@ -102,22 +114,25 @@ class PrivateLessonEventAdmin(EventChildAdmin):
     form = PrivateLessonEventAdminForm
     show_in_index = True
 
-    list_display = ('teacherNames','customerNames','startTime','durationMinutes','location','pricingTier')
-    list_filter = ('location','room','startTime','pricingTier')
+    list_display = ('teacherNames', 'customerNames', 'startTime', 'durationMinutes', 'location', 'pricingTier')
+    list_filter = ('location', 'room', 'startTime', 'pricingTier')
 
     fieldsets = (
-        (None, {'fields': (('location','room'),'pricingTier','participants','comments',)}),
+        (None, {'fields': (('location', 'room'), 'pricingTier', 'participants', 'comments', )}),
     )
 
-    def teacherNames(self,obj):
+    def teacherNames(self, obj):
         return ', '.join([x.staffMember.fullName for x in obj.eventstaffmember_set.all()])
     teacherNames.short_description = _('Instructors')
 
-    def customerNames(self,obj):
+    def customerNames(self, obj):
         return ', '.join([x.fullName for x in obj.customers])
     customerNames.short_description = _('Customers')
 
-    inlines = [EventOccurrenceInline,PrivateLessonCustomerInline,PrivateLessonTeacherInline,PrivateLessonEventRegistrationInline]
+    inlines = [
+        EventOccurrenceInline, PrivateLessonCustomerInline,
+        PrivateLessonTeacherInline, PrivateLessonEventRegistrationInline
+    ]
 
 
-admin.site._registry[StaffMember].inlines.insert(0,InstructorPrivateLessonDetailsInline)
+admin.site._registry[StaffMember].inlines.insert(0, InstructorPrivateLessonDetailsInline)

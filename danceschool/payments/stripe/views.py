@@ -31,23 +31,23 @@ def handle_stripe_checkout(request):
     tr_id = request.POST.get('reg_id')
     transactionType = request.POST.get('transaction_type')
     taxable = request.POST.get('taxable', False)
-    addSessionInfo = request.POST.get('addSessionInfo',False)
+    addSessionInfo = request.POST.get('addSessionInfo', False)
     customizeUrl = request.POST.get('customizeUrl')
-    successUrl = request.POST.get('successUrl',reverse('registration'))
+    successUrl = request.POST.get('successUrl', reverse('registration'))
 
     # Parse if a specific submission user is indicated
     submissionUser = None
     if submissionUserId:
         try:
             submissionUser = User.objects.get(id=int(submissionUserId))
-        except (ValueError,ObjectDoesNotExist):
+        except (ValueError, ObjectDoesNotExist):
             logger.warning('Invalid user passed, submissionUser will not be recorded.')
 
     # If a specific amount to pay has been passed, then allow payment
     # of that amount.
     if amount:
         try:
-            if isinstance(amount,list):
+            if isinstance(amount, list):
                 amount = float(amount[0])
             else:
                 amount = float(amount)
@@ -96,7 +96,12 @@ def handle_stripe_checkout(request):
                 transactionType=transactionType,
             )
     except (ValueError, ObjectDoesNotExist) as e:
-        logger.error('Invalid registration information passed to handle_stripe_checkout view: (%s, %s, %s)' % (invoice_id, tr_id, amount))
+        logger.error(
+            'Invalid registration information passed to ' +
+            'handle_stripe_checkout view: (%s, %s, %s)' % (
+                invoice_id, tr_id, amount
+            )
+        )
         logger.error(e)
         return HttpResponseBadRequest()
 
@@ -116,34 +121,34 @@ def handle_stripe_checkout(request):
         # Since it's a decline, stripe.error.CardError will be caught
         body = e.json_body
         err = body['error']
-        logger.error('Stripe CardError %s: %s' % (e.http_status,err))
+        logger.error('Stripe CardError %s: %s' % (e.http_status, err))
     except stripe.error.RateLimitError as e:
         # Too many requests made to the API too quickly
         body = e.json_body
         err = body['error']
-        logger.error('Stripe RateLimitError %s: %s' % (e.http_status,err))
+        logger.error('Stripe RateLimitError %s: %s' % (e.http_status, err))
     except stripe.error.InvalidRequestError as e:
         # Invalid parameters were supplied to Stripe's API
         body = e.json_body
         err = body['error']
-        logger.error('Stripe InvalidRequestError %s: %s' % (e.http_status,err))
+        logger.error('Stripe InvalidRequestError %s: %s' % (e.http_status, err))
     except stripe.error.AuthenticationError as e:
         # Authentication with Stripe's API failed
         # (maybe you changed API keys recently)
         body = e.json_body
         err = body['error']
-        logger.error('Stripe AuthenticationError %s: %s' % (e.http_status,err))
+        logger.error('Stripe AuthenticationError %s: %s' % (e.http_status, err))
     except stripe.error.APIConnectionError as e:
         # Network communication with Stripe failed
         body = e.json_body
         err = body['error']
-        logger.error('Stripe APIConnectionError %s: %s' % (e.http_status,err))
+        logger.error('Stripe APIConnectionError %s: %s' % (e.http_status, err))
     except stripe.error.StripeError as e:
         # Display a very generic error to the user, and maybe send
         # yourself an email
         body = e.json_body
         err = body['error']
-        logger.error('Stripe StripeError %s: %s' % (e.http_status,err))
+        logger.error('Stripe StripeError %s: %s' % (e.http_status, err))
 
     if charge:
         StripeCharge.objects.create(

@@ -7,7 +7,7 @@ class NewsApphook(CMSApp):
     name = _("News Apphook")
 
     def get_urls(self, page=None, language=None, **kwargs):
-        return ["danceschool.news.urls"]       # replace this with the path to your application's URLs module
+        return ["danceschool.news.urls"]
 
 
 apphook_pool.register(NewsApphook)

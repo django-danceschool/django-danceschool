@@ -4,21 +4,27 @@ from django.utils.translation import ugettext_lazy as _
 
 from dal import autocomplete
 
-from .models import DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup, PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount, CustomerGroupDiscount, CustomerDiscount
-from danceschool.core.models import Registration, TemporaryRegistration, PricingTier, Customer
+from .models import (
+    DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup,
+    PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount,
+    CustomerGroupDiscount, CustomerDiscount
+)
+from danceschool.core.models import (
+    Registration, TemporaryRegistration, PricingTier, Customer
+)
 
 
 class DiscountCategoryAdmin(admin.ModelAdmin):
-    list_display = ('name','order','cannotCombine')
-    list_editable = ('order',)
-    list_filter = ('cannotCombine',)
-    search_fields = ('name',)
+    list_display = ('name', 'order', 'cannotCombine')
+    list_editable = ('order', )
+    list_filter = ('cannotCombine', )
+    search_fields = ('name', )
 
 
 class DiscountComboComponentInline(admin.StackedInline):
     model = DiscountComboComponent
     extra = 1
-    fields = (('pointGroup','quantity',),'allWithinPointGroup',('level','weekday'),)
+    fields = (('pointGroup', 'quantity', ), 'allWithinPointGroup', ('level', 'weekday'), )
 
 
 class CustomerDiscountInlineForm(ModelForm):
@@ -46,14 +52,14 @@ class CustomerDiscountInlineForm(ModelForm):
 class CustomerGroupDiscountInline(admin.StackedInline):
     model = CustomerGroupDiscount
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class CustomerDiscountInline(admin.StackedInline):
     model = CustomerDiscount
     form = CustomerDiscountInlineForm
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class DiscountComboAdminForm(ModelForm):
@@ -63,37 +69,50 @@ class DiscountComboAdminForm(ModelForm):
         exclude = []
 
     class Media:
-        js = ('js/discountcombo_collapsetypes.js',)
+        js = ('js/discountcombo_collapsetypes.js', )
 
 
 class DiscountComboAdmin(admin.ModelAdmin):
-    inlines = [DiscountComboComponentInline,CustomerGroupDiscountInline,CustomerDiscountInline]
+    inlines = [
+        DiscountComboComponentInline, CustomerGroupDiscountInline,
+        CustomerDiscountInline
+    ]
     form = DiscountComboAdminForm
 
-    list_display = ('name','category','discountType','active','expirationDate','restrictions')
-    list_filter = ('category','discountType','active','newCustomersOnly','expirationDate')
-    ordering = ('name',)
-    actions = ['enableDiscount','disableDiscount']
+    list_display = (
+        'name', 'category', 'discountType', 'active', 'expirationDate',
+        'restrictions'
+    )
+    list_filter = (
+        'category', 'discountType', 'active', 'newCustomersOnly', 'expirationDate'
+    )
+    ordering = ('name', )
+    actions = ['enableDiscount', 'disableDiscount']
 
     fieldsets = (
         (None, {
-            'fields': ('name','category',('active','expirationDate'),'newCustomersOnly','studentsOnly','daysInAdvanceRequired','firstXRegistered','discountType',)
+            'fields': (
+                'name', 'category',
+                ('active', 'expirationDate'),
+                'newCustomersOnly', 'studentsOnly', 'daysInAdvanceRequired',
+                'firstXRegistered', 'discountType',
+            )
         }),
         (_('Flat-Price Discount (in default currency)'), {
-            'classes': ('type_flatPrice',),
-            'fields': ('onlinePrice','doorPrice'),
+            'classes': ('type_flatPrice', ),
+            'fields': ('onlinePrice', 'doorPrice'),
         }),
         (_('Dollar Discount (in default currency)'), {
-            'classes': ('type_dollarDiscount',),
-            'fields': ('dollarDiscount',),
+            'classes': ('type_dollarDiscount', ),
+            'fields': ('dollarDiscount', ),
         }),
         (_('Percentage Discount'), {
-            'classes': ('type_percentageDiscount',),
-            'fields': ('percentDiscount','percentUniversallyApplied'),
+            'classes': ('type_percentageDiscount', ),
+            'fields': ('percentDiscount', 'percentUniversallyApplied'),
         }),
     )
 
-    def restrictions(self,obj):
+    def restrictions(self, obj):
         text = []
         if obj.studentsOnly:
             text.append(_('Students only'))
@@ -161,17 +180,17 @@ class PricingTierGroupInline(admin.TabularInline):
 
 
 class PointGroupAdmin(admin.ModelAdmin):
-    inlines = (PricingTierGroupInline,)
+    inlines = (PricingTierGroupInline, )
 
-    list_display = ('name',)
-    ordering = ('name',)
+    list_display = ('name', )
+    ordering = ('name', )
 
 
 # This adds the inlines to Registration and TemporyRegistration without subclassing
-admin.site._registry[Registration].inlines.insert(0,RegistrationDiscountInline)
-admin.site._registry[TemporaryRegistration].inlines.insert(0,TemporaryRegistrationDiscountInline)
-admin.site._registry[PricingTier].inlines.insert(0,PricingTierGroupInline)
+admin.site._registry[Registration].inlines.insert(0, RegistrationDiscountInline)
+admin.site._registry[TemporaryRegistration].inlines.insert(0, TemporaryRegistrationDiscountInline)
+admin.site._registry[PricingTier].inlines.insert(0, PricingTierGroupInline)
 
 admin.site.register(DiscountCategory, DiscountCategoryAdmin)
-admin.site.register(DiscountCombo,DiscountComboAdmin)
-admin.site.register(PointGroup,PointGroupAdmin)
+admin.site.register(DiscountCombo, DiscountComboAdmin)
+admin.site.register(PointGroup, PointGroupAdmin)

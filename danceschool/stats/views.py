@@ -19,12 +19,12 @@ class SchoolStatsView(PermissionRequiredMixin, TemplateView):
         request = self.request
         context_data = kwargs
 
-        (totalStudents,numSeries,totalSeriesRegs,totalTime) = getGeneralStats(request)
+        (totalStudents, numSeries, totalSeriesRegs, totalTime) = getGeneralStats(request)
 
         context_data.update({
-            'totalStudents':totalStudents,
-            'numSeries':numSeries,
-            'totalSeriesRegs':totalSeriesRegs,
-            'totalTime':totalTime,
+            'totalStudents': totalStudents,
+            'numSeries': numSeries,
+            'totalSeriesRegs': totalSeriesRegs,
+            'totalTime': totalTime,
         })
         return context_data

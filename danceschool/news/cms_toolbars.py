@@ -11,7 +11,7 @@ class NewsItemContentToolbar(CMSToolbar):
 
     def populate(self):
         if self.request.user.has_perm('news.add_newsitem'):
-            menu = self.toolbar.get_or_create_menu('core-content',_('Content'))
+            menu = self.toolbar.get_or_create_menu('core-content', _('Content'))
             menu.add_link_item(_('Add News Item'), reverse('admin:news_newsitem_add'), position=0)
             menu.add_break('post_add_newsitem_break', position=1)
             menu.add_link_item(_('Manage News Items'), reverse('admin:news_newsitem_changelist'))

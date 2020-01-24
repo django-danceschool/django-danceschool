@@ -11,5 +11,5 @@ class FAQContentToolbar(CMSToolbar):
 
     def populate(self):
         if self.request.user.has_perm('faq.change_faq'):
-            menu = self.toolbar.get_or_create_menu('core-content',_('Content'))
+            menu = self.toolbar.get_or_create_menu('core-content', _('Content'))
             menu.add_link_item(_('Manage FAQs'), reverse('admin:faq_faq_changelist'))

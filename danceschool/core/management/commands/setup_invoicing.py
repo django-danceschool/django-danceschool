@@ -42,7 +42,13 @@ class Command(BaseCommand):
         ]
         for this_app in required_apps:
             if not apps.is_installed(this_app[0]):
-                self.stdout.write(self.style.ERROR('ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % this_app[1]))
+                self.stdout.write(
+                    self.style.ERROR(
+                        'ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % (
+                            this_app[1],
+                        )
+                    )
+                )
                 return None
 
         self.stdout.write(
@@ -52,7 +58,11 @@ CHECKING INVOICE GENERATION FUNCTIONALITY
             """
         )
 
-        add_invoicing = self.boolean_input('Add invoice generation plugin to the registration summary view to allow staff members to generate and email invoices for registrations [Y/n]', True)
+        add_invoicing = self.boolean_input(
+            'Add invoice generation plugin to the registration summary view to ' +
+            'allow staff members to generate and email invoices for registrations [Y/n]',
+            True
+        )
         if add_invoicing:
             invoice_sp = StaticPlaceholder.objects.get_or_create(code='registration_invoice_placeholder')
             invoice_p_draft = invoice_sp[0].draft

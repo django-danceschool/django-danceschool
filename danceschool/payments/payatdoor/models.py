@@ -14,7 +14,13 @@ logger = logging.getLogger(__name__)
 class PayAtDoorFormModel(CMSPlugin):
     ''' This model holds options for instances of the PayAtDoorFormPlugin '''
 
-    successPage = PageField(verbose_name=_('Success Page'),help_text=_('When the user returns to the site after a successful transaction, send them to this page.'),related_name='successPageForPayAtDoor')
+    successPage = PageField(
+        verbose_name=_('Success Page'),
+        help_text=_(
+            'When the user returns to the site after a successful ' +
+            'transaction, send them to this page.'
+        ),
+        related_name='successPageForPayAtDoor')
 
     def get_short_description(self):
         return self.plugin_type or self.id

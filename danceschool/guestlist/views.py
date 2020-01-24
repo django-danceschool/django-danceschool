@@ -21,15 +21,15 @@ class GuestListView(PermissionRequiredMixin, TemplateView):
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            self.date = datetime.strptime(request.GET.get('date') or '','%Y-%m-%d')
+            self.date = datetime.strptime(request.GET.get('date') or '', '%Y-%m-%d')
         except ValueError:
             self.date = None
 
         self.guest_list = GuestList.objects.filter(
             id=self.kwargs.get('guestlist_id', None)).first()
         self.event = Event.objects.filter(
-            id=self.kwargs.get('event_id',None)).first() or \
-                getattr(self.guest_list, 'currentEvent', None)
+            id=self.kwargs.get('event_id', None)
+        ).first() or getattr(self.guest_list, 'currentEvent', None)
 
         if (
             self.guest_list and self.event and not

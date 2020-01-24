@@ -23,12 +23,12 @@ class CustomerGuestAutocompleteForm(forms.Form):
         queryset = Customer.objects.annotate(
             firstName=F('first_name'), lastName=F('last_name'),
             guestType=Value(ugettext('Customer'), output_field=CharField())
-        ).values('firstName','lastName','guestType').order_by()
+        ).values('firstName', 'lastName', 'guestType').order_by()
 
         queryset = queryset.union(
             StaffMember.objects.annotate(
                 guestType=Value(ugettext('Customer'), output_field=CharField())
-            ).values('firstName','lastName','guestType').order_by()
+            ).values('firstName', 'lastName', 'guestType').order_by()
         )
 
         if apps.is_installed('danceschool.guestlist'):
@@ -37,7 +37,7 @@ class CustomerGuestAutocompleteForm(forms.Form):
             queryset = queryset.union(
                 GuestListName.objects.annotate(
                     guestType=Value(ugettext('Customer'), output_field=CharField())
-                ).values('firstName','lastName','guestType').order_by()
+                ).values('firstName', 'lastName', 'guestType').order_by()
             )
 
         super().__init__(*args, **kwargs)

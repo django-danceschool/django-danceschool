@@ -32,9 +32,16 @@ class DiscountLinksToolbar(CMSToolbar):
                 identifier='financial_related_items_break'
             ) + 1
 
-        related_menu = financial_menu.get_or_create_menu('financial-related',_('Related Items'), position=position)
+        related_menu = financial_menu.get_or_create_menu(
+            'financial-related', _('Related Items'), position=position
+        )
 
         if self.request.user.has_perm('discounts.change_discountcombo'):
-            related_menu.add_link_item(_('Discounts'), url=reverse('admin:discounts_discountcombo_changelist'))
+            related_menu.add_link_item(
+                _('Discounts'), url=reverse('admin:discounts_discountcombo_changelist')
+            )
         if self.request.user.has_perm('discounts.change_discountcategory'):
-            related_menu.add_link_item(_('Discount Categories'), url=reverse('admin:discounts_discountcategory_changelist'))
+            related_menu.add_link_item(
+                _('Discount Categories'),
+                url=reverse('admin:discounts_discountcategory_changelist')
+            )

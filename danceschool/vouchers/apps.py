@@ -30,9 +30,9 @@ class VoucherAppConfig(AppConfig):
             })
             return [cv.voucher for cv in cvs]
 
-        Customer.add_to_class('getAvailableCredits',creditsAvailable)
-        Customer.add_to_class('getVouchers',getCustomerVouchers)
-        Customer.add_to_class('getReferralVouchers',getCustomerReferralVouchers)
+        Customer.add_to_class('getAvailableCredits', creditsAvailable)
+        Customer.add_to_class('getVouchers', getCustomerVouchers)
+        Customer.add_to_class('getReferralVouchers', getCustomerReferralVouchers)
 
         # This ensures that the signal receivers are loaded
         from . import handlers

@@ -6,7 +6,9 @@ from django.urls import reverse
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 
-from danceschool.core.models import DanceType, DanceTypeLevel, DanceRole, PricingTier, StaffMemberListPluginModel
+from danceschool.core.models import (
+    DanceType, DanceTypeLevel, DanceRole, PricingTier, StaffMemberListPluginModel
+)
 
 from dynamic_preferences.registries import global_preferences_registry
 import re
@@ -33,7 +35,10 @@ class Command(BaseCommand):
             result = input("Please answer yes or no: ")
         return result[0].lower() == "y"
 
-    def pattern_input(self, question, message='Invalid entry', pattern='^[a-zA-Z0-9_ ]+$', default='',required=True):
+    def pattern_input(
+        self, question, message='Invalid entry', pattern='^[a-zA-Z0-9_ ]+$',
+        default='', required=True
+    ):
         '''
         Method for input disallowing special characters, with optionally
         specifiable regex pattern and error message.
@@ -97,16 +102,32 @@ class Command(BaseCommand):
         ]
         for this_app in required_apps:
             if not apps.is_installed(this_app[0]):
-                self.stdout.write(self.style.ERROR('ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % this_app[1]))
+                self.stdout.write(
+                    self.style.ERROR(
+                        'ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % (
+                            this_app[1],
+                        )
+                    )
+                )
                 return None
 
         this_user = User.objects.filter(is_superuser=True).first()
         if not this_user:
-            self.stdout.write(self.style.ERROR('ERROR: Superuser has not yet been created.  Please run \'python manage.py createsuperuser\' before proceeding.'))
+            self.stdout.write(
+                self.style.ERROR(
+                    'ERROR: Superuser has not yet been created.  Please run ' +
+                    '\'python manage.py createsuperuser\' before proceeding.'
+                )
+            )
             return None
 
         if Page.objects.count() > 0:
-            self.stdout.write(self.style.WARNING('WARNING: CMS pages have already been created.  Creating duplicate CMS pages may lead to unexpected results.'))
+            self.stdout.write(
+                self.style.WARNING(
+                    'WARNING: CMS pages have already been created.  ' +
+                    'Creating duplicate CMS pages may lead to unexpected results.'
+                )
+            )
 
         self.stdout.write(
             """
@@ -131,7 +152,8 @@ BASIC SETUP:
 
         # Current Domain
         current_domain = self.pattern_input(
-            'Enter the domain name of this installation, with no protocol or trailing slashes (e.g. \'bostonlindyhop.com\') [localhost:8000]',
+            'Enter the domain name of this installation, with no protocol or ' +
+            'trailing slashes (e.g. \'bostonlindyhop.com\') [localhost:8000]',
             message='Invalid domain name (no whitespace or slashes allowed)',
             default='localhost:8000',
             pattern='^[^/\\ ]+$'
@@ -154,7 +176,7 @@ BASIC SETUP:
         school_email = self.pattern_input(
             'Provide a default school email address',
             message='Invalid email address.',
-            pattern='^[^@]+@[^@]+\.[^@]+$',
+            pattern=r'^[^@]+@[^@]+\.[^@]+$',
         )
         prefs['contact__businessEmail'] = school_email
         prefs['email__defaultEmailFrom'] = school_email
@@ -211,13 +233,13 @@ BASIC SETUP:
         currency_symbol = input('Unicode currency symbol for display [$]: ') or '$'
         prefs['general__currencySymbol'] = currency_symbol
 
-        send_error_emails = self.boolean_input('Send error emails [Y/n]',True)
+        send_error_emails = self.boolean_input('Send error emails [Y/n]', True)
         prefs['email__enableErrorEmails'] = send_error_emails
 
         error_email_address = self.pattern_input(
             'Email address to send error messages to [%s]' % school_email,
             message='Invalid email address.',
-            pattern='^[^@]+@[^@]+\.[^@]+$',
+            pattern=r'^[^@]+@[^@]+\.[^@]+$',
             default=school_email,
         )
         prefs['email__errorEmailTo'] = error_email_address
@@ -243,11 +265,20 @@ Remember, you can always rename these initial values or add/delete dance levels 
         )
         initial_dancetype_object = DanceType.objects.get_or_create(name=initial_dancetype, defaults={'order': 1.0})
 
-        use_initial_levels = self.boolean_input('Use initial levels \'Level 1\', \'Level 2\', and \'Level 3\' [Y/n]', True)
+        use_initial_levels = self.boolean_input(
+            'Use initial levels \'Level 1\', \'Level 2\', and \'Level 3\' [Y/n]',
+            True
+        )
         if use_initial_levels:
-            DanceTypeLevel.objects.get_or_create(name='Level 1', danceType=initial_dancetype_object[0], defaults={'order': 1.0})
-            DanceTypeLevel.objects.get_or_create(name='Level 2', danceType=initial_dancetype_object[0], defaults={'order': 2.0})
-            DanceTypeLevel.objects.get_or_create(name='Level 3', danceType=initial_dancetype_object[0], defaults={'order': 3.0})
+            DanceTypeLevel.objects.get_or_create(
+                name='Level 1', danceType=initial_dancetype_object[0], defaults={'order': 1.0}
+            )
+            DanceTypeLevel.objects.get_or_create(
+                name='Level 2', danceType=initial_dancetype_object[0], defaults={'order': 2.0}
+            )
+            DanceTypeLevel.objects.get_or_create(
+                name='Level 3', danceType=initial_dancetype_object[0], defaults={'order': 3.0}
+            )
 
         self.stdout.write(
             """
@@ -264,9 +295,9 @@ if you do not ask students to register for a particular role, then answer 'No' b
 
         define_roles = self.boolean_input('Define \'Leader\' and \'Follower\' roles [Y/n]', True)
         if define_roles:
-            DanceRole.objects.get_or_create(name='Leader',defaults={'pluralName': 'Leaders', 'order':1.0})
-            DanceRole.objects.get_or_create(name='Follower',defaults={'pluralName': 'Followers', 'order': 2.0})
-            initial_dancetype_object[0].roles.set(DanceRole.objects.filter(name__in=['Leader','Follower']))
+            DanceRole.objects.get_or_create(name='Leader', defaults={'pluralName': 'Leaders', 'order': 1.0})
+            DanceRole.objects.get_or_create(name='Follower', defaults={'pluralName': 'Followers', 'order': 2.0})
+            initial_dancetype_object[0].roles.set(DanceRole.objects.filter(name__in=['Leader', 'Follower']))
             initial_dancetype_object[0].save()
 
         self.stdout.write(
@@ -301,9 +332,9 @@ interface after completing this setup.
             default='Default Pricing',
         )
 
-        initial_online_price = self.float_input('Initial online price [50]',default=50)
-        initial_door_price = self.float_input('Initial at-the-door price [60]',default=60)
-        initial_dropin_price = self.float_input('Initial price for single-class drop-ins [15]',default=15)
+        initial_online_price = self.float_input('Initial online price [50]', default=50)
+        initial_door_price = self.float_input('Initial at-the-door price [60]', default=60)
+        initial_dropin_price = self.float_input('Initial price for single-class drop-ins [15]', default=15)
 
         PricingTier.objects.get_or_create(
             name=initial_pricing_tier_name,
@@ -348,14 +379,20 @@ a daily/weekly/monthly ongoing basis as well.
 
             if generate_staff:
                 # This just ensures that the standard staff categories are created before launch
-                prefs.get('financial__classInstructionExpenseCat',None)
-                prefs.get('financial__assistantClassInstructionExpenseCat',None)
-                prefs.get('financial__otherStaffExpenseCat',None)
+                prefs.get('financial__classInstructionExpenseCat', None)
+                prefs.get('financial__assistantClassInstructionExpenseCat', None)
+                prefs.get('financial__otherStaffExpenseCat', None)
 
-            generate_venue = self.boolean_input('Auto-generate venue rental expense items for completed events [Y/n]', True)
+            generate_venue = self.boolean_input(
+                'Auto-generate venue rental expense items for completed events [Y/n]',
+                True
+            )
             prefs['financial__autoGenerateExpensesVenueRental'] = generate_venue
 
-            generate_registration = self.boolean_input('Auto-generate registration revenue items for registrations [Y/n]', True)
+            generate_registration = self.boolean_input(
+                'Auto-generate registration revenue items for registrations [Y/n]',
+                True
+            )
             prefs['financial__autoGenerateRevenueRegistrations'] = generate_registration
 
         if apps.is_installed('danceschool.private_lessons'):
@@ -376,11 +413,20 @@ it if you would prefer that students pay instructors directly at the time of the
                 """
             )
 
-            allow_public_privatelesson_booking = self.boolean_input('Allow public booking of private lessons [Y/n]', True)
+            allow_public_privatelesson_booking = self.boolean_input(
+                'Allow public booking of private lessons [Y/n]',
+                True
+            )
             prefs['privateLessons__allowPublicBooking'] = allow_public_privatelesson_booking
-            allow_privatelesson_payment = self.boolean_input('Allow payment for private lessons through the registration system [Y/n]', True)
+            allow_privatelesson_payment = self.boolean_input(
+                'Allow payment for private lessons through the registration system [Y/n]',
+                True
+            )
             prefs['privateLessons__allowRegistration'] = allow_privatelesson_payment
-            notify_privatelesson_instructor = self.boolean_input('Notify private lesson instructors on lesson booking [Y/n]', True)
+            notify_privatelesson_instructor = self.boolean_input(
+                'Notify private lesson instructors on lesson booking [Y/n]',
+                True
+            )
             prefs['privateLessons__notifyInstructor'] = notify_privatelesson_instructor
 
         self.stdout.write(
@@ -422,11 +468,16 @@ Remember, all page settings and content can be changed later via the admin inter
                 school_city, school_state, school_postal
             )
             email_string = '<a href="mailto:{}">{}</a>'.format(school_email, school_email)
-            initial_footer = '<p class="text-center"><strong>%s</strong><br />\n%s\n%s</p>' % (school_name, address_string, email_string)
+            initial_footer = '<p class="text-center"><strong>%s</strong><br />\n%s\n%s</p>' % (
+                school_name, address_string, email_string
+            )
             add_plugin(sp_draft, 'TextPlugin', initial_language, body=initial_footer)
             add_plugin(sp_public, 'TextPlugin', initial_language, body=initial_footer)
 
-        registration_first = self.boolean_input('Perform a "registration-only" setup with registration on the home page? [y/N]', False)
+        registration_first = self.boolean_input(
+            'Perform a "registration-only" setup with registration on the home page? [y/N]',
+            False
+        )
         if registration_first:
             home_page = create_page(
                 'Registration', 'cms/home.html', initial_language, menu_title='Registration',
@@ -437,23 +488,43 @@ Remember, all page settings and content can be changed later via the admin inter
         else:
             add_home_page = self.boolean_input('Create a \'Home\' page [Y/n]', True)
             if add_home_page:
-                home_page = create_page('Home', 'cms/frontpage.html', initial_language, menu_title='Home', in_navigation=True, published=True)
+                home_page = create_page(
+                    'Home', 'cms/frontpage.html', initial_language,
+                    menu_title='Home', in_navigation=True, published=True
+                )
                 content_placeholder = home_page.placeholders.get(slot='content')
-                add_plugin(content_placeholder, 'TextPlugin', initial_language, body='<h1>Welcome to %s</h1>\n\n<p>If you are logged in, click \'Edit Page\' to begin adding content.</p>' % school_name)
+                add_plugin(
+                    content_placeholder, 'TextPlugin', initial_language,
+                    body='<h1>Welcome to %s</h1>' % school_name +
+                    '\n\n<p>If you are logged in, click \'Edit Page\' to begin ' +
+                    'adding content.</p>'
+                )
                 publish_page(home_page, this_user, initial_language)
                 home_page.set_as_homepage()
                 self.stdout.write('Home page added.\n')
-            add_registration_link = self.boolean_input('Add a link to the Registration page to the main navigation menu [Y/n]', True)
+            add_registration_link = self.boolean_input(
+                'Add a link to the Registration page to the main navigation menu [Y/n]',
+                True
+            )
             if add_registration_link:
                 registration_link_page = create_page(
                     'Registration', 'cms/home.html', initial_language,
-                    menu_title='Register', slug='register', overwrite_url=reverse('registration'), in_navigation=True, published=True
+                    menu_title='Register', slug='register',
+                    overwrite_url=reverse('registration'), in_navigation=True,
+                    published=True
                 )
                 self.stdout.write('Registration link added.\n')
 
-        add_instructor_page = self.boolean_input('Add a page to list all instructors with their photos and bios [Y/n]', True)
+        add_instructor_page = self.boolean_input(
+            'Add a page to list all instructors with their photos and bios [Y/n]',
+            True
+        )
         if add_instructor_page:
-            instructor_page = create_page('Instructors', 'cms/twocolumn_rightsidebar.html', initial_language, menu_title='Instructors', in_navigation=True, published=True)
+            instructor_page = create_page(
+                'Instructors', 'cms/twocolumn_rightsidebar.html',
+                initial_language, menu_title='Instructors', in_navigation=True,
+                published=True
+            )
             content_placeholder = instructor_page.placeholders.get(slot='content')
             sidebar_placeholder = instructor_page.placeholders.get(slot='sidebar')
             add_plugin(
@@ -471,29 +542,47 @@ Remember, all page settings and content can be changed later via the admin inter
             publish_page(instructor_page, this_user, initial_language)
             self.stdout.write('Instructor page added.\n')
 
-        add_calendar_page = self.boolean_input('Add a page with a public calendar of classes/events [Y/n]', True)
+        add_calendar_page = self.boolean_input(
+            'Add a page with a public calendar of classes/events [Y/n]',
+            True
+        )
         if add_calendar_page:
-            calendar_page = create_page('Calendar', 'cms/home.html', initial_language, menu_title='Calendar', in_navigation=True, published=True)
+            calendar_page = create_page(
+                'Calendar', 'cms/home.html', initial_language,
+                menu_title='Calendar', in_navigation=True, published=True
+            )
             content_placeholder = calendar_page.placeholders.get(slot='content')
             add_plugin(content_placeholder, 'PublicCalendarPlugin', initial_language)
             publish_page(calendar_page, this_user, initial_language)
             self.stdout.write('Calendar page added.\n')
 
         if apps.is_installed('danceschool.private_lessons') and allow_public_privatelesson_booking:
-            add_privatelesson_link = self.boolean_input('Add a link to book private lessons to the main navigation menu [Y/n]', True)
+            add_privatelesson_link = self.boolean_input(
+                'Add a link to book private lessons to the main navigation menu [Y/n]',
+                True
+            )
             if add_privatelesson_link:
                 privatelesson_link_page = create_page(
                     'Schedule Private Lessons', 'cms/home.html', initial_language,
-                    menu_title='Private Lessons', slug='private_lessons', overwrite_url=reverse('bookPrivateLesson'), in_navigation=True, published=True
+                    menu_title='Private Lessons', slug='private_lessons',
+                    overwrite_url=reverse('bookPrivateLesson'),
+                    in_navigation=True, published=True
                 )
                 self.stdout.write('Private lesson scheduling link added.\n')
 
         if apps.is_installed('danceschool.faq'):
-            add_faq_page = self.boolean_input('Add an FAQ page and General FAQs Category [Y/n]', True)
+            add_faq_page = self.boolean_input(
+                'Add an FAQ page and General FAQs Category [Y/n]',
+                True
+            )
             if add_faq_page:
                 faq_models = import_module('danceschool.faq.models')
                 general_cat = faq_models.FAQCategory.objects.get_or_create(name='General Questions')
-                faq_page = create_page('Frequently Asked Questions', 'cms/twocolumn_rightsidebar.html', initial_language, menu_title='FAQ', in_navigation=True, published=True)
+                faq_page = create_page(
+                    'Frequently Asked Questions', 'cms/twocolumn_rightsidebar.html',
+                    initial_language, menu_title='FAQ', in_navigation=True,
+                    published=True
+                )
                 content_placeholder = faq_page.placeholders.get(slot='content')
                 sidebar_placeholder = faq_page.placeholders.get(slot='sidebar')
                 add_plugin(content_placeholder, 'FAQCategoryPlugin', initial_language, category=general_cat[0])
@@ -502,10 +591,17 @@ Remember, all page settings and content can be changed later via the admin inter
                 self.stdout.write('FAQ page added.\n')
 
         if apps.is_installed('danceschool.news'):
-            add_news_page = self.boolean_input('Add a News page, along with an initial Welcome news item [Y/n]', True)
+            add_news_page = self.boolean_input(
+                'Add a News page, along with an initial Welcome news item [Y/n]',
+                True
+            )
             if add_news_page:
                 news_models = import_module('danceschool.news.models')
-                news_models.NewsItem.objects.create(title='Welcome to %s!' % school_name, content='<p>Continue to check this news feed to remain up-to-date on everything that is happening with the school.</p>')
+                news_models.NewsItem.objects.create(
+                    title='Welcome to %s!' % school_name,
+                    content='<p>Continue to check this news feed to remain ' +
+                    'up-to-date on everything that is happening with the school.</p>'
+                )
 
                 create_page(
                     'Latest News', 'cms/twocolumn_rightsidebar.html', initial_language,
@@ -570,4 +666,7 @@ Remember, all page settings and content can be changed later via the admin inter
         call_command('setup_permissions')
 
         # Finished with setup process
-        self.stdout.write(self.style.SUCCESS('Successfully setup dance school!  Now enter \'python manage.py runserver\' command to test installation.'))
+        self.stdout.write(self.style.SUCCESS(
+            'Successfully setup dance school!  Now enter \'python manage.py ' +
+            'runserver\' command to test installation.'
+        ))

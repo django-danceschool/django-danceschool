@@ -12,13 +12,13 @@ from .models import Requirement, CustomerRequirement
 class CustomerRequirementAjaxView(PermissionRequiredMixin, View):
     permission_required = 'prerequisites.add_customerrequirement'
 
-    def post(self,request,*args,**kwargs):
+    def post(self, request, *args, **kwargs):
 
         customerId = request.POST.get('customerId')
         requirementId = request.POST.get('requirementId')
         roleId = request.POST.get('roleId')
-        roleEnforced = str(request.POST.get('roleEnforced',''))
-        setMet = str(request.POST.get('setMet',''))
+        roleEnforced = str(request.POST.get('roleEnforced', ''))
+        setMet = str(request.POST.get('setMet', ''))
 
         roleEnforced = True if roleEnforced.lower() == 'true' else False
 
@@ -59,7 +59,7 @@ class CustomerRequirementAjaxView(PermissionRequiredMixin, View):
         else:
             if not (roleEnforced and not role):
                 # This is the check status case.
-                meets = req.customerMeetsRequirement(customer,danceRole=role)
+                meets = req.customerMeetsRequirement(customer, danceRole=role)
                 response.update({
                     'customerStatus': meets,
                 })
@@ -69,7 +69,7 @@ class CustomerRequirementAjaxView(PermissionRequiredMixin, View):
                 response['customerStatus'] = {}
 
                 for role in roles:
-                    meets = req.customerMeetsRequirement(customer,danceRole=role)
+                    meets = req.customerMeetsRequirement(customer, danceRole=role)
                     response['customerStatus'][role.name] = meets
 
         return JsonResponse(response)

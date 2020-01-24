@@ -24,7 +24,7 @@ class DoorToolbar(CMSToolbar):
             registers = DoorRegister.objects.filter(enabled=True)
 
             for register in registers:
-                url=reverse('doorRegister', args=(register.slug, today.year, today.month, today.day))
+                url = reverse('doorRegister', args=(register.slug, today.year, today.month, today.day))
                 menu.add_link_item(register.title, url=url)
 
             if registers:
@@ -38,4 +38,7 @@ class DoorToolbar(CMSToolbar):
         if self.request.user.has_perm('door.change_doorregister'):
             menu.add_link_item(_('Manage Registers'), url=reverse('admin:door_doorregister_changelist'))
         if self.request.user.has_perm('door.change_doorregisterpaymentmethod'):
-            menu.add_link_item(_('Manage Register Payment Methods'), url=reverse('admin:door_doorregisterpaymentmethod_changelist'))
+            menu.add_link_item(
+                _('Manage Register Payment Methods'),
+                url=reverse('admin:door_doorregisterpaymentmethod_changelist')
+            )

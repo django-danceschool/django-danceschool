@@ -21,7 +21,7 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
 
         context.update({
             'allow_amount_entry': False,
-            'squareApplicationId': getattr(settings,'SQUARE_APPLICATION_ID',''),
+            'squareApplicationId': getattr(settings, 'SQUARE_APPLICATION_ID', ''),
         })
 
         return context
@@ -52,7 +52,7 @@ class SquarePointOfSalePlugin(CMSPluginBase):
         context = super(SquarePointOfSalePlugin, self).render(context, instance, placeholder)
 
         context.update({
-            'squareApplicationId': getattr(settings,'SQUARE_APPLICATION_ID',''),
+            'squareApplicationId': getattr(settings, 'SQUARE_APPLICATION_ID', ''),
             'returnUrl': context['request'].build_absolute_uri(reverse('processSquarePointOfSale')),
         })
 

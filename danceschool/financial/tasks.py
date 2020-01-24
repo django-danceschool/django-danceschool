@@ -4,7 +4,10 @@ import logging
 
 from danceschool.core.constants import getConstant
 
-from .helpers import createExpenseItemsForEvents, createExpenseItemsForVenueRental,createRevenueItemsForRegistrations
+from .helpers import (
+    createExpenseItemsForEvents, createExpenseItemsForVenueRental,
+    createRevenueItemsForRegistrations
+)
 
 
 # Define logger for this file

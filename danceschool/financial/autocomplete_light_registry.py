@@ -12,9 +12,9 @@ def get_method_list():
     '''
     Include manual methods by default
     '''
-    methods = [str(_('Cash')),str(_('Check')),str(_('Bank/Debit Card')),str(_('Other'))]
-    methods += ExpenseItem.objects.order_by().values_list('paymentMethod',flat=True).distinct()
-    methods += RevenueItem.objects.order_by().values_list('paymentMethod',flat=True).distinct()
+    methods = [str(_('Cash')), str(_('Check')), str(_('Bank/Debit Card')), str(_('Other'))]
+    methods += ExpenseItem.objects.order_by().values_list('paymentMethod', flat=True).distinct()
+    methods += RevenueItem.objects.order_by().values_list('paymentMethod', flat=True).distinct()
     methods_list = list(set(methods))
 
     if None in methods_list:
@@ -32,7 +32,7 @@ class PaymentMethodAutoComplete(autocomplete.Select2ListView):
     def get_list(self):
         return get_method_list()
 
-    def create(self,text):
+    def create(self, text):
         '''
         Since this autocomplete is used to create new RevenueItems, and the set of
         RevenueItem paymentMethods is automatically updated in get_method_list(),
@@ -88,7 +88,7 @@ class TransactionPartyAutoComplete(autocomplete.Select2QuerySetView):
 
         if display_create_option and self.has_add_permission(self.request):
             '''
-            Generate querysets of Locations, StaffMembers, and Users that 
+            Generate querysets of Locations, StaffMembers, and Users that
             match the query string.
             '''
             for s in Location.objects.filter(
@@ -142,25 +142,25 @@ class TransactionPartyAutoComplete(autocomplete.Select2QuerySetView):
                 this_id = text[len('Location_'):]
                 this_loc = Location.objects.get(id=this_id)
                 return self.get_queryset().get_or_create(
-                    name=this_loc.name,location=this_loc
+                    name=this_loc.name, location=this_loc
                 )[0]
             elif text.startswith('StaffMember_'):
                 this_id = text[len('StaffMember_'):]
                 this_member = StaffMember.objects.get(id=this_id)
                 return self.get_queryset().get_or_create(
-                    name=this_member.fullName,staffMember=this_member,
-                    defaults={'user': getattr(this_member,'userAccount',None)}
+                    name=this_member.fullName, staffMember=this_member,
+                    defaults={'user': getattr(this_member, 'userAccount', None)}
                 )[0]
             elif text.startswith('User_'):
                 this_id = text[len('User_'):]
                 this_user = User.objects.get(id=this_id)
                 return self.get_queryset().get_or_create(
-                    name=this_user.get_full_name(),user=this_user,
-                    defaults={'staffMember': getattr(this_user,'staffmember',None)}
+                    name=this_user.get_full_name(), user=this_user,
+                    defaults={'staffMember': getattr(this_user, 'staffmember', None)}
                 )[0]
             else:
                 return self.get_queryset().get_or_create(
-                    name=text,staffMember=None,user=None,location=None
+                    name=text, staffMember=None, user=None, location=None
                 )[0]
         else:
-            return super(TransactionPartyAutoComplete,self).create_object(text)
+            return super(TransactionPartyAutoComplete, self).create_object(text)

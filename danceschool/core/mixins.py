@@ -39,31 +39,31 @@ class EmailRecipientMixin(object):
         email_kwargs = {}
 
         for list_arg in [
-            'to','cc','bcc',
+            'to', 'cc', 'bcc',
         ]:
-            email_kwargs[list_arg] = kwargs.pop(list_arg,[]) or []
-            if isinstance(email_kwargs[list_arg],string_types):
-                email_kwargs[list_arg] = [email_kwargs[list_arg],]
+            email_kwargs[list_arg] = kwargs.pop(list_arg, []) or []
+            if isinstance(email_kwargs[list_arg], string_types):
+                email_kwargs[list_arg] = [email_kwargs[list_arg], ]
 
-        for none_arg in ['attachment_name','attachment']:
-            email_kwargs[none_arg] = kwargs.pop(none_arg,None) or None
+        for none_arg in ['attachment_name', 'attachment']:
+            email_kwargs[none_arg] = kwargs.pop(none_arg, None) or None
 
         # Ignore any passed HTML content unless explicitly told to send as HTML
-        if kwargs.pop('send_html',False) and kwargs.get('html_message'):
+        if kwargs.pop('send_html', False) and kwargs.get('html_message'):
             email_kwargs['html_content'] = render_to_string(
                 'email/html_email_base.html',
-                context={'html_content': kwargs.get('html_message'),'subject': subject}
+                context={'html_content': kwargs.get('html_message'), 'subject': subject}
             )
 
-        email_kwargs['from_name'] = kwargs.pop('from_name',getConstant('email__defaultEmailName')) or \
+        email_kwargs['from_name'] = kwargs.pop('from_name', getConstant('email__defaultEmailName')) or \
             getConstant('email__defaultEmailName')
-        email_kwargs['from_address'] = kwargs.pop('from_name',getConstant('email__defaultEmailFrom')) or \
+        email_kwargs['from_address'] = kwargs.pop('from_name', getConstant('email__defaultEmailFrom')) or \
             getConstant('email__defaultEmailFrom')
 
         # Add the object's default recipients if they are provided
         default_recipients = self.get_default_recipients() or []
-        if isinstance(default_recipients,string_types):
-            default_recipients = [default_recipients,]
+        if isinstance(default_recipients, string_types):
+            default_recipients = [default_recipients, ]
 
         email_kwargs['bcc'] += default_recipients
 
@@ -72,11 +72,11 @@ class EmailRecipientMixin(object):
 
         # In situations where there are no context
         # variables to be rendered, send a mass email
-        has_tags = re.search('\{\{.+\}\}',content)
+        has_tags = re.search(r'\{\{.+\}\}', content)
         if not has_tags:
             t = Template(content)
             rendered_content = t.render(Context(kwargs))
-            sendEmail(subject,rendered_content,**email_kwargs)
+            sendEmail(subject, rendered_content, **email_kwargs)
             return
 
         # Otherwise, get the object-specific email context and email
@@ -87,7 +87,7 @@ class EmailRecipientMixin(object):
         # For security reasons, the following tags are removed from the template before parsing:
         # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}
         content = re.sub(
-            '\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
+            r'\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
             '',
             content
         )
@@ -96,16 +96,16 @@ class EmailRecipientMixin(object):
 
         if email_kwargs.get('html_content'):
             html_content = re.sub(
-                '\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
+                r'\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}',
                 '',
                 email_kwargs.get('html_content')
             )
             t = Template(html_content)
             email_kwargs['html_content'] = t.render(Context(template_context))
 
-        sendEmail(subject,rendered_content,**email_kwargs)
+        sendEmail(subject, rendered_content, **email_kwargs)
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         '''
         This method can be overridden in classes that inherit from this mixin
         so that additional object-specific context is provided to the email
@@ -145,14 +145,14 @@ class FinancialContextMixin(object):
     This mixin just adds the currency code and symbol to the context
     '''
 
-    def get_context_data(self,**kwargs):
+    def get_context_data(self, **kwargs):
         context = {
             'currencyCode': getConstant('general__currencyCode'),
             'currencySymbol': getConstant('general__currencySymbol'),
             'businessName': getConstant('contact__businessName'),
         }
         context.update(kwargs)
-        return super(FinancialContextMixin,self).get_context_data(**context)
+        return super(FinancialContextMixin, self).get_context_data(**context)
 
 
 class StaffMemberObjectMixin(object):
@@ -162,7 +162,7 @@ class StaffMemberObjectMixin(object):
     '''
 
     def get_object(self, queryset=None):
-        if hasattr(self.request.user,'staffmember'):
+        if hasattr(self.request.user, 'staffmember'):
             return self.request.user.staffmember
         else:
             return None
@@ -180,9 +180,9 @@ class GroupRequiredByFieldMixin(GroupRequiredMixin):
     def get_group_required(self):
         ''' Get the group_required value from the object '''
         this_object = self.model_object
-        if hasattr(this_object,self.group_required_field):
-            if hasattr(getattr(this_object,self.group_required_field),'name'):
-                return [getattr(this_object,self.group_required_field).name]
+        if hasattr(this_object, self.group_required_field):
+            if hasattr(getattr(this_object, self.group_required_field), 'name'):
+                return [getattr(this_object, self.group_required_field).name]
         return ['']
 
     def check_membership(self, groups):
@@ -232,20 +232,23 @@ class AdminSuccessURLMixin(object):
 
     def get_success_url(self):
         if self.success_list_url:
-            return '%s?redirect_url=%s' % (reverse('submissionRedirect'), quote(self.success_list_url))
+            return '%s?redirect_url=%s' % (
+                reverse('submissionRedirect'), quote(self.success_list_url)
+            )
         else:
-            # If no URL specified, then the redirect view will use the default from the runtime preferences.
+            # If no URL specified, then the redirect view will use the default
+            # from the runtime preferences.
             return reverse('submissionRedirect')
 
 
 class TemplateChoiceField(ChoiceField):
 
-    def validate(self,value):
+    def validate(self, value):
         '''
         Check for empty values, and for an existing template, but do not check if
         this is one of the initial choices provided.
         '''
-        super(ChoiceField,self).validate(value)
+        super(ChoiceField, self).validate(value)
 
         try:
             get_template(value)
@@ -255,20 +258,21 @@ class TemplateChoiceField(ChoiceField):
 
 class PluginTemplateMixin(object):
     '''
-    This mixin is for plugin classes, to override the render_template with the one provided in the template field,
-    and to allow for selectable choices with the option to add a new (validated) choice.
+    This mixin is for plugin classes, to override the render_template with the
+    one provided in the template field, and to allow for selectable choices with
+    the option to add a new (validated) choice.
     '''
 
     def render(self, context, instance, placeholder):
         ''' Permits setting of the template in the plugin instance configuration '''
         if instance and instance.template:
             self.render_template = instance.template
-        return super(PluginTemplateMixin,self).render(context,instance,placeholder)
+        return super(PluginTemplateMixin, self).render(context, instance, placeholder)
 
-    def templateChoiceFormFactory(self,request,choices):
+    def templateChoiceFormFactory(self, request, choices):
         class PluginTemplateChoiceForm(ModelForm):
 
-            def __init__(self,*args,**kwargs):
+            def __init__(self, *args, **kwargs):
                 super(PluginTemplateChoiceForm, self).__init__(*args, **kwargs)
 
                 # Handle passed parameters
@@ -276,7 +280,7 @@ class PluginTemplateMixin(object):
                 all_choices = choices
 
                 if self.instance and self.instance.template not in [x[0] for x in choices]:
-                    all_choices = [(self.instance.template,self.instance.template)] + all_choices
+                    all_choices = [(self.instance.template, self.instance.template)] + all_choices
 
                 if self.request and self.request.user.has_perm('core.choose_custom_plugin_template'):
                     self.fields['template'] = TemplateChoiceField(choices=all_choices)
@@ -287,8 +291,8 @@ class PluginTemplateMixin(object):
                 ''' Add Select2 custom behavior only if user has permissions to need it. '''
                 if self.request and self.request.user.has_perm('core.choose_custom_plugin_template'):
                     return Media(
-                        css={'all':('autocomplete_light/select2.css',)},
-                        js=('autocomplete_light/select2.js','js/select2_newtemplate.js')
+                        css={'all': ('autocomplete_light/select2.css',)},
+                        js=('autocomplete_light/select2.js', 'js/select2_newtemplate.js')
                     )
                 return Media()
             media = property(_media)
@@ -296,25 +300,28 @@ class PluginTemplateMixin(object):
         return PluginTemplateChoiceForm
 
     def get_form(self, request, obj=None, **kwargs):
-        kwargs['form'] = self.templateChoiceFormFactory(request,self.get_template_choices())
+        kwargs['form'] = self.templateChoiceFormFactory(request, self.get_template_choices())
         return super(PluginTemplateMixin, self).get_form(request, obj, **kwargs)
 
     def get_template_choices(self):
         # If templates are explicitly specified, use those
-        if hasattr(self,'template_choices') and self.template_choices:
+        if hasattr(self, 'template_choices') and self.template_choices:
             return self.template_choices
 
         # If templates are registered, use those
         registered = [
             x for x in plugin_templates_registry.values() if
-            getattr(x,'plugin',None) in [z.__name__ for z in self.__class__.__mro__]
+            getattr(x, 'plugin', None) in [z.__name__ for z in self.__class__.__mro__]
         ]
         if registered:
-            return [(x.template_name, getattr(x,'description',None) or x.template_name) for x in registered]
+            return [
+                (x.template_name, getattr(x, 'description', None) or x.template_name)
+                for x in registered
+            ]
 
         # If just one template is specified, use that
         if self.render_template:
-            return [(self.render_template,self.render_template),]
+            return [(self.render_template, self.render_template), ]
 
         # No choices to report
         return []
@@ -344,9 +351,9 @@ class EventOrderMixin(object):
 
         # Initialize with null values that get filled in based on the logic below.
         annotations = {
-            'nullParam': Case(default_value=None,output_field=IntegerField()),
-            'paramOne': Case(default_value=None,output_field=IntegerField()),
-            'paramTwo': Case(default_value=None,output_field=IntegerField()),
+            'nullParam': Case(default_value=None, output_field=IntegerField()),
+            'paramOne': Case(default_value=None, output_field=IntegerField()),
+            'paramTwo': Case(default_value=None, output_field=IntegerField()),
         }
 
         if rule == 'SessionFirst':
@@ -453,7 +460,7 @@ class EventOrderMixin(object):
         '''
 
         # Reverse ordering can be optionally specified in the view class definition.
-        reverseTime = getattr(self,'reverse_time_ordering',reverseTime)
+        reverseTime = getattr(self, 'reverse_time_ordering', reverseTime)
         timeParameter = '-startTime' if reverseTime is True else 'startTime'
         return ('nullParam', 'paramOne', 'paramTwo', timeParameter)
 
@@ -466,9 +473,9 @@ class SiteHistoryMixin(object):
     can automatically return to a logical place.
     '''
 
-    def set_return_page(self,namedUrl,pageName='',**kwargs):
+    def set_return_page(self, namedUrl, pageName='', **kwargs):
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        siteHistory = self.request.session.get('SITE_HISTORY',{})
+        siteHistory = self.request.session.get('SITE_HISTORY', {})
 
         updates = {
             'returnPage': (namedUrl, kwargs),
@@ -476,19 +483,19 @@ class SiteHistoryMixin(object):
             'expiry': expiry.strftime('%Y-%m-%dT%H:%M:%S%z'),
         }
 
-        if list(siteHistory.get('returnPage',[])) != list(updates['returnPage']):
+        if list(siteHistory.get('returnPage', [])) != list(updates['returnPage']):
             updates.update({
-                'priorPage': siteHistory.get('returnPage',(None,{})),
+                'priorPage': siteHistory.get('returnPage', (None, {})),
                 'priorPageName': siteHistory.get('returnPageName', ''),
             })
 
         siteHistory.update(updates)
         self.request.session['SITE_HISTORY'] = siteHistory
 
-    def get_return_page(self,prior=False):
+    def get_return_page(self, prior=False):
         ''' This is just a wrapper for the getReturnPage helper function. '''
-        siteHistory = self.request.session.get('SITE_HISTORY',{})
-        return getReturnPage(siteHistory,prior=prior)
+        siteHistory = self.request.session.get('SITE_HISTORY', {})
+        return getReturnPage(siteHistory, prior=prior)
 
 
 class RegistrationAdjustmentsMixin(object):
@@ -528,23 +535,22 @@ class RegistrationAdjustmentsMixin(object):
         try:
             if discount_responses:
                 discount_responses.sort(
-                    key=lambda k: 
+                    key=lambda k:
                     min(
                         [getattr(x, 'net_price', initial_price) for x in k.items] +
                         [initial_price]
                     ) if k and hasattr(k, 'items') else initial_price
                 )
-                discount_codes = getattr(discount_responses[0],'items',[])
+                discount_codes = getattr(discount_responses[0], 'items', [])
                 if discount_codes:
                     discounted_total = min(
                         [getattr(x, 'net_price', initial_price) for x in discount_codes]
-                    ) + getattr(discount_responses[0],'ineligible_total', 0)
+                    ) + getattr(discount_responses[0], 'ineligible_total', 0)
                     total_discount_amount = initial_price - discounted_total
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
 
         return (discount_codes, total_discount_amount, discounted_total)
-
 
     def getAddons(self, reg):
         '''
@@ -582,12 +588,12 @@ class ReferralInfoMixin(object):
 
         # GET parameters are also usable, but the URL pattern takes precedence.
         if not voucher_id:
-            voucher_id = request.GET.get('referral',None)
+            voucher_id = request.GET.get('referral', None)
         if not marketing_id:
-            marketing_id = request.GET.get('id',None)
+            marketing_id = request.GET.get('id', None)
 
         # Ignore voucher and marketing IDs that contain disallowed characters.
-        pattern = re.compile('^[a-zA-Z\-_0-9]+$')
+        pattern = re.compile(r'^[a-zA-Z\-_0-9]+$')
         if (voucher_id and not pattern.match(voucher_id)):
             voucher_id = None
         if (marketing_id and not pattern.match(marketing_id)):

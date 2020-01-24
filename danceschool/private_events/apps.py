@@ -18,7 +18,7 @@ class PrivateEventsAppConfig(AppConfig):
             feeds when looping through locations.
             '''
             return reverse('jsonPrivateCalendarFeed', args=(self.id,))
-        Location.add_to_class('jsonPrivateCalendarFeed',jsonPrivateCalendarFeed)
+        Location.add_to_class('jsonPrivateCalendarFeed', jsonPrivateCalendarFeed)
 
         @property
         def jsonRoomPrivateCalendarFeed(self):
@@ -27,4 +27,4 @@ class PrivateEventsAppConfig(AppConfig):
             feeds when looping through locations.
             '''
             return reverse('jsonPrivateCalendarFeed', args=(self.location.id, self.id,))
-        Room.add_to_class('jsonPrivateCalendarFeed',jsonRoomPrivateCalendarFeed)
+        Room.add_to_class('jsonPrivateCalendarFeed', jsonRoomPrivateCalendarFeed)

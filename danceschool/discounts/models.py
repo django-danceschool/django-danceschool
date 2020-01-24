@@ -6,11 +6,19 @@ from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
 from collections import namedtuple
 
-from danceschool.core.models import PricingTier, DanceTypeLevel, Registration, TemporaryRegistration, Customer, CustomerGroup
+from danceschool.core.models import (
+    PricingTier, DanceTypeLevel, Registration, TemporaryRegistration,
+    Customer, CustomerGroup
+)
 
 
 class PointGroup(models.Model):
-    name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Give this pricing tier point group a name (e.g. \'Regular Series Class Hours\')'))
+    name = models.CharField(
+        _('Name'), max_length=50, unique=True,
+        help_text=_(
+            'Give this pricing tier point group a name (e.g. \'Regular Series Class Hours\')'
+        )
+    )
 
     def __str__(self):
         return self.name
@@ -33,14 +41,14 @@ class PricingTierGroup(models.Model):
     pricingTier = models.OneToOneField(
         PricingTier, verbose_name=_('Pricing tier'), on_delete=models.CASCADE
     )
-    points = models.PositiveIntegerField(_('# of Points'),default=0)
+    points = models.PositiveIntegerField(_('# of Points'), default=0)
 
     def __str__(self):
         return str(_('%s points for pricing tier %s' % (self.group.name, self.pricingTier.name)))
 
     class Meta:
         ''' Only one pricingtiergroup per pricingtier and group combo '''
-        unique_together = (('pricingTier','group'),)
+        unique_together = (('pricingTier', 'group'), )
         verbose_name = _('Pricing tier point group')
         verbose_name_plural = _('Pricing tier point groups')
 
@@ -49,7 +57,7 @@ class DiscountCategory(models.Model):
     '''
     The discounts app allows one discount to be applied per category
     '''
-    name = models.CharField(_('Category name'),max_length=30,unique=True)
+    name = models.CharField(_('Category name'), max_length=30, unique=True)
     order = models.FloatField(
         _('Category order'),
         help_text=_('Discounts from categories with lower numbers are applied first.'),
@@ -57,7 +65,10 @@ class DiscountCategory(models.Model):
     )
     cannotCombine = models.BooleanField(
         _('Cannot be combined'),
-        help_text=_('If checked, then discounts in this category cannot be combined with any other type of discount.'),
+        help_text=_(
+            'If checked, then discounts in this category cannot be combined ' +
+            'with any other type of discount.'
+        ),
         default=False,
     )
 
@@ -65,7 +76,7 @@ class DiscountCategory(models.Model):
         return self.name
 
     class Meta:
-        ordering = ('order',)
+        ordering = ('order', )
         verbose_name = _('Discount category')
         verbose_name_plural = _('Discount categories')
 
@@ -74,10 +85,10 @@ class DiscountCombo(models.Model):
 
     # Choices of Discount Types
     class DiscountType(DjangoChoices):
-        flatPrice = ChoiceItem('F',_('Exact Specified Price'))
-        dollarDiscount = ChoiceItem('D',_('Dollar Discount from Regular Price'))
-        percentDiscount = ChoiceItem('P',_('Percentage Discount from Regular Price'))
-        addOn = ChoiceItem('A',_('Free Add-on Item (Can be combined with other discounts)'))
+        flatPrice = ChoiceItem('F', _('Exact Specified Price'))
+        dollarDiscount = ChoiceItem('D', _('Dollar Discount from Regular Price'))
+        percentDiscount = ChoiceItem('P', _('Percentage Discount from Regular Price'))
+        addOn = ChoiceItem('A', _('Free Add-on Item (Can be combined with other discounts)'))
 
     # An applied discount may not apply to all items in a customer's
     # cart, so an instance of this class keeps track of the code
@@ -91,19 +102,27 @@ class DiscountCombo(models.Model):
     # In practice, this means that a discount on the whole item will never be superceded by a discount
     # on a portion of the item as long as the percentage discounts for more point are always larger
     # than the discounts for fewer points (e.g. additional hours of class are cheaper).
-    ApplicableDiscountCode = namedtuple('ApplicableDiscountCode',['code','items','itemTuples'])
+    ApplicableDiscountCode = namedtuple('ApplicableDiscountCode', ['code', 'items', 'itemTuples'])
 
     # Net allocated prices are optional, everything else is required.
-    DiscountInfo = namedtuple('DiscountInfo',['code','net_price','discount_amount','net_allocated_prices'])
-    DiscountInfo.__new__.__defaults__ = ([],)
+    DiscountInfo = namedtuple(
+        'DiscountInfo', ['code', 'net_price', 'discount_amount', 'net_allocated_prices']
+    )
+    DiscountInfo.__new__.__defaults__ = ([], )
 
     # A DiscountApplication contains a list of DiscountInfo tuples to be applied, along with an optional
     # total for ineligible items to be added to the discounted net price at the end.
-    DiscountApplication = namedtuple('DiscountApplication',['items','ineligible_total'])
-    DiscountApplication.__new__.__defaults__ = ([],0)
+    DiscountApplication = namedtuple('DiscountApplication', ['items', 'ineligible_total'])
+    DiscountApplication.__new__.__defaults__ = ([], 0)
 
-    name = models.CharField(_('Name'),max_length=50,unique=True,help_text=_('Give this discount combination a name (e.g. \'Two 4-week series\')'))
-    active = models.BooleanField(_('Active'),default=True,help_text=_('Uncheck this to \'turn off\' this discount'))
+    name = models.CharField(
+        _('Name'), max_length=50, unique=True,
+        help_text=_('Give this discount combination a name (e.g. \'Two 4-week series\')')
+    )
+    active = models.BooleanField(
+        _('Active'), default=True,
+        help_text=_('Uncheck this to \'turn off\' this discount')
+    )
     category = models.ForeignKey(
         DiscountCategory, verbose_name=_('Discount category'),
         help_text=_(
@@ -114,10 +133,18 @@ class DiscountCombo(models.Model):
     )
 
     # If null, then there is no expiration date
-    expirationDate = models.DateTimeField(_('Expiration Date'), null=True,blank=True,help_text=_('Leave blank for no expiration.'))
+    expirationDate = models.DateTimeField(
+        _('Expiration Date'), null=True, blank=True,
+        help_text=_('Leave blank for no expiration.')
+    )
 
-    studentsOnly = models.BooleanField(verbose_name=_('Discount for HS/college/university students only'),default=False,help_text=_('Check this box to create student discounts.'))
-    newCustomersOnly = models.BooleanField(verbose_name=_('Discount for New Customers only'),default=False)
+    studentsOnly = models.BooleanField(
+        verbose_name=_('Discount for HS/college/university students only'),
+        default=False, help_text=_('Check this box to create student discounts.')
+    )
+    newCustomersOnly = models.BooleanField(
+        verbose_name=_('Discount for New Customers only'), default=False
+    )
     daysInAdvanceRequired = models.PositiveIntegerField(
         _('Must register __ days in advance'),
         null=True, blank=True,
@@ -138,20 +165,53 @@ class DiscountCombo(models.Model):
         )
     )
 
-    discountType = models.CharField(_('Discount type'),max_length=1,help_text=_('Is this a flat price, a dollar amount discount, a \'percentage off\' discount, or a free add-on?'),choices=DiscountType.choices,default=DiscountType.dollarDiscount)
+    discountType = models.CharField(
+        _('Discount type'), max_length=1,
+        help_text=_(
+            'Is this a flat price, a dollar amount discount, a ' +
+            '\'percentage off\' discount, or a free add-on?'
+        ),
+        choices=DiscountType.choices, default=DiscountType.dollarDiscount
+    )
 
     # For flat price discounts
-    onlinePrice = models.FloatField(_('Online price'),null=True,blank=True,validators=[MinValueValidator(0)])
-    doorPrice = models.FloatField(_('At-the-door price'),null=True,blank=True,validators=[MinValueValidator(0)])
+    onlinePrice = models.FloatField(
+        _('Online price'), null=True, blank=True, validators=[MinValueValidator(0)]
+    )
+    doorPrice = models.FloatField(
+        _('At-the-door price'), null=True, blank=True, validators=[MinValueValidator(0)]
+    )
 
     # For 'dollars off' discounts
-    dollarDiscount = models.FloatField(_('Amount of dollar discount'),null=True,blank=True,help_text=_('This amount will be subtracted from the customer\'s total (in currency units, e.g. dollars).'),validators=[MinValueValidator(0)])
+    dollarDiscount = models.FloatField(
+        _('Amount of dollar discount'), null=True, blank=True,
+        help_text=_(
+            'This amount will be subtracted from the customer\'s total ' +
+            '(in currency units, e.g. dollars).'
+        ),
+        validators=[MinValueValidator(0)]
+    )
 
     # For 'percentage off' discounts
-    percentDiscount = models.FloatField(_('Amount of percentage discount'),null=True,blank=True,help_text=_('This percentage will be subtracted from the customer\'s total.'),validators=[MinValueValidator(0)])
-    percentUniversallyApplied = models.BooleanField(_('Percentage discount is univerally applied'),default=False,help_text=_('If checked, then the percentage discount will be applied to all items in the order, not just the items that qualify the order for this discount combination (e.g. 20% off all registrations of three or more classes.'))
+    percentDiscount = models.FloatField(
+        _('Amount of percentage discount'), null=True, blank=True,
+        help_text=_(
+            'This percentage will be subtracted from the customer\'s ' +
+            'total.'
+        ),
+        validators=[MinValueValidator(0)]
+    )
+    percentUniversallyApplied = models.BooleanField(
+        _('Percentage discount is univerally applied'), default=False,
+        help_text=_(
+            'If checked, then the percentage discount will be applied to all ' +
+            'items in the order, not just the items that qualify the order ' +
+            'for this discount combination (e.g. 20% off all registrations ' +
+            'of three or more classes.'
+        )
+    )
 
-    def applyAndAllocate(self,allocatedPrices,tieredTuples,payAtDoor=False):
+    def applyAndAllocate(self, allocatedPrices, tieredTuples, payAtDoor=False):
         '''
         This method takes an initial allocation of prices across events, and
         an identical length list of allocation tuples.  It applies the rule
@@ -168,7 +228,10 @@ class DiscountCombo(models.Model):
             applicable_price = self.getFlatPrice(payAtDoor) or 0
 
             this_price = applicable_price \
-                + sum([x[0].event.getBasePrice(payAtDoor=payAtDoor) * x[1] if x[1] != 1 else x[0].price for x in tieredTuples])
+                + sum([
+                    x[0].event.getBasePrice(payAtDoor=payAtDoor) * x[1] if
+                    x[1] != 1 else x[0].price for x in tieredTuples
+                ])
 
             # Flat prices are allocated equally across all events
             this_allocated_prices = [x * (this_price / initial_net_price) for x in allocatedPrices]
@@ -185,7 +248,7 @@ class DiscountCombo(models.Model):
 
             if self.percentUniversallyApplied:
                 this_price = \
-                    initial_net_price * (1 - (max(min(self.percentDiscount or 0,100),0) / 100))
+                    initial_net_price * (1 - (max(min(self.percentDiscount or 0, 100), 0) / 100))
                 this_allocated_prices = [x * (this_price / initial_net_price) for x in allocatedPrices]
             else:
                 # Allocate the percentage discount based on the prior allocation from the prior category
@@ -195,7 +258,7 @@ class DiscountCombo(models.Model):
                 for idx, val in enumerate(tieredTuples):
                     this_val = (
                         allocatedPrices[idx] *
-                        (1 - val[1]) * (1 - (max(min(self.percentDiscount or 0,100),0) / 100)) +
+                        (1 - val[1]) * (1 - (max(min(self.percentDiscount or 0, 100), 0) / 100)) +
                         allocatedPrices[idx] * val[1]
                     )
                     this_allocated_prices.append(this_val)
@@ -208,7 +271,7 @@ class DiscountCombo(models.Model):
             this_price = max(this_price, 0)
             return self.DiscountInfo(self, this_price, initial_net_price - this_price, this_allocated_prices)
 
-    def getFlatPrice(self,payAtDoor=False):
+    def getFlatPrice(self, payAtDoor=False):
         '''
         Rather than embedding logic re: door pricing,
         other code can call this method.
@@ -231,7 +294,7 @@ class DiscountCombo(models.Model):
         component_list = []
 
         for x in self.discountcombocomponent_set.all():
-            for y in range(0,x.quantity):
+            for y in range(0, x.quantity):
                 component_list += [x]
 
         component_list.sort(key=lambda x: x.quantity, reverse=True)
@@ -267,23 +330,26 @@ class DiscountCombo(models.Model):
 class DiscountComboComponent(models.Model):
 
     # For weekday-specific discounts
-    DAYS_CHOICES = [(None,''),] + [(k,x) for k,x in enumerate(day_name)]
+    DAYS_CHOICES = [(None, ''), ] + [(k, x) for k, x in enumerate(day_name)]
 
     discountCombo = models.ForeignKey(
         DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
     )
 
     pointGroup = models.ForeignKey(
-        PointGroup, verbose_name=_('Pricing Tier Point Group'), 
+        PointGroup, verbose_name=_('Pricing Tier Point Group'),
         on_delete=models.CASCADE,
     )
 
     allWithinPointGroup = models.BooleanField(
         verbose_name=_('Applies to all within Point Group'),
-        help_text=_('If checked, then this discount applies to this quantity or more within the point group.  Use, for example, for all-in passes.')
+        help_text=_(
+            'If checked, then this discount applies to this quantity or more ' +
+            'within the point group.  Use, for example, for all-in passes.'
+        )
     )
 
-    quantity = models.PositiveSmallIntegerField(_('Quantity'),default=1)
+    quantity = models.PositiveSmallIntegerField(_('Quantity'), default=1)
     level = models.ForeignKey(
         DanceTypeLevel, null=True, blank=True,
         verbose_name=_('Dance type/level'), on_delete=models.SET_NULL
@@ -304,9 +370,9 @@ class TemporaryRegistrationDiscount(models.Model):
         on_delete=models.CASCADE,
     )
     discount = models.ForeignKey(
-        DiscountCombo,verbose_name=_('Discount'), on_delete=models.CASCADE
+        DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
     )
-    discountAmount = models.FloatField(verbose_name=_('Amount of discount'),validators=[MinValueValidator(0)])
+    discountAmount = models.FloatField(verbose_name=_('Amount of discount'), validators=[MinValueValidator(0)])
 
     class Meta:
         unique_together = ('registration', 'discount')
@@ -316,13 +382,13 @@ class TemporaryRegistrationDiscount(models.Model):
 
 class RegistrationDiscount(models.Model):
     registration = models.ForeignKey(
-        Registration,verbose_name=_('Registration'), on_delete=models.CASCADE
+        Registration, verbose_name=_('Registration'), on_delete=models.CASCADE
     )
     discount = models.ForeignKey(
         DiscountCombo, verbose_name=_('Discount'),
         on_delete=models.CASCADE,
     )
-    discountAmount = models.FloatField(verbose_name=_('Amount of discount'),validators=[MinValueValidator(0)])
+    discountAmount = models.FloatField(verbose_name=_('Amount of discount'), validators=[MinValueValidator(0)])
 
     class Meta:
         unique_together = ('registration', 'discount')

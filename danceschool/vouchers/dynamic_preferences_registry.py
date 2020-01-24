@@ -7,7 +7,10 @@ from django.utils.translation import ugettext_lazy as _
 from django.db import connection
 from django.template.loader import get_template
 
-from dynamic_preferences.types import BooleanPreference, StringPreference, FloatPreference, ModelChoicePreference, Section
+from dynamic_preferences.types import (
+    BooleanPreference, StringPreference, FloatPreference, ModelChoicePreference,
+    Section
+)
 from dynamic_preferences.registries import global_preferences_registry
 
 from danceschool.core.models import EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
@@ -16,8 +19,8 @@ from .models import VoucherCategory
 
 # we create some section objects to link related preferences together
 
-vouchers = Section('vouchers',_('Vouchers/Gift Certificates'))
-referrals = Section('referrals',_('Referral Program'))
+vouchers = Section('vouchers', _('Vouchers/Gift Certificates'))
+referrals = Section('referrals', _('Referral Program'))
 
 
 ##############################
@@ -46,7 +49,11 @@ class GiftCertificatesPDFEnabled(BooleanPreference):
     section = vouchers
     name = 'enableGiftCertificatePDF'
     verbose_name = _('Enable Gift Certificate PDF Attachments')
-    help_text = _('If checked, then gift certificate emails will come with an attached PDF that can be printed and presented as a gift, based on the special EmailTemplate.')
+    help_text = _(
+        'If checked, then gift certificate emails will come with an attached ' +
+        'PDF that can be printed and presented as a gift, based on the special ' +
+        'EmailTemplate.'
+    )
     default = True
 
 
@@ -101,7 +108,7 @@ class GiftCertTemplate(ModelChoicePreference):
         # if self.model and self.model._meta.db_table in connection.introspection.table_names():
 
         initial_template = get_template('email/gift_certificate_confirmation.html')
-        with open(initial_template.origin.name,'r') as infile:
+        with open(initial_template.origin.name, 'r') as infile:
             content = infile.read()
             infile.close()
 
@@ -130,7 +137,7 @@ class GiftCertPDFTemplate(ModelChoicePreference):
         # if self.model and self.model._meta.db_table in connection.introspection.table_names():
 
         initial_template = get_template('email/gift_certificate_attachment.html')
-        with open(initial_template.origin.name,'r') as infile:
+        with open(initial_template.origin.name, 'r') as infile:
             content = infile.read()
             infile.close()
 
@@ -155,7 +162,10 @@ class ReferralProgramEnabled(BooleanPreference):
     section = referrals
     name = 'enableReferralProgram'
     verbose_name = _('Enable Referral Program')
-    help_text = _('If checked, then each customer will automatically have a referral code generated that they can use to get friends discounts.')
+    help_text = _(
+        'If checked, then each customer will automatically have a referral ' +
+        'code generated that they can use to get friends discounts.'
+    )
     default = False
 
 

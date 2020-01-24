@@ -44,7 +44,7 @@ class BackupFrequency(ChoicePreference):
 class BackupMonthDay(ChoicePreference):
     section = backups
     name = 'backupMonthDay'
-    choices = [(str(x),str(x)) for x in range(1,29)]
+    choices = [(str(x), str(x)) for x in range(1, 29)]
     verbose_name = _('Backup on day of month')
     default = '1'
     help_text = _('Applies only to monthly backups')
@@ -54,7 +54,7 @@ class BackupMonthDay(ChoicePreference):
 class BackupWeekday(ChoicePreference):
     section = backups
     name = 'backupWeekday'
-    choices = [(str(x),_(day_name[x])) for x in range(0,7)]
+    choices = [(str(x), _(day_name[x])) for x in range(0, 7)]
     verbose_name = _('Backup on day of week')
     default = '0'
     help_text = _('Applies only to weekly backups')
@@ -64,7 +64,7 @@ class BackupWeekday(ChoicePreference):
 class BackupHour(ChoicePreference):
     section = backups
     name = 'backupHour'
-    choices = [(str(x), '%s:00' % x) for x in range(0,24)]
+    choices = [(str(x), '%s:00' % x) for x in range(0, 24)]
     verbose_name = _('Backup on hour of the day')
     default = '0'
 

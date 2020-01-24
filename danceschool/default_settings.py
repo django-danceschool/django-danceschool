@@ -143,7 +143,7 @@ CMS_PLACEHOLDER_CONF = {
     },
     'splash_image': {
         'name': 'Splash Background Image',
-        'plugins': ['PictureSplashTemplatePlugin',],
+        'plugins': ['PictureSplashTemplatePlugin', ],
         'excluded_plugins': [],
         'limits': {
             'global': 1,
@@ -157,7 +157,7 @@ CMS_PLACEHOLDER_CONF = {
     },
     'splash_carousel': {
         'name': 'Splash Carousel',
-        'plugins': ['Bootstrap4CarouselPlugin',],
+        'plugins': ['Bootstrap4CarouselPlugin', ],
         'excluded_plugins': [],
         'limits': {
             'Bootstrap4CarouselPlugin': 1,

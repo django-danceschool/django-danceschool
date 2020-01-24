@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(check_student_info)
-def checkRequirements(sender,**kwargs):
+def checkRequirements(sender, **kwargs):
     '''
     Check that the customer meets all prerequisites for the items in the registration.
     '''
@@ -29,13 +29,13 @@ def checkRequirements(sender,**kwargs):
 
     logger.debug('Signal to check RegistrationContactForm handled by prerequisites app.')
 
-    formData = kwargs.get('formData',{})
+    formData = kwargs.get('formData', {})
     first = formData.get('firstName')
     last = formData.get('lastName')
     email = formData.get('email')
 
-    request = kwargs.get('request',{})
-    registration = kwargs.get('registration',None)
+    request = kwargs.get('request', {})
+    registration = kwargs.get('registration', None)
 
     customer = Customer.objects.filter(
         first_name=first,
@@ -46,7 +46,7 @@ def checkRequirements(sender,**kwargs):
     requirement_errors = []
 
     for ter in registration.temporaryeventregistration_set.all():
-        if hasattr(ter.event,'getRequirements'):
+        if hasattr(ter.event, 'getRequirements'):
             for req in ter.event.getRequirements():
                 if not req.customerMeetsRequirement(
                     customer=customer,
@@ -55,20 +55,27 @@ def checkRequirements(sender,**kwargs):
                     if req.enforcementMethod == Requirement.EnforcementChoice.error:
                         requirement_errors.append((ter.event.name, req.name))
                     if req.enforcementMethod == Requirement.EnforcementChoice.warning:
-                        requirement_warnings.append((ter.event.name,req.name))
+                        requirement_warnings.append((ter.event.name, req.name))
 
     if requirement_errors:
         raise ValidationError(format_html(
             '<p>{}</p> <ul>{}</ul> <p>{}</p>',
-            ugettext('Unfortunately, you do not meet the following requirements/prerequisites for the items you have chosen:\n'),
+            ugettext(
+                'Unfortunately, you do not meet the following ' +
+                'requirements/prerequisites for the items you have chosen:\n'
+            ),
             mark_safe(''.join(['<li><em>%s:</em> %s</li>\n' % x for x in requirement_errors])),
             getConstant('requirements__errorMessage') or '',
         ))
 
     if requirement_warnings:
-        messages.warning(request,format_html(
+        messages.warning(request, format_html(
             '<p>{}</p> <ul>{}</ul> <p>{}</p>',
-            mark_safe(ugettext('<strong>Please Note:</strong> It appears that you do not meet the following requirements/prerequisites for the items you have chosen:\n')),
+            mark_safe(ugettext(
+                '<strong>Please Note:</strong> It appears that you do not ' +
+                'meet the following requirements/prerequisites for the items ' +
+                'you have chosen:\n'
+            )),
             mark_safe(''.join(['<li><em>%s:</em> %s</li>\n' % x for x in requirement_warnings])),
             getConstant('requirements__warningMessage') or '',
         ))

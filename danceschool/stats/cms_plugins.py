@@ -22,23 +22,23 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Allows this plugin to use templates designed for a list of locations. '''
-        context = super(StatsGraphPlugin,self).render(context,instance,placeholder)
+        context = super(StatsGraphPlugin, self).render(context, instance, placeholder)
 
         # Javascript makes it difficult to calculate date/time differences, so instead
         # pass the most useful ones to the template context in a dictionary.  These are used
         # to show stats over different time ranges.
         limitMonthDates = {}
-        for m in range(0,25):
+        for m in range(0, 25):
             limitMonthDates[m] = (timezone.now() - relativedelta(months=m)).strftime('%Y-%m-%d')
 
         # The same for graphs that allow one to choose different years.
-        recentYears = [timezone.now().year + x for x in range(-5,1)]
+        recentYears = [timezone.now().year + x for x in range(-5, 1)]
 
         series_by_year = Series.objects.order_by('year')
 
         if series_by_year.count() > 0:
             first_year = series_by_year.first().year
-            allYears = [x for x in range(first_year,timezone.now().year + 1)]
+            allYears = [x for x in range(first_year, timezone.now().year + 1)]
         else:
             allYears = []
 

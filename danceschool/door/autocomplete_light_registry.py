@@ -15,13 +15,21 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
 
     def get_result_value(self, result):
         """Return the value of a result."""
-        return '{} {} ({})'.format(result.get('firstName'), result.get('lastName'), result.get('guestType'))
+        return '{} {} ({})'.format(
+            result.get('firstName'), result.get('lastName'), result.get('guestType')
+        )
 
     def get_result_label(self, result):
         """Return the label of a result."""
         if result.get('guestType') != 'Customer':
-            return format_html('<span data-id="{id}" data-type="{guestType}">{firstName} {lastName} ({guestType})</span>', **result)
-        return format_html('<span data-id="{id}" data-type="{guestType}">{firstName} {lastName}</span>', **result)
+            return format_html(
+                '<span data-id="{id}" data-type="{guestType}">{firstName} {lastName} ({guestType})</span>',
+                **result
+            )
+        return format_html(
+            '<span data-id="{id}" data-type="{guestType}">{firstName} {lastName}</span>',
+            **result
+        )
 
     def get_queryset(self):
         # Filter out results for unauthenticated users.
@@ -32,7 +40,6 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
             date = parse(self.forwarded.get('date', ''))
         except ValueError:
             date = None
-
 
         name_filters = Q()
         if self.q:
@@ -52,7 +59,7 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
         queryset = Customer.objects.annotate(
             firstName=F('first_name'), lastName=F('last_name'),
             guestType=Value(ugettext('Customer'), output_field=CharField())
-        ).filter(name_filters).filter(customer_filters).values('id','firstName','lastName','guestType')
+        ).filter(name_filters).filter(customer_filters).values('id', 'firstName', 'lastName', 'guestType')
 
         if date and apps.is_installed('danceschool.guestlist'):
 
@@ -64,7 +71,9 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
             # This is the same logic as the appliesToEvent() method of GuestList
             applicable_lists = GuestList.objects.filter(
                 Q(individualEvents__in=today_events) |
-                Q(eventSessions__in=today_events.filter(session__isnull=False).values_list('session', flat=True)) |
+                Q(eventSessions__in=today_events.filter(session__isnull=False).values_list(
+                    'session', flat=True
+                )) |
                 Q(seriesCategories__in=today_events.filter(
                     series__category__isnull=False
                 ).values_list('series__category', flat=True)) |
@@ -83,6 +92,10 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
 
             # Now that all the subqueries are together, order by the common
             # lastName and firstName fields.
-            queryset = queryset.values('id','firstName','lastName','guestType').order_by('lastName','firstName')
+            queryset = queryset.values(
+                'id', 'firstName', 'lastName', 'guestType'
+            ).order_by(
+                'lastName', 'firstName'
+            )
 
         return queryset

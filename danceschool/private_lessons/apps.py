@@ -18,7 +18,7 @@ class PrivateLessonsConfig(AppConfig):
             feeds when looping through locations.
             '''
             return reverse('jsonPrivateLessonFeed', args=(self.id,))
-        Location.add_to_class('jsonPrivateLessonFeed',jsonPrivateLessonFeed)
+        Location.add_to_class('jsonPrivateLessonFeed', jsonPrivateLessonFeed)
 
         @property
         def jsonRoomPrivateLessonFeed(self):
@@ -27,4 +27,4 @@ class PrivateLessonsConfig(AppConfig):
             feeds when looping through locations.
             '''
             return reverse('jsonPrivateLessonFeed', args=(self.location.id, self.id,))
-        Room.add_to_class('jsonPrivateLessonFeed',jsonRoomPrivateLessonFeed)
+        Room.add_to_class('jsonPrivateLessonFeed', jsonRoomPrivateLessonFeed)

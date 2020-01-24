@@ -10,4 +10,4 @@ class StripePaymentsAppConfig(AppConfig):
 
         import stripe
 
-        stripe.api_key = getattr(settings,'STRIPE_PRIVATE_KEY','')
+        stripe.api_key = getattr(settings, 'STRIPE_PRIVATE_KEY', '')

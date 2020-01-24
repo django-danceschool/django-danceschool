@@ -168,5 +168,5 @@ def getReturnPage(context, prior=False):
     {% getReturnPage as returnPage %} and then reference {{ returnPage.url }}
     and {{ returnPage.title }} as needed.
     '''
-    siteHistory = getattr(context.get('request',None),'session',{}).get('SITE_HISTORY',{})
-    return returnPageHelper(siteHistory,prior=prior)
+    siteHistory = getattr(context.get('request', None), 'session', {}).get('SITE_HISTORY', {})
+    return returnPageHelper(siteHistory, prior=prior)

@@ -76,11 +76,11 @@ class PayAtDoorFormPlugin(CMSPluginBase):
         registration = getattr(context.get('registration', None), 'id', '')
         invoice = str(getattr(context.get('invoice', None), 'id', ''))
         user = getattr(context.get('user', None), 'id', '')
-        initialAmount = context.get('netPrice',None)
+        initialAmount = context.get('netPrice', None)
 
         return DoorPaymentForm(
             user=user, invoice=invoice, registration=registration,
-            initialAmount=round(initialAmount,2)
+            initialAmount=round(initialAmount, 2)
         )
 
 

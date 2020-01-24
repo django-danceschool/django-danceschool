@@ -23,13 +23,16 @@ class PrivateEventAdminForm(ModelForm):
 
     class Meta:
         model = PrivateEvent
-        exclude = ['month','year','startTime','endTime','duration','submissionUser','registrationOpen','capacity','status']
+        exclude = [
+            'month', 'year', 'startTime', 'endTime', 'duration',
+            'submissionUser', 'registrationOpen', 'capacity', 'status'
+        ]
         widgets = {
             'location': LocationWithDataWidget,
         }
 
     class Media:
-        js = ('js/serieslocation_capacity_change.js','js/location_related_objects_lookup.js')
+        js = ('js/serieslocation_capacity_change.js', 'js/location_related_objects_lookup.js')
 
 
 class PrivateEventAdmin(EventChildAdmin):
@@ -37,36 +40,36 @@ class PrivateEventAdmin(EventChildAdmin):
     form = PrivateEventAdminForm
     show_in_index = True
 
-    list_display = ('name','category','nextOccurrenceTime','firstOccurrenceTime','location_given','displayToGroup')
-    list_filter = ('category','displayToGroup','location','locationString')
-    search_fields = ('title',)
-    ordering = ('-endTime',)
+    list_display = ('name', 'category', 'nextOccurrenceTime', 'firstOccurrenceTime', 'location_given', 'displayToGroup')
+    list_filter = ('category', 'displayToGroup', 'location', 'locationString')
+    search_fields = ('title', )
+    ordering = ('-endTime', )
     inlines = [EventOccurrenceInline, EventReminderInline]
 
     fieldsets = (
         (None, {
-            'fields': ('title','category','descriptionField','link')
+            'fields': ('title', 'category', 'descriptionField', 'link')
         }),
         ('Location', {
-            'fields': (('location','room'),'locationString')
+            'fields': (('location', 'room'), 'locationString')
         }),
         ('Visibility', {
-            'fields': ('displayToGroup','displayToUsers'),
+            'fields': ('displayToGroup', 'displayToUsers'),
         })
     )
 
-    def location_given(self,obj):
+    def location_given(self, obj):
         if obj.room and obj.location:
             return _('%s, %s' % (obj.room.name, obj.location.name))
         if obj.location:
             return obj.location.name
         return obj.locationString
 
-    def save_model(self,request,obj,form,change):
+    def save_model(self, request, obj, form, change):
         obj.status = Event.RegStatus.disabled
         obj.submissionUser = request.user
         obj.save()
 
 
-admin.site.register(PrivateEvent,PrivateEventAdmin)
+admin.site.register(PrivateEvent, PrivateEventAdmin)
 admin.site.register(PrivateEventCategory)

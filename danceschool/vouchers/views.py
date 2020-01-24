@@ -28,15 +28,15 @@ class GiftCertificateCustomizeView(FormView):
     template_name = 'cms/forms/display_form_classbased.html'
     form_class = VoucherCustomizationForm
 
-    def dispatch(self,request,*args,**kwargs):
+    def dispatch(self, request, *args, **kwargs):
         '''
         Check that a valid Invoice ID has been passed in session data,
         and that said invoice is marked as paid.
         '''
         paymentSession = request.session.get(INVOICE_VALIDATION_STR, {})
         self.invoiceID = paymentSession.get('invoiceID')
-        self.amount = paymentSession.get('amount',0)
-        self.success_url = paymentSession.get('success_url',reverse('registration'))
+        self.amount = paymentSession.get('amount', 0)
+        self.success_url = paymentSession.get('success_url', reverse('registration'))
 
         # Check that Invoice matching passed ID exists
         try:
@@ -47,9 +47,9 @@ class GiftCertificateCustomizeView(FormView):
         if i.unpaid or i.amountPaid != self.amount:
             return HttpResponseBadRequest(_('Passed invoice is not paid.'))
 
-        return super(GiftCertificateCustomizeView,self).dispatch(request,*args,**kwargs)
+        return super(GiftCertificateCustomizeView, self).dispatch(request, *args, **kwargs)
 
-    def form_valid(self,form):
+    def form_valid(self, form):
         '''
         Create the gift certificate voucher with the indicated information and send
         the email as directed.
@@ -65,7 +65,11 @@ class GiftCertificateCustomizeView(FormView):
         try:
             voucher = Voucher.create_new_code(
                 prefix='GC_',
-                name=_('Gift certificate: %s%s for %s' % (getConstant('general__currencySymbol'),self.amount, emailTo)),
+                name=_(
+                    'Gift certificate: %s%s for %s' % (
+                        getConstant('general__currencySymbol'), self.amount, emailTo
+                    )
+                ),
                 category=getConstant('vouchers__giftCertCategory'),
                 originalAmount=self.amount,
                 singleUse=False,
@@ -94,7 +98,7 @@ class GiftCertificateCustomizeView(FormView):
         if recipientName:
             pdf_kwargs.update({})
 
-        attachment = GiftCertificatePDFView(request=pdf_request).get(request=pdf_request,**pdf_kwargs).content or None
+        attachment = GiftCertificatePDFView(request=pdf_request).get(request=pdf_request, **pdf_kwargs).content or None
 
         if attachment:
             attachment_name = 'gift_certificate.pdf'
@@ -126,7 +130,7 @@ class GiftCertificateCustomizeView(FormView):
         )
 
         # Remove the invoice session data
-        self.request.session.pop(INVOICE_VALIDATION_STR,None)
+        self.request.session.pop(INVOICE_VALIDATION_STR, None)
 
         return HttpResponseRedirect(self.get_success_url())
 
@@ -134,14 +138,14 @@ class GiftCertificateCustomizeView(FormView):
 class GiftCertificatePDFView(PDFTemplateView):
     template_name = 'vouchers/pdf/giftcertificate_template.html'
 
-    def get_context_data(self,**kwargs):
-        context = super(GiftCertificatePDFView,self).get_context_data(**kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(GiftCertificatePDFView, self).get_context_data(**kwargs)
 
         template = getConstant('vouchers__giftCertPDFTemplate')
 
         # For security reasons, the following tags are removed from the template before parsing:
         # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}
-        content = re.sub('\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}','',template.content)
+        content = re.sub(r'\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}', '', template.content)
 
         t = Template(content)
 

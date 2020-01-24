@@ -28,15 +28,15 @@ class RevenueTest(DefaultSchoolTestCase):
 
         response = self.client.get(reverse('submitRevenues'))
         self.assertEqual(response.status_code, 302)
-        self.client.login(username=self.superuser.username,password='pass')
+        self.client.login(username=self.superuser.username, password='pass')
         response = self.client.get(reverse('submitRevenues'))
         self.assertEqual(response.status_code, 200)
 
         # Check that association and payment method choices are populated
-        self.assertIn(('Cash','Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
+        self.assertIn(('Cash', 'Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
 
         # Create a Revenue item that is not associated with a Series/Event for $10
-        response = self.client.post(reverse('submitRevenues'),{
+        response = self.client.post(reverse('submitRevenues'), {
             'grossTotal': 10,
             'total': 10,
             'adjustments': 0,
@@ -46,11 +46,13 @@ class RevenueTest(DefaultSchoolTestCase):
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
             'submissionUser': self.superuser.id,
-            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(
+                getattr(settings, 'DATETIME_INPUT_FORMATS', ['%Y-%m-%d %H:%M:%S', ])[0]
+            ),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
-        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
+        self.assertFalse(getattr(response.context_data.get('form', {}), 'errors', None))
+        self.assertEqual(response.redirect_chain, [(reverse('submissionRedirect'), 302)])
         self.assertTrue(RevenueItem.objects.filter(description='Test Revenue Item').exists())
 
         ri = RevenueItem.objects.get(description='Test Revenue Item')
@@ -61,7 +63,7 @@ class RevenueTest(DefaultSchoolTestCase):
         self.assertFalse(ri.received)
 
         # Create a second Revenue item that is associated with Series s for $20
-        response = self.client.post(reverse('submitRevenues'),{
+        response = self.client.post(reverse('submitRevenues'), {
             'grossTotal': 20,
             'total': 20,
             'adjustments': 0,
@@ -72,12 +74,14 @@ class RevenueTest(DefaultSchoolTestCase):
             'paymentMethod': 'Cash',
             'currentlyHeldBy': self.superuser.id,
             'submissionUser': self.superuser.id,
-            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(
+                getattr(settings, 'DATETIME_INPUT_FORMATS', ['%Y-%m-%d %H:%M:%S', ])[0]
+            ),
         }, follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
-        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
+        self.assertFalse(getattr(response.context_data.get('form', {}), 'errors', None))
+        self.assertEqual(response.redirect_chain, [(reverse('submissionRedirect'), 302)])
         self.assertTrue(RevenueItem.objects.filter(description='Test Associated Revenue Item').exists())
 
         ri = RevenueItem.objects.get(description='Test Associated Revenue Item')
@@ -104,24 +108,24 @@ class ExpensesTest(DefaultSchoolTestCase):
         using the Expense submission form.
         """
 
-        default_expense_cat = ExpenseCategory.objects.create(name='Default Category',defaultRate=20)
+        default_expense_cat = ExpenseCategory.objects.create(name='Default Category', defaultRate=20)
 
         response = self.client.get(reverse('submitExpenses'))
         self.assertEqual(response.status_code, 302)
-        self.client.login(username=self.superuser.username,password='pass')
+        self.client.login(username=self.superuser.username, password='pass')
         response = self.client.get(reverse('submitExpenses'))
         self.assertEqual(response.status_code, 200)
 
         # Check that choices are populated for payBy and paymentMethod
         self.assertIn(1, [x[0] for x in response.context_data.get('form').fields['payBy'].choices])
-        self.assertIn(('Cash','Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
+        self.assertIn(('Cash', 'Cash'), response.context_data.get('form').fields['paymentMethod'].choices)
 
         # Create an expense item for 1 hour of work, paid at default rate ($20)
-        response = self.client.post(reverse('submitExpenses'),{
+        response = self.client.post(reverse('submitExpenses'), {
             'hours': 1,
             'category': default_expense_cat.id,
             'payTo': TransactionParty.objects.get_or_create(
-                user=self.superuser,defaults={'name': self.superuser.get_full_name()}
+                user=self.superuser, defaults={'name': self.superuser.get_full_name()}
             )[0].id,
             'payBy': 1,
             'description': 'Test Expense Item',
@@ -130,11 +134,13 @@ class ExpensesTest(DefaultSchoolTestCase):
             'paid': True,
             'approved': True,
             'submissionUser': self.superuser.id,
-            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(
+                settings, 'DATETIME_INPUT_FORMATS', ['%Y-%m-%d %H:%M:%S', ])[0]
+            ),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
-        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
+        self.assertFalse(getattr(response.context_data.get('form', {}), 'errors', None))
+        self.assertEqual(response.redirect_chain, [(reverse('submissionRedirect'), 302)])
         self.assertTrue(ExpenseItem.objects.filter(description='Test Expense Item').exists())
 
         ei = ExpenseItem.objects.get(description='Test Expense Item')
@@ -144,12 +150,12 @@ class ExpensesTest(DefaultSchoolTestCase):
         self.assertEqual(ei.payTo.user, self.superuser)
 
         # Create a second expense item for $50, paid to a location
-        response = self.client.post(reverse('submitExpenses'),{
+        response = self.client.post(reverse('submitExpenses'), {
             'total': 50,
             'category': default_expense_cat.id,
             'payBy': 2,
             'payTo': TransactionParty.objects.get_or_create(
-                location=self.defaultLocation,defaults={'name': self.defaultLocation.name}
+                location=self.defaultLocation, defaults={'name': self.defaultLocation.name}
             )[0].id,
             'description': 'Test Venue Expense Item',
             'paymentMethod': 'Cash',
@@ -157,11 +163,13 @@ class ExpensesTest(DefaultSchoolTestCase):
             'paid': False,
             'approved': False,
             'submissionUser': self.superuser.id,
-            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(settings,'DATETIME_INPUT_FORMATS',['%Y-%m-%d %H:%M:%S',])[0]),
+            'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(
+                settings, 'DATETIME_INPUT_FORMATS', ['%Y-%m-%d %H:%M:%S', ])[0]
+            ),
         }, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(getattr(response.context_data.get('form',{}),'errors',None))
-        self.assertEqual(response.redirect_chain,[(reverse('submissionRedirect'),302)])
+        self.assertFalse(getattr(response.context_data.get('form', {}), 'errors', None))
+        self.assertEqual(response.redirect_chain, [(reverse('submissionRedirect'), 302)])
         self.assertTrue(ExpenseItem.objects.filter(description='Test Venue Expense Item').exists())
 
         ei = ExpenseItem.objects.get(description='Test Venue Expense Item')
@@ -199,7 +207,7 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         financial summary views are populated appropriately.
         """
         default_rev_cat = RevenueCategory.objects.create(name='Default Category')
-        default_expense_cat = ExpenseCategory.objects.create(name='Default Category',defaultRate=20)
+        default_expense_cat = ExpenseCategory.objects.create(name='Default Category', defaultRate=20)
 
         ei = ExpenseItem.objects.create(
             hours=1,
@@ -221,10 +229,16 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
     def test_annual_detailview(self):
         ei, ri = self.create_initial_items()
 
-        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year}))
+        response = self.client.get(reverse(
+            'financialYearDetailView',
+            kwargs={'year': ensure_localtime(timezone.now()).year}
+        ))
         self.assertEqual(response.status_code, 302)
-        self.client.login(username=self.superuser.username,password='pass')
-        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year}))
+        self.client.login(username=self.superuser.username, password='pass')
+        response = self.client.get(reverse(
+            'financialYearDetailView',
+            kwargs={'year': ensure_localtime(timezone.now()).year}
+        ))
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -236,14 +250,22 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ri.accrualDate = timezone.now() + timedelta(days=-366)
         ri.save()
 
-        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year}))
+        response = self.client.get(reverse(
+            'financialYearDetailView',
+            kwargs={'year': ensure_localtime(timezone.now()).year}
+        ))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data.get('otherExpenseItems'))
         self.assertFalse(response.context_data.get('otherRevenueItems'))
 
         # Change the basis to payment/received basis and ensure
         # that the items still show up
-        response = self.client.get(reverse('financialYearDetailView', kwargs={'year': ensure_localtime(timezone.now()).year,}) + '?basis=paymentDate')
+        response = self.client.get(reverse(
+            'financialYearDetailView',
+            kwargs={
+                'year': ensure_localtime(timezone.now()).year,
+            }
+        ) + '?basis=paymentDate')
         self.assertEqual(response.status_code, 200)
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
         self.assertIn(ri, response.context_data.get('otherRevenueItems'))
@@ -251,10 +273,22 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
     def test_monthly_detailview(self):
         ei, ri = self.create_initial_items()
 
-        response = self.client.get(reverse('financialMonthDetailView', kwargs={'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month}))
+        response = self.client.get(reverse(
+            'financialMonthDetailView',
+            kwargs={
+                'year': ensure_localtime(timezone.now()).year,
+                'month': ensure_localtime(timezone.now()).month
+            }
+        ))
         self.assertEqual(response.status_code, 302)
-        self.client.login(username=self.superuser.username,password='pass')
-        response = self.client.get(reverse('financialMonthDetailView', kwargs={'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month}))
+        self.client.login(username=self.superuser.username, password='pass')
+        response = self.client.get(reverse(
+            'financialMonthDetailView',
+            kwargs={
+                'year': ensure_localtime(timezone.now()).year,
+                'month': ensure_localtime(timezone.now()).month
+            }
+        ))
         self.assertEqual(response.status_code, 200)
 
         self.assertIn(ei, response.context_data.get('otherExpenseItems'))
@@ -267,7 +301,13 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ri.accrualDate = timezone.now() + timedelta(days=-32)
         ri.save()
 
-        response = self.client.get(reverse('financialMonthDetailView', kwargs={'year': ensure_localtime(timezone.now()).year, 'month': ensure_localtime(timezone.now()).month}))
+        response = self.client.get(reverse(
+            'financialMonthDetailView',
+            kwargs={
+                'year': ensure_localtime(timezone.now()).year,
+                'month': ensure_localtime(timezone.now()).month
+            }
+        ))
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.context_data.get('otherExpenseItems'))
         self.assertFalse(response.context_data.get('otherRevenueItems'))
@@ -287,7 +327,7 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         s = self.create_series()
         response = self.client.get(reverse('financesByMonth'))
         self.assertEqual(response.status_code, 302)
-        self.client.login(username=self.superuser.username,password='pass')
+        self.client.login(username=self.superuser.username, password='pass')
         response = self.client.get(reverse('financesByMonth'))
         self.assertEqual(response.status_code, 200)
 
@@ -295,6 +335,6 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         s = self.create_series()
         response = self.client.get(reverse('financesByEvent'))
         self.assertEqual(response.status_code, 302)
-        self.client.login(username=self.superuser.username,password='pass')
+        self.client.login(username=self.superuser.username, password='pass')
         response = self.client.get(reverse('financesByEvent'))
         self.assertEqual(response.status_code, 200)

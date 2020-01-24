@@ -10,7 +10,10 @@ from django.utils.dateparse import parse_datetime
 
 from datetime import datetime, timedelta
 
-from danceschool.core.models import Instructor, StaffMember, TemporaryRegistration, TemporaryEventRegistration, DanceRole, Event, EventOccurrence, EventStaffMember, Customer
+from danceschool.core.models import (
+    Instructor, StaffMember, TemporaryRegistration, TemporaryEventRegistration,
+    DanceRole, Event, EventOccurrence, EventStaffMember, Customer
+)
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -22,25 +25,25 @@ from .constants import PRIVATELESSON_VALIDATION_STR
 class InstructorAvailabilityView(TemplateView):
     template_name = 'private_lessons/instructor_availability_fullcalendar.html'
 
-    def get(self,request,*args,**kwargs):
+    def get(self, request, *args, **kwargs):
         # Only instructors or individuals with permission to change
         # other instructors' availability have permission to see this view.
-        thisUser = getattr(request,'user',None)
-        thisStaffMember = getattr(thisUser,'staffmember',None)
+        thisUser = getattr(request, 'user', None)
+        thisStaffMember = getattr(thisUser, 'staffmember', None)
         if (
             (thisStaffMember and thisUser and thisUser.has_perm('private_lessons.edit_own_availability')) or
             (thisUser and thisUser.has_perm('private_lessons.edit_others_availability'))
         ):
-            return super(InstructorAvailabilityView,self).get(request,*args,**kwargs)
+            return super(InstructorAvailabilityView, self).get(request, *args, **kwargs)
         raise Http404()
 
-    def get_context_data(self,**kwargs):
-        context = super(InstructorAvailabilityView,self).get_context_data(**kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(InstructorAvailabilityView, self).get_context_data(**kwargs)
 
         context.update({
-            'instructor': getattr(getattr(self.request,'user'),'staffmember'),
+            'instructor': getattr(getattr(self.request, 'user'), 'staffmember'),
             'instructor_list': StaffMember.objects.filter(
-                instructor__availableForPrivates=True,instructorprivatelessondetails__isnull=False
+                instructor__availableForPrivates=True, instructorprivatelessondetails__isnull=False
             ),
             'creation_form': SlotCreationForm(),
             'update_form': SlotUpdateForm(),
@@ -82,7 +85,10 @@ class AddAvailabilitySlotView(FormView):
                     room=form.cleaned_data.get('room'),
                     pricingTier=form.cleaned_data.get('pricingTier'),
                 )
-                this_time = (ensure_localtime(datetime.combine(this_date, this_time)) + timedelta(minutes=interval_minutes)).time()
+                this_time = (
+                    ensure_localtime(datetime.combine(this_date, this_time)) +
+                    timedelta(minutes=interval_minutes)
+                ).time()
             this_date += timedelta(days=1)
 
         return JsonResponse({'valid': True})
@@ -90,7 +96,7 @@ class AddAvailabilitySlotView(FormView):
 
 class UpdateAvailabilitySlotView(FormView):
     form_class = SlotUpdateForm
-    http_method_names = ['post',]
+    http_method_names = ['post', ]
 
     def get(self, request, *args, **kwargs):
         return JsonResponse({'valid': False})
@@ -124,11 +130,11 @@ class BookPrivateLessonView(FormView):
     template_name = 'private_lessons/private_lesson_fullcalendar.html'
     form_class = SlotBookingForm
 
-    def get_context_data(self,**kwargs):
-        context = super(BookPrivateLessonView,self).get_context_data(**kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(BookPrivateLessonView, self).get_context_data(**kwargs)
         context.update({
             'instructor_list': Instructor.objects.filter(
-                availableForPrivates=True,instructorprivatelessondetails__isnull=False
+                availableForPrivates=True, instructorprivatelessondetails__isnull=False
             ),
             'defaultLessonLength': getConstant('privateLessons__defaultLessonLength'),
         })
@@ -139,19 +145,19 @@ class BookPrivateLessonView(FormView):
         Pass the current user to the form to render the payAtDoor field if applicable.
         '''
         kwargs = super(BookPrivateLessonView, self).get_form_kwargs(**kwargs)
-        kwargs['user'] = self.request.user if hasattr(self.request,'user') else None
+        kwargs['user'] = self.request.user if hasattr(self.request, 'user') else None
         return kwargs
 
     def form_valid(self, form):
 
         slotId = form.cleaned_data.pop('slotId')
-        payAtDoor = form.cleaned_data.pop('payAtDoor',False)
+        payAtDoor = form.cleaned_data.pop('payAtDoor', False)
 
         # Check that passed duration is valid.
         try:
             duration = int(form.cleaned_data.pop('duration'))
         except ValueError:
-            form.add_error(None,ValidationError(_('Invalid duration.'),code='invalid'))
+            form.add_error(None, ValidationError(_('Invalid duration.'), code='invalid'))
             return self.form_invalid(form)
 
         # Include the submission user if the user is authenticated
@@ -163,7 +169,7 @@ class BookPrivateLessonView(FormView):
         try:
             thisSlot = InstructorAvailabilitySlot.objects.get(id=slotId)
         except ObjectDoesNotExist:
-            form.add_error(None,ValidationError(_('Invalid slot ID.'),code='invalid'))
+            form.add_error(None, ValidationError(_('Invalid slot ID.'), code='invalid'))
             return self.form_invalid(form)
 
         # Check that passed role is valid
@@ -172,7 +178,7 @@ class BookPrivateLessonView(FormView):
                 instructorprivatelessondetails__instructor=thisSlot.instructor,
             ).get(id=int(form.cleaned_data.pop('role')))
         except (ValueError, ObjectDoesNotExist):
-            form.add_error(None,ValidationError(_('Invalid dance role.'),code='invalid'))
+            form.add_error(None, ValidationError(_('Invalid dance role.'), code='invalid'))
             return self.form_invalid(form)
 
         affectedSlots = InstructorAvailabilitySlot.objects.filter(
@@ -202,7 +208,17 @@ class BookPrivateLessonView(FormView):
             Q(eventregistration__isnull=False) |
             Q(temporaryeventregistration__registration__expirationDate__gte=timezone.now())
         ).exists():
-            form.add_error(None,ValidationError(_('Some or all of your requested lesson time is currently in the process of registration. Please select a new slot or try again later.'),code='invalid'))
+            form.add_error(
+                None,
+                ValidationError(
+                    _(
+                        'Some or all of your requested lesson time is currently ' +
+                        'in the process of registration. Please select a new ' +
+                        'slot or try again later.'
+                    ),
+                    code='invalid'
+                )
+            )
             return self.form_invalid(form)
         else:
             existingEvents.delete()
@@ -260,7 +276,7 @@ class BookPrivateLessonView(FormView):
 
             # Create a Temporary Registration associated with this lesson.
             reg = TemporaryRegistration(
-                submissionUser=submissionUser,dateTime=timezone.now(),
+                submissionUser=submissionUser, dateTime=timezone.now(),
                 payAtDoor=payAtDoor,
                 expirationDate=expiry,
             )
@@ -305,29 +321,29 @@ class PrivateLessonStudentInfoView(FormView):
     template_name = 'private_lessons/get_student_info.html'
     form_class = PrivateLessonStudentInfoForm
 
-    def dispatch(self,request,*args,**kwargs):
+    def dispatch(self, request, *args, **kwargs):
         '''
         Handle the session data passed by the prior view.
         '''
 
-        lessonSession = request.session.get(PRIVATELESSON_VALIDATION_STR,{})
+        lessonSession = request.session.get(PRIVATELESSON_VALIDATION_STR, {})
 
         try:
             self.lesson = PrivateLessonEvent.objects.get(id=lessonSession.get('lesson'))
         except (ValueError, ObjectDoesNotExist):
-            messages.error(request,_('Invalid lesson identifier passed to sign-up form.'))
+            messages.error(request, _('Invalid lesson identifier passed to sign-up form.'))
             return HttpResponseRedirect(reverse('bookPrivateLesson'))
 
-        expiry = parse_datetime(lessonSession.get('expiry',''),)
+        expiry = parse_datetime(lessonSession.get('expiry', ''), )
         if not expiry or expiry < timezone.now():
-            messages.info(request,_('Your registration session has expired. Please try again.'))
+            messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('bookPrivateLesson'))
 
-        self.payAtDoor = lessonSession.get('payAtDoor',False)
-        return super(PrivateLessonStudentInfoView,self).dispatch(request,*args,**kwargs)
+        self.payAtDoor = lessonSession.get('payAtDoor', False)
+        return super(PrivateLessonStudentInfoView, self).dispatch(request, *args, **kwargs)
 
-    def get_context_data(self,**kwargs):
-        context = super(PrivateLessonStudentInfoView,self).get_context_data(**kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(PrivateLessonStudentInfoView, self).get_context_data(**kwargs)
         context.update({
             'lesson': self.lesson,
             'teachers': [x.staffMember.fullName for x in self.lesson.eventstaffmember_set.all()],
@@ -341,14 +357,14 @@ class PrivateLessonStudentInfoView(FormView):
         kwargs['payAtDoor'] = self.payAtDoor
         return kwargs
 
-    def form_valid(self,form):
+    def form_valid(self, form):
         first_name = form.cleaned_data.get('firstName')
         last_name = form.cleaned_data.get('lastName')
         email = form.cleaned_data.get('email')
         phone = form.cleaned_data.get('phone')
 
         customer, created = Customer.objects.update_or_create(
-            first_name=first_name,last_name=last_name,email=email,defaults={'phone': phone}
+            first_name=first_name, last_name=last_name, email=email, defaults={'phone': phone}
         )
         # Ensure that this customer is affiliated with this lesson.
         PrivateLessonCustomer.objects.get_or_create(
@@ -357,6 +373,6 @@ class PrivateLessonStudentInfoView(FormView):
         )
 
         self.lesson.finalizeBooking()
-        messages.success(self.request,_('Your private lesson has been scheduled successfully.'))
-        self.request.session.pop(PRIVATELESSON_VALIDATION_STR,{})
+        messages.success(self.request, _('Your private lesson has been scheduled successfully.'))
+        self.request.session.pop(PRIVATELESSON_VALIDATION_STR, {})
         return HttpResponseRedirect(reverse('submissionRedirect'))

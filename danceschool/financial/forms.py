@@ -32,9 +32,10 @@ from .autocomplete_light_registry import get_method_list
 logger = logging.getLogger(__name__)
 
 PAYBY_CHOICES = (
-    (1,_('Hours of Work/Rental (paid at default rate)')),
-    (2,_('Flat Payment')),
+    (1, _('Hours of Work/Rental (paid at default rate)')),
+    (2, _('Flat Payment')),
 )
+
 
 class ExpenseCategoryWidget(Select):
     '''
@@ -87,7 +88,10 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         )
     )
 
-    payBy = forms.ChoiceField(widget=forms.RadioSelect, choices=PAYBY_CHOICES, label=_('Report this expense as:'), initial=2)
+    payBy = forms.ChoiceField(
+        widget=forms.RadioSelect, choices=PAYBY_CHOICES,
+        label=_('Report this expense as:'), initial=2
+    )
     paymentMethod = autocomplete.Select2ListCreateChoiceField(
         choice_list=get_method_list,
         required=False,
@@ -97,16 +101,16 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        user_id = getattr(user,'id',None)
- 
+        user_id = getattr(user, 'id', None)
+
         if user_id:
             kwargs.update(initial={
                 'payTo': TransactionParty.objects.get_or_create(
-                    user=user,defaults={'name': user.get_full_name()}
+                    user=user, defaults={'name': user.get_full_name()}
                 )[0].id,
             })
 
-        super(ExpenseReportingForm,self).__init__(*args,**kwargs)
+        super(ExpenseReportingForm, self).__init__(*args, **kwargs)
 
         self.helper = FormHelper()
 
@@ -114,13 +118,21 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         # Django will take care of converting it to local time
         accrualDate_field = Field(
             'accrualDate', type="hidden",
-            value=timezone.make_naive(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()
+            value=(
+                timezone.make_naive(timezone.now()) if
+                timezone.is_aware(timezone.now()) else timezone.now()
+            )
         )
 
         if user and user.has_perm('financial.mark_expenses_paid'):
             payment_section = Div(
                 Div(
-                    HTML('<a data-toggle="collapse" href="#collapsepayment">%s</a> (%s)' % (_('Mark as Approved/Paid'),_('click to expand'))),
+                    HTML(
+                        '<a data-toggle="collapse" href="#collapsepayment">' +
+                        ('%s</a> (%s)' % (
+                            _('Mark as Approved/Paid'), _('click to expand')
+                        ))
+                    ),
                     css_class='card-header'
                 ),
                 Div(
@@ -128,17 +140,33 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
                     'paid',
                     Div(
                         Field('paymentDate', css_class='datepicker'),
-                        HTML('<div style="margin: auto 1em;"><button id="payment-event-start" class="btn btn-outline-secondary">%s</button></div>' %
-                            _('Event Start Date')
+                        HTML(
+                            '<div style="margin: auto 1em;">' +
+                            '<button id="payment-event-start" ' +
+                            'class="btn btn-outline-secondary">' +
+                            ('%s</button></div>' % _('Event Start Date'))
                         ),
                         css_class='form-row',
                     ),
                     'paymentMethod',
-                    HTML('<p style="margin-top: 30px;"><strong>%s</strong> %s</p>' % (_('Note:'),_('For accounting purposes, please do not mark expenses as paid unless they have already been paid to the recipient.'))),
+                    HTML(
+                        '<p style="margin-top: 30px;"><strong>' +
+                        (
+                            '%s</strong> %s</p>' % (
+                                _('Note:'),
+                                _(
+                                    'For accounting purposes, please do not ' +
+                                    'mark expenses as paid unless they have ' +
+                                    'already been paid to the recipient.'
+                                )
+                            )
+                        ),
+                    ),
                     css_class='card-body collapse',
                     id='collapsepayment',
                 ),
-                css_class='card my-4')
+                css_class='card my-4'
+            )
         else:
             payment_section = None
 
@@ -146,12 +174,15 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         if user.has_perm('financial.add_expensecategory'):
             related_url = reverse('admin:financial_expensecategory_add') + '?_to_field=id&_popup=1'
             added_html = [
-                '<a href="%s" class="btn btn-outline-secondary related-widget-wrapper-link add-related" id="add_id_category"> ' % related_url,
-                '<img src="%sadmin/img/icon-addlink.svg" width="10" height="10" alt="%s"/></a>' % (getattr(settings,'STATIC_URL','/static/'), _('Add Another'))
+                ('<a href="%s" class="btn btn-outline-secondary ' % related_url) +
+                'related-widget-wrapper-link add-related" id="add_id_category"> ',
+                '<img src="%sadmin/img/icon-addlink.svg" width="10" height="10" alt="%s"/></a>' % (
+                    getattr(settings, 'STATIC_URL', '/static/'), _('Add Another')
+                )
             ]
             category_field = Div(
-                Div('category',css_class='col-sm-11'),
-                Div(HTML('\n'.join(added_html)),css_class='col-sm-1',style='margin-top: 25px;'),
+                Div('category', css_class='col-sm-11'),
+                Div(HTML('\n'.join(added_html)), css_class='col-sm-1', style='margin-top: 25px;'),
                 css_class='related-widget-wrapper row'
             )
         else:
@@ -173,7 +204,7 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
             accrualDate_field,
             payment_section,
             'attachment',
-            Submit('submit',_('Submit')),
+            Submit('submit', _('Submit')),
         )
 
     def clean(self):
@@ -195,17 +226,17 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         if paid and paymentDate:
             self.cleaned_data['accrualDate'] = paymentDate
         else:
-            self.cleaned_data.pop('paymentDate',None)
+            self.cleaned_data.pop('paymentDate', None)
 
         # If an event has been specified, then that takes precedence for setting
         # the accrual date of the expense.
-        if event and getattr(event,'startTime',None):
+        if event and getattr(event, 'startTime', None):
             self.cleaned_data['accrualDate'] = event.startTime
 
         if payBy == '1' and total:
-            self.cleaned_data.pop('total',None)
+            self.cleaned_data.pop('total', None)
         if payBy == '2' and hours:
-            self.cleaned_data.pop('hours',None)
+            self.cleaned_data.pop('hours', None)
         return self.cleaned_data
 
     class Meta:
@@ -226,7 +257,7 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
             'js/expense_reporting.js'
         )
         css = {
-            'all': ('jquery-ui/jquery-ui.min.css',),
+            'all': ('jquery-ui/jquery-ui.min.css', ),
         }
 
 
@@ -236,7 +267,7 @@ class InvoiceItemChoiceField(forms.ModelChoiceField):
     thrown off by the fact that the initial query is blank.
     '''
 
-    def to_python(self,value):
+    def to_python(self, value):
         try:
             value = super(InvoiceItemChoiceField, self).to_python(value)
         except (ValueError, ValidationError):
@@ -299,7 +330,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
 
-        if hasattr(user,'id'):
+        if hasattr(user, 'id'):
             kwargs.update(initial={
                 'submissionUser': user.id
             })
@@ -309,7 +340,11 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
 
         detail_section = Div(
             Div(
-                HTML('<a data-toggle="collapse" href="#collapsedetails">%s</a> (%s)' % (_('Adjustments/Fees'),_('click to expand'))),
+                HTML(
+                    '<a data-toggle="collapse" href="#collapsedetails">%s</a> (%s)' % (
+                        _('Adjustments/Fees'), _('click to expand')
+                    )
+                ),
                 css_class='card-header'
             ),
             Div(
@@ -323,7 +358,11 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
 
         event_section = Div(
             Div(
-                HTML('<a data-toggle="collapse" href="#collapseevent">%s</a> (%s)' % (_('Event/Invoice item (optional)'),_('click to expand'))),
+                HTML(
+                    '<a data-toggle="collapse" href="#collapseevent">%s</a> (%s)' % (
+                        _('Event/Invoice item (optional)'), _('click to expand')
+                    )
+                ),
                 css_class='card-header'
             ),
             Div(
@@ -337,15 +376,22 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         if user and user.has_perm('financial.mark_revenues_received'):
             receipt_section = Div(
                 Div(
-                    HTML('<a data-toggle="collapse" href="#collapsereceipt">%s</a> (%s)' % (_('Mark as Received'),_('click to expand'))),
+                    HTML(
+                        '<a data-toggle="collapse" href="#collapsereceipt">%s</a> (%s)' % (
+                            _('Mark as Received'), _('click to expand')
+                        )
+                    ),
                     css_class='card-header'
                 ),
                 Div(
                     'received',
                     Div(
                         Field('receivedDate', css_class='datepicker'),
-                        HTML('<div style="margin: auto 1em;"><button id="received-event-start" class="btn btn-outline-secondary">%s</button></div>' %
-                            _('Event Start Date')
+                        HTML(
+                            '<div style="margin: auto 1em;">' +
+                            '<button id="received-event-start" ' +
+                            'class="btn btn-outline-secondary">' +
+                            ('%s</button></div>' % _('Event Start Date'))
                         ),
                         css_class='form-row',
                     ),
@@ -366,9 +412,9 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         else:
             receipt_section = None
 
-        self.fields["invoiceItem"] = InvoiceItemChoiceField(queryset=InvoiceItem.objects.none(),required=False)
+        self.fields["invoiceItem"] = InvoiceItemChoiceField(queryset=InvoiceItem.objects.none(), required=False)
         self.fields['event'].required = False
-        
+
         # Handled by the model's save() method
         self.fields['total'].required = False
         self.fields['fees'].required = False
@@ -386,7 +432,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
             event_section,
             receipt_section,
             'attachment',
-            Submit('submit',_('Submit')),
+            Submit('submit', _('Submit')),
         )
 
     def clean_description(self):
@@ -409,9 +455,9 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         ]
 
     class Media:
-        js = ('js/revenue_reporting.js', 'jquery-ui/jquery-ui.min.js',)
+        js = ('js/revenue_reporting.js', 'jquery-ui/jquery-ui.min.js', )
         css = {
-            'all': ('jquery-ui/jquery-ui.min.css',),
+            'all': ('jquery-ui/jquery-ui.min.css', ),
         }
 
 
@@ -434,7 +480,7 @@ class CompensationRuleResetForm(forms.Form):
         ''' Handle the update logic for this in the view, not the form '''
         pass
 
-    def __init__(self,*args,**kwargs):
+    def __init__(self, *args, **kwargs):
         staffmembers = kwargs.pop('staffmembers', StaffMember.objects.none())
 
         # Initialize a default (empty) form to fill
@@ -443,25 +489,42 @@ class CompensationRuleResetForm(forms.Form):
         for cat in EventStaffCategory.objects.order_by('name'):
             this_label = cat.name
             this_help_text = ''
-            if not getattr(cat,'defaultwage',None):
+            if not getattr(cat, 'defaultwage', None):
                 this_help_text += ugettext('No default compensation specified. ')
             if staffmembers:
                 this_help_text += ugettext('{count} selected members with rules specified.').format(
                     count=staffmembers.filter(expenserules__category=cat).count(),
                 )
 
-            self.fields['category_%s' % cat.id] = forms.BooleanField(required=False,label=this_label,help_text=this_help_text)
+            self.fields['category_%s' % cat.id] = forms.BooleanField(
+                required=False, label=this_label, help_text=this_help_text
+            )
 
-        self.fields['resetHow'] = forms.ChoiceField(label=_('For each selected category:'), choices=(('COPY',_('Copy default rules to each staff member')),('DELETE',_('Delete existing custom rules'))))
+        self.fields['resetHow'] = forms.ChoiceField(
+            label=_('For each selected category:'),
+            choices=(
+                ('COPY', _('Copy default rules to each staff member')),
+                ('DELETE', _('Delete existing custom rules'))
+            )
+        )
 
 
 class ExpenseRuleGenerationForm(forms.Form):
     ''' Generate a form with all expense rules '''
 
-    staff = forms.BooleanField(required=False, initial=True, label=_('Generate expense items for event staff'))
-    venues = forms.BooleanField(required=False, initial=True, label=_('Generate expense items for venue rental'))
-    generic = forms.BooleanField(required=False, initial=True, label=_('Generate expense items for generic rules'))
-    registrations = forms.BooleanField(required=False, initial=True, label=_('Generate revenue items for registrations'))
+    staff = forms.BooleanField(
+        required=False, initial=True, label=_('Generate expense items for event staff')
+    )
+    venues = forms.BooleanField(
+        required=False, initial=True, label=_('Generate expense items for venue rental')
+    )
+    generic = forms.BooleanField(
+        required=False, initial=True, label=_('Generate expense items for generic rules')
+    )
+    registrations = forms.BooleanField(
+        required=False, initial=True,
+        label=_('Generate revenue items for registrations')
+    )
 
     def __init__(self, *args, **kwargs):
 

@@ -12,8 +12,8 @@ from .models import DiscountCombo
 
 @staff_member_required
 def popularDiscountsJSON(request):
-    startDate = getDateTimeFromGet(request,'startDate')
-    endDate = getDateTimeFromGet(request,'endDate')
+    startDate = getDateTimeFromGet(request, 'startDate')
+    endDate = getDateTimeFromGet(request, 'endDate')
 
     timeLimit = Q(registrationdiscount__registration__dateTime__isnull=False)
 
@@ -25,15 +25,15 @@ def popularDiscountsJSON(request):
     uses = list(DiscountCombo.objects.annotate(
         counter=Count(Case(
             When(timeLimit, then=1), output_field=IntegerField())
-        )).filter(counter__gt=0).values('name','counter').order_by('-counter')[:10])
+        )).filter(counter__gt=0).values('name', 'counter').order_by('-counter')[:10])
 
-    return JsonResponse(uses,safe=False)
+    return JsonResponse(uses, safe=False)
 
 
 @staff_member_required
 def discountFrequencyJSON(request):
-    startDate = getDateTimeFromGet(request,'startDate')
-    endDate = getDateTimeFromGet(request,'endDate')
+    startDate = getDateTimeFromGet(request, 'startDate')
+    endDate = getDateTimeFromGet(request, 'endDate')
 
     timeLimit = Q()
 
@@ -44,7 +44,7 @@ def discountFrequencyJSON(request):
 
     # Percentage of registrations using discounts
     discounts_counter_sorted = sorted(Counter(Registration.objects.filter(timeLimit).annotate(
-        discounts_applied=Count('registrationdiscount')).values_list('discounts_applied',flat=True)).items())
+        discounts_applied=Count('registrationdiscount')).values_list('discounts_applied', flat=True)).items())
 
     results_list = [{'discounts': x[0], 'count': x[1]} for x in discounts_counter_sorted]
-    return JsonResponse(results_list,safe=False)
+    return JsonResponse(results_list, safe=False)

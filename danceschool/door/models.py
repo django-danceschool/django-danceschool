@@ -59,7 +59,7 @@ class DoorRegisterPaymentMethod(models.Model):
     '''
 
     name = models.CharField(_('Method name'), max_length=50)
-    
+
     requireFullRegistration = models.BooleanField(
         _('Is full registration (name and email) always required for this method?'),
         default=False,
@@ -100,22 +100,22 @@ class DoorRegisterEventPluginModel(CMSPlugin):
     be customized to a variety of purposes using custom templates, etc.
     '''
     LIMIT_CHOICES = [
-        ('S',_('Event start date')),
-        ('E',_('Event end date')),
+        ('S', _('Event start date')),
+        ('E', _('Event end date')),
     ]
     EVENT_TYPE_CHOICES = [
-        ('B',_('Class Series and Public Events')),
-        ('S',_('Only Class Series')),
-        ('P',_('Only Public Events')),
+        ('B', _('Class Series and Public Events')),
+        ('S', _('Only Class Series')),
+        ('P', _('Only Public Events')),
     ]
     OPEN_CHOICES = [
-        ('O',_('Open for registration only')),
-        ('C',_('Closed for registration only')),
-        ('B',_('Both open and closed events')),
+        ('O', _('Open for registration only')),
+        ('C', _('Closed for registration only')),
+        ('B', _('Both open and closed events')),
     ]
     SORT_CHOICES = [
-        ('A',_('Ascending')),
-        ('D',_('Descending')),
+        ('A', _('Ascending')),
+        ('D', _('Descending')),
     ]
 
     title = models.CharField(
@@ -188,23 +188,23 @@ class DoorRegisterEventPluginModel(CMSPlugin):
 
     weekday = models.PositiveSmallIntegerField(
         _('Limit to weekday'), null=True, blank=True,
-        choices=[(x,_(day_name[x])) for x in range(0,7)]
+        choices=[(x, _(day_name[x])) for x in range(0, 7)]
     )
 
     eventCategories = models.ManyToManyField(
-        PublicEventCategory,verbose_name=_('Limit to public event categories'),
+        PublicEventCategory, verbose_name=_('Limit to public event categories'),
         help_text=_('Leave blank for no restriction'),
         blank=True
     )
 
     seriesCategories = models.ManyToManyField(
-        SeriesCategory,verbose_name=_('Limit to series categories'),
+        SeriesCategory, verbose_name=_('Limit to series categories'),
         help_text=_('Leave blank for no restriction'),
         blank=True
     )
 
     levels = models.ManyToManyField(
-        DanceTypeLevel,verbose_name=_('Limit to type and levels'),
+        DanceTypeLevel, verbose_name=_('Limit to type and levels'),
         help_text=_('Leave blank for no restriction'),
         blank=True
     )
@@ -213,7 +213,7 @@ class DoorRegisterEventPluginModel(CMSPlugin):
         _('Custom CSS classes'), max_length=250, null=True, blank=True,
         help_text=_('Classes are applied to surrounding &lt;div&gt;')
     )
-    template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
+    template = models.CharField(_('Plugin template'), max_length=250, null=True, blank=True)
 
     requireFullRegistration = models.BooleanField(
         _('Require full registration'), blank=True, default=True,
@@ -227,7 +227,7 @@ class DoorRegisterEventPluginModel(CMSPlugin):
     paymentMethods = models.ManyToManyField(
         DoorRegisterPaymentMethod,
         verbose_name=_('Payment Methods'),
-        help_text = _(
+        help_text=_(
             'If you would like separate buttons for individual payment methods, ' +
             'then select them here.  If left blank, a single button will be shown ' +
             'and no payment method will be specified.'
@@ -253,7 +253,7 @@ class DoorRegisterEventPluginModel(CMSPlugin):
 
     def get_short_description(self):
         desc = self.title or ''
-        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choices = getattr(self.get_plugin_class(), 'template_choices', [])
         choice_name = [x[1] for x in choices if x[0] == self.template]
         if choice_name:
             if desc:
@@ -267,14 +267,14 @@ class DoorRegisterEventPluginModel(CMSPlugin):
                 desc = self.template
         return desc or self.id
 
-    def save(self,*args,**kwargs):
+    def save(self, *args, **kwargs):
         '''
         New plugin instances have, by default, the standard registration buttons
         broken out by role and nothing else.
         '''
 
         created = not self.pk
-        super().save(*args,**kwargs)
+        super().save(*args, **kwargs)
         if created:
             DoorRegisterEventPluginChoice.objects.create(
                 eventPlugin=self,
@@ -302,13 +302,13 @@ class DoorRegisterEventPluginChoice(models.Model):
         ('S', _('Register with student designation')),
     ]
     OPTION_LOCATION_CHOICES = [
-        ('P',_('Primary choice')),
-        ('A',_('Additional choice')),
+        ('P', _('Primary choice')),
+        ('A', _('Additional choice')),
     ]
     OPEN_CHOICES = [
-        ('O',_('Open for registration only')),
-        ('C',_('Closed for registration only')),
-        ('B',_('Both open and closed events')),
+        ('O', _('Open for registration only')),
+        ('C', _('Closed for registration only')),
+        ('B', _('Both open and closed events')),
     ]
     SOLDOUT_CHOICES = [
         ('D', _('Display with label')),
@@ -343,7 +343,7 @@ class DoorRegisterEventPluginChoice(models.Model):
 
     byRole = models.BooleanField(
         _('Separate choices for each role'), blank=True, default=True,
-        help_text = _(
+        help_text=_(
             'If disabled, then this option will not be broken out by role. ' +
             'It is not recommended to do this except for drop-in ' +
             'registrations, because the default registration workflow does ' +
@@ -353,7 +353,7 @@ class DoorRegisterEventPluginChoice(models.Model):
 
     byPaymentMethod = models.BooleanField(
         _('Separate choices for each payment method'), blank=True, default=False,
-        help_text = _(
+        help_text=_(
             'If enabled, then this option will be broken out by the payment ' +
             'methods specified for this plugin. If no payment methods are ' +
             'specified, then this choice will have no effect. It is useful to ' +
@@ -390,7 +390,7 @@ class DoorRegisterEventPluginChoice(models.Model):
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
     data = JSONField(
-        _('Additional data passed with registration'),default={},blank=True,
+        _('Additional data passed with registration'), default={}, blank=True,
         help_text=_(
             'This may be used for passing specific information about this ' +
             'event registration for statistical or other custom purposes.'
@@ -425,8 +425,8 @@ class DoorRegisterEventPluginChoice(models.Model):
         # No need to continue if the event open status does not match the choice
         # requirements.
         if (
-            (event.registrationOpen == False and self.registrationOpenDisplay == "O") or
-            (event.registrationOpen == True and self.registrationOpenDisplay == "C")
+            (event.registrationOpen is False and self.registrationOpenDisplay == "O") or
+            (event.registrationOpen is True and self.registrationOpenDisplay == "C")
         ):
             return (primary_options, additional_options)
 
@@ -448,7 +448,7 @@ class DoorRegisterEventPluginChoice(models.Model):
             } for x in event.availableRoles
         ]
         if not roles or not self.byRole:
-            roles = [{'name': None, 'id': None, 'soldOut': event.soldOut},]
+            roles = [{'name': None, 'id': None, 'soldOut': event.soldOut}, ]
 
         for role in roles:
             if role['soldOut'] and self.soldOutRule == 'H':
@@ -509,4 +509,4 @@ class DoorRegisterEventPluginChoice(models.Model):
         return (primary_options, additional_options)
 
     class Meta(object):
-        ordering = ['order',]
+        ordering = ['order', ]

@@ -43,7 +43,12 @@ class Command(BaseCommand):
         ]
         for this_app in required_apps:
             if not apps.is_installed(this_app[0]):
-                self.stdout.write(self.style.ERROR('ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % this_app[1]))
+                self.stdout.write(
+                    self.style.ERROR(
+                        ('ERROR: %s is not installed or listed ' % this_app[1]) +
+                        'in INSTALLED_APPS. Please install before proceeding.'
+                    )
+                )
                 return None
 
         self.stdout.write(
@@ -70,11 +75,18 @@ CHECKING AT-THE-DOOR PAYMENTS INTEGRATION
                 )
                 self.stdout.write('At-the-door payment processing form added.')
 
-            add_willpayatdoor = self.boolean_input('Add At-the-door payments checkbox to the registration summary view to allow students to elect to pay at the door [Y/n]', True)
+            add_willpayatdoor = self.boolean_input(
+                'Add At-the-door payments checkbox to the registration ' +
+                'summary view to allow students to elect to pay at the door [Y/n]',
+                True
+            )
             if add_willpayatdoor:
-                home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+                home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
                 if not home_page:
-                    self.stdout.write(self.style.ERROR('Cannot add at-the-door payments checkbox because a home page has not yet been set.'))
+                    self.stdout.write(self.style.ERROR(
+                        'Cannot add at-the-door payments checkbox because a ' +
+                        'home page has not yet been set.'
+                    ))
                 else:
                     payment_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
                     payment_p_draft = payment_sp[0].draft

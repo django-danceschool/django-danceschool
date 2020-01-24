@@ -21,11 +21,11 @@ class PrivateCalendarView(TemplateView):
     template_name = 'private_events/private_fullcalendar.html'
 
     def get_context_data(self, **kwargs):
-        context = super(PrivateCalendarView,self).get_context_data(**kwargs)
+        context = super(PrivateCalendarView, self).get_context_data(**kwargs)
 
         context.update({
-            'locations': Location.objects.all().order_by('status','name'),
-            'rooms': Room.objects.all().order_by('location__status','location__name', 'name'),
+            'locations': Location.objects.all().order_by('status', 'name'),
+            'rooms': Room.objects.all().order_by('location__status', 'location__name', 'name'),
             'publicFeed': reverse('calendarFeed'),
             'jsonPublicFeed': reverse('jsonCalendarFeed'),
             'jsonPrivateFeeds': {
@@ -33,15 +33,15 @@ class PrivateCalendarView(TemplateView):
             }
         })
 
-        feedKey = getattr(getattr(self.request.user,'staffmember',None),'feedKey',None)
+        feedKey = getattr(getattr(self.request.user, 'staffmember', None), 'feedKey', None)
         if feedKey:
             context.update({
                 'privateFeeds': {
-                    'ownPublicEvents': reverse('calendarFeed', args=(feedKey,)),
-                    'privateEvents': reverse('privateCalendarFeed', args=(feedKey,)),
+                    'ownPublicEvents': reverse('calendarFeed', args=(feedKey, )),
+                    'privateEvents': reverse('privateCalendarFeed', args=(feedKey, )),
                 },
             })
-            context['jsonPrivateFeeds']['ownPublicEvents'] = reverse('jsonCalendarFeed', args=(feedKey,))
+            context['jsonPrivateFeeds']['ownPublicEvents'] = reverse('jsonCalendarFeed', args=(feedKey, ))
 
         if apps.is_installed('danceschool.private_lessons'):
             context['privateLessonAdminUrl'] = reverse('admin:private_lessons_privatelessonevent_changelist')
@@ -78,13 +78,20 @@ def addPrivateEvent(request):
             try:
                 # Only the startTime should be passable to the formset
                 if key == 'startTime':
-                    formset[0].fields['startTime'].initial = ensure_timezone(datetime.strptime(request.GET.get(key) or '','%Y-%m-%d'))
-                    formset[0].fields['endTime'].initial = ensure_timezone(datetime.strptime(request.GET.get(key) or '','%Y-%m-%d'))
+                    formset[0].fields['startTime'].initial = ensure_timezone(
+                        datetime.strptime(request.GET.get(key) or '', '%Y-%m-%d')
+                    )
+                    formset[0].fields['endTime'].initial = ensure_timezone(
+                        datetime.strptime(request.GET.get(key) or '', '%Y-%m-%d')
+                    )
                     formset[0].fields['allDay'].initial = True
             except ValueError:
                 pass
 
-    return render(request,'private_events/add_private_event_form.html',{
-        'form': form,
-        'formset': formset,
-        'formset_helper': OccurrenceFormSetHelper()},)
+    return render(
+        request, 'private_events/add_private_event_form.html', {
+            'form': form,
+            'formset': formset,
+            'formset_helper': OccurrenceFormSetHelper()
+        },
+    )

@@ -18,8 +18,8 @@ class RequirementItemInline(admin.TabularInline):
 class CustomerRequirementInline(admin.StackedInline):
     model = CustomerRequirement
     extra = 0
-    readonly_fields = ['submissionDate','modifiedDate']
-    classes = ('collapse',)
+    readonly_fields = ['submissionDate', 'modifiedDate']
+    classes = ('collapse', )
 
 
 class RequirementAdminForm(ModelForm):
@@ -49,30 +49,30 @@ class RequirementAdminForm(ModelForm):
 @admin.register(Requirement)
 class RequirementAdmin(admin.ModelAdmin):
     form = RequirementAdminForm
-    inlines = [RequirementItemInline,]
-    readonly_fields = ['submissionDate','modifiedDate','customerAjaxDiv']
-    list_display = ['name','applicableLevel','applicableClass','enforcementMethod']
-    list_editable = ['enforcementMethod',]
+    inlines = [RequirementItemInline, ]
+    readonly_fields = ['submissionDate', 'modifiedDate', 'customerAjaxDiv']
+    list_display = ['name', 'applicableLevel', 'applicableClass', 'enforcementMethod']
+    list_editable = ['enforcementMethod', ]
 
     fieldsets = (
         (None, {
-            'fields': ('name',('applicableLevel','applicableClass'),'booleanRule','enforcementMethod',)
+            'fields': ('name', ('applicableLevel', 'applicableClass'), 'booleanRule', 'enforcementMethod', )
         }),
         (_('Role Options'), {
-            'classes': ('collapse',),
-            'fields': ('roleEnforced','applicableRole'),
+            'classes': ('collapse', ),
+            'fields': ('roleEnforced', 'applicableRole'),
         }),
-        (_('Customers Meeting Requirement'),{
-            'classes': ('collapse',),
-            'fields': ('customerCheck','customerAjaxDiv'),
+        (_('Customers Meeting Requirement'), {
+            'classes': ('collapse', ),
+            'fields': ('customerCheck', 'customerAjaxDiv'),
         }),
         (_('Date and Time'), {
-            'classes': ('collapse',),
-            'fields': ('submissionDate','modifiedDate'),
+            'classes': ('collapse', ),
+            'fields': ('submissionDate', 'modifiedDate'),
         })
     )
 
-    def customerAjaxDiv(self,obj):
+    def customerAjaxDiv(self, obj):
         '''
         This creates a div in which it will be shown whether a customer meets or does not meet
         the requirement, and in which it is possible to explicitly give or deny a requirement for
@@ -92,4 +92,4 @@ class RequirementAdmin(admin.ModelAdmin):
     customerAjaxDiv.short_description = _('Requirement status')
 
 
-admin.site._registry[Customer].inlines.insert(0,CustomerRequirementInline)
+admin.site._registry[Customer].inlines.insert(0, CustomerRequirementInline)

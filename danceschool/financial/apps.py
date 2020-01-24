@@ -18,45 +18,45 @@ class FinancialAppConfig(AppConfig):
 
         @property
         def revenueReportedGross(self):
-            if hasattr(self,'revenueitem') and self.revenueitem:
+            if hasattr(self, 'revenueitem') and self.revenueitem:
                 return self.revenueitem.total
             return 0
-        InvoiceItem.add_to_class('revenueReportedGross',revenueReportedGross)
+        InvoiceItem.add_to_class('revenueReportedGross', revenueReportedGross)
 
         @property
         def revenueReported(self):
-            if hasattr(self,'revenueitem') and self.revenueitem:
+            if hasattr(self, 'revenueitem') and self.revenueitem:
                 return self.revenueitem.netRevenue
             return 0
-        InvoiceItem.add_to_class('revenueReported',revenueReported)
+        InvoiceItem.add_to_class('revenueReported', revenueReported)
 
         @property
         def feesReported(self):
-            if hasattr(self,'revenueitem') and self.revenueitem:
+            if hasattr(self, 'revenueitem') and self.revenueitem:
                 return self.revenueitem.fees
             return 0
-        InvoiceItem.add_to_class('feesReported',feesReported)
+        InvoiceItem.add_to_class('feesReported', feesReported)
 
         @property
         def taxesReported(self):
-            if hasattr(self,'revenueitem') and self.revenueitem:
+            if hasattr(self, 'revenueitem') and self.revenueitem:
                 return self.revenueitem.taxes
             return 0
-        InvoiceItem.add_to_class('taxesReported',taxesReported)
+        InvoiceItem.add_to_class('taxesReported', taxesReported)
 
         @property
         def revenueReceivedGross(self):
-            if hasattr(self,'revenueitem') and self.revenueitem and self.revenueitem.received:
+            if hasattr(self, 'revenueitem') and self.revenueitem and self.revenueitem.received:
                 return self.revenueitem.total
             return 0
-        InvoiceItem.add_to_class('revenueReceivedGross',revenueReceivedGross)
+        InvoiceItem.add_to_class('revenueReceivedGross', revenueReceivedGross)
 
         @property
         def revenueReceived(self):
-            if hasattr(self,'revenueitem') and self.revenueitem and self.revenueitem.received:
+            if hasattr(self, 'revenueitem') and self.revenueitem and self.revenueitem.received:
                 return self.revenueitem.netRevenue
             return 0
-        InvoiceItem.add_to_class('revenueReceived',revenueReceived)
+        InvoiceItem.add_to_class('revenueReceived', revenueReceived)
 
         @property
         def revenueMismatch(self):
@@ -65,8 +65,8 @@ class FinancialAppConfig(AppConfig):
             if not self.invoice.buyerPaysSalesTax:
                 comparison += self.taxesReported
 
-            return round(self.total,2) != round(comparison,2)
-        InvoiceItem.add_to_class('revenueMismatch',revenueMismatch)
+            return round(self.total, 2) != round(comparison, 2)
+        InvoiceItem.add_to_class('revenueMismatch', revenueMismatch)
 
         @property
         def invoiceRevenueMismatch(self):
@@ -80,7 +80,7 @@ class FinancialAppConfig(AppConfig):
         @property
         def revenueNotYetReceived(self):
             return self.revenueReceived != self.revenueReported
-        InvoiceItem.add_to_class('revenueNotYetReceived',revenueNotYetReceived)
+        InvoiceItem.add_to_class('revenueNotYetReceived', revenueNotYetReceived)
 
         @property
         def invoiceRevenueNotYetReceived(self):
@@ -93,10 +93,10 @@ class FinancialAppConfig(AppConfig):
 
         @property
         def revenueRefundsReported(self):
-            if hasattr(self,'revenueitem') and self.revenueitem:
+            if hasattr(self, 'revenueitem') and self.revenueitem:
                 return -1 * self.revenueitem.adjustments
             return 0
-        InvoiceItem.add_to_class('revenueRefundsReported',revenueRefundsReported)
+        InvoiceItem.add_to_class('revenueRefundsReported', revenueRefundsReported)
 
         @property
         def invoiceRevenueRefundsReported(self):
@@ -108,14 +108,25 @@ class FinancialAppConfig(AppConfig):
         @property
         def paidOut(self):
             ''' Add a property to Event indicating whether hourly expenses have been paid out. '''
-            return (True in self.expenseitem_set.filter(expenseRule__staffmemberwageinfo__isnull=False).values_list('paid',flat=True))
+            return (
+                True in self.expenseitem_set.filter(
+                    expenseRule__staffmemberwageinfo__isnull=False
+                ).values_list('paid', flat=True)
+            )
         Event.add_to_class('paidOut', paidOut)
 
         def validate_EnsureNotPaidOut(event_pk):
-            ''' Add a validator to SubstituteTeacher submissions checking if the series has been paid out '''
+            '''
+            Add a validator to SubstituteTeacher submissions checking if the
+            series has been paid out.
+            '''
             event = Event.objects.get(pk=event_pk)
             if event.paidOut:
-                raise ValidationError(_('Staff members for this series have already been paid.  If you need to adjust hours worked, you will need to request money from them directly.'))
+                raise ValidationError(_(
+                    'Staff members for this series have already been paid.  ' +
+                    'If you need to adjust hours worked, you will need to ' +
+                    'request money from them directly.'
+                ))
 
         for field in [f for f in SubstituteTeacher._meta.fields if f.name == 'event']:
             field.validators.append(validate_EnsureNotPaidOut)

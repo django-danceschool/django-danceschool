@@ -30,11 +30,15 @@ class RequirementErrorMessage(StringPreference):
     section = requirements
     name = 'errorMessage'
     verbose_name = _('Error message for unmet requirements')
-    help_text = _('This message will be appended to any error message with a list of requirements not met.  Individual requirements may be set to produce either errors or warnings.')
+    help_text = _(
+        'This message will be appended to any error message with a list of ' +
+        'requirements not met.  Individual requirements may be set to produce ' +
+        'either errors or warnings.'
+    )
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -44,10 +48,14 @@ class RequirementWarningMessage(StringPreference):
     section = requirements
     name = 'warningMessage'
     verbose_name = _('Warning message for unmet requirements')
-    help_text = _('This message will be appended to any warning message with a list of requirements not met.  Individual requirements may be set to produce either errors or warnings.')
+    help_text = _(
+        'This message will be appended to any warning message with a list of ' +
+        'requirements not met.  Individual requirements may be set to produce ' +
+        'either errors or warnings.'
+    )
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs

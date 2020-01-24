@@ -89,7 +89,12 @@ def createPaypalPayment(request):
                 transactionType=transactionType,
             )
     except (ValueError, ObjectDoesNotExist) as e:
-        logger.error('Invalid registration information passed to createPaypalPayment view: (%s, %s, %s)' % (invoice_id, tr_id, amount))
+        logger.error(
+            'Invalid registration information passed to ' +
+            'createPaypalPayment view: (%s, %s, %s)' % (
+                invoice_id, tr_id, amount
+            )
+        )
         logger.error(e)
         return HttpResponseBadRequest()
 
@@ -100,11 +105,11 @@ def createPaypalPayment(request):
 
     this_transaction = {
         'amount': {
-            'total': round(this_total,2),
+            'total': round(this_total, 2),
             'currency': this_currency,
             'details': {
-                'subtotal': round(this_subtotal,2),
-                'tax': round(this_invoice.taxes,2),
+                'subtotal': round(this_subtotal, 2),
+                'tax': round(this_invoice.taxes, 2),
             },
         },
         'description': str(this_description),
@@ -122,8 +127,8 @@ def createPaypalPayment(request):
 
         this_transaction['item_list']['items'].append({
             'name': str(item.name),
-            'price': round(this_item_price,2),
-            'tax': round(item.taxes,2),
+            'price': round(this_item_price, 2),
+            'tax': round(item.taxes, 2),
             'currency': this_currency,
             'quantity': 1,
         })
@@ -134,21 +139,21 @@ def createPaypalPayment(request):
     if this_invoice.grossTotal != this_invoice.total:
         this_transaction['item_list']['items'].append({
             'name': str(_('Total Discounts')),
-            'price': round(this_invoice.total,2) - round(this_invoice.grossTotal,2),
+            'price': round(this_invoice.total, 2) - round(this_invoice.grossTotal, 2),
             'currency': this_currency,
             'quantity': 1,
         })
     if this_invoice.amountPaid > 0:
         this_transaction['item_list']['items'].append({
             'name': str(_('Previously Paid')),
-            'price': -1 * round(this_invoice.amountPaid,2),
+            'price': -1 * round(this_invoice.amountPaid, 2),
             'currency': this_currency,
             'quantity': 1,
         })
     if amount != this_invoice.outstandingBalance:
         this_transaction['item_list']['items'].append({
             'name': str(_('Remaining Balance After Payment')),
-            'price': round(amount,2) - round(this_invoice.outstandingBalance,2),
+            'price': round(amount, 2) - round(this_invoice.outstandingBalance, 2),
             'currency': this_currency,
             'quantity': 1,
         })
@@ -201,7 +206,7 @@ def createPaypalPayment(request):
 def executePaypalPayment(request):
     paymentId = request.POST.get('paymentID')
     payerId = request.POST.get('payerID')
-    addSessionInfo = request.POST.get('addSessionInfo',False)
+    addSessionInfo = request.POST.get('addSessionInfo', False)
     successUrl = request.POST.get('successUrl')
 
     try:

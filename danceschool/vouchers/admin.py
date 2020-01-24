@@ -7,7 +7,12 @@ from dal import autocomplete
 from danceschool.core.models import Customer, Registration, TemporaryRegistration
 from danceschool.core.admin import CustomerAdmin
 
-from .models import VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher, SeriesCategoryVoucher, PublicEventCategoryVoucher, SessionVoucher, CustomerGroupVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse, VoucherCredit
+from .models import (
+    VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher,
+    SeriesCategoryVoucher, PublicEventCategoryVoucher, SessionVoucher,
+    CustomerGroupVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse,
+    VoucherCredit
+)
 
 
 class CustomerVoucherInlineForm(ModelForm):
@@ -35,14 +40,14 @@ class CustomerVoucherInlineForm(ModelForm):
 class CustomerGroupVoucherInline(admin.StackedInline):
     model = CustomerGroupVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class CustomerVoucherInline(admin.StackedInline):
     model = CustomerVoucher
     form = CustomerVoucherInlineForm
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class CustomerAdminWithVouchers(CustomerAdmin):
@@ -52,7 +57,7 @@ class CustomerAdminWithVouchers(CustomerAdmin):
 class RegistrationVoucherInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
-    readonly_fields = ['voucher','amount']
+    readonly_fields = ['voucher', 'amount']
 
     # Prevents adding new voucher uses without going through
     # the standard registration process
@@ -66,7 +71,7 @@ class RegistrationVoucherInline(admin.TabularInline):
 class TemporaryRegistrationVoucherInline(admin.TabularInline):
     model = TemporaryVoucherUse
     extra = 0
-    readonly_fields = ['voucher','amount']
+    readonly_fields = ['voucher', 'amount']
 
     # Prevents adding new voucher uses without going through
     # the standard registration process
@@ -80,43 +85,43 @@ class TemporaryRegistrationVoucherInline(admin.TabularInline):
 class DanceTypeVoucherInline(admin.StackedInline):
     model = DanceTypeVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class ClassVoucherInline(admin.StackedInline):
     model = ClassVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class SeriesCategoryVoucherInline(admin.StackedInline):
     model = SeriesCategoryVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class PublicEventCategoryVoucherInline(admin.StackedInline):
     model = PublicEventCategoryVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class EventSessionVoucherInline(admin.StackedInline):
     model = SessionVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class ClassVoucherInline(admin.StackedInline):
     model = ClassVoucher
     extra = 1
-    classes = ['collapse',]
+    classes = ['collapse', ]
 
 
 class VoucherUseInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
-    readonly_fields = ['registration','amount']
+    readonly_fields = ['registration', 'amount']
 
     # Prevents adding new voucher uses without going through
     # the standard registration process.
@@ -138,39 +143,55 @@ class VoucherCreditInlineForm(ModelForm):
 class VoucherCreditInline(admin.TabularInline):
     model = VoucherCredit
     extra = 1
-    fields = ['amount', 'description','creationDate']
-    readonly_fields = ['creationDate',]
+    fields = ['amount', 'description', 'creationDate']
+    readonly_fields = ['creationDate', ]
 
     form = VoucherCreditInlineForm
 
 
 class VoucherAdmin(admin.ModelAdmin):
-    inlines = [DanceTypeVoucherInline,ClassVoucherInline,SeriesCategoryVoucherInline,PublicEventCategoryVoucherInline,EventSessionVoucherInline,CustomerGroupVoucherInline,CustomerVoucherInline,VoucherUseInline,VoucherCreditInline]
-    list_display = ['voucherId','name','category','amountLeft','maxAmountPerUse','expirationDate','isEnabled','restrictions']
-    list_filter = ['category','expirationDate','disabled','forFirstTimeCustomersOnly','forPreviousCustomersOnly', 'doorOnly']
-    search_fields = ['voucherId','name','description']
-    readonly_fields = ['refundAmount','creationDate']
-    actions = ['enableVoucher','disableVoucher']
+    inlines = [
+        DanceTypeVoucherInline, ClassVoucherInline, SeriesCategoryVoucherInline,
+        PublicEventCategoryVoucherInline, EventSessionVoucherInline,
+        CustomerGroupVoucherInline, CustomerVoucherInline, VoucherUseInline,
+        VoucherCreditInline
+    ]
+    list_display = [
+        'voucherId', 'name', 'category', 'amountLeft', 'maxAmountPerUse',
+        'expirationDate', 'isEnabled', 'restrictions'
+    ]
+    list_filter = [
+        'category', 'expirationDate', 'disabled', 'forFirstTimeCustomersOnly',
+        'forPreviousCustomersOnly', 'doorOnly'
+    ]
+    search_fields = ['voucherId', 'name', 'description']
+    readonly_fields = ['refundAmount', 'creationDate']
+    actions = ['enableVoucher', 'disableVoucher']
 
     fieldsets = (
         (None, {
-            'fields': (('voucherId','category'),'name','description',('originalAmount','maxAmountPerUse'),),
+            'fields': (('voucherId', 'category'), 'name', 'description', ('originalAmount', 'maxAmountPerUse'), ),
         }),
         (_('Voucher Restrictions'), {
-            'fields': ('expirationDate',('singleUse','forFirstTimeCustomersOnly','forPreviousCustomersOnly','doorOnly','disabled')),
+            'fields': (
+                'expirationDate', (
+                    'singleUse', 'forFirstTimeCustomersOnly',
+                    'forPreviousCustomersOnly', 'doorOnly', 'disabled'
+                )
+            ),
         }),
         (_('Other Info'), {
-            'classes': ('collapse',),
-            'fields': ('creationDate','refundAmount'),
+            'classes': ('collapse', ),
+            'fields': ('creationDate', 'refundAmount'),
         }),
     )
 
-    def isEnabled(self,obj):
+    def isEnabled(self, obj):
         return obj.disabled is False
     isEnabled.short_description = _('Enabled')
     isEnabled.boolean = True
 
-    def restrictions(self,obj):
+    def restrictions(self, obj):
         text = []
         if obj.singleUse:
             text.append(_('Single use'))
@@ -209,10 +230,10 @@ class VoucherAdmin(admin.ModelAdmin):
 
 
 # This adds inlines to Registration and TemporaryRegistration without subclassing
-admin.site._registry[Registration].inlines.insert(0,RegistrationVoucherInline)
-admin.site._registry[TemporaryRegistration].inlines.insert(0,TemporaryRegistrationVoucherInline)
+admin.site._registry[Registration].inlines.insert(0, RegistrationVoucherInline)
+admin.site._registry[TemporaryRegistration].inlines.insert(0, TemporaryRegistrationVoucherInline)
 
 admin.site.register(VoucherCategory)
-admin.site.register(Voucher,VoucherAdmin)
+admin.site.register(Voucher, VoucherAdmin)
 admin.site.unregister(Customer)
-admin.site.register(Customer,CustomerAdminWithVouchers)
+admin.site.register(Customer, CustomerAdminWithVouchers)

@@ -26,7 +26,7 @@ def linkUserToMostRecentCustomer(sender, **kwargs):
     their most recent existing registration at the time they verify their email
     address.
     '''
-    email_address = kwargs.get('email_address',None)
+    email_address = kwargs.get('email_address', None)
 
     if not email_address or not email_address.primary or not email_address.verified:
         return
@@ -65,8 +65,8 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
     registration = kwargs.get('registration', None)
 
     if (
-        not getattr(registration,'customer',None) or
-        (hasattr(registration.customer,'user') and registration.customer.user)
+        not getattr(registration, 'customer', None) or
+        (hasattr(registration.customer, 'user') and registration.customer.user)
     ):
         return
 

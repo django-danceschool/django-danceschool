@@ -12,7 +12,11 @@ from collections import OrderedDict
 from adminsortable2.admin import SortableInlineAdminMixin
 
 from .models import DoorRegisterEventPluginModel, DoorRegisterEventPluginChoice
-from danceschool.core.models import StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel, EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent, Location
+from danceschool.core.models import (
+    StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel,
+    EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent,
+    Location
+)
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -54,34 +58,34 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
     fieldsets = (
         (None, {
             'fields': (
-                'title','eventType','occursWithinDays', 'registrationOpenLimit',
+                'title', 'eventType', 'occursWithinDays', 'registrationOpenLimit',
                 'requireFullRegistration', 'paymentMethods',
             )
         }),
         (_('Limit Start Date'), {
             'classes': ('collapse',),
-            'fields': ('limitTypeStart','daysStart','startDate'),
+            'fields': ('limitTypeStart', 'daysStart', 'startDate'),
         }),
         (_('Limit End Date'), {
             'classes': ('collapse',),
-            'fields': ('limitTypeEnd','daysEnd','endDate'),
+            'fields': ('limitTypeEnd', 'daysEnd', 'endDate'),
         }),
         (_('Limit Number'), {
             'classes': ('collapse',),
-            'fields': ('limitNumber','sortOrder'),
+            'fields': ('limitNumber', 'sortOrder'),
         }),
         (_('Other Limit Restrictions'), {
             'classes': ('collapse',),
-            'fields': ('eventCategories','seriesCategories','levels', 'location', 'weekday'),
+            'fields': ('eventCategories', 'seriesCategories', 'levels', 'location', 'weekday'),
         }),
         (_('Display Options'), {
             'classes': ('collapse',),
-            'fields': ('template','cssClasses'),
+            'fields': ('template', 'cssClasses'),
         }),
     )
 
     def render(self, context, instance, placeholder):
-        context = super().render(context,instance,placeholder)
+        context = super().render(context, instance, placeholder)
 
         # Ensure that the CSRF protection cookie is set for all lists of events.
         # Useful for things like buttons that go directly into the registration process.
@@ -112,12 +116,12 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
             endKey = 'endTime__lte'
 
         if instance.startDate:
-            filters[startKey] = datetime.combine(instance.startDate,datetime.min.time())
+            filters[startKey] = datetime.combine(instance.startDate, datetime.min.time())
         elif instance.daysStart is not None:
             filters[startKey] = timezone.now() + timedelta(days=instance.daysStart)
 
         if instance.endDate:
-            filters[endKey] = datetime.combine(instance.endDate,datetime.max.time())
+            filters[endKey] = datetime.combine(instance.endDate, datetime.max.time())
         elif instance.daysEnd is not None:
             filters[endKey] = timezone.now() + timedelta(days=instance.daysEnd)
 
@@ -172,7 +176,7 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
             } for x in instance.paymentMethods.all()
         ]
 
-        # Each event gets its own list of choices.  
+        # Each event gets its own list of choices.
         for event in listing:
 
             primary_options = []
@@ -197,6 +201,7 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
             'register_choices': register_choices,
         })
         return context
+
 
 plugin_pool.register_plugin(DoorRegisterVoucherPlugin)
 plugin_pool.register_plugin(DoorRegisterGuestSearchPlugin)

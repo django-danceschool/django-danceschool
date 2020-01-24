@@ -29,7 +29,12 @@ class SquareLinksToolbar(CMSToolbar):
                 identifier='financial_related_items_break'
             ) + 1
 
-        related_menu = financial_menu.get_or_create_menu('financial-related',_('Related Items'), position=position)
+        related_menu = financial_menu.get_or_create_menu(
+            'financial-related', _('Related Items'), position=position
+        )
 
         if self.request.user.has_perm('square.change_squarepaymentrecord'):
-            related_menu.add_link_item(_('Square Payment Records'), url=reverse('admin:square_squarepaymentrecord_changelist'))
+            related_menu.add_link_item(
+                _('Square Payment Records'),
+                url=reverse('admin:square_squarepaymentrecord_changelist')
+            )

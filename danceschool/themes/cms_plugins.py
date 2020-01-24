@@ -6,6 +6,7 @@ from cms.plugin_pool import plugin_pool
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.registries import plugin_templates_registry, PluginTemplateBase
 
+
 class PictureSplashTemplatePlugin(PicturePlugin):
     '''
     A subclass of the Django CMS PicturePlugin that can be used just to select
@@ -29,5 +30,6 @@ class PictureSplashTemplatePlugin(PicturePlugin):
     def get_render_template(self, context, instance, placeholder):
         ''' Template cannot be chosen when using this plugin. '''
         return 'djangocms_picture/splash_image/picture.html'
+
 
 plugin_pool.register_plugin(PictureSplashTemplatePlugin)

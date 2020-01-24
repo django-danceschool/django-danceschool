@@ -14,6 +14,6 @@ class PaypalAppConfig(AppConfig):
         # Paypal SDK is globally con
         paypalrestsdk.configure({
             'mode': getattr(settings, 'PAYPAL_MODE', 'sandbox'),
-            'client_id': getattr(settings, 'PAYPAL_CLIENT_ID',''),
-            'client_secret': getattr(settings, 'PAYPAL_CLIENT_SECRET',''),
+            'client_id': getattr(settings, 'PAYPAL_CLIENT_ID', ''),
+            'client_secret': getattr(settings, 'PAYPAL_CLIENT_SECRET', ''),
         })

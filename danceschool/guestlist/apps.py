@@ -23,4 +23,4 @@ class GuestListAppConfig(AppConfig):
 
             return GuestList.objects.filter(filters)
 
-        Event.add_to_class('guestLists',guestLists)
+        Event.add_to_class('guestLists', guestLists)

@@ -15,12 +15,12 @@ from .models import InstructorAvailabilitySlot, PrivateLessonEvent
 
 class AvailabilityFeedItem(object):
 
-    def __init__(self,object,**kwargs):
+    def __init__(self, object, **kwargs):
 
-        timeZone = pytz.timezone(getattr(settings,'TIME_ZONE','UTC'))
-        if kwargs.get('timeZone',None):
+        timeZone = pytz.timezone(getattr(settings, 'TIME_ZONE', 'UTC'))
+        if kwargs.get('timeZone', None):
             try:
-                timeZone = pytz.timezone(kwargs.get('timeZone',None))
+                timeZone = pytz.timezone(kwargs.get('timeZone', None))
             except pytz.exceptions.UnknownTimeZoneError:
                 pass
 
@@ -28,20 +28,24 @@ class AvailabilityFeedItem(object):
         self.type = 'instructorAvailability'
         self.id_number = object.id
         self.title = object.name
-        self.start = timezone.localtime(object.startTime,timeZone) \
+        self.start = timezone.localtime(object.startTime, timeZone) \
             if timezone.is_aware(object.startTime) else object.startTime
         self.end = self.start + timedelta(minutes=object.duration)
         self.availableDurations = object.availableDurations
         self.availableRoles = object.availableRoles
-        self.pricingTier = getattr(object.pricingTier,'name',None)
-        self.pricingTier_id = getattr(object.pricingTier,'id',None)
-        self.onlinePrice = getattr(object.pricingTier,'onlinePrice',None)
-        self.doorPrice = getattr(object.pricingTier,'doorPrice',None)
+        self.pricingTier = getattr(object.pricingTier, 'name', None)
+        self.pricingTier_id = getattr(object.pricingTier, 'id', None)
+        self.onlinePrice = getattr(object.pricingTier, 'onlinePrice', None)
+        self.doorPrice = getattr(object.pricingTier, 'doorPrice', None)
         self.status = object.status
-        self.className = ['availabilitySlot','availabilitySlot-%s' % object.status]
+        self.className = ['availabilitySlot', 'availabilitySlot-%s' % object.status]
 
         if object.location:
-            self.location = object.location.name + '\n' + object.location.address + '\n' + object.location.city + ', ' + object.location.state + ' ' + object.location.zip
+            self.location = (
+                object.location.name + '\n' + object.location.address + '\n' +
+                object.location.city + ', ' + object.location.state + ' ' +
+                object.location.zip
+            )
             self.location_id = object.location.id
         else:
             self.location = None
@@ -55,12 +59,12 @@ class AvailabilityFeedItem(object):
 
 class PrivateLessonFeedItem(object):
 
-    def __init__(self,object,**kwargs):
+    def __init__(self, object, **kwargs):
 
-        timeZone = pytz.timezone(getattr(settings,'TIME_ZONE','UTC'))
-        if kwargs.get('timeZone',None):
+        timeZone = pytz.timezone(getattr(settings, 'TIME_ZONE', 'UTC'))
+        if kwargs.get('timeZone', None):
             try:
-                timeZone = pytz.timezone(kwargs.get('timeZone',None))
+                timeZone = pytz.timezone(kwargs.get('timeZone', None))
             except pytz.exceptions.UnknownTimeZoneError:
                 pass
 
@@ -68,13 +72,17 @@ class PrivateLessonFeedItem(object):
         self.type = 'privateLesson'
         self.id_number = object.id
         self.title = object.nameAndDate(withDate=False)
-        self.start = timezone.localtime(object.startTime,timeZone) \
+        self.start = timezone.localtime(object.startTime, timeZone) \
             if timezone.is_aware(object.startTime) else object.startTime
-        self.end = timezone.localtime(object.endTime,timeZone) \
+        self.end = timezone.localtime(object.endTime, timeZone) \
             if timezone.is_aware(object.endTime) else object.endTime
-        if getattr(object,'location',None):
-            self.location = object.location.name + '\n' + object.location.address + '\n' + object.location.city + ', ' + object.location.state + ' ' + object.location.zip
-            self.room = getattr(object.room,'name',None)
+        if getattr(object, 'location', None):
+            self.location = (
+                object.location.name + '\n' + object.location.address + '\n' +
+                object.location.city + ', ' + object.location.state + ' ' +
+                object.location.zip
+            )
+            self.room = getattr(object.room, 'name', None)
         else:
             self.location = None
             self.room = None
@@ -82,20 +90,22 @@ class PrivateLessonFeedItem(object):
 
 # This function creates a JSON feed of all available private lesson
 # slots so that lessons may be booked using JQuery fullcalendar.
-def json_availability_feed(request,instructor_id=None):
+def json_availability_feed(request, instructor_id=None):
     if not instructor_id:
         return JsonResponse({})
 
-    startDate = request.GET.get('start','')
-    endDate = request.GET.get('end','')
-    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
+    startDate = request.GET.get('start', '')
+    endDate = request.GET.get('end', '')
+    timeZone = request.GET.get('timezone', getattr(settings, 'TIME_ZONE', 'UTC'))
     hideUnavailable = request.GET.get('hideUnavailable', False)
 
     time_filter_dict_events = {}
     if startDate:
-        time_filter_dict_events['startTime__gte'] = ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d'))
+        time_filter_dict_events['startTime__gte'] = ensure_timezone(datetime.strptime(startDate, '%Y-%m-%d'))
     if endDate:
-        time_filter_dict_events['startTime__lte'] = ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1)
+        time_filter_dict_events['startTime__lte'] = ensure_timezone(
+            datetime.strptime(endDate, '%Y-%m-%d')
+        ) + timedelta(days=1)
 
     this_instructor = Instructor.objects.get(id=instructor_id)
 
@@ -105,20 +115,21 @@ def json_availability_feed(request,instructor_id=None):
 
     if (
         ((
-            hasattr(request.user,'staffmember') and getattr(request.user.staffmember,'instructor') == this_instructor and
+            hasattr(request.user, 'staffmember') and
+            getattr(request.user.staffmember, 'instructor') == this_instructor and
             request.user.has_perm('private_lessons.edit_own_availability')
         ) or
             request.user.has_perm('private_lessons.edit_others_availability')
         ) and not hideUnavailable
     ):
-        eventlist = [AvailabilityFeedItem(x,timeZone=timeZone).__dict__ for x in availability]
+        eventlist = [AvailabilityFeedItem(x, timeZone=timeZone).__dict__ for x in availability]
     else:
-        eventlist = [AvailabilityFeedItem(x,timeZone=timeZone).__dict__ for x in availability if x.isAvailable]
+        eventlist = [AvailabilityFeedItem(x, timeZone=timeZone).__dict__ for x in availability if x.isAvailable]
 
-    return JsonResponse(eventlist,safe=False)
+    return JsonResponse(eventlist, safe=False)
 
 
-def json_lesson_feed(request,location_id=None,room_id=None,show_others=False):
+def json_lesson_feed(request, location_id=None, room_id=None, show_others=False):
     '''
     This function displays a JSON feed of all lessons scheduled, optionally
     filtered by location. If show_others is specified, it requires that the
@@ -131,19 +142,19 @@ def json_lesson_feed(request,location_id=None,room_id=None,show_others=False):
     if not request.user.has_perm('private_lessons.view_others_lessons'):
         show_others = False
 
-    this_instructor = getattr(request.user,'staffmember',None)
-    startDate = request.GET.get('start','')
-    endDate = request.GET.get('end','')
-    timeZone = request.GET.get('timezone',getattr(settings,'TIME_ZONE','UTC'))
+    this_instructor = getattr(request.user, 'staffmember', None)
+    startDate = request.GET.get('start', '')
+    endDate = request.GET.get('end', '')
+    timeZone = request.GET.get('timezone', getattr(settings, 'TIME_ZONE', 'UTC'))
 
     filters = Q(instructoravailabilityslot__status=InstructorAvailabilitySlot.SlotStatus.booked)
     if not show_others:
         filters = filters & Q(eventstaffmember__staffMember=this_instructor)
 
     if startDate:
-        filters = filters & Q(startTime__gte=ensure_timezone(datetime.strptime(startDate,'%Y-%m-%d')))
+        filters = filters & Q(startTime__gte=ensure_timezone(datetime.strptime(startDate, '%Y-%m-%d')))
     if endDate:
-        filters = filters & Q(endTime__lte=ensure_timezone(datetime.strptime(endDate,'%Y-%m-%d')) + timedelta(days=1))
+        filters = filters & Q(endTime__lte=ensure_timezone(datetime.strptime(endDate, '%Y-%m-%d')) + timedelta(days=1))
 
     if location_id:
         filters = filters & Q(location__id=location_id)
@@ -152,5 +163,5 @@ def json_lesson_feed(request,location_id=None,room_id=None,show_others=False):
 
     lessons = PrivateLessonEvent.objects.filter(filters).distinct()
 
-    eventlist = [PrivateLessonFeedItem(x,timeZone=timeZone).__dict__ for x in lessons]
-    return JsonResponse(eventlist,safe=False)
+    eventlist = [PrivateLessonFeedItem(x, timeZone=timeZone).__dict__ for x in lessons]
+    return JsonResponse(eventlist, safe=False)

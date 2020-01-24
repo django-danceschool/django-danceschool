@@ -12,7 +12,7 @@ from .constants import getConstant
 logger = logging.getLogger(__name__)
 
 
-def emailErrorMessage(subject,message):
+def emailErrorMessage(subject, message):
     '''
     Useful for sending error messages via email.
     '''
@@ -28,7 +28,7 @@ def emailErrorMessage(subject,message):
         return
 
     try:
-        send_mail(subject,message,
+        send_mail(subject, message,
                   send_from,
                   [send_to], fail_silently=False)
         logger.debug('Error email sent.')
@@ -36,25 +36,25 @@ def emailErrorMessage(subject,message):
         logger.error('Error email was not sent: %s' % e)
 
 
-def getReturnPage(siteHistory,prior=False):
+def getReturnPage(siteHistory, prior=False):
     '''
     This helper function is called in various places to get the return page from current
     session data.  The session data (in the 'SITE_HISTORY' key) is a required argument.
     '''
 
     expiry = parse_datetime(
-        siteHistory.get('expiry',''),
+        siteHistory.get('expiry', ''),
     )
     if prior:
-        returnPage = siteHistory.get('priorPage',None)
-        returnPageName = siteHistory.get('priorPageName',None)
+        returnPage = siteHistory.get('priorPage', None)
+        returnPageName = siteHistory.get('priorPageName', None)
     else:
-        returnPage = siteHistory.get('returnPage',None)
-        returnPageName = siteHistory.get('returnPageName',None)
+        returnPage = siteHistory.get('returnPage', None)
+        returnPageName = siteHistory.get('returnPageName', None)
 
     if expiry and expiry >= timezone.now() and returnPage[0]:
         return {
-            'url': reverse(returnPage[0],kwargs=returnPage[1]),
+            'url': reverse(returnPage[0], kwargs=returnPage[1]),
             'title': returnPageName,
         }
     else:

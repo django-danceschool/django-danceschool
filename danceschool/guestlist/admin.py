@@ -15,8 +15,8 @@ class GuestListComponentInline(admin.TabularInline):
 
 
 class GuestListAdmin(admin.ModelAdmin):
-    list_display = ('name','sortOrder','includeStaff','includeRegistrants')
-    list_filter = ('includeStaff','includeRegistrants',)
+    list_display = ('name', 'sortOrder', 'includeStaff', 'includeRegistrants')
+    list_filter = ('includeStaff', 'includeRegistrants',)
     inlines = [GuestListComponentInline, GuestListNameInline]
 
     fieldsets = (
@@ -25,7 +25,7 @@ class GuestListAdmin(admin.ModelAdmin):
         }),
         (_('Apply to categories'), {
             'classes': ('collapse',),
-            'fields': ('seriesCategories','eventCategories'),
+            'fields': ('seriesCategories', 'eventCategories'),
         }),
         (_('Apply to sessions'), {
             'classes': ('collapse',),
@@ -36,7 +36,7 @@ class GuestListAdmin(admin.ModelAdmin):
             'fields': ('individualEvents',),
         }),
         (None, {
-            'fields': ('includeStaff','includeRegistrants','sortOrder',),
+            'fields': ('includeStaff', 'includeRegistrants', 'sortOrder',),
         }),
     )
 

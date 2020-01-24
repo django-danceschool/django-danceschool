@@ -18,7 +18,9 @@ class SettingsToolbar(CMSToolbar):
         # 'Apps' is the spot on the existing djang-cms toolbar admin_menu
         # 'where we'll insert all of our applications' menus.
         #
-        if not self.request.user.has_perm('dynamic_preferences.change_global_preference'):
+        if not self.request.user.has_perm(
+            'dynamic_preferences.change_global_preference'
+        ):
             return
 
         admin_menu = self.toolbar.get_or_create_menu(
@@ -56,15 +58,24 @@ class SettingsToolbar(CMSToolbar):
 
 @toolbar_pool.register
 class EventsToolbar(CMSToolbar):
-    ''' Adds items to the toolbar to add class Series and Events, etc, as well as a button to view registrations '''
+    '''
+    Adds items to the toolbar to add class Series and Events, etc, as well as a
+    button to view registrations
+    '''
 
     def populate(self):
         menu = self.toolbar.get_or_create_menu('core-events', _('Events'))
 
         if self.request.user.has_perm('core.view_registration_summary'):
-            self.toolbar.add_button(_('View Registrations'), url=reverse('viewregistrations_selectevent'),side=RIGHT)
+            self.toolbar.add_button(
+                _('View Registrations'),
+                url=reverse('viewregistrations_selectevent'), side=RIGHT
+            )
 
-            menu.add_link_item(_('View Registrations'), url=reverse('viewregistrations_selectevent'))
+            menu.add_link_item(
+                _('View Registrations'),
+                url=reverse('viewregistrations_selectevent')
+            )
 
         menu.add_link_item(_('Registration Page'), url=reverse('registration'))
 
@@ -72,58 +83,94 @@ class EventsToolbar(CMSToolbar):
             self.request.user.has_perm('core.add_series') or
             self.request.user.has_perm('core.add_publicevent') or
             self.request.user.has_perm('core.change_series') or
-                self.request.user.has_perm('core.change_publicevent')):
-                menu.add_break('post_registration_break')
-                if self.request.user.has_perm('core.add_series'):
-                    menu.add_link_item(_('Add a Class Series'), url=reverse('admin:core_series_add'))
-                if self.request.user.has_perm('core.add_publicevent'):
-                    menu.add_link_item(_('Add a Public Event'), url=reverse('admin:core_publicevent_add'))
-                if self.request.user.has_perm('core.add_series'):
-                    menu.add_link_item(_('Edit Existing Series'), url=reverse('admin:core_series_changelist'))
-                if self.request.user.has_perm('core.add_publicevent'):
-                    menu.add_link_item(_('Edit Existing Events'), url=reverse('admin:core_publicevent_changelist'))
+            self.request.user.has_perm('core.change_publicevent')
+        ):
+            menu.add_break('post_registration_break')
+            if self.request.user.has_perm('core.add_series'):
+                menu.add_link_item(
+                    _('Add a Class Series'),
+                    url=reverse('admin:core_series_add')
+                )
+            if self.request.user.has_perm('core.add_publicevent'):
+                menu.add_link_item(
+                    _('Add a Public Event'),
+                    url=reverse('admin:core_publicevent_add')
+                )
+            if self.request.user.has_perm('core.add_series'):
+                menu.add_link_item(
+                    _('Edit Existing Series'),
+                    url=reverse('admin:core_series_changelist')
+                )
+            if self.request.user.has_perm('core.add_publicevent'):
+                menu.add_link_item(
+                    _('Edit Existing Events'),
+                    url=reverse('admin:core_publicevent_changelist')
+                )
 
-        if self.request.user.has_perm('core.change_classdescription') or self.request.user.has_perm('core.change_dancetypelevel') \
-            or self.request.user.has_perm('core.change_location') or self.request.user.has_perm('core.change_pricingtier') or \
-                self.request.user.has_perm('core.change_customer') or self.request.user.has_perm('core.change_dancerole') or \
-                self.request.user.has_perm('core.change_publiceventcategory') or self.request.user.has_perm('core.change_eventstaffcategory'):
-                    menu.add_break('related_items_break')
+        if (
+            self.request.user.has_perm('core.change_classdescription') or
+            self.request.user.has_perm('core.change_dancetypelevel') or
+            self.request.user.has_perm('core.change_location') or
+            self.request.user.has_perm('core.change_pricingtier') or
+            self.request.user.has_perm('core.change_customer') or
+            self.request.user.has_perm('core.change_dancerole') or
+            self.request.user.has_perm('core.change_publiceventcategory') or
+            self.request.user.has_perm('core.change_eventstaffcategory')
+        ):
+            menu.add_break('related_items_break')
 
         if self.request.user.has_perm('core.change_classdescription'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Class Descriptions'),url=reverse('admin:core_classdescription_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Class Descriptions'),
+                url=reverse('admin:core_classdescription_changelist')
+            )
 
         if self.request.user.has_perm('core.change_customer'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Customers'),url=reverse('admin:core_customer_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Customers'), url=reverse('admin:core_customer_changelist')
+            )
 
         if self.request.user.has_perm('core.change_customergroup'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Customer Groups'),url=reverse('admin:core_customergroup_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Customer Groups'), url=reverse('admin:core_customergroup_changelist')
+            )
 
         if self.request.user.has_perm('core.change_dancetypelevel'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Dance Roles'),url=reverse('admin:core_dancerole_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Dance Roles'), url=reverse('admin:core_dancerole_changelist')
+            )
 
         if self.request.user.has_perm('core.change_dancetypelevel'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Dance Types/Levels'),url=reverse('admin:core_dancetypelevel_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Dance Types/Levels'),
+                url=reverse('admin:core_dancetypelevel_changelist')
+            )
 
         if self.request.user.has_perm('core.change_eventstaffcategory'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Event Staff Categories'),url=reverse('admin:core_eventstaffcategory_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Event Staff Categories'),
+                url=reverse('admin:core_eventstaffcategory_changelist')
+            )
 
         if self.request.user.has_perm('core.change_location'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Locations'),url=reverse('admin:core_location_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(_('Locations'), url=reverse('admin:core_location_changelist'))
 
         if self.request.user.has_perm('core.change_pricingtier'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Pricing Tiers'),url=reverse('admin:core_pricingtier_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(_('Pricing Tiers'), url=reverse('admin:core_pricingtier_changelist'))
 
         if self.request.user.has_perm('core.change_publiceventcategory'):
-            related_menu = menu.get_or_create_menu('core-events-related',_('Related Items'))
-            related_menu.add_link_item(_('Public Event Categories'),url=reverse('admin:core_publiceventcategory_changelist'))
+            related_menu = menu.get_or_create_menu('core-events-related', _('Related Items'))
+            related_menu.add_link_item(
+                _('Public Event Categories'), url=reverse('admin:core_publiceventcategory_changelist')
+            )
 
 
 @toolbar_pool.register
@@ -131,10 +178,17 @@ class StaffMemberToolbar(CMSToolbar):
     ''' Adds items to the toolbar to add class Series and Events. '''
 
     def populate(self):
-        if hasattr(self.request.user,'staffmember') and hasattr(self.request.user.staffmember,'instructor') and self.request.user.has_perm('core.view_own_instructor_stats'):
+        if (
+            hasattr(self.request.user, 'staffmember') and
+            hasattr(self.request.user.staffmember, 'instructor') and
+            self.request.user.has_perm('core.view_own_instructor_stats')
+        ):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
             menu.add_link_item(_('Your Stats'), url=reverse('staffMemberStats'))
-        if hasattr(self.request.user,'staffmember') and self.request.user.has_perm('core.update_instructor_bio'):
+        if (
+            hasattr(self.request.user, 'staffmember') and
+            self.request.user.has_perm('core.update_instructor_bio')
+        ):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
             menu.add_link_item(_('Update Your Contact Info'), url=reverse('staffBioChange'))
 
@@ -160,25 +214,38 @@ class StaffMemberToolbar(CMSToolbar):
 
         if self.request.user.has_perm('core.change_staffmember'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
-            menu.add_link_item(_('Manage Staff/Instructors'), url=reverse('admin:core_staffmember_changelist'))
+            menu.add_link_item(
+                _('Manage Staff/Instructors'),
+                url=reverse('admin:core_staffmember_changelist')
+            )
 
 
 @toolbar_pool.register
 class ContentToolbar(CMSToolbar):
-    ''' Adds links to manage files, and can be hooked in to manage News, FAQs, Surveys/Forms, etc. '''
+    '''
+    Adds links to manage files, and can be hooked in to manage News, FAQs,
+    Surveys/Forms, etc.
+    '''
 
     def populate(self):
         if (
-            self.request.user.has_perm('filer.change_folder') or self.request.user.has_perm('core.change_emailtemplate') or
-            (apps.is_installed('djangocms_forms') and self.request.user.has_perm('djangocms_forms.export_formsubmission'))
+            self.request.user.has_perm('filer.change_folder') or
+            self.request.user.has_perm('core.change_emailtemplate') or
+            (
+                apps.is_installed('djangocms_forms') and
+                self.request.user.has_perm('djangocms_forms.export_formsubmission')
+            )
         ):
-            menu = self.toolbar.get_or_create_menu('core-content',_('Content'))
+            menu = self.toolbar.get_or_create_menu('core-content', _('Content'))
 
         if self.request.user.has_perm('filer.change_folder'):
             menu.add_link_item(_('Manage Uploaded Files'), reverse('admin:filer_folder_changelist'))
 
         if self.request.user.has_perm('core.change_emailtemplate'):
-            menu.add_link_item(_('Manage Email Templates'), reverse('admin:core_emailtemplate_changelist'))
+            menu.add_link_item(
+                _('Manage Email Templates'),
+                reverse('admin:core_emailtemplate_changelist')
+            )
 
 
 @toolbar_pool.register
@@ -192,7 +259,10 @@ class CoreFinancesToolbar(CMSToolbar):
             menu = self.toolbar.get_or_create_menu('financial', _('Finances'))
 
             # The "Create an Invoice" link goes at the top of the menu
-            menu.add_link_item(_('Create an Invoice'), url=reverse('admin:core_invoice_add'),position=0)
+            menu.add_link_item(
+                _('Create an Invoice'), url=reverse('admin:core_invoice_add'),
+                position=0
+            )
 
             # Other apps may have added related items already
             startPosition = menu.find_first(
@@ -205,5 +275,8 @@ class CoreFinancesToolbar(CMSToolbar):
                     Break,
                     identifier='financial_related_items_break'
                 )
-            related_menu = menu.get_or_create_menu('financial-related',_('Related Items'), position=startPosition + 2)
+            related_menu = menu.get_or_create_menu(
+                'financial-related', _('Related Items'),
+                position=startPosition + 2
+            )
             related_menu.add_link_item(_('Invoices'), url=reverse('admin:core_invoice_changelist'))

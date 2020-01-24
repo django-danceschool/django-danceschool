@@ -6,7 +6,10 @@ from django.apps import apps
 import logging
 from collections import OrderedDict
 
-from danceschool.core.signals import request_discounts, apply_discount, apply_addons, post_registration, get_eventregistration_data
+from danceschool.core.signals import (
+    request_discounts, apply_discount, apply_addons, post_registration,
+    get_eventregistration_data
+)
 from danceschool.core.constants import getConstant
 from danceschool.core.models import Customer, EventRegistration, Registration
 from danceschool.core.classreg import RegistrationSummaryView
@@ -20,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @receiver(request_discounts)
-def getBestDiscount(sender,**kwargs):
+def getBestDiscount(sender, **kwargs):
     '''
     When a customer registers for events, discounts may need to be
     automatically applied.  A given shopping cart may, in fact,
@@ -36,7 +39,7 @@ def getBestDiscount(sender,**kwargs):
 
     logger.debug('Signal fired to request discounts.')
 
-    reg = kwargs.pop('registration',None)
+    reg = kwargs.pop('registration', None)
     if not reg:
         logger.warning('No registration passed, discounts not applied.')
         return
@@ -45,7 +48,7 @@ def getBestDiscount(sender,**kwargs):
 
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
-    customer = Customer.objects.filter(email=reg.email,first_name=reg.firstName,last_name=reg.lastName).first()
+    customer = Customer.objects.filter(email=reg.email, first_name=reg.firstName, last_name=reg.lastName).first()
     if (customer and customer.numClassSeries > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
@@ -78,12 +81,16 @@ def getBestDiscount(sender,**kwargs):
     # Get the applicable discounts and sort them in ascending category order
     # so that the best discounts are always listed in the order that they will
     # be applied.
-    discountCodesApplicable = getApplicableDiscountCombos(eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=False, dateTime=reg.dateTime)
+    discountCodesApplicable = getApplicableDiscountCombos(
+        eligible_list, newCustomer, reg.student,
+        customer=customer, addOn=False, cannotCombine=False, dateTime=reg.dateTime
+    )
     discountCodesApplicable.sort(key=lambda x: x.code.category.order)
 
-    # Once we have a list of codes to try, calculate the discounted price for each possibility,
-    # and pick the one in each category that has the lowest total price.  We also need to keep track
-    # of the way in which some discounts are allocated across individual events.
+    # Once we have a list of codes to try, calculate the discounted price for each
+    # possibility, and pick the one in each category that has the lowest total
+    # price.  We also need to keep track of the way in which some discounts
+    # are allocated across individual events.
     best_discounts = OrderedDict()
 
     initial_prices = [x.event.getBasePrice(payAtDoor=payAtDoor) for x in eligible_list]
@@ -97,7 +104,8 @@ def getBestDiscount(sender,**kwargs):
     for discount in discountCodesApplicable:
 
         # If the category has changed, then the new net_allocated_prices and the
-        # new net_precategory price are whatever was found to be best in the last category.
+        # new net_precategory price are whatever was found to be best in the last
+        # category.
         if (discount.code.category != last_category):
             last_category = discount.code.category
 
@@ -108,15 +116,19 @@ def getBestDiscount(sender,**kwargs):
                 net_allocated_prices = last_discount.net_allocated_prices
                 net_precategory_price = last_discount.net_price
 
-        # The second item in each tuple is now adjusted, so that each item that is wholly or partially
-        # applied against the discount will be wholly (value goes to 0) or partially subtracted from the
-        # remaining value to be calculated at full price.
-        tieredTuples = [(x,1) for x in eligible_list[:]]
+        # The second item in each tuple is now adjusted, so that each item that
+        # is wholly or partially applied against the discount will be wholly
+        # (value goes to 0) or partially subtracted from the remaining value
+        # to be calculated at full price.
+        tieredTuples = [(x, 1) for x in eligible_list[:]]
 
         for itemTuple in discount.itemTuples:
-            tieredTuples = [(p,q) if p != itemTuple[0] else (p,q - itemTuple[1]) for (p,q) in tieredTuples]
+            tieredTuples = [
+                (p, q) if p != itemTuple[0] else
+                (p, q - itemTuple[1]) for (p, q) in tieredTuples
+            ]
 
-        response = discount.code.applyAndAllocate(net_allocated_prices,tieredTuples,payAtDoor)
+        response = discount.code.applyAndAllocate(net_allocated_prices, tieredTuples, payAtDoor)
 
         # Once the final price has been calculated, apply it iff it is less than
         # the previously best discount found.
@@ -133,7 +145,8 @@ def getBestDiscount(sender,**kwargs):
     # compared against the base price, and there is no need to allocate across items since
     # only one code will potentially be applied.
     uncombinedCodesApplicable = getApplicableDiscountCombos(
-        eligible_list, newCustomer, reg.student, customer=customer, addOn=False, cannotCombine=True, dateTime=reg.dateTime
+        eligible_list, newCustomer, reg.student,
+        customer=customer, addOn=False, cannotCombine=True, dateTime=reg.dateTime
     )
 
     for discount in uncombinedCodesApplicable:
@@ -141,12 +154,12 @@ def getBestDiscount(sender,**kwargs):
         # The second item in each tuple is now adjusted, so that each item that is wholly or partially
         # applied against the discount will be wholly (value goes to 0) or partially subtracted from the
         # remaining value to be calculated at full price.
-        tieredTuples = [(x,1) for x in eligible_list[:]]
+        tieredTuples = [(x, 1) for x in eligible_list[:]]
 
         for itemTuple in discount.itemTuples:
-            tieredTuples = [(p,q) if p != itemTuple[0] else (p,q - itemTuple[1]) for (p,q) in tieredTuples]
+            tieredTuples = [(p, q) if p != itemTuple[0] else (p, q - itemTuple[1]) for (p, q) in tieredTuples]
 
-        response = discount.code.applyAndAllocate(initial_prices,tieredTuples,payAtDoor)
+        response = discount.code.applyAndAllocate(initial_prices, tieredTuples, payAtDoor)
 
         # Once the final price has been calculated, apply it iff it is less than
         # the previously best discount or combination of discounts found.
@@ -165,16 +178,16 @@ def getBestDiscount(sender,**kwargs):
 
 
 @receiver(apply_discount)
-def applyTemporaryDiscount(sender,**kwargs):
+def applyTemporaryDiscount(sender, **kwargs):
     # Get the registration and the customer
     if not getConstant('general__discountsEnabled'):
         return
 
     logger.debug('Signal fired to apply discounts.')
 
-    reg = kwargs.pop('registration',None)
-    discount = kwargs.pop('discount',None)
-    discountAmount = kwargs.pop('discount_amount',None)
+    reg = kwargs.pop('registration', None)
+    discount = kwargs.pop('discount', None)
+    discountAmount = kwargs.pop('discount_amount', None)
 
     if not reg or not discount:
         logger.warning('Incomplete information passed, discounts not applied.')
@@ -183,7 +196,7 @@ def applyTemporaryDiscount(sender,**kwargs):
     obj, created = TemporaryRegistrationDiscount.objects.update_or_create(
         registration=reg,
         discount=discount,
-        defaults={'discountAmount': discountAmount,},
+        defaults={'discountAmount': discountAmount, },
     )
     logger.debug('Discount applied.')
     return obj
@@ -197,32 +210,38 @@ def getAddonItems(sender, **kwargs):
 
     logger.debug('Signal fired to request free add-ons.')
 
-    reg = kwargs.pop('registration',None)
+    reg = kwargs.pop('registration', None)
     if not reg:
         logger.warning('No registration passed, addons not applied.')
         return
 
     newCustomer = True
-    customer = Customer.objects.filter(email=reg.email,first_name=reg.firstName,last_name=reg.lastName).first()
+    customer = Customer.objects.filter(email=reg.email, first_name=reg.firstName, last_name=reg.lastName).first()
     if (customer and customer.numClassSeries > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
     # No need to get all objects, just the ones that could qualify one for an add-on
-    cart_object_list = reg.temporaryeventregistration_set.filter(dropIn=False).filter(Q(event__series__pricingTier__isnull=False) | Q(event__publicevent__pricingTier__isnull=False))
+    cart_object_list = reg.temporaryeventregistration_set.filter(dropIn=False).filter(
+        Q(event__series__pricingTier__isnull=False) |
+        Q(event__publicevent__pricingTier__isnull=False)
+    )
 
-    availableAddons = getApplicableDiscountCombos(cart_object_list, newCustomer, reg.student, customer=customer, addOn=True, dateTime=reg.dateTime)
+    availableAddons = getApplicableDiscountCombos(
+        cart_object_list, newCustomer, reg.student,
+        customer=customer, addOn=True, dateTime=reg.dateTime
+    )
     return [x.code.name for x in availableAddons]
 
 
 @receiver(post_registration)
-def applyFinalDiscount(sender,**kwargs):
+def applyFinalDiscount(sender, **kwargs):
     # Get the registration and the customer
     if not getConstant('general__discountsEnabled'):
         return
 
     logger.debug('Signal fired to finalize application of discounts.')
 
-    reg = kwargs.pop('registration',None)
+    reg = kwargs.pop('registration', None)
 
     if not reg:
         logger.debug('No registration passed, discounts not applied.')
@@ -243,27 +262,28 @@ def applyFinalDiscount(sender,**kwargs):
 
 
 @receiver(get_eventregistration_data)
-def reportDiscounts(sender,**kwargs):
+def reportDiscounts(sender, **kwargs):
     if not getConstant('general__discountsEnabled'):
         return
 
     logger.debug('Signal fired to return discounts associated with registrations')
 
-    regs = kwargs.pop('eventregistrations',None)
-    if not regs or not isinstance(regs,QuerySet) or not (regs.model == EventRegistration):
+    regs = kwargs.pop('eventregistrations', None)
+    if not regs or not isinstance(regs, QuerySet) or not (regs.model == EventRegistration):
         logger.warning('No/invalid EventRegistration queryset passed, so discounts not found.')
         return
-    
+
     extras = {}
     regs = regs.filter(registration__registrationdiscount__isnull=False).prefetch_related(
-        'registration__registrationdiscount_set','registration__registrationdiscount_set__discount'
+        'registration__registrationdiscount_set',
+        'registration__registrationdiscount_set__discount'
     )
 
     for reg in regs:
         extras[reg.id] = list(reg.registration.registrationdiscount_set.annotate(
             name=F('discount__name'),
-            type=Value('discount',output_field=CharField()),
+            type=Value('discount', output_field=CharField()),
             amount=F('discountAmount'),
-        ).values('id','amount','name','type'))
+        ).values('id', 'amount', 'name', 'type'))
 
     return extras

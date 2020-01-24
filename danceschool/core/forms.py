@@ -52,7 +52,10 @@ class LocationWithDataWidget(Select):
         if option_value:
             this_location = Location.objects.filter(id=int(option_value)).first()
             defaultCapacity = this_location.defaultCapacity
-            room_options = [{'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity} for x in this_location.room_set.all()]
+            room_options = [
+                {'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity}
+                for x in this_location.room_set.all()
+            ]
 
             extra_value_data = format_html(
                 ' data-defaultCapacity="{}" data-roomOptions="{}"',
@@ -80,14 +83,14 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
             value = []
         has_id = attrs and 'id' in attrs
         final_attrs = self.build_attrs(attrs, extra_attrs={'name': name})
-        output = [u'',]
+        output = [u'', ]
 
         # Separate out regular choices and override-only choices
         all_choices = list(chain(self.choices, choices))
 
         override_choices = [
             x for x in all_choices if
-            isinstance(x[1],dict) and
+            isinstance(x[1], dict) and
             'override' in x[1].keys() and
             x[1]['override']
         ]
@@ -120,7 +123,9 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
                 option_value = force_text(option_value, encoding='utf-8')
                 rendered_cb = cb.render(name, option_value)
                 option_label = conditional_escape(force_text(option_label, encoding='utf=8'))
-                output.append(u'<li><label%s>%s %s</label></li>' % (label_for, rendered_cb, option_label))
+                output.append(u'<li><label%s>%s %s</label></li>' % (
+                    label_for, rendered_cb, option_label
+                ))
 
             output.append(u'</ul>')
 
@@ -134,7 +139,14 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
             else:
                 collapse_id = 'override_' + str(int(random() * 10.0**12))
 
-            output.append(u'<button class="btn btn-outline-secondary btn-sm mb-4" type="button" data-toggle="collapse" data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s"><ul class="list-unstyled">' % {'id': collapse_id, 'string': _('Additional Choices')})
+            output.append(
+                u'<button class="btn btn-outline-secondary btn-sm mb-4" ' +
+                'type="button" data-toggle="collapse" ' +
+                ('data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s">' % {
+                    {'id': collapse_id, 'string': _('Additional Choices')}
+                }) +
+                '<ul class="list-unstyled">'
+            )
 
             for i, (option_value, option_label) in enumerate(override_choices):
                 if 'disabled' in final_attrs:
@@ -158,7 +170,10 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
                 option_label = conditional_escape(force_text(option_label, encoding='utf=8'))
                 output.append(u'<li><label%s>%s %s</label></li>' % (label_for, rendered_cb, option_label))
             if submit_button_flag:
-                output.append(u'<input class="btn btn-outline-primary btn-sm" type="submit" value="%s &raquo;" />' % _('Register now'))
+                output.append(
+                    '<input class="btn btn-outline-primary btn-sm" type="submit" ' +
+                    'value="%s &raquo;" />' % _('Register now')
+                )
             output.append(u'</ul></div>')
 
         return mark_safe(u'\n'.join(output))
@@ -176,7 +191,7 @@ class CheckboxSeriesChoiceField(forms.MultipleChoiceField):
         # Add field attributes for the associated event, and a dictionary of
         # additional field features (e.g. roles, drop-ins, etc.).
         self.event = kwargs.pop('event', None)
-        self.features = kwargs.pop('features',{})
+        self.features = kwargs.pop('features', {})
         super(CheckboxSeriesChoiceField, self).__init__(*args, **kwargs)
 
     def valid_value(self, value):
@@ -211,14 +226,16 @@ class ClassChoiceForm(forms.Form):
 
         # Only the keys passed in this property will be entered into session data.
         # This prevents injection of unknown values into the registration process.
-        self.permitted_event_keys = kwargs.pop('permittedEventKeys',['role',])
+        self.permitted_event_keys = kwargs.pop('permittedEventKeys', ['role', ])
 
         # Initialize a default (empty) form to fill
         super(ClassChoiceForm, self).__init__(*args, **kwargs)
 
         # Allow users with appropriate permissions to process door registrations.
         if user and user.has_perm('core.accept_door_payments'):
-            self.fields['payAtDoor'] = forms.BooleanField(required=False, label=_('Door/Invoice Registration'))
+            self.fields['payAtDoor'] = forms.BooleanField(
+                required=False, label=_('Door/Invoice Registration')
+            )
 
         # If specified in form kwargs, add a voucher code field.
         if voucherField:
@@ -229,14 +246,12 @@ class ClassChoiceForm(forms.Form):
         else:
             choice_set = openEvents
 
-
         occurrence_filters = {}
         if interval:
             occurrence_filters.update({
                 'endTime__gte': interval[0],
                 'startTime__lte': interval[1]
             })
-
 
         for event in choice_set:
             field_choices = []
@@ -254,7 +269,9 @@ class ClassChoiceForm(forms.Form):
             for role in roles:
                 this_label_text = role.pluralName if usePluralName else role.name
                 if includeCounts:
-                    this_label_text += '(%s %s)' % (event.numRegisteredForRole(role),str(_('registered')))
+                    this_label_text += '(%s %s)' % (
+                        event.numRegisteredForRole(role), str(_('registered'))
+                    )
                 this_label = {
                     'label': this_label_text,
                     'type': 'role',
@@ -272,7 +289,7 @@ class ClassChoiceForm(forms.Form):
                         this_label['closed'] = True
                         this_label['override'] = True
                 field_choices.append(
-                    (json.dumps({'role': role.id,}),this_label)
+                    (json.dumps({'role': role.id, }), this_label)
                 )
             # If no choices, then add a general Register choice
             if not roles:
@@ -290,7 +307,7 @@ class ClassChoiceForm(forms.Form):
                     this_label['closed'] = True
                     this_label['override'] = True
                 field_choices.append(
-                    (json.dumps({'role': None}),this_label)
+                    (json.dumps({'role': None}), this_label)
                 )
 
             # Add drop-in choices if they are available and if this user has permission.
@@ -309,7 +326,7 @@ class ClassChoiceForm(forms.Form):
                             'roleName': _('Drop in'),
                         }
                         if b:
-                            this_label['override'] = True 
+                            this_label['override'] = True
                         field_choices += ((
                             json.dumps({'dropin_' + str(occurrence.id): True}),
                             this_label
@@ -334,7 +351,7 @@ class ClassChoiceForm(forms.Form):
                 hasContent = True
             if isinstance(value, list):
                 # Ignore any passed value that is not a dictionary
-                value_dict_list = [json.loads(x) for x in value if isinstance(json.loads(x),dict)]
+                value_dict_list = [json.loads(x) for x in value if isinstance(json.loads(x), dict)]
 
                 # Get the list of roles -- if more than one, then raise an error
                 roles = [y.pop('role') for y in value_dict_list if y.get('role')]
@@ -346,9 +363,11 @@ class ClassChoiceForm(forms.Form):
                 dropIns = [k.replace('dropin_', '') for k in value_dict.keys() if 'dropin_' in k]
 
                 if len(roles) > 1:
-                    raise ValidationError(_('Must select only one role.'),code='invalid')
+                    raise ValidationError(_('Must select only one role.'), code='invalid')
                 elif len(roles) == 1 and len(dropIns) > 0:
-                    raise ValidationError(_('Cannot register for drop-in classes and also for the entire series.'),code='invalid')
+                    raise ValidationError(_(
+                        'Cannot register for drop-in classes and also for the entire series.'
+                    ), code='invalid')
         if not hasContent:
             raise ValidationError(_('Must register for at least one class or series.'))
 
@@ -361,13 +380,29 @@ class RegistrationContactForm(forms.Form):
     firstName = forms.CharField(label=_('First Name'))
     lastName = forms.CharField(label=_('Last Name'))
     email = forms.EmailField()
-    phone = forms.CharField(required=False, label=_('Telephone (optional)'),help_text=_('We may use this to notify you in event of a cancellation.'))
-    student = forms.BooleanField(required=False, label=_('I am a student'), help_text=_('Photo ID is required at the door'))
+    phone = forms.CharField(
+        required=False, label=_('Telephone (optional)'),
+        help_text=_('We may use this to notify you in event of a cancellation.')
+    )
+    student = forms.BooleanField(
+        required=False, label=_('I am a student'),
+        help_text=_('Photo ID is required at the door')
+    )
     mailList = forms.BooleanField(required=False, label=_('Add me to the mailing list'))
-    agreeToPolicies = forms.BooleanField(required=True, label=_('<strong>I agree to all policies (required)</strong>'),help_text=_('By checking, you agree to abide by all policies.'))
+    agreeToPolicies = forms.BooleanField(
+        required=True,
+        label=_('<strong>I agree to all policies (required)</strong>'),
+        help_text=_('By checking, you agree to abide by all policies.')
+    )
     gift = forms.CharField(required=False, label=_('Voucher ID'))
-    howHeardAboutUs = forms.ChoiceField(choices=HOW_HEARD_CHOICES, required=False, label=_('How did you hear about us?'),help_text=_('Optional'))
-    comments = forms.CharField(widget=forms.Textarea, required=False, label=_('Comments'),help_text=_('Add anything else you\'d like to tell us.'))
+    howHeardAboutUs = forms.ChoiceField(
+        choices=HOW_HEARD_CHOICES, required=False,
+        label=_('How did you hear about us?'), help_text=_('Optional')
+    )
+    comments = forms.CharField(
+        widget=forms.Textarea, required=False, label=_('Comments'),
+        help_text=_('Add anything else you\'d like to tell us.')
+    )
 
     def get_top_layout(self):
 
@@ -406,14 +441,15 @@ class RegistrationContactForm(forms.Form):
         self._request = kwargs.pop('request', None)
         self._registration = kwargs.pop('registration', None)
         user = getattr(self._request, 'user', None)
-        session = getattr(self._request, 'session',{}).get(REG_VALIDATION_STR,{})
+        session = getattr(self._request, 'session', {}).get(REG_VALIDATION_STR, {})
 
         super(RegistrationContactForm, self).__init__(*args, **kwargs)
         self._session = session
 
-        # Setting use_custom_control to False to avoid issues with django-crispy-forms Bootstrap integration.
+        # Setting use_custom_control to False to avoid issues with
+        # django-crispy-forms Bootstrap integration.
         self.helper = FormHelper()
-        self.helper.use_custom_control=False
+        self.helper.use_custom_control = False
         self.helper.form_method = 'post'
         self.helper.form_tag = False  # Our template must explicitly include the <form tag>
 
@@ -433,22 +469,22 @@ class RegistrationContactForm(forms.Form):
 
         # If a voucher ID was passed (i.e. a referral code), then populate the form
         # and clear the passed session value
-        if session.get('voucher_id') and self.fields.get('gift',None):
+        if session.get('voucher_id') and self.fields.get('gift', None):
             self.fields['gift'].initial = session.get('voucher_id')
             self.fields['gift'].widget.attrs['readonly'] = True
             session.pop('voucher_id', None)
             session.pop('voucher_names', None)
-            session.pop('total_voucher_amount',None)
+            session.pop('total_voucher_amount', None)
 
         # Pass along whether the individual is a student if this has already
         # been set.
-        if self._registration and self.fields.get('student',None):
+        if self._registration and self.fields.get('student', None):
             self.fields['student'].initial = self._registration.student
 
     def is_valid(self):
         '''
-        For this form to be considered valid, there must be not only no errors, but also no messages on
-        the request that need to be shown.
+        For this form to be considered valid, there must be not only no errors,
+        but also no messages on the request that need to be shown.
         '''
 
         valid = super(RegistrationContactForm, self).is_valid()
@@ -456,7 +492,7 @@ class RegistrationContactForm(forms.Form):
 
         # We only want validation messages to show up once, so pop messages that have already show up
         # before checking to see if any messages remain to be shown.
-        prior_messages = self._session.pop('prior_messages',[])
+        prior_messages = self._session.pop('prior_messages', [])
         remaining_messages = []
 
         for m in msgs:
@@ -490,7 +526,10 @@ class RegistrationContactForm(forms.Form):
 
         if already_registered_list:
             error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in already_registered_list])
-            raise ValidationError(ugettext(mark_safe('You are already registered for:\n<ul>\n%s\n</ul>\nIf you are registering another person, please enter their name.' % error_list)))
+            raise ValidationError(ugettext(mark_safe(
+                'You are already registered for:\n<ul>\n%s\n</ul>' % error_list +
+                '\nIf you are registering another person, please enter their name.'
+            )))
 
         # Allow other handlers to add validation errors to the form.  Also, by
         # passing the request, we allow those handlers to add messages to the
@@ -510,9 +549,12 @@ class CreateInvoiceForm(forms.Form):
     This form is used by staff users to create an invoice.
     '''
 
-    submissionUser = forms.ModelChoiceField(queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),required=True)
-    invoiceSent = forms.BooleanField(label=_('Send Invoice'),required=True)
-    invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
+    submissionUser = forms.ModelChoiceField(
+        queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
+        required=True
+    )
+    invoiceSent = forms.BooleanField(label=_('Send Invoice'), required=True)
+    invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'), required=False)
     discountAmount = forms.FloatField(required=False)
 
     def __init__(self, *args, **kwargs):
@@ -585,9 +627,12 @@ class DoorAmountForm(forms.Form):
     payment.  Upon this being marked, the registration is processed.
     '''
 
-    submissionUser = forms.ModelChoiceField(queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),required=True)
+    submissionUser = forms.ModelChoiceField(
+        queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
+        required=True
+    )
 
-    paid = forms.BooleanField(label=_('Payment Received'),required=False)
+    paid = forms.BooleanField(label=_('Payment Received'), required=False)
     receivedBy = forms.ModelChoiceField(
         queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
         label=_('Payment received by:'),
@@ -605,11 +650,11 @@ class DoorAmountForm(forms.Form):
             }
         )
     )
-    amountPaid = forms.FloatField(label=_('Amount Paid'),required=False)
+    amountPaid = forms.FloatField(label=_('Amount Paid'), required=False)
 
-    invoiceSent = forms.BooleanField(label=_('Send Invoice'),required=False)
-    payerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
-    invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'),required=False)
+    invoiceSent = forms.BooleanField(label=_('Send Invoice'), required=False)
+    payerEmail = forms.EmailField(label=_('Payer Email Address'), required=False)
+    invoicePayerEmail = forms.EmailField(label=_('Payer Email Address'), required=False)
     discountAmount = forms.FloatField(required=False)
 
     def __init__(self, *args, **kwargs):
@@ -621,9 +666,10 @@ class DoorAmountForm(forms.Form):
 
         subUser = getattr(user, 'id', None)
 
-        # Setting use_custom_control to False to avoid issues with django-crispy-forms Bootstrap integration.
+        # Setting use_custom_control to False to avoid issues with
+        # django-crispy-forms Bootstrap integration.
         self.helper = FormHelper()
-        self.helper.use_custom_control=False
+        self.helper.use_custom_control = False
         self.helper.form_method = 'post'
         self.helper.form_tag = False  # Our template must explicitly include the <form tag>
 
@@ -712,7 +758,9 @@ class DoorAmountForm(forms.Form):
         invoiceSent = form_data.get('invoiceSent')
 
         if paid and invoiceSent:
-            raise ValidationError(_('Must choose either cash payment or invoice submission, not both.'))
+            raise ValidationError(_(
+                'Must choose either cash payment or invoice submission, not both.'
+            ))
 
         if not paid and not invoiceSent:
             raise ValidationError(_('Must select either cash payment or invoice submission.'))
@@ -773,8 +821,9 @@ class EventAutocompleteForm(forms.Form):
 
 class RefundForm(forms.ModelForm):
     '''
-    This is the form that is used to allocate refunds across series and events.  If the Paypal app is installed, then it
-    will also be used to submit refund requests to Paypal.  Note that most cleaning validation happens in Javascript.
+    This is the form that is used to allocate refunds across series and events.
+    If the Paypal app is installed, then it will also be used to submit refund
+    requests to Paypal.  Note that most cleaning validation happens in Javascript.
     '''
     class Meta:
         model = Invoice
@@ -792,23 +841,40 @@ class RefundForm(forms.ModelForm):
             item_max = item.total + item.taxes if this_invoice.buyerPaysSalesTax else item.total
 
             self.fields["item_cancelled_%s" % item.id] = forms.BooleanField(
-                label=_('Cancelled'),required=False, initial=initial)
+                label=_('Cancelled'), required=False, initial=initial)
             self.fields['item_refundamount_%s' % item.id] = forms.FloatField(
-                label=_('Refund Amount'),required=False, initial=(-1) * item.adjustments, min_value=0, max_value=item_max)
+                label=_('Refund Amount'), required=False,
+                initial=(-1) * item.adjustments, min_value=0, max_value=item_max
+            )
 
         self.fields['comments'] = forms.CharField(
-            label=_('Explanation/Comments (optional)'),required=False,
-            help_text=_('This information will be added to the comments on the invoice associated with this refund.'),
-            widget=forms.Textarea(attrs={'placeholder': _('Enter explanation/comments...'), 'class': 'form-control'}))
+            label=_('Explanation/Comments (optional)'), required=False,
+            help_text=_(
+                'This information will be added to the comments on the invoice ' +
+                'associated with this refund.'
+            ),
+            widget=forms.Textarea(attrs={
+                'placeholder': _('Enter explanation/comments...'),
+                'class': 'form-control'
+            })
+        )
 
         self.fields['id'] = forms.ModelChoiceField(
-            required=True, queryset=Invoice.objects.filter(id=this_invoice.id),widget=forms.HiddenInput(),initial=this_invoice.id)
+            required=True, queryset=Invoice.objects.filter(id=this_invoice.id),
+            widget=forms.HiddenInput(), initial=this_invoice.id
+        )
 
         self.fields['initial_refund_amount'] = forms.FloatField(
-            required=True, initial=(-1) * this_invoice.adjustments, min_value=0, max_value=this_invoice.amountPaid + this_invoice.refunds, widget=forms.HiddenInput())
+            required=True, initial=(-1) * this_invoice.adjustments,
+            min_value=0, max_value=this_invoice.amountPaid + this_invoice.refunds,
+            widget=forms.HiddenInput()
+        )
 
         self.fields['total_refund_amount'] = forms.FloatField(
-            required=True, initial=0, min_value=0, max_value=this_invoice.amountPaid + this_invoice.refunds, widget=forms.HiddenInput())
+            required=True, initial=0, min_value=0,
+            max_value=this_invoice.amountPaid + this_invoice.refunds,
+            widget=forms.HiddenInput()
+        )
 
     def clean_total_refund_amount(self):
         '''
@@ -816,7 +882,9 @@ class RefundForm(forms.ModelForm):
         '''
         initial = self.cleaned_data.get('initial_refund_amount', 0)
         total = self.cleaned_data['total_refund_amount']
-        summed_refunds = sum([v for k, v in self.cleaned_data.items() if k.startswith('item_refundamount_')])
+        summed_refunds = sum([
+            v for k, v in self.cleaned_data.items() if k.startswith('item_refundamount_')
+        ])
 
         if not self.cleaned_data.get('id'):
             raise ValidationError('ID not in cleaned data')
@@ -832,14 +900,29 @@ class RefundForm(forms.ModelForm):
 
 class EmailContactForm(forms.Form):
 
-    EMAIL_SENDTOSET_CHOICES = (('series', _('All students in one or more series')),('month', _('All Students in a given month')))
-    RICH_TEXT_CHOICES = (('plain', _('Plain text email')),('HTML', _('HTML rich text email')))
+    EMAIL_SENDTOSET_CHOICES = (
+        ('series', _('All students in one or more series')),
+        ('month', _('All Students in a given month'))
+    )
+    RICH_TEXT_CHOICES = (
+        ('plain', _('Plain text email')),
+        ('HTML', _('HTML rich text email'))
+    )
 
-    sendToSet = forms.ChoiceField(label=_('This email is for:'),widget=forms.RadioSelect, choices=EMAIL_SENDTOSET_CHOICES, required=False, initial='series')
+    sendToSet = forms.ChoiceField(
+        label=_('This email is for:'), widget=forms.RadioSelect,
+        choices=EMAIL_SENDTOSET_CHOICES, required=False, initial='series'
+    )
 
-    template = forms.ModelChoiceField(label=_('(Optional) Select a template'),required=False, queryset=EmailTemplate.objects.none())
+    template = forms.ModelChoiceField(
+        label=_('(Optional) Select a template'), required=False,
+        queryset=EmailTemplate.objects.none()
+    )
 
-    richTextChoice = forms.ChoiceField(label=_('Send this email as'),widget=forms.RadioSelect, choices=RICH_TEXT_CHOICES, required=True, initial='plain')
+    richTextChoice = forms.ChoiceField(
+        label=_('Send this email as'), widget=forms.RadioSelect,
+        choices=RICH_TEXT_CHOICES, required=True, initial='plain'
+    )
 
     subject = forms.CharField(max_length=100)
 
@@ -848,16 +931,25 @@ class EmailContactForm(forms.Form):
 
     from_name = forms.CharField(max_length=50, initial=get_defaultEmailName)
     from_address = forms.EmailField(max_length=100, initial=get_defaultEmailFrom)
-    cc_myself = forms.BooleanField(label=_('CC Myself:'),initial=True, required=False)
-    month = forms.ChoiceField(label=_('Email all students registered in month:'),initial='', required=False)
-    series = forms.MultipleChoiceField(label=_('Email all students registered in a current/recent series:'),initial='', required=False)
-    testemail = forms.BooleanField(label=_('Test email:'),help_text=_('Send a test email to myself only.'),initial=False, required=False)
+    cc_myself = forms.BooleanField(label=_('CC Myself:'), initial=True, required=False)
+    month = forms.ChoiceField(
+        label=_('Email all students registered in month:'), initial='',
+        required=False
+    )
+    series = forms.MultipleChoiceField(
+        label=_('Email all students registered in a current/recent series:'),
+        initial='', required=False
+    )
+    testemail = forms.BooleanField(
+        label=_('Test email:'), help_text=_('Send a test email to myself only.'),
+        initial=False, required=False
+    )
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        months = kwargs.pop('months',[])
-        recentseries = kwargs.pop('recentseries',[])
-        customers = kwargs.pop('customers',[])
+        months = kwargs.pop('months', [])
+        recentseries = kwargs.pop('recentseries', [])
+        customers = kwargs.pop('customers', [])
 
         super(EmailContactForm, self).__init__(*args, **kwargs)
 
@@ -881,7 +973,9 @@ class EmailContactForm(forms.Form):
             self.fields['series'].choices = recentseries
 
         if user:
-            self.fields['template'].queryset = EmailTemplate.objects.filter(Q(groupRequired__isnull=True) | Q(groupRequired__in=user.groups.all())).filter(hideFromForm=False)
+            self.fields['template'].queryset = EmailTemplate.objects.filter(
+                Q(groupRequired__isnull=True) | Q(groupRequired__in=user.groups.all())
+            ).filter(hideFromForm=False)
 
     def clean(self):
         # Custom cleaning ensures email is only sent to one of
@@ -990,8 +1084,10 @@ class SubstituteReportingForm(forms.ModelForm):
         user = kwargs.pop('user', None)
 
         # Ensure 'initial' is initialized to avoid KeyError issues and fill in the Sub category
-        kwargs['initial'] = kwargs.get('initial',{})
-        kwargs['initial'].update({'category': getConstant('general__eventStaffCategorySubstitute').id})
+        kwargs['initial'] = kwargs.get('initial', {})
+        kwargs['initial'].update(
+            {'category': getConstant('general__eventStaffCategorySubstitute').id}
+        )
 
         # If the user is a staffMember, then populate the form with their info
         if hasattr(user, 'staffmember'):
@@ -1011,7 +1107,9 @@ class SubstituteReportingForm(forms.ModelForm):
                     Instructor.InstructorStatus.retiredGuest
                 ]
             ).order_by('instructor__status', 'lastName', 'firstName'))
-        self.fields['replacedStaffMember'] = SeriesTeacherChoiceField(queryset=SeriesTeacher.objects.none())
+        self.fields['replacedStaffMember'] = SeriesTeacherChoiceField(
+            queryset=SeriesTeacher.objects.none()
+        )
         self.fields['occurrences'] = SeriesClassesChoiceField(queryset=EventOccurrence.objects.none())
         self.fields['submissionUser'].widget = forms.HiddenInput()
         self.fields['category'].widget = forms.HiddenInput()
@@ -1024,19 +1122,35 @@ class SubstituteReportingForm(forms.ModelForm):
         '''
         super(SubstituteReportingForm, self).clean()
 
-        occurrences = self.cleaned_data.get('occurrences',[])
+        occurrences = self.cleaned_data.get('occurrences', [])
         staffMember = self.cleaned_data.get('staffMember')
-        replacementFor = self.cleaned_data.get('replacedStaffMember',[])
+        replacementFor = self.cleaned_data.get('replacedStaffMember', [])
         event = self.cleaned_data.get('event')
 
         for occ in occurrences:
             for this_sub in occ.eventstaffmember_set.all():
                 if this_sub.replacedStaffMember == replacementFor:
-                    self.add_error('occurrences', ValidationError(_('One or more classes you have selected already has a substitute teacher for that class.'),code='invalid'))
+                    self.add_error(
+                        'occurrences',
+                        ValidationError(_(
+                            'One or more classes you have selected already ' +
+                            'has a substitute teacher for that class.'
+                        ), code='invalid')
+                    )
 
         if event and staffMember:
-            if staffMember in [x.staffMember for x in event.eventstaffmember_set.filter(category__in=[getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')])]:
-                self.add_error('event', ValidationError(_('You cannot substitute teach for a class in which you were an instructor.'),code='invalid'))
+            if staffMember in [
+                x.staffMember for x in
+                event.eventstaffmember_set.filter(
+                    category__in=[
+                        getConstant('general__eventStaffCategoryAssistant'),
+                        getConstant('general__eventStaffCategoryInstructor')
+                    ]
+                )
+            ]:
+                self.add_error('event', ValidationError(_(
+                    'You cannot substitute teach for a class in which you were an instructor.'
+                ), code='invalid'))
 
     def validate_unique(self):
         '''
@@ -1087,14 +1201,22 @@ class StaffMemberBioChangeForm(forms.ModelForm):
                 label=_('Available For private lessons'),
                 initial=True,
                 required=False,
-                help_text=_('Check this box if you would like to be listed as available for private lessons from students.')
+                help_text=_(
+                    'Check this box if you would like to be listed as ' +
+                    'available for private lessons from students.'
+                )
             )
 
     def save(self, commit=True):
-        ''' If the staff member is an instructor, also update the availableForPrivates field on the Instructor record. '''
+        '''
+        If the staff member is an instructor, also update the availableForPrivates
+        field on the Instructor record.
+        '''
         if getattr(self.instance, 'instructor', None):
-            self.instance.instructor.availableForPrivates = self.cleaned_data.pop('availableForPrivates', self.instance.instructor.availableForPrivates)
-            self.instance.instructor.save(update_fields=['availableForPrivates',])
+            self.instance.instructor.availableForPrivates = self.cleaned_data.pop(
+                'availableForPrivates', self.instance.instructor.availableForPrivates
+            )
+            self.instance.instructor.save(update_fields=['availableForPrivates', ])
         super(StaffMemberBioChangeForm, self).save(commit=True)
 
     class Meta:
@@ -1105,10 +1227,16 @@ class StaffMemberBioChangeForm(forms.ModelForm):
 class RepeatEventForm(forms.Form):
 
     startDate = forms.DateField(label=_('First event occurs on'))
-    repeatEvery = forms.IntegerField(label=_('Repeat every'),min_value=1, initial=1)
-    periodicity = forms.ChoiceField(label=_('Period'),choices=(('D', _('Days')),('W', _('Weeks')),('M', _('Months')),), initial='W')
-    quantity = forms.IntegerField(label=_('Repeat this many times'),min_value=1, max_value=99, required=False)
-    endDate = forms.DateField(label=_('Repeat until this date'),required=False)
+    repeatEvery = forms.IntegerField(label=_('Repeat every'), min_value=1, initial=1)
+    periodicity = forms.ChoiceField(
+        label=_('Period'),
+        choices=(('D', _('Days')), ('W', _('Weeks')), ('M', _('Months')),),
+        initial='W'
+    )
+    quantity = forms.IntegerField(
+        label=_('Repeat this many times'), min_value=1, max_value=99, required=False
+    )
+    endDate = forms.DateField(label=_('Repeat until this date'), required=False)
 
     def clean(self):
         startDate = self.cleaned_data.get('startDate')
@@ -1119,7 +1247,11 @@ class RepeatEventForm(forms.Form):
             self.add_error('endDate', ValidationError(_('End date must be after start date.')))
 
         if quantity and endDate:
-            self.add_error('quantity', ValidationError(_('Please specify either a number of repeats or an end date, not both.')))
+            self.add_error(
+                'quantity', ValidationError(_(
+                    'Please specify either a number of repeats or an end date, not both.'
+                ))
+            )
 
 
 class InvoiceNotificationForm(forms.Form):
@@ -1134,4 +1266,6 @@ class InvoiceNotificationForm(forms.Form):
         super(InvoiceNotificationForm, self).__init__(*args, **kwargs)
 
         for invoice in invoices:
-            self.fields['invoice_%s' % invoice.id] = forms.BooleanField(label=invoice.id, required=False, initial=True)
+            self.fields['invoice_%s' % invoice.id] = forms.BooleanField(
+                label=invoice.id, required=False, initial=True
+            )

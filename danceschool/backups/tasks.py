@@ -15,7 +15,7 @@ from danceschool.core.constants import getConstant
 logger = logging.getLogger(__name__)
 
 
-@db_periodic_task(crontab(hour='*',minute='0'))
+@db_periodic_task(crontab(hour='*', minute='0'))
 def backupDatabase():
     '''
     This task runs every hour in crontab, but it revokes itself in order to have customizable
@@ -28,13 +28,13 @@ def backupDatabase():
     frequency = getConstant('backups__backupFrequency')
     replace_to = {
         'hour': int(getConstant('backups__backupHour')),
-    } 
+    }
     relative_to = {'minutes': -15}
 
     if frequency == 'Monthly':
         this_day = timezone.now().day
         replace_to['day'] = int(getConstant('backups__backupMonthDay'))
-        if timezone.now().replace(day=replace_to['day'],hour=replace_to['hour']) < timezone.now():
+        if timezone.now().replace(day=replace_to['day'], hour=replace_to['hour']) < timezone.now():
             relative_to['months'] = 1
     elif frequency == 'Weekly':
         this_weekday = timezone.now().weekday()
@@ -56,4 +56,8 @@ def backupDatabase():
     nextTime = timezone.now().replace(**replace_to) + relativedelta(**relative_to)
     backupDatabase.revoke(revoke_until=nextTime)
 
-    logger.debug('Next backup will occur at approximately %s.' % (nextTime + relativedelta(minutes=15)).strftime('%Y-%m-%d %H:00:00'))
+    logger.debug(
+        'Next backup will occur at approximately %s.' % (
+            (nextTime + relativedelta(minutes=15)).strftime('%Y-%m-%d %H:00:00'),
+        )
+    )

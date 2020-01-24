@@ -27,7 +27,7 @@ class UserAccountInfo(View):
         if not request.user.is_authenticated:
             return JsonResponse(context)
 
-        customer = getattr(request.user,'customer',None)
+        customer = getattr(request.user, 'customer', None)
 
         if customer:
             context.update({
@@ -133,7 +133,7 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                     'Invalid request type. ' +
                     'Options are \'get\', \'get_all\', and \'update\'.'
                 )
-            })            
+            })
 
         if not event_id:
             errors.append({
@@ -273,7 +273,7 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
             checkin.cancelled = this_update[0].get('cancelled', False)
 
         EventCheckIn.objects.bulk_update(
-            existing_checkins, ['cancelled','submissionUser']
+            existing_checkins, ['cancelled', 'submissionUser']
         )
 
         # Create EventCheckIns associated with remaining new registrations and
@@ -315,7 +315,7 @@ def getEmailTemplate(request):
     if request.method != 'POST':
         return HttpResponse(_('Error, no POST data.'))
 
-    if not hasattr(request,'user'):
+    if not hasattr(request, 'user'):
         return HttpResponse(_('Error, not authenticated.'))
 
     template_id = request.POST.get('template')

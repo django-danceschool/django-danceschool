@@ -14,19 +14,27 @@ class PrerequisitesAppConfig(AppConfig):
         from . import handlers
 
         def getRequirements(series):
-            return Requirement.objects.filter(Q(applicableLevel=series.classDescription.danceTypeLevel) | Q(applicableClass=series.classDescription)).exclude(enforcementMethod=Requirement.EnforcementChoice.none)
+            return Requirement.objects.filter(
+                Q(applicableLevel=series.classDescription.danceTypeLevel) |
+                Q(applicableClass=series.classDescription)
+            ).exclude(
+                enforcementMethod=Requirement.EnforcementChoice.none
+            )
 
-        def customerMeetsAllSeriesRequirements(series, customer, danceRole=None,registration=None):
-            ''' Add a method to the Series class to check whether a specified customer meets all requirements for the Series. '''
+        def customerMeetsAllSeriesRequirements(series, customer, danceRole=None, registration=None):
+            '''
+            Add a method to the Series class to check whether a specified
+            customer meets all requirements for the Series.
+            '''
             for req in series.getRequirements():
-                if not req.customerMeetsRequirement(customer,danceRole=danceRole,registration=registration):
+                if not req.customerMeetsRequirement(customer, danceRole=danceRole, registration=registration):
                     return False
             return True
 
-        def meetsAllSeriesRequirements(customer, series, danceRole=None,registration=None):
+        def meetsAllSeriesRequirements(customer, series, danceRole=None, registration=None):
             ''' Just reverse the arguments so this can be added to the Customer class, too. '''
             return customerMeetsAllSeriesRequirements(series, customer, danceRole, registration)
 
-        Series.add_to_class('getRequirements',getRequirements)
-        Series.add_to_class('customerMeetsAllRequirements',customerMeetsAllSeriesRequirements)
-        Customer.add_to_class('meetsAllSeriesRequirements',meetsAllSeriesRequirements)
+        Series.add_to_class('getRequirements', getRequirements)
+        Series.add_to_class('customerMeetsAllRequirements', customerMeetsAllSeriesRequirements)
+        Customer.add_to_class('meetsAllSeriesRequirements', meetsAllSeriesRequirements)

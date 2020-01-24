@@ -24,8 +24,8 @@ class SquarePaymentRecord(PaymentRecord):
     using the REST API.
     '''
 
-    transactionId = models.CharField(_('Square Transaction ID'),max_length=100,unique=True)
-    locationId = models.CharField(_('Square Location ID'),max_length=100)
+    transactionId = models.CharField(_('Square Transaction ID'), max_length=100, unique=True)
+    locationId = models.CharField(_('Square Location ID'), max_length=100)
     payerEmail = models.EmailField(_('Associated email'), null=True, blank=True)
 
     @property
@@ -57,7 +57,7 @@ class SquarePaymentRecord(PaymentRecord):
 
     def getPayment(self):
         api_instance = TransactionsApi()
-        api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
+        api_instance.api_client.configuration.access_token = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
 
         try:
             response = api_instance.retrieve_transaction(
@@ -77,7 +77,7 @@ class SquarePaymentRecord(PaymentRecord):
 
     def refund(self, amount=None):
         api_instance = TransactionsApi()
-        api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
+        api_instance.api_client.configuration.access_token = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
         transaction = self.getPayment()
 
         # For both partial and full refunds, we loop through the tenders and refund
@@ -111,7 +111,7 @@ class SquarePaymentRecord(PaymentRecord):
 
             try:
                 response = api_instance.create_refund(
-                    location_id=self.locationId,transaction_id=self.transactionId,body=body
+                    location_id=self.locationId, transaction_id=self.transactionId, body=body
                 )
                 if response.errors:
                     logger.error('Error in providing Square refund: %s' % response.errors)
@@ -128,7 +128,7 @@ class SquarePaymentRecord(PaymentRecord):
                 'status': 'success',
                 'refund_id': response.refund.id,
                 'refundAmount': float(response.refund.amount_money.amount) / 100,
-                'fees': float(getattr(getattr(response.refund,'processing_fee_money',None),'amount',0)) / 100,
+                'fees': float(getattr(getattr(response.refund, 'processing_fee_money', None), 'amount', 0)) / 100,
             })
 
             remains_to_refund -= to_refund
@@ -137,13 +137,13 @@ class SquarePaymentRecord(PaymentRecord):
             # Once the refund process is complete, fees will be calculated,
             # so schedule a task to get them and update records one minute
             # in the future.
-            updateSquareFees.schedule(args=(self,), delay=60)
+            updateSquareFees.schedule(args=(self, ), delay=60)
 
         return refundData
 
     class Meta:
         permissions = (
-            ('handle_pos_payments',_('Has access to point-of-sale payment functionality')),
+            ('handle_pos_payments', _('Has access to point-of-sale payment functionality')),
         )
         verbose_name = _('Square payment record')
         verbose_name_plural = _('Payment records')
@@ -152,8 +152,19 @@ class SquarePaymentRecord(PaymentRecord):
 class SquareCheckoutFormModel(CMSPlugin):
     ''' This model holds options for instances of the SquarePaymentFormPlugin '''
 
-    successPage = PageField(verbose_name=_('Success Page'),help_text=_('When the user returns to the site after a successful transaction, send them to this page.'),related_name='successPageForSquare')
-    defaultAmount = models.FloatField(verbose_name=_('Default amount'),help_text=_('The initial value for gift certificate forms.'),default=0)
+    successPage = PageField(
+        verbose_name=_('Success Page'),
+        help_text=_(
+            'When the user returns to the site after a successful ' +
+            'transaction, send them to this page.'
+        ),
+        related_name='successPageForSquare'
+    )
+    defaultAmount = models.FloatField(
+        verbose_name=_('Default amount'),
+        help_text=_('The initial value for gift certificate forms.'),
+        default=0
+    )
 
     def get_short_description(self):
         return self.plugin_type or self.id

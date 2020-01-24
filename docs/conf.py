@@ -153,6 +153,3 @@ texinfo_documents = [
      author, 'Django-danceschool', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

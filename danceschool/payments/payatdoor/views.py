@@ -83,7 +83,7 @@ def handle_payatdoor(request):
 
         # Send users back to the invoice to confirm the successful payment.
         # If none is specified, then return to the registration page.
-        returnPage = getReturnPage(request.session.get('SITE_HISTORY',{}))
+        returnPage = getReturnPage(request.session.get('SITE_HISTORY', {}))
         if returnPage.get('url'):
             return HttpResponseRedirect(returnPage['url'])
         return HttpResponseRedirect(reverse('registration'))

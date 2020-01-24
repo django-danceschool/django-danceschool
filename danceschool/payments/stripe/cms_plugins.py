@@ -20,7 +20,7 @@ class StripeGiftCertificateFormPlugin(CMSPluginBase):
         context = super(StripeGiftCertificateFormPlugin, self).render(context, instance, placeholder)
 
         context.update({
-            'stripe_key': getattr(settings,'STRIPE_PUBLIC_KEY',''),
+            'stripe_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
             'business_name': getConstant('contact__businessName'),
             'currencyCode': getConstant('general__currencyCode'),
         })
@@ -40,7 +40,7 @@ class StripePaymentFormPlugin(CMSPluginBase):
         context = super(StripePaymentFormPlugin, self).render(context, instance, placeholder)
 
         context.update({
-            'stripe_key': getattr(settings,'STRIPE_PUBLIC_KEY',''),
+            'stripe_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
             'business_name': getConstant('contact__businessName'),
             'currencyCode': getConstant('general__currencyCode'),
         })

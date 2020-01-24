@@ -47,7 +47,10 @@ class Command(BaseCommand):
         ]
         for this_app in required_apps:
             if not apps.is_installed(this_app[0]):
-                self.stdout.write(self.style.ERROR('ERROR: %s is not installed or listed in INSTALLED_APPS. Please install before proceeding.' % this_app[1]))
+                self.stdout.write(self.style.ERROR(
+                    ('ERROR: %s is not installed or listed in ' % this_app[1]) +
+                    'INSTALLED_APPS. Please install before proceeding.'
+                ))
                 return None
 
         self.stdout.write(
@@ -57,9 +60,9 @@ CHECKING SQUARE INTEGRATION
             """
         )
 
-        location_id = getattr(settings,'SQUARE_LOCATION_ID','')
-        client_id = getattr(settings,'SQUARE_APPLICATION_ID','')
-        client_secret = getattr(settings,'SQUARE_ACCESS_TOKEN','')
+        location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
+        client_id = getattr(settings, 'SQUARE_APPLICATION_ID', '')
+        client_secret = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
 
         if location_id:
             self.stdout.write('Square location ID set.')
@@ -87,17 +90,26 @@ CHECKING SQUARE INTEGRATION
                 from squareconnect.apis.transactions_api import TransactionsApi
 
                 locations_api_instance = LocationsApi()
-                locations_api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
+                locations_api_instance.api_client.configuration.access_token = getattr(
+                    settings, 'SQUARE_ACCESS_TOKEN', ''
+                )
                 transactions_api_instance = TransactionsApi()
-                transactions_api_instance.api_client.configuration.access_token = getattr(settings,'SQUARE_ACCESS_TOKEN','')
+                transactions_api_instance.api_client.configuration.access_token = getattr(
+                    settings, 'SQUARE_ACCESS_TOKEN', ''
+                )
 
                 # Check that the location ID from settings actually identifies a location.
                 api_response = locations_api_instance.list_locations()
                 if api_response.errors:
-                    self.stdout.write(self.style.ERROR('Error in listing Locations: %s' % api_response.errors))
+                    self.stdout.write(self.style.ERROR(
+                        'Error in listing Locations: %s' % api_response.errors
+                    ))
                     foundErrors = True
                 if location_id not in [x.id for x in api_response.locations]:
-                    self.stdout.write(self.style.ERROR('Location ID from settings does not identify a valid Square Location.'))
+                    self.stdout.write(self.style.ERROR(
+                        'Location ID from settings does not identify a valid ' +
+                        'Square Location.'
+                    ))
                     foundErrors = True
 
                 # Check that we can access transaction information
@@ -106,7 +118,9 @@ CHECKING SQUARE INTEGRATION
                     self.stdout.write(self.style.ERROR('Error in listing Transactions: %s' % api_response.errors))
                     foundErrors = True
                 else:
-                    self.stdout.write(self.style.SUCCESS('Successfully connected to Square API with provided credentials.'))
+                    self.stdout.write(self.style.SUCCESS(
+                        'Successfully connected to Square API with provided credentials.'
+                    ))
             except ImportError:
                 self.stdout.write(self.style.ERROR('Required squareconnect app not installed.'))
                 foundErrors = True
@@ -114,14 +128,23 @@ CHECKING SQUARE INTEGRATION
                 self.stdout.write(self.style.ERROR('Exception in using Square API: %s\n' % e))
                 foundErrors = True
 
-        add_square_checkout = self.boolean_input('Add Square Checkout form to the registration summary view to allow students to pay [Y/n]', True)
+        add_square_checkout = self.boolean_input(
+            'Add Square Checkout form to the registration summary view to ' +
+            'allow students to pay [Y/n]', True
+        )
         if add_square_checkout:
-            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+            home_page = Page.objects.filter(
+                is_home=True, publisher_is_draft=False
+            ).first()
             if not home_page:
-                self.stdout.write(self.style.ERROR('Cannot add Square Checkout form because a home page has not yet been set.'))
+                self.stdout.write(self.style.ERROR(
+                    'Cannot add Square Checkout form because a home page has not yet been set.'
+                ))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(code='registration_payment_placeholder')
+                checkout_sp = StaticPlaceholder.objects.get_or_create(
+                    code='registration_payment_placeholder'
+                )
                 checkout_p_draft = checkout_sp[0].draft
                 checkout_p_public = checkout_sp[0].public
 
@@ -159,18 +182,28 @@ Notes for Checkout integration
                         """
                     )
 
-        add_square_pos = self.boolean_input('Add Square point-of-sale button for at-the-door payments to allow students to pay [Y/n]', True)
+        add_square_pos = self.boolean_input(
+            'Add Square point-of-sale button for at-the-door payments to ' +
+            'allow students to pay [Y/n]', True
+        )
         if add_square_pos:
-            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
             if not home_page:
-                self.stdout.write(self.style.ERROR('Cannot add Square point-of-sale button because a home page has not yet been set.'))
+                self.stdout.write(self.style.ERROR(
+                    'Cannot add Square point-of-sale button because a home ' +
+                    'page has not yet been set.'
+                ))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(code='registration_payatdoor_placeholder')
+                checkout_sp = StaticPlaceholder.objects.get_or_create(
+                    code='registration_payatdoor_placeholder'
+                )
                 checkout_p_draft = checkout_sp[0].draft
                 checkout_p_public = checkout_sp[0].public
 
-                if checkout_p_public.get_plugins().filter(plugin_type='SquarePointOfSalePlugin').exists():
+                if checkout_p_public.get_plugins().filter(
+                    plugin_type='SquarePointOfSalePlugin'
+                ).exists():
                     self.stdout.write('Square point of sale button already present.')
                 else:
                     add_plugin(
@@ -220,22 +253,34 @@ Notes for point-of-sale integration
   of sale transaction without logging into this account, your transaction
   will fail with an error.
 
-                        """ % (Site.objects.get_current().domain,reverse('processSquarePointOfSale'))
+                        """ % (Site.objects.get_current().domain, reverse('processSquarePointOfSale'))
                     )
 
-        add_square_checkout_atdoor = self.boolean_input('Add Square Checkout form for at-the-door payments in case point-of-sale is not working [y/N]', False)
+        add_square_checkout_atdoor = self.boolean_input(
+            'Add Square Checkout form for at-the-door payments in case ' +
+            'point-of-sale is not working [y/N]', False
+        )
         if add_square_checkout_atdoor:
-            home_page = Page.objects.filter(is_home=True,publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
             if not home_page:
-                self.stdout.write(self.style.ERROR('Cannot add Square Checkout form because a home page has not yet been set.'))
+                self.stdout.write(self.style.ERROR(
+                    'Cannot add Square Checkout form because a home page ' +
+                    'has not yet been set.'
+                ))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(code='registration_payatdoor_placeholder')
+                checkout_sp = StaticPlaceholder.objects.get_or_create(
+                    code='registration_payatdoor_placeholder'
+                )
                 checkout_p_draft = checkout_sp[0].draft
                 checkout_p_public = checkout_sp[0].public
 
-                if checkout_p_public.get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
-                    self.stdout.write('Square checkout form already present for at-the-door transactions.')
+                if checkout_p_public.get_plugins().filter(
+                    plugin_type='SquareCheckoutFormPlugin'
+                ).exists():
+                    self.stdout.write(
+                        'Square checkout form already present for at-the-door transactions.'
+                    )
                 else:
                     add_plugin(
                         checkout_p_draft, 'SquareCheckoutFormPlugin', initial_language,
@@ -250,4 +295,6 @@ Notes for point-of-sale integration
         if not foundErrors:
             self.stdout.write(self.style.SUCCESS('Square setup complete.'))
         else:
-            self.stdout.write(self.style.ERROR('Square setup encountered errors.  Please see above for details.'))
+            self.stdout.write(self.style.ERROR(
+                'Square setup encountered errors.  Please see above for details.'
+            ))

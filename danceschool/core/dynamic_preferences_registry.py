@@ -6,7 +6,10 @@ but can be changed dynamically.
 from django.utils.translation import ugettext_lazy as _
 from django.template.loader import get_template
 
-from dynamic_preferences.types import BooleanPreference, StringPreference, IntegerPreference, FloatPreference, ChoicePreference, ModelChoicePreference, Section
+from dynamic_preferences.types import (
+    BooleanPreference, StringPreference, IntegerPreference, FloatPreference,
+    ChoicePreference, ModelChoicePreference, Section
+)
 from dynamic_preferences.registries import global_preferences_registry
 from filer.models import Folder
 from cms.models import Page
@@ -54,7 +57,9 @@ class StaffPhotosFolder(ModelChoicePreference):
     verbose_name = _('Staff Photos Folder')
     help_text = _(
         'The folder used to store profile photos of staff members. ' +
-        'Note that if this is changed, existing profile photos linked to staff members will not be moved.')
+        'Note that if this is changed, existing profile photos linked to ' +
+        'staff members will not be moved.'
+    )
     default = Folder.objects.none()
 
 
@@ -64,7 +69,9 @@ class DefaultAdminSuccessPage(IntegerPreference):
     model = Page
     name = 'defaultAdminSuccessPage'
     verbose_name = _('Default Admin Form Success Page')
-    help_text = _('The page to which a staff user is redirected after successfully submitting an admin form.')
+    help_text = _(
+        'The page to which a staff user is redirected after successfully submitting an admin form.'
+    )
     default = Page.objects.none()
     field_class = PageSelectFormField
 
@@ -172,7 +179,7 @@ class BusinessPhone(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -194,7 +201,7 @@ class BusinessAddress(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -208,7 +215,7 @@ class BusinessAddressLineTwo(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -221,7 +228,7 @@ class BusinessCity(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -234,7 +241,7 @@ class BusinessState(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -247,7 +254,7 @@ class BusinessZip(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -269,7 +276,10 @@ class EnableRegistration(BooleanPreference):
     section = registration
     name = 'registrationEnabled'
     verbose_name = _('Registration Enabled')
-    help_text = _('Uncheck this to disable registration entirely.  Useful when performing upgrades or testing.')
+    help_text = _(
+        'Uncheck this to disable registration entirely.  ' +
+        'Useful when performing upgrades or testing.'
+    )
     default = True
 
 
@@ -278,7 +288,11 @@ class DefaultClassCapacity(IntegerPreference):
     section = registration
     name = 'defaultEventCapacity'
     verbose_name = _('Default Registration Capacity')
-    help_text = _('This is usually a location-specific setting or an event-specific setting.  However, if a limit is not otherwise provided, then this will limit the number of registrations allowed.')
+    help_text = _(
+        'This is usually a location-specific setting or an event-specific ' +
+        'setting.  However, if a limit is not otherwise provided, then this ' +
+        'will limit the number of registrations allowed.'
+    )
     default = 50
 
 
@@ -287,7 +301,13 @@ class RegistrationClosesAfterDays(FloatPreference):
     section = registration
     name = 'closeAfterDays'
     verbose_name = _('Close Registration Days After Beginning')
-    help_text = _('By default, online registration closes automatically this many days from the beginning of an Event or Series (e.g. Enter 2.5 to close two days and twelve hours after beginning, or enter -3 to close three days before beginning).  This value can be overridden for individual Events.')
+    help_text = _(
+        'By default, online registration closes automatically this many days ' +
+        'from the beginning of an Event or Series (e.g. Enter 2.5 to close ' +
+        'two days and twelve hours after beginning, or enter -3 to close ' +
+        'three days before beginning).  This value can be overridden for ' +
+        'individual Events.'
+    )
     default = 7.0
 
 
@@ -295,8 +315,15 @@ class RegistrationClosesAfterDays(FloatPreference):
 class RegistrationDisplayLimitDays(IntegerPreference):
     section = registration
     name = 'displayLimitDays'
-    verbose_name = _('Do Not Show Registration for Events that Begin More Than __ Days in the Future')
-    help_text = _('By default, events are shown on the registration page as soon as they are created.  If you list events far into the future, set this value, and events that begin more than this many days in the future will not be shown in the registration page.  Enter 0 for no restriction.')
+    verbose_name = _(
+        'Do Not Show Registration for Events that Begin More Than __ Days in the Future'
+    )
+    help_text = _(
+        'By default, events are shown on the registration page as soon as ' +
+        'they are created.  If you list events far into the future, set this ' +
+        'value, and events that begin more than this many days in the future ' +
+        'will not be shown in the registration page.  Enter 0 for no restriction.'
+    )
     default = 0
 
 
@@ -310,10 +337,10 @@ class RegistrationOrgRule(ChoicePreference):
         ('Month', _('Month')),
         ('Session', _('Session ordered by start date (if no session, group as "Other")')),
         ('SessionAlpha', _('Session ordered alphabetically (if no session, group as "Other")')),
-        ('SessionMonth',_('Session ordered by start date and Month')),
-        ('SessionAlphaMonth',_('Session ordered alphabetically and Month')),
-        ('Weekday',_('Weekday')),
-        ('MonthWeekday',_('Month and Weekday')),
+        ('SessionMonth', _('Session ordered by start date and Month')),
+        ('SessionAlphaMonth', _('Session ordered alphabetically and Month')),
+        ('Weekday', _('Weekday')),
+        ('MonthWeekday', _('Month and Weekday')),
     ]
     verbose_name = _('Rule for Organizing Series and Events for Registration')
     default = 'SessionFirst'
@@ -355,8 +382,9 @@ class ShowDescriptionRule(ChoicePreference):
     ]
     verbose_name = _('Rule for showing class descriptions on the regisration page')
     help_text = _(
-        'This option determines how much of each event\'s description is shown on the class registration page. '
-        'Users can always select the \'more info\' link to access the full description.'
+        'This option determines how much of each event\'s description is '
+        'shown on the class registration page. Users can always select the ' +
+        '\'more info\' link to access the full description.'
     )
     default = 'all'
 
@@ -366,7 +394,9 @@ class SalesTaxRate(FloatPreference):
     section = registration
     name = 'salesTaxRate'
     verbose_name = _('Sales tax percentage rate to be applied registrations')
-    help_text = _('Enter, e.g. \'10\' for a 10% tax rate to be applied to all class and event registrations.')
+    help_text = _(
+        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all class and event registrations.'
+    )
     default = 0.0
 
 
@@ -375,7 +405,10 @@ class BuyerPaysSalesTax(BooleanPreference):
     section = registration
     name = 'buyerPaysSalesTax'
     verbose_name = _('Buyer pays sales tax (added to total price)')
-    help_text = _('If unchecked, then the buyer will not be charged sales tax directly, but the amount of tax collected by the business will be reported.')
+    help_text = _(
+        'If unchecked, then the buyer will not be charged sales tax directly, ' +
+        'but the amount of tax collected by the business will be reported.'
+    )
     default = True
 
 
@@ -384,7 +417,13 @@ class AllowAjaxSignin(BooleanPreference):
     section = registration
     name = 'allowAjaxSignin'
     verbose_name = _('Allow users to login/signup during registration')
-    help_text = _('If you don\'t allow customers to see their history or do automatic checks for prerequisites, then you may not need customers to create user accounts or authenticate themselves. If this box is unchecked, then users will not be able to log in or create a new account during the registration process.')
+    help_text = _(
+        'If you don\'t allow customers to see their history or do automatic ' +
+        'checks for prerequisites, then you may not need customers to create ' +
+        'user accounts or authenticate themselves. If this box is unchecked, ' +
+        'then users will not be able to log in or create a new account during ' +
+        'the registration process.'
+    )
     default = True
 
 
@@ -393,7 +432,11 @@ class RegistrationSessionExpiryMinutes(IntegerPreference):
     section = registration
     name = 'sessionExpiryMinutes'
     verbose_name = _('Temporary registration data expires after __ minutes')
-    help_text = _('In each step of the registration process, customers have this many minutes to proceed before they are no longer guaranteed a spot and are required to begin again.')
+    help_text = _(
+        'In each step of the registration process, customers have this many ' +
+        'minutes to proceed before they are no longer guaranteed a spot and ' +
+        'are required to begin again.'
+    )
     default = 15
 
 
@@ -402,7 +445,11 @@ class DeleteExpiredTemporaryRegistrations(BooleanPreference):
     section = registration
     name = 'deleteExpiredTemporaryRegistrations'
     verbose_name = _('Automatically delete expired temporary registration and session data')
-    help_text = _('If this box is checked, then an hourly script will automatically expired temporary registration and session data.  Disabling this feature is only recommended for testing.')
+    help_text = _(
+        'If this box is checked, then an hourly script will automatically ' +
+        'expired temporary registration and session data.  Disabling this ' +
+        'feature is only recommended for testing.'
+    )
     default = True
 
 
@@ -427,7 +474,7 @@ class DefaultEmailsFrom(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -441,7 +488,7 @@ class DefaultEmailsName(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -462,7 +509,7 @@ class ErrorEmailsFrom(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -475,7 +522,7 @@ class ErrorEmailsTo(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__,self).get_field_kwargs()
+        field_kwargs = super(self.__class__, self).get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -485,8 +532,8 @@ class EmailLinkProtocol(ChoicePreference):
     section = email
     name = 'linkProtocol'
     choices = [
-        ('http','HTTP'),
-        ('https','HTTPS'),
+        ('http', 'HTTP'),
+        ('https', 'HTTPS'),
     ]
     verbose_name = _('Protocol for URLs in email templates')
     default = 'http'
@@ -510,7 +557,7 @@ class RegSuccessEmailTemplate(ModelChoicePreference):
         # if self.model and self.model._meta.db_table in connection.introspection.table_names():
 
         initial_template = get_template('email/registration_success.html')
-        with open(initial_template.origin.name,'r') as infile:
+        with open(initial_template.origin.name, 'r') as infile:
             content = infile.read()
             infile.close()
 
@@ -539,7 +586,7 @@ class InvoiceEmailTemplate(ModelChoicePreference):
         # if self.model and self.model._meta.db_table in connection.introspection.table_names():
 
         initial_template = get_template('email/invoice_initial.html')
-        with open(initial_template.origin.name,'r') as infile:
+        with open(initial_template.origin.name, 'r') as infile:
             content = infile.read()
             infile.close()
 

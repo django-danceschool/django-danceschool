@@ -12,14 +12,14 @@ from .models import Voucher
 
 class VouchersTest(DefaultSchoolTestCase):
 
-    def create_voucher(self,**kwargs):
+    def create_voucher(self, **kwargs):
 
         v = Voucher(
-            voucherId=kwargs.get('voucherId','TEST_VOUCHER'),
-            name=kwargs.get('name','Test Voucher'),
-            originalAmount=kwargs.get('originalAmount',10),
-            maxAmountPerUse=kwargs.get('maxAmountPerUse',None),
-            disabled=kwargs.get('disabled',False),
+            voucherId=kwargs.get('voucherId', 'TEST_VOUCHER'),
+            name=kwargs.get('name', 'Test Voucher'),
+            originalAmount=kwargs.get('originalAmount', 10),
+            maxAmountPerUse=kwargs.get('maxAmountPerUse', None),
+            disabled=kwargs.get('disabled', False),
             expirationDate=kwargs.get('expirationDate', None),
             forPreviousCustomersOnly=kwargs.get('forPreviousCustomersOnly', False),
             forFirstTimeCustomersOnly=kwargs.get('forFirstTimeCustomersOnly', False)
@@ -27,7 +27,7 @@ class VouchersTest(DefaultSchoolTestCase):
         v.save()
         return v
 
-    def register_to_check_voucher(self,voucherCode,series):
+    def register_to_check_voucher(self, voucherCode, series):
         '''
         This method makes it easy to determine whether discounts are working
         correctly for a single class registration
@@ -35,7 +35,7 @@ class VouchersTest(DefaultSchoolTestCase):
         s = series
 
         response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code,200)
+        self.assertEqual(response.status_code, 200)
         self.assertIn(s, response.context['regOpenSeries'])
 
         # Sign up for the series, and check that we proceed to the student information page.
@@ -43,10 +43,12 @@ class VouchersTest(DefaultSchoolTestCase):
         # from the form itself.
         post_data = {'event_%s' % s.id: response.context_data['form'].fields['event_%s' % s.id].choices[0][0]}
 
-        response = self.client.post(reverse('registration'),post_data,follow=True)
-        self.assertEqual(response.redirect_chain,[(reverse('getStudentInfo'), 302)])
+        response = self.client.post(reverse('registration'), post_data, follow=True)
+        self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = TemporaryRegistration.objects.get(id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId'))
+        tr = TemporaryRegistration.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+        )
         self.assertTrue(tr.temporaryeventregistration_set.filter(event__id=s.id).exists())
         self.assertEqual(tr.payAtDoor, False)
 
@@ -62,7 +64,7 @@ class VouchersTest(DefaultSchoolTestCase):
             'agreeToPolicies': True,
             'gift': voucherCode,
         }
-        return self.client.post(reverse('getStudentInfo'),post_data,follow=True)
+        return self.client.post(reverse('getStudentInfo'), post_data, follow=True)
 
     def test_nonexistent_voucher(self):
         ''' Check that entering a non-existent voucher fails '''
@@ -70,8 +72,8 @@ class VouchersTest(DefaultSchoolTestCase):
         updateConstant('vouchers__enableVouchers', True)
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_voucher('MADEUP_CODE',s)
-        self.assertEqual(response.status_code,200)
+        response = self.register_to_check_voucher('MADEUP_CODE', s)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(response.redirect_chain)
         self.assertTrue(response.context_data['form'].errors.get('gift'))
 
@@ -82,8 +84,8 @@ class VouchersTest(DefaultSchoolTestCase):
         s = self.create_series(pricingTier=self.defaultPricing)
         v = self.create_voucher(disabled=True)
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(response.redirect_chain)
         self.assertTrue(response.context_data['form'].errors.get('gift'))
 
@@ -97,8 +99,8 @@ class VouchersTest(DefaultSchoolTestCase):
         s = self.create_series(pricingTier=self.defaultPricing)
         v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=-1))
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(response.redirect_chain)
         self.assertTrue(response.context_data['form'].errors.get('gift'))
 
@@ -115,8 +117,8 @@ class VouchersTest(DefaultSchoolTestCase):
             expirationDate=timezone.now() + timedelta(days=1),
         )
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(response.redirect_chain)
         self.assertTrue(response.context_data['form'].errors.get('gift'))
 
@@ -131,8 +133,8 @@ class VouchersTest(DefaultSchoolTestCase):
             expirationDate=timezone.now() + timedelta(days=1),
         )
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(response.redirect_chain)
         self.assertTrue(response.context_data['form'].errors.get('gift'))
 
@@ -149,13 +151,16 @@ class VouchersTest(DefaultSchoolTestCase):
             maxAmountPerUse=2,
         )
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
-        self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
-        self.assertEqual(response.context_data.get('netPrice'),response.context_data.get('totalPrice') - v.maxAmountPerUse)
-        self.assertEqual(response.context_data.get('is_free'),False)
-        self.assertEqual(response.context_data.get('total_voucher_amount'),v.maxAmountPerUse)
+        self.assertEqual(
+            response.context_data.get('netPrice'),
+            response.context_data.get('totalPrice') - v.maxAmountPerUse
+        )
+        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('total_voucher_amount'), v.maxAmountPerUse)
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
         tvu = v.temporaryvoucheruse_set.filter(registration=response.context_data.get('registration'))
@@ -171,13 +176,16 @@ class VouchersTest(DefaultSchoolTestCase):
         s = self.create_series(pricingTier=self.defaultPricing)
         v = self.create_voucher()
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
-        self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
-        self.assertEqual(response.context_data.get('netPrice'),response.context_data.get('totalPrice') - v.originalAmount)
-        self.assertEqual(response.context_data.get('is_free'),False)
-        self.assertEqual(response.context_data.get('total_voucher_amount'),v.originalAmount)
+        self.assertEqual(
+            response.context_data.get('netPrice'),
+            response.context_data.get('totalPrice') - v.originalAmount
+        )
+        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('total_voucher_amount'), v.originalAmount)
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
         tvu = v.temporaryvoucheruse_set.filter(registration=response.context_data.get('registration'))
@@ -197,13 +205,13 @@ class VouchersTest(DefaultSchoolTestCase):
             maxAmountPerUse=None,
         )
 
-        response = self.register_to_check_voucher(v.voucherId,s)
-        self.assertEqual(response.status_code,200)
-        self.assertEqual(response.redirect_chain,[(reverse('showRegSummary'), 302)])
+        response = self.register_to_check_voucher(v.voucherId, s)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
         self.assertEqual(response.context_data.get('netPrice'), 0)
         self.assertEqual(response.context_data.get('is_free'), True)
-        self.assertEqual(response.context_data.get('total_voucher_amount'),s.getBasePrice())
+        self.assertEqual(response.context_data.get('total_voucher_amount'), s.getBasePrice())
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
         tr = response.context_data.get('registration')

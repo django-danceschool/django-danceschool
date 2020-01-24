@@ -76,9 +76,15 @@ class DanceRole(models.Model):
     effectively disabled by simply creating a single role such as "Student."
     '''
 
-    name = models.CharField(_('Name'),max_length=50,unique=True)
-    pluralName = models.CharField(_('Plural of name'),max_length=50,unique=True,help_text=_('For the registration form.'))
-    order = models.FloatField(_('Order number'),help_text=_('Lower numbers show up first when registering.'))
+    name = models.CharField(_('Name'), max_length=50, unique=True)
+    pluralName = models.CharField(
+        _('Plural of name'), max_length=50, unique=True,
+        help_text=_('For the registration form.')
+    )
+    order = models.FloatField(
+        _('Order number'),
+        help_text=_('Lower numbers show up first when registering.')
+    )
 
     def save(self, *args, **kwargs):
         ''' Just add "s" if no plural name given. '''
@@ -103,10 +109,23 @@ class DanceType(models.Model):
     run classes in multiple dance types with different roles for each (e.g. partnered
     vs. non-partnered dances).
     '''
-    name = models.CharField(_('Name'),max_length=50,unique=True)
-    order = models.FloatField(_('Order number'),help_text=_('Lower numbers show up first when choosing class types in the admin.  By default, this does not affect ordering on public-facing registration pages.'))
+    name = models.CharField(_('Name'), max_length=50, unique=True)
+    order = models.FloatField(
+        _('Order number'),
+        help_text=_(
+            'Lower numbers show up first when choosing class types in the ' +
+            'admin.  By default, this does not affect ordering on ' +
+            'public-facing registration pages.'
+        )
+    )
 
-    roles = models.ManyToManyField(DanceRole,verbose_name=_('Dance roles'),help_text=_('Select default roles used for registrations of this dance type (can be overriden for specific events).'))
+    roles = models.ManyToManyField(
+        DanceRole, verbose_name=_('Dance roles'),
+        help_text=_(
+            'Select default roles used for registrations of this dance type ' +
+            '(can be overriden for specific events).'
+        )
+    )
 
     def __str__(self):
         return self.name
@@ -121,10 +140,18 @@ class DanceTypeLevel(models.Model):
     '''
     Levels are defined within dance types.
     '''
-    name = models.CharField(_('Name'),max_length=50)
-    order = models.FloatField(_('Order number'),help_text=_('This is used to order and look up dance types.'))
-    danceType = models.ForeignKey(DanceType,verbose_name=_('Dance Type'),on_delete=models.CASCADE)
-    displayColor = RGBColorField(_('Display Color'),help_text=_('Choose a color for the calendar display.'),default=get_defaultClassColor)
+    name = models.CharField(_('Name'), max_length=50)
+    order = models.FloatField(
+        _('Order number'), help_text=_('This is used to order and look up dance types.')
+    )
+    danceType = models.ForeignKey(
+        DanceType, verbose_name=_('Dance Type'), on_delete=models.CASCADE
+    )
+    displayColor = RGBColorField(
+        _('Display Color'),
+        help_text=_('Choose a color for the calendar display.'),
+        default=get_defaultClassColor
+    )
 
     def __str__(self):
         return ' - '.join([self.danceType.name, self.name])
@@ -132,11 +159,11 @@ class DanceTypeLevel(models.Model):
     class Meta:
         verbose_name = _('Level of dance type')
         verbose_name_plural = _('Levels of dance type')
-        ordering = ('danceType__order','order',)
+        ordering = ('danceType__order', 'order',)
 
 
 class EventStaffCategory(models.Model):
-    name = models.CharField(_('Name'),max_length=50,unique=True)
+    name = models.CharField(_('Name'), max_length=50, unique=True)
 
     def __str__(self):
         return self.name
@@ -155,42 +182,81 @@ class StaffMember(models.Model):
 
     # These fields are separate from the user fields because sometimes
     # individuals go publicly by a different name than they may privately.
-    firstName = models.CharField(_('First name'),max_length=50,null=True,blank=True)
-    lastName = models.CharField(_('Last name'),max_length=50,null=True,blank=True)
+    firstName = models.CharField(_('First name'), max_length=50, null=True, blank=True)
+    lastName = models.CharField(_('Last name'), max_length=50, null=True, blank=True)
 
     # Although Staff members may be defined without user accounts, this precludes
     # them from having access to the school's features, and is not recommended.
-    userAccount = models.OneToOneField(User, verbose_name=_('User account'), null=True,blank=True,on_delete=models.SET_NULL)
+    userAccount = models.OneToOneField(
+        User, verbose_name=_('User account'), null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
 
     # By default, only the public email is listed on public-facing pages, and
     # telephone contact information are not listed on public-facing pages either.
-    publicEmail = models.CharField(_('Public Email Address'),max_length=100,help_text=_('This is the email address used on the site if the instructor is available for private lessons.'),blank=True)
-    privateEmail = models.CharField(_('Private Email Address'),max_length=100,help_text=_('This is the personal email address of the instructor for the instructor directory.'),blank=True)
-    phone = models.CharField(_('Telephone'),max_length=25,help_text=_('Instructor phone numbers are for the instructor directory only, and should not be given to students.'),blank=True,null=True)
+    publicEmail = models.CharField(
+        _('Public Email Address'), max_length=100,
+        help_text=_(
+            'This is the email address used on the site if the instructor is ' +
+            'available for private lessons.'
+        ),
+        blank=True
+    )
+    privateEmail = models.CharField(
+        _('Private Email Address'), max_length=100,
+        help_text=_(
+            'This is the personal email address of the instructor for the instructor directory.'
+        ),
+        blank=True
+    )
+    phone = models.CharField(
+        _('Telephone'), max_length=25,
+        help_text=_(
+            'Instructor phone numbers are for the instructor directory only, ' +
+            'and should not be given to students.'
+        ),
+        blank=True, null=True
+    )
 
     image = FilerImageField(
         verbose_name=_('Staff photo'), on_delete=models.SET_NULL, blank=True,
         null=True, related_name='staff_image'
     )
-    bio = HTMLField(verbose_name=_('Bio text'),help_text=_('Insert the instructor\'s bio here.  Use HTML to include videos, formatting, etc.'),null=True,blank=True)
+    bio = HTMLField(
+        verbose_name=_('Bio text'),
+        help_text=_(
+            'Insert the instructor\'s bio here.  Use HTML to include videos, ' +
+            'formatting, etc.'
+        ),
+        null=True, blank=True
+    )
 
     categories = models.ManyToManyField(
-        EventStaffCategory,verbose_name=_('Included in staff categories'),blank=True,
-        help_text=_('When choosing staff members, the individuals available to staff will be limited based on the categories chosen here. If the individual is an instructor, also be sure to set the instructor information below.')
+        EventStaffCategory, verbose_name=_('Included in staff categories'), blank=True,
+        help_text=_(
+            'When choosing staff members, the individuals available to staff ' +
+            'will be limited based on the categories chosen here. If the ' +
+            'individual is an instructor, also be sure to set the instructor ' +
+            'information below.'
+        )
     )
 
     # This field is a unique key that is used in the URL for the
     # staff member's personal calendar feed.
-    feedKey = models.UUIDField(verbose_name=_('Calendar/RSS feed key'),default=uuid.uuid4,editable=False)
+    feedKey = models.UUIDField(
+        verbose_name=_('Calendar/RSS feed key'), default=uuid.uuid4, editable=False
+    )
 
     @property
     def fullName(self):
-        return ' '.join([self.firstName or '',self.lastName or ''])
+        return ' '.join([self.firstName or '', self.lastName or ''])
     fullName.fget.short_description = _('Name')
 
     @property
     def activeThisMonth(self):
-        return self.eventstaffmember_set.filter(event__year=timezone.now().year,event__month=timezone.now().month).exists()
+        return self.eventstaffmember_set.filter(
+            event__year=timezone.now().year, event__month=timezone.now().month
+        ).exists()
     activeThisMonth.fget.short_description = _('Staffed this month')
 
     @property
@@ -206,12 +272,15 @@ class StaffMember(models.Model):
         unique_together = ('firstName', 'lastName')
         verbose_name = _('Staff member')
         verbose_name_plural = _('Staff members')
-        ordering = ('lastName','firstName')
+        ordering = ('lastName', 'firstName')
 
         permissions = (
-            ('view_staff_directory',_('Can access the staff directory view')),
-            ('view_school_stats',_('Can view statistics about the school\'s performance.')),
-            ('can_autocomplete_staffmembers',_('Able to use customer and staff member autocomplete features (in admin forms)')),
+            ('view_staff_directory', _('Can access the staff directory view')),
+            ('view_school_stats', _('Can view statistics about the school\'s performance.')),
+            (
+                'can_autocomplete_staffmembers',
+                _('Able to use customer and staff member autocomplete features (in admin forms)')
+            ),
         )
 
 
@@ -220,18 +289,35 @@ class Instructor(models.Model):
     These go on the instructors page.
     '''
     class InstructorStatus(DjangoChoices):
-        roster = ChoiceItem('R',_('Regular Instructor'))
-        assistant = ChoiceItem('A',_('Assistant Instructor'))
-        training = ChoiceItem('T',_('Instructor-in-training'))
-        guest = ChoiceItem('G',_('Guest Instructor'))
-        retiredGuest = ChoiceItem('Z',_('Former Guest Instructor'))
-        retired = ChoiceItem('X',_('Former/Retired Instructor'))
-        hidden = ChoiceItem('H',_('Publicly Hidden'))
+        roster = ChoiceItem('R', _('Regular Instructor'))
+        assistant = ChoiceItem('A', _('Assistant Instructor'))
+        training = ChoiceItem('T', _('Instructor-in-training'))
+        guest = ChoiceItem('G', _('Guest Instructor'))
+        retiredGuest = ChoiceItem('Z', _('Former Guest Instructor'))
+        retired = ChoiceItem('X', _('Former/Retired Instructor'))
+        hidden = ChoiceItem('H', _('Publicly Hidden'))
 
-    staffMember = models.OneToOneField(StaffMember,verbose_name=_('Staff member'),on_delete=models.CASCADE,primary_key=True)
+    staffMember = models.OneToOneField(
+        StaffMember, verbose_name=_('Staff member'), on_delete=models.CASCADE,
+        primary_key=True
+    )
 
-    status = models.CharField(_('Instructor status'),max_length=1,choices=InstructorStatus.choices,default=InstructorStatus.hidden,help_text=_('Instructor status affects the visibility of the instructor on the site, but is separate from the "categories" of event staffing on which compensation is based.'))
-    availableForPrivates = models.BooleanField(_('Available for private lessons'),default=True,help_text=_('Check this box if you would like to be listed as available for private lessons from students.'))
+    status = models.CharField(
+        _('Instructor status'), max_length=1, choices=InstructorStatus.choices,
+        default=InstructorStatus.hidden,
+        help_text=_(
+            'Instructor status affects the visibility of the instructor on ' +
+            'the site, but is separate from the "categories" of event ' +
+            'staffing on which compensation is based.'
+        )
+    )
+    availableForPrivates = models.BooleanField(
+        _('Available for private lessons'), default=True,
+        help_text=_(
+            'Check this box if you would like to be listed as available ' +
+            'for private lessons from students.'
+        )
+    )
 
     @property
     def assistant(self):
@@ -263,7 +349,7 @@ class Instructor(models.Model):
 
     @property
     def statusLabel(self):
-        return self.InstructorStatus.values.get(self.status,'')
+        return self.InstructorStatus.values.get(self.status, '')
     statusLabel.fget.short_description = _('Status')
 
     @property
@@ -277,11 +363,17 @@ class Instructor(models.Model):
         verbose_name = _('Instructor')
         verbose_name_plural = _('Instructors')
         permissions = (
-            ('update_instructor_bio',_('Can update instructors\' bio information')),
-            ('view_own_instructor_stats',_('Can view one\'s own statistics (if an instructor)')),
-            ('view_other_instructor_stats',_('Can view other instructors\' statistics')),
-            ('view_own_instructor_finances',_('Can view one\'s own financial/payment data (if a staff member)')),
-            ('view_other_instructor_finances',_('Can view other staff members\' financial/payment data')),
+            ('update_instructor_bio', _('Can update instructors\' bio information')),
+            ('view_own_instructor_stats', _('Can view one\'s own statistics (if an instructor)')),
+            ('view_other_instructor_stats', _('Can view other instructors\' statistics')),
+            (
+                'view_own_instructor_finances',
+                _('Can view one\'s own financial/payment data (if a staff member)')
+            ),
+            (
+                'view_other_instructor_finances',
+                _('Can view other staff members\' financial/payment data')
+            ),
         )
 
 
@@ -289,14 +381,32 @@ class ClassDescription(models.Model):
     '''
     All the classes we teach.
     '''
-    title = models.CharField(_('Title'),max_length=200)
-    description = HTMLField(_('Description'),blank=True)
-    shortDescription = models.TextField(_('Short description'),blank=True,help_text=_('May be used for tag lines and feeds.'))
-    danceTypeLevel = models.ForeignKey(DanceTypeLevel,verbose_name=_('Dance Type & Level'),default=1,on_delete=models.SET_DEFAULT)
+    title = models.CharField(_('Title'), max_length=200)
+    description = HTMLField(_('Description'), blank=True)
+    shortDescription = models.TextField(
+        _('Short description'), blank=True,
+        help_text=_('May be used for tag lines and feeds.')
+    )
+    danceTypeLevel = models.ForeignKey(
+        DanceTypeLevel, verbose_name=_('Dance Type & Level'), default=1,
+        on_delete=models.SET_DEFAULT
+    )
 
-    slug = models.SlugField(_('Slug'),max_length=100,unique=True,blank='True',help_text=_('This is used in the URL for the individual class pages.  You can override the default'))
+    slug = models.SlugField(
+        _('Slug'), max_length=100, unique=True, blank='True',
+        help_text=_(
+            'This is used in the URL for the individual class pages.  ' +
+            'You can override the default'
+        )
+    )
 
-    oneTimeSeries = models.BooleanField(_('One Time Series'),default=False,help_text=_('If checked, this class description will not show up in the dropdown menu when creating a new series.'))
+    oneTimeSeries = models.BooleanField(
+        _('One Time Series'), default=False,
+        help_text=_(
+            'If checked, this class description will not show up in the ' +
+            'dropdown menu when creating a new series.'
+        )
+    )
 
     @property
     def danceTypeName(self):
@@ -313,20 +423,20 @@ class ClassDescription(models.Model):
         '''
         Returns the start time of the last time this series was offered
         '''
-        return getattr(self.series_set.order_by('-startTime').first(),'startTime',None)
+        return getattr(self.series_set.order_by('-startTime').first(), 'startTime', None)
     lastOffered.fget.short_description = _('Last offered')
 
     @property
     def lastOfferedMonth(self):
         '''
         Sometimes a Series is associated with a month other than the one
-        in which the first class begins, so this returns a (year,month) tuple
+        in which the first class begins, so this returns a (year, month) tuple
         that can be used in admin instead.
         '''
         lastOfferedSeries = self.series_set.order_by('-startTime').first()
         return (
-            getattr(lastOfferedSeries,'year',None),
-            getattr(lastOfferedSeries,'month',None)
+            getattr(lastOfferedSeries, 'year', None),
+            getattr(lastOfferedSeries, 'month', None)
         )
     lastOfferedMonth.fget.short_description = _('Last offered')
 
@@ -347,26 +457,51 @@ class Location(models.Model):
     Events are held at locations.
     '''
     class StatusChoices(DjangoChoices):
-        active = ChoiceItem('A',_('Active Location'))
-        former = ChoiceItem('F',_('Former Location'))
-        specialEvents = ChoiceItem('S',_('Special Event Location (not shown by default)'))
+        active = ChoiceItem('A', _('Active Location'))
+        former = ChoiceItem('F', _('Former Location'))
+        specialEvents = ChoiceItem('S', _('Special Event Location (not shown by default)'))
 
-    name = models.CharField(_('Name'),max_length=80,unique=True,help_text=_('Give this location a name.'))
+    name = models.CharField(
+        _('Name'), max_length=80, unique=True,
+        help_text=_('Give this location a name.')
+    )
 
-    address = models.CharField('Street address',max_length=50,help_text=_('Enter the location\'s street address.'),blank=True,null=True)
-    city = models.CharField(_('City'),max_length=30,default='Cambridge')
-    state = models.CharField(_('2-digit state code'),max_length=12,default='MA')
-    zip = models.CharField(_('ZIP/postal code'), max_length=12,default='02138')
+    address = models.CharField(
+        'Street address', max_length=50,
+        help_text=_('Enter the location\'s street address.'),
+        blank=True, null=True
+    )
+    city = models.CharField(_('City'), max_length=30, default='Cambridge')
+    state = models.CharField(_('2-digit state code'), max_length=12, default='MA')
+    zip = models.CharField(_('ZIP/postal code'), max_length=12, default='02138')
 
-    directions = HTMLField(_('Directions'),help_text=_('Insert any detailed directions that you would like here.  Use HTML to include videos, formatting, etc.'),null=True,blank=True)
+    directions = HTMLField(
+        _('Directions'),
+        help_text=_(
+            'Insert any detailed directions that you would like here.  ' +
+            'Use HTML to include videos, formatting, etc.'
+        ),
+        null=True, blank=True
+    )
 
     # This property restricts the visibility of the location in dropdowns
     # and on the publicly presented list of locations
-    status = models.CharField(_('Status'),max_length=1,help_text=_('Is this location used regularly, used for special events, or no longer used?'),choices=StatusChoices.choices,default=StatusChoices.active)
+    status = models.CharField(
+        _('Status'), max_length=1,
+        help_text=_('Is this location used regularly, used for special events, or no longer used?'),
+        choices=StatusChoices.choices, default=StatusChoices.active
+    )
 
-    orderNum = models.FloatField(_('Order number'),default=0,help_text=_('This determines the order that the locations show up on the Locations page.'))
+    orderNum = models.FloatField(
+        _('Order number'), default=0,
+        help_text=_('This determines the order that the locations show up on the Locations page.')
+    )
 
-    defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this venue.'))
+    defaultCapacity = models.PositiveIntegerField(
+        _('Default Venue Capacity'), null=True, blank=True,
+        default=get_defaultEventCapacity,
+        help_text=_('If set, this will be used to determine capacity for class series in this venue.')
+    )
 
     @property
     def address_string(self):
@@ -382,7 +517,7 @@ class Location(models.Model):
 
     @property
     def statusLabel(self):
-        return self.StatusChoices.values.get(self.status,'')
+        return self.StatusChoices.values.get(self.status, '')
     statusLabel.fget.short_description = _('Status')
 
     def __str__(self):
@@ -398,12 +533,24 @@ class Room(models.Model):
     '''
     Locations may have multiple rooms, each of which may have its own capacity.
     '''
-    name = models.CharField(_('Name'),max_length=80,help_text=_('Give this room a name.'))
-    location = models.ForeignKey(Location,verbose_name=_('Location'),on_delete=models.CASCADE)
+    name = models.CharField(_('Name'), max_length=80, help_text=_('Give this room a name.'))
+    location = models.ForeignKey(Location, verbose_name=_('Location'), on_delete=models.CASCADE)
 
-    defaultCapacity = models.PositiveIntegerField(_('Default Venue Capacity'),null=True,blank=True,default=get_defaultEventCapacity,help_text=_('If set, this will be used to determine capacity for class series in this room.'))
+    defaultCapacity = models.PositiveIntegerField(
+        _('Default Venue Capacity'), null=True, blank=True,
+        default=get_defaultEventCapacity,
+        help_text=_('If set, this will be used to determine capacity for class series in this room.')
+    )
 
-    description = HTMLField(_('Description'),help_text=_('By default, only room names are listed publicly.  However, you may insert any descriptive information that you would like about this room here.'), null=True, blank=True)
+    description = HTMLField(
+        _('Description'),
+        help_text=_(
+            'By default, only room names are listed publicly.  However, you ' +
+            'may insert any descriptive information that you would like about ' +
+            'this room here.'
+        ),
+        null=True, blank=True
+    )
 
     @property
     def jsonCalendarFeed(self):
@@ -416,26 +563,43 @@ class Room(models.Model):
         return self.name
 
     class Meta:
-        unique_together = ('location','name')
+        unique_together = ('location', 'name')
         verbose_name = _('Room')
         verbose_name_plural = _('Rooms')
-        ordering = ('location__name','name',)
+        ordering = ('location__name', 'name',)
 
 
 class PricingTier(models.Model):
-    name = models.CharField(max_length=50,unique=True,help_text=_('Give this pricing tier a name (e.g. \'Default 4-week series\')'))
+    name = models.CharField(
+        max_length=50, unique=True,
+        help_text=_('Give this pricing tier a name (e.g. \'Default 4-week series\')')
+    )
 
     # By default, prices may vary by online or door registration.
     # More sophisticated discounts, including student discounts
     # may be achieved through the discounts and vouchers apps, if enabled.
-    onlinePrice = models.FloatField(_('Online price'),default=0,validators=[MinValueValidator(0)])
-    doorPrice = models.FloatField(_('At-the-door price'), default=0,validators=[MinValueValidator(0)])
+    onlinePrice = models.FloatField(
+        _('Online price'), default=0, validators=[MinValueValidator(0)]
+    )
+    doorPrice = models.FloatField(
+        _('At-the-door price'), default=0, validators=[MinValueValidator(0)]
+    )
 
-    dropinPrice = models.FloatField(_('Single class drop-in price'),default=0,validators=[MinValueValidator(0)],help_text=_('If students are allowed to drop in, then this price will be applied per class.'))
+    dropinPrice = models.FloatField(
+        _('Single class drop-in price'), default=0, validators=[MinValueValidator(0)],
+        help_text=_('If students are allowed to drop in, then this price will be applied per class.')
+    )
 
-    expired = models.BooleanField(_('Expired'),default=False,help_text=_("If this box is checked, then this pricing tier will not show up as an option when creating new series.  Use this for old prices or custom pricing that will not be repeated."))
+    expired = models.BooleanField(
+        _('Expired'), default=False,
+        help_text=_(
+            "If this box is checked, then this pricing tier will not show up " +
+            "as an option when creating new series.  Use this for old prices " +
+            "or custom pricing that will not be repeated."
+        )
+    )
 
-    def getBasePrice(self,**kwargs):
+    def getBasePrice(self, **kwargs):
         '''
         This handles the logic of finding the correct price.  If more sophisticated
         discounting systems are needed, then this PricingTier model can be subclassed,
@@ -473,23 +637,34 @@ class EventSession(models.Model):
     on the events associated with the session.
     '''
 
-    name = models.CharField(_('Name'),max_length=100,help_text=_('Session name will be displayed.'))
-    description = models.TextField(_('Description'),null=True,blank=True,help_text=_('Add an optional description.'))
+    name = models.CharField(_('Name'), max_length=100, help_text=_('Session name will be displayed.'))
+    description = models.TextField(
+        _('Description'), null=True, blank=True, help_text=_('Add an optional description.')
+    )
     slug = models.SlugField(
         _('Slug'),
         max_length=50,
-        help_text=_('Events can be accessed by a URL based on this slug, as well as by a URL specified by month.'),
+        help_text=_(
+            'Events can be accessed by a URL based on this slug, as well as by ' +
+            'a URL specified by month.'
+        ),
     )
 
     startTime = models.DateTimeField(
         _('Start Time'),
-        help_text=_('This value should be populated automatically based on the first start time of any event associated with this session.'),
-        null=True,blank=True,
+        help_text=_(
+            'This value should be populated automatically based on the first ' +
+            'start time of any event associated with this session.'
+        ),
+        null=True, blank=True,
     )
     endTime = models.DateTimeField(
         _('End Time'),
-        help_text=_('This value should be populated automatically based on the last end time of any event associated with this session.'),
-        null=True,blank=True,
+        help_text=_(
+            'This value should be populated automatically based on the last end ' +
+            'time of any event associated with this session.'
+        ),
+        null=True, blank=True,
     )
 
     @property
@@ -509,13 +684,13 @@ class EventSession(models.Model):
             self.startTime = events.order_by('startTime').first().startTime
             self.endTime = events.order_by('endTime').last().endTime
 
-        super(EventSession,self).save(*args,**kwargs)
+        super(EventSession, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        ordering = ('startTime','name')
+        ordering = ('startTime', 'name')
         verbose_name = _('Event session')
         verbose_name_plural = _('Event sessions')
 
@@ -527,8 +702,14 @@ class EventCategory(models.Model):
     then their categorization may also inherit from this class.
     '''
 
-    name = models.CharField(_('Name'),max_length=100,unique=True,help_text=_('Category name will be displayed.'))
-    description = models.TextField(_('Description'),null=True,blank=True,help_text=_('Add an optional description.'))
+    name = models.CharField(
+        _('Name'), max_length=100, unique=True,
+        help_text=_('Category name will be displayed.')
+    )
+    description = models.TextField(
+        _('Description'), null=True, blank=True,
+        help_text=_('Add an optional description.')
+    )
 
     def __str__(self):
         return self.name
@@ -544,8 +725,17 @@ class SeriesCategory(EventCategory):
     '''
     Categorization for class series events, inherits from EventCategory.
     '''
-    slug = models.SlugField(_('Slug'),max_length=50,help_text=_('This slug is used primarily for custom templates in registration, if the category is shown separately on the registration page.  You can override the default.'))
-    separateOnRegistrationPage = models.BooleanField(_('Show category separately on registration page'),default=False)
+    slug = models.SlugField(
+        _('Slug'), max_length=50,
+        help_text=_(
+            'This slug is used primarily for custom templates in registration, ' +
+            'if the category is shown separately on the registration page.  ' +
+            'You can override the default.'
+        )
+    )
+    separateOnRegistrationPage = models.BooleanField(
+        _('Show category separately on registration page'), default=False
+    )
 
     class Meta:
         verbose_name = _('Series category')
@@ -556,9 +746,18 @@ class PublicEventCategory(EventCategory):
     '''
     Categorization for public events, inherits from EventCategory.
     '''
-    slug = models.SlugField(_('Slug'),max_length=50,help_text=_('This slug is used primarily for custom templates in registration, if the category is shown separately on the registration page.  You can override the default.'))
-    separateOnRegistrationPage = models.BooleanField(_('Show category separately on registration page'),default=False)
-    displayColor = RGBColorField(_('Calendar display color'),default='#0000FF')
+    slug = models.SlugField(
+        _('Slug'), max_length=50,
+        help_text=_(
+            'This slug is used primarily for custom templates in registration, ' +
+            'if the category is shown separately on the registration page.  ' +
+            'You can override the default.'
+        )
+    )
+    separateOnRegistrationPage = models.BooleanField(
+        _('Show category separately on registration page'), default=False
+    )
+    displayColor = RGBColorField(_('Calendar display color'), default='#0000FF')
 
     class Meta:
         verbose_name = _('Public event category')
@@ -570,38 +769,63 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     All public and private events, including class series, inherit off of this model.
     '''
     class RegStatus(DjangoChoices):
-        disabled = ChoiceItem('D',_('Registration disabled'))
-        enabled = ChoiceItem('O',_('Registration enabled'))
-        heldClosed = ChoiceItem('K',_('Registration held closed (override default behavior)'))
-        heldOpen = ChoiceItem('H',_('Registration held open (override default)'))
-        linkOnly = ChoiceItem('L',_('Registration open, but hidden from registration page and calendar (link required to register)'))
-        regHidden = ChoiceItem('C',_('Hidden from registration page and registration closed, but visible on calendar.'))
-        hidden = ChoiceItem('X',_('Event hidden and registration closed'))
+        disabled = ChoiceItem('D', _('Registration disabled'))
+        enabled = ChoiceItem('O', _('Registration enabled'))
+        heldClosed = ChoiceItem('K', _('Registration held closed (override default behavior)'))
+        heldOpen = ChoiceItem('H', _('Registration held open (override default)'))
+        linkOnly = ChoiceItem('L', _(
+            'Registration open, but hidden from registration page and calendar ' +
+            '(link required to register)'
+        ))
+        regHidden = ChoiceItem('C', _(
+            'Hidden from registration page and registration closed, but visible on calendar.'
+        ))
+        hidden = ChoiceItem('X', _('Event hidden and registration closed'))
 
-    status = models.CharField(_('Registration status'),max_length=1,choices=RegStatus.choices,help_text=_('Set the registration status and visibility status of this event.'))
-    session = models.ForeignKey(EventSession,verbose_name=_('Session'),help_text=_('Optional event sessions can be used to order events for registration.'),null=True,blank=True,on_delete=models.SET_NULL)
+    status = models.CharField(
+        _('Registration status'), max_length=1, choices=RegStatus.choices,
+        help_text=_('Set the registration status and visibility status of this event.')
+    )
+    session = models.ForeignKey(
+        EventSession, verbose_name=_('Session'),
+        help_text=_('Optional event sessions can be used to order events for registration.'),
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
 
     # The UUID field is used for private registration links
     uuid = models.UUIDField(_('Unique link ID'), default=uuid.uuid4, editable=False)
 
     # Although this can be inferred from status, this field is set in the database
     # to allow simpler queryset operations
-    registrationOpen = models.BooleanField(_('Registration is open'),default=False)
+    registrationOpen = models.BooleanField(_('Registration is open'), default=False)
     closeAfterDays = models.FloatField(
         _('Registration closes days from first occurrence'),
         default=get_closeAfterDays,
         null=True,
         blank=True,
-        help_text=_('Enter positive values to close after first event occurrence, and negative values to close before first event occurrence.  Leave blank to keep registration open until the event has ended entirely.'))
+        help_text=_(
+            'Enter positive values to close after first event occurrence, and ' +
+            'negative values to close before first event occurrence.  Leave ' +
+            'blank to keep registration open until the event has ended entirely.'
+        )
+    )
 
-    created = models.DateTimeField(_('Creation date'),auto_now_add=True)
-    modified = models.DateTimeField(_('Last modified date'),auto_now=True)
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submitted by user'),null=True,blank=True,related_name='eventsubmissions',on_delete=models.SET_NULL)
+    created = models.DateTimeField(_('Creation date'), auto_now_add=True)
+    modified = models.DateTimeField(_('Last modified date'), auto_now=True)
+    submissionUser = models.ForeignKey(
+        User, verbose_name=_('Submitted by user'), null=True, blank=True,
+        related_name='eventsubmissions', on_delete=models.SET_NULL
+    )
 
-    location = models.ForeignKey(Location,verbose_name=_('Location'),null=True,blank=True,on_delete=models.SET_NULL)
-    room = models.ForeignKey(Room,verbose_name=_('Room'),null=True,blank=True,on_delete=models.SET_NULL)
+    location = models.ForeignKey(
+        Location, verbose_name=_('Location'), null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
+    room = models.ForeignKey(
+        Room, verbose_name=_('Room'), null=True, blank=True, on_delete=models.SET_NULL
+    )
 
-    capacity = models.PositiveIntegerField(_('Event capacity'),null=True,blank=True)
+    capacity = models.PositiveIntegerField(_('Event capacity'), null=True, blank=True)
 
     # These were formerly methods that were given a property decorator, but
     # we need to store them in the DB so that we can have individual class pages
@@ -610,15 +834,20 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     # /%year%/%month%/%slug%/.  These fields will not be shown in the admin but will
     # be automatically updated on model save.  They can still be called as they were
     # called before.
-    month = models.PositiveSmallIntegerField(_('Month'),null=True,blank=True,validators=[MinValueValidator(1),MaxValueValidator(12)])
-    year = models.SmallIntegerField(_('Year'),null=True,blank=True)
-    startTime = models.DateTimeField(_('Start time (first occurrence)'),null=True,blank=True)
-    endTime = models.DateTimeField(_('End time (last occurrence)'),null=True,blank=True)
-    duration = models.FloatField(_('Duration in hours'),null=True,blank=True,validators=[MinValueValidator(0)])
+    month = models.PositiveSmallIntegerField(
+        _('Month'), null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(12)]
+    )
+    year = models.SmallIntegerField(_('Year'), null=True, blank=True)
+    startTime = models.DateTimeField(_('Start time (first occurrence)'), null=True, blank=True)
+    endTime = models.DateTimeField(_('End time (last occurrence)'), null=True, blank=True)
+    duration = models.FloatField(
+        _('Duration in hours'), null=True, blank=True, validators=[MinValueValidator(0)]
+    )
 
     # PostgreSQL can store arbitrary additional information associated with this customer
     # in a JSONfield, but to remain database agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={},blank=True)
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     @property
     def localStartTime(self):
@@ -634,7 +863,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         This exists as a separate method because sometimes events should really
         belong to more than one month (e.g. class series that persist over multiple months).
         '''
-        class_counter = Counter([(x.startTime.year, x.startTime.month) for x in self.eventoccurrence_set.all()])
+        class_counter = Counter([
+            (x.startTime.year, x.startTime.month) for x in self.eventoccurrence_set.all()
+        ])
         multiclass_months = [x[0] for x in class_counter.items() if x[1] > 1]
         all_months = [x[0] for x in class_counter.items()]
 
@@ -730,9 +961,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
                 org = updateForMonth(self, org)
         elif rule == 'Month':
             org = updateForMonth(self, org)
-        elif rule in ['Session','SessionAlpha']:
+        elif rule in ['Session', 'SessionAlpha']:
             org = updateForSession(self, org)
-        elif rule in ['SessionMonth','SessionAlphaMonth']:
+        elif rule in ['SessionMonth', 'SessionAlphaMonth']:
             if self.session and self.month:
                 org.update({
                     'name': _('%s: %s' % (month_name[self.month], self.session.name)),
@@ -773,7 +1004,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         This property is overridden for Series, for which the display color is set by
         the dance type and level of the class.
         '''
-        if hasattr(self,'category') and self.category:
+        if hasattr(self, 'category') and self.category:
             return self.category.displayColor
     displayColor.fget.short_description = _('Display color')
 
@@ -792,9 +1023,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             )
         ]
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Event,self).get_email_context(**kwargs)
+        context = super(Event, self).get_email_context(**kwargs)
         context.update({
             'id': self.id,
             'name': self.__str__(),
@@ -806,7 +1037,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         })
         return context
 
-    def getBasePrice(self,**kwargs):
+    def getBasePrice(self, **kwargs):
         '''
         This method is also generally overridden by subclasses of this class, but it is
         defined here to ensure that the method always exists when looping through events.
@@ -821,10 +1052,14 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         rule = getConstant('registration__eventMonthRule')
 
-        class_counter = list(Counter([(x.startTime.year, x.startTime.month) for x in self.eventoccurrence_set.order_by('startTime')]).items())
+        class_counter = list(Counter([
+            (x.startTime.year, x.startTime.month) for x in
+            self.eventoccurrence_set.order_by('startTime')
+        ]).items())
 
-        # Count occurrences by year and month, and find any months with more than one occurrence in them.  Return the
-        # first of these.  If no months have more than one occurrence, return the month of the first occurrence.
+        # Count occurrences by year and month, and find any months with more than
+        # one occurrence in them.  Return the first of these.  If no months
+        # have more than one occurrence, return the month of the first occurrence.
         if rule == 'FirstMulti' and class_counter:
             multiclass_months = [x[0] for x in class_counter if x[1] > 1]
             all_months = [x[0] for x in class_counter]
@@ -854,7 +1089,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             else:
                 return class_counter[len(class_counter) - 1][0]
 
-        return (None,None)
+        return (None, None)
 
     @property
     def numOccurrences(self):
@@ -955,17 +1190,19 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def registrationEnabled(self):
         ''' Just checks if this event ever permits/permitted registration '''
-        return self.status in [self.RegStatus.enabled,self.RegStatus.heldOpen,self.RegStatus.heldClosed]
+        return self.status in [
+            self.RegStatus.enabled, self.RegStatus.heldOpen, self.RegStatus.heldClosed
+        ]
     registrationEnabled.fget.short_description = _('Registration enabled')
 
     @property
     def statusLabel(self):
-        return self.RegStatus.values.get(self.status,'')
+        return self.RegStatus.values.get(self.status, '')
     statusLabel.fget.short_description = _('Status')
 
     @property
     def numDropIns(self, includeTemporaryRegs=False):
-        count = self.eventregistration_set.filter(cancelled=False,dropIn=True).count()
+        count = self.eventregistration_set.filter(cancelled=False, dropIn=True).count()
         if includeTemporaryRegs:
             count += self.temporaryeventregistration_set.filter(dropIn=True).exclude(
                 registration__expirationDate__lte=timezone.now()).count()
@@ -980,10 +1217,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         than the person in question.
         '''
 
-        count = self.eventregistration_set.filter(cancelled=False,dropIn=False).count()
+        count = self.eventregistration_set.filter(cancelled=False, dropIn=False).count()
         if includeTemporaryRegs:
             excludes = Q(registration__expirationDate__lte=timezone.now())
-            if isinstance(dateTime,datetime):
+            if isinstance(dateTime, datetime):
                 excludes = exclude | Q(registration__dateTime__gte=dateTime)
             count += self.temporaryeventregistration_set.filter(dropIn=False).exclude(excludes).count()
         return count
@@ -996,15 +1233,16 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     @property
     def availableRoles(self):
         '''
-        Returns the set of roles for this event.  Since roles are not always custom specified for
-        event, this looks for the set of available roles in multiple places.  If no roles are found,
-        then the method returns an empty list, in which case it can be assumed that the event's registration
+        Returns the set of roles for this event.  Since roles are not always custom
+        specified for event, this looks for the set of available roles in multiple
+        places.  If no roles are found, then the method returns an empty list,
+        in which case it can be assumed that the event's registration
         is not role-specific.
         '''
         eventRoles = self.eventrole_set.filter(capacity__gt=0)
         if eventRoles.count() > 0:
             return [x.role for x in eventRoles]
-        elif isinstance(self,Series):
+        elif isinstance(self, Series):
             return self.classDescription.danceTypeLevel.danceType.roles.all()
         return []
     availableRoles.fget.short_description = _('Applicable dance roles')
@@ -1013,9 +1251,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         Accepts a DanceRole object and returns the number of registrations of that role.
         '''
-        count = self.eventregistration_set.filter(cancelled=False,dropIn=False,role=role).count()
+        count = self.eventregistration_set.filter(cancelled=False, dropIn=False, role=role).count()
         if includeTemporaryRegs:
-            count += self.temporaryeventregistration_set.filter(dropIn=False,role=role).exclude(
+            count += self.temporaryeventregistration_set.filter(dropIn=False, role=role).exclude(
                 registration__expirationDate__lte=timezone.now()).count()
         return count
 
@@ -1024,11 +1262,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         Return a dictionary listing registrations by all available roles (including no role)
         '''
-        role_list = list(self.availableRoles) + [None,]
-        return {getattr(x,'name',None):self.numRegisteredForRole(x) for x in role_list}
+        role_list = list(self.availableRoles) + [None, ]
+        return {getattr(x, 'name', None): self.numRegisteredForRole(x) for x in role_list}
     numRegisteredByRole.fget.short_description = _('# Registered by role')
 
-    def capacityForRole(self,role):
+    def capacityForRole(self, role):
         '''
         Accepts a DanceRole object and determines the capacity for that role at this event.this
         Since roles are not always custom specified for events, this looks for the set of
@@ -1050,7 +1288,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         # No custom roles for this event, so get the danceType roles and use the overall
         # capacity divided by the number of roles
-        if isinstance(self,Series):
+        if isinstance(self, Series):
             try:
                 availableRoles = self.classDescription.danceTypeLevel.danceType.roles.all()
 
@@ -1066,13 +1304,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         # No custom roles and no danceType to get roles from, so return the overall capacity
         return self.capacity
 
-    def soldOutForRole(self,role,includeTemporaryRegs=False):
+    def soldOutForRole(self, role, includeTemporaryRegs=False):
         '''
         Accepts a DanceRole object and responds if the number of registrations for that
         role exceeds the capacity for that role at this event.
         '''
         return self.numRegisteredForRole(
-            role,includeTemporaryRegs=includeTemporaryRegs) >= (self.capacityForRole(role) or 0)
+            role, includeTemporaryRegs=includeTemporaryRegs) >= (self.capacityForRole(role) or 0)
 
     @property
     def soldOut(self):
@@ -1104,8 +1342,14 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         modified = False
         open = self.registrationOpen
 
-        startTime = ensure_localtime(self.startTime) or getattr(self.eventoccurrence_set.order_by('startTime').first(),'startTime',None)
-        endTime = ensure_localtime(self.endTime) or getattr(self.eventoccurrence_set.order_by('-endTime').first(),'endTime',None)
+        startTime = (
+            ensure_localtime(self.startTime) or
+            getattr(self.eventoccurrence_set.order_by('startTime').first(), 'startTime', None)
+        )
+        endTime = (
+            ensure_localtime(self.endTime) or
+            getattr(self.eventoccurrence_set.order_by('-endTime').first(), 'endTime', None)
+        )
 
         # If set to these codes, then registration will be held closed
         force_closed_codes = [
@@ -1136,16 +1380,31 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             open = True
             modified = True
         elif (
-            startTime and self.status in automatic_codes and ((
-                self.closeAfterDays and timezone.now() > startTime + timedelta(days=self.closeAfterDays)) or
-                timezone.now() > endTime) and open is True):
-                    open = False
-                    modified = True
-        elif startTime and self.status in automatic_codes and ((
-            timezone.now() < endTime and not self.closeAfterDays) or (
-                self.closeAfterDays and timezone.now() < startTime + timedelta(days=self.closeAfterDays))) and open is False:
-                    open = True
-                    modified = True
+            startTime and self.status in automatic_codes and
+            (
+                (
+                    self.closeAfterDays and
+                    timezone.now() > startTime + timedelta(days=self.closeAfterDays)
+                ) or
+                timezone.now() > endTime
+            ) and
+            open is True
+        ):
+            open = False
+            modified = True
+        elif (
+            startTime and self.status in automatic_codes and
+            (
+                (timezone.now() < endTime and not self.closeAfterDays) or
+                (
+                    self.closeAfterDays and
+                    timezone.now() < startTime + timedelta(days=self.closeAfterDays)
+                )
+            ) and
+            open is False
+        ):
+            open = True
+            modified = True
 
         # Save if something has changed, otherwise, do nothing
         if modified and not saveMethod:
@@ -1156,9 +1415,17 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         return (modified, open)
 
     def clean(self):
-        if self.status in [Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen] and not self.capacity:
+        if (
+            self.status in [
+                Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen
+            ] and not self.capacity
+        ):
             raise ValidationError(_('If registration is enabled then a capacity must be set.'))
-        if self.status in [Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen] and not self.pricingTier:
+        if (
+            self.status in [
+                Event.RegStatus.enabled, Event.RegStatus.linkOnly, Event.RegStatus.heldOpen
+            ] and not self.pricingTier
+        ):
             raise ValidationError(_('If registration is enabled then a pricing tier must be set.'))
         if self.room and self.location and self.room.location != self.location:
             raise ValidationError(_('Selected room is not part of selected location.'))
@@ -1176,7 +1443,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
                 self.month = self.getYearAndMonth()[1]
                 self.startTime = self.eventoccurrence_set.order_by('startTime').first().startTime
                 self.endTime = self.eventoccurrence_set.order_by('endTime').last().endTime
-                self.duration = sum([x.duration for x in self.eventoccurrence_set.all() if not x.cancelled])
+                self.duration = sum([
+                    x.duration for x in self.eventoccurrence_set.all() if not x.cancelled
+                ])
 
             if self.room and not self.location:
                 self.location = self.room.location
@@ -1189,8 +1458,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             modified, open = self.updateRegistrationStatus(saveMethod=True)
             if modified:
                 self.registrationOpen = open
-            logger.debug('Finished checking status and ready for super call. Value is %s' % self.registrationOpen)
-        super(Event,self).save(*args,**kwargs)
+            logger.debug(
+                'Finished checking status and ready for super call. Value is %s' % self.registrationOpen
+            )
+        super(Event, self).save(*args, **kwargs)
 
         # Update start time and end time for associated event session.
         if self.session:
@@ -1210,12 +1481,16 @@ class EventOccurrence(models.Model):
     All events have one or more occurrences.  For example, class series have classes,
     public events may be one time (one occurrence) or they may occur repeatedly.
     '''
-    event = models.ForeignKey(Event,verbose_name=_('Series/Event'),on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, verbose_name=_('Series/Event'), on_delete=models.CASCADE)
 
     startTime = models.DateTimeField(_('Start Time'))
     endTime = models.DateTimeField(_('End Time'))
 
-    cancelled = models.BooleanField(_('Cancelled'),help_text=_('Check this box to mark that the class or event was cancelled.'), default=False)
+    cancelled = models.BooleanField(
+        _('Cancelled'),
+        help_text=_('Check this box to mark that the class or event was cancelled.'),
+        default=False
+    )
 
     @property
     def localStartTime(self):
@@ -1233,26 +1508,32 @@ class EventOccurrence(models.Model):
         return (self.endTime - self.startTime).seconds / 3600
     duration.fget.short_description = _('Duration')
 
-    def allDayForDate(self,this_date,timeZone=None):
+    def allDayForDate(self, this_date, timeZone=None):
         '''
         This method determines whether the occurrence lasts the entirety of
         a specified day in the specified time zone.  If no time zone is specified,
         then it uses the default time zone).  Also, give a grace period of a few
         minutes to account for issues with the way events are sometimes entered.
         '''
-        if isinstance(this_date,datetime):
+        if isinstance(this_date, datetime):
             d = this_date.date()
         else:
             d = this_date
 
-        date_start = datetime(d.year,d.month,d.day)
-        naive_start = self.startTime if timezone.is_naive(self.startTime) else timezone.make_naive(self.startTime, timezone=timeZone)
-        naive_end = self.endTime if timezone.is_naive(self.endTime) else timezone.make_naive(self.endTime, timezone=timeZone)
+        date_start = datetime(d.year, d.month, d.day)
+        naive_start = (
+            self.startTime if timezone.is_naive(self.startTime) else
+            timezone.make_naive(self.startTime, timezone=timeZone)
+        )
+        naive_end = (
+            self.endTime if timezone.is_naive(self.endTime) else
+            timezone.make_naive(self.endTime, timezone=timeZone)
+        )
 
         return (
             # Ensure that all comparisons are done in local time
             naive_start <= date_start and
-            naive_end >= date_start + timedelta(days=1,minutes=-30)
+            naive_end >= date_start + timedelta(days=1, minutes=-30)
         )
 
     @property
@@ -1267,7 +1548,7 @@ class EventOccurrence(models.Model):
         # Otherwise, describe appropriately
         sameYear = (startDate.year == endDate.year)
         textStrings = []
-        for d in [self.localStartTime,self.localEndTime]:
+        for d in [self.localStartTime, self.localEndTime]:
             if self.allDayForDate(d) and sameYear:
                 textStrings.append(d.strftime('%A, %B %d'))
             elif self.allDayForDate(d):
@@ -1275,26 +1556,28 @@ class EventOccurrence(models.Model):
             else:
                 textStrings.append(d.strftime('%B %d, %Y, %-I:%M %p'))
 
-        return _('From {startTime} to {endTime}'.format(startTime=textStrings[0], endTime=textStrings[1]))
+        return _('From {startTime} to {endTime}'.format(
+            startTime=textStrings[0], endTime=textStrings[1]
+        ))
     timeDescription.fget.short_description = _('Occurs')
 
     def __str__(self):
-        return '%s: %s' % (self.event.name,self.timeDescription)
+        return '%s: %s' % (self.event.name, self.timeDescription)
 
     class Meta:
         verbose_name = _('Event occurrence')
         verbose_name_plural = _('Event occurrences')
-        ordering = ('event','startTime')
+        ordering = ('event', 'startTime')
 
 
 class EventRole(models.Model):
-    event = models.ForeignKey(Event,on_delete=models.CASCADE)
-    role = models.ForeignKey(DanceRole,on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    role = models.ForeignKey(DanceRole, on_delete=models.CASCADE)
     capacity = models.PositiveIntegerField()
 
     class Meta:
         ''' Ensure each role is only listed once per event. '''
-        unique_together = ('event','role')
+        unique_together = ('event', 'role')
         verbose_name = _('Event dance role')
         verbose_name_plural = _('Event dance roles')
 
@@ -1306,18 +1589,31 @@ class EventStaffMember(models.Model):
     models and managers.  However, other types may be created by
     overriding StaffType.
     '''
-    category = models.ForeignKey(EventStaffCategory,verbose_name=_('Category'),null=True,on_delete=models.SET_NULL)
+    category = models.ForeignKey(
+        EventStaffCategory, verbose_name=_('Category'), null=True,
+        on_delete=models.SET_NULL
+    )
 
-    event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
-    occurrences = models.ManyToManyField(EventOccurrence,blank=True,verbose_name=_('Applicable event occurrences'))
+    event = models.ForeignKey(Event, verbose_name=_('Event'), on_delete=models.CASCADE)
+    occurrences = models.ManyToManyField(
+        EventOccurrence, blank=True, verbose_name=_('Applicable event occurrences')
+    )
 
-    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff Member'),on_delete=models.CASCADE)
-    replacedStaffMember = models.ForeignKey('self',verbose_name=_('Replacement for'),related_name='replacementFor',null=True,blank=True,on_delete=models.SET_NULL)
+    staffMember = models.ForeignKey(
+        StaffMember, verbose_name=_('Staff Member'), on_delete=models.CASCADE
+    )
+    replacedStaffMember = models.ForeignKey(
+        'self', verbose_name=_('Replacement for'), related_name='replacementFor',
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
 
     specifiedHours = models.FloatField(
         _('Number of hours (optional)'),
-        help_text=_('If unspecified, then the net number of hours is based on the duration of the applicable event occurrences.'),null=True,blank=True,
-        validators=[MinValueValidator(0)]
+        help_text=_(
+            'If unspecified, then the net number of hours is based on the ' +
+            'duration of the applicable event occurrences.'
+        ),
+        null=True, blank=True, validators=[MinValueValidator(0)]
     )
 
     # PostgreSQL can store arbitrary additional information associated with this
@@ -1341,7 +1637,10 @@ class EventStaffMember(models.Model):
         '''
         if self.specifiedHours is not None:
             return self.specifiedHours
-        elif self.category in [getConstant('general__eventStaffCategoryAssistant'),getConstant('general__eventStaffCategoryInstructor')]:
+        elif self.category in [
+            getConstant('general__eventStaffCategoryAssistant'),
+            getConstant('general__eventStaffCategoryInstructor')
+        ]:
             return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
         else:
             return sum([x.duration for x in self.occurrences.filter(cancelled=False)])
@@ -1360,7 +1659,7 @@ class EventStaffMember(models.Model):
 
     class Meta:
         ordering = ('event', 'staffMember__lastName', 'staffMember__firstName')
-        unique_together = ('staffMember','event','category','replacedStaffMember')
+        unique_together = ('staffMember', 'event', 'category', 'replacedStaffMember')
         verbose_name = _('Event staff member')
         verbose_name_plural = _('Event staff members')
 
@@ -1372,11 +1671,25 @@ class Series(Event):
     through which their DanceType and DanceTypeLevel are specified.
     '''
 
-    classDescription = models.ForeignKey(ClassDescription,verbose_name=_('Class description'),null=True,on_delete=models.SET_NULL)
-    category = models.ForeignKey(SeriesCategory,verbose_name=_('Series category (optional)'),null=True,blank=True,help_text=_('Custom series categories may be used to display special series (e.g. one-offs, visiting instructors) separately on your registration page.'),on_delete=models.SET_NULL)
-    allowDropins = models.BooleanField(_('Allow class drop-ins'), default=False, help_text=_('If checked, then all staff will be able to register students as drop-ins.'))
+    classDescription = models.ForeignKey(
+        ClassDescription, verbose_name=_('Class description'), null=True,
+        on_delete=models.SET_NULL
+    )
+    category = models.ForeignKey(
+        SeriesCategory, verbose_name=_('Series category (optional)'),
+        null=True, blank=True,
+        help_text=_(
+            'Custom series categories may be used to display special series ' +
+            '(e.g. one-offs, visiting instructors) separately on your registration page.'
+        ),
+        on_delete=models.SET_NULL
+    )
+    allowDropins = models.BooleanField(
+        _('Allow class drop-ins'), default=False,
+        help_text=_('If checked, then all staff will be able to register students as drop-ins.')
+    )
 
-    def getTeachers(self,includeSubstitutes=False):
+    def getTeachers(self, includeSubstitutes=False):
         seriesTeachers = SeriesTeacher.objects.filter(event=self)
         seriesTeachers = set([t.staffMember for t in seriesTeachers])
 
@@ -1391,14 +1704,16 @@ class Series(Event):
     teachers = property(fget=getTeachers)
     teachers.fget.short_description = _('Instructors')
 
-    pricingTier = models.ForeignKey(PricingTier,verbose_name=_('Pricing tier'),on_delete=models.PROTECT)
+    pricingTier = models.ForeignKey(
+        PricingTier, verbose_name=_('Pricing tier'), on_delete=models.PROTECT
+    )
 
     @property
     def name(self):
         '''
         Overrides property from Event base class.
         '''
-        return getattr(getattr(self,'classDescription',None),'title','')
+        return getattr(getattr(self, 'classDescription', None), 'title', '')
     name.fget.short_description = _('Name')
 
     @property
@@ -1406,7 +1721,7 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        return getattr(getattr(self,'classDescription',None),'description','')
+        return getattr(getattr(self, 'classDescription', None), 'description', '')
     description.fget.short_description = _('Description')
 
     @property
@@ -1414,10 +1729,10 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        cd = getattr(self,'classDescription',None)
+        cd = getattr(self, 'classDescription', None)
         if cd:
-            sd = getattr(cd,'shortDescription','')
-            d = getattr(cd,'description','')
+            sd = getattr(cd, 'shortDescription', '')
+            d = getattr(cd, 'description', '')
             return sd if sd else d
         return ''
     shortDescription.fget.short_description = _('Short description')
@@ -1425,10 +1740,10 @@ class Series(Event):
     @property
     def slug(self):
         '''
-        No property in the Event base class, but PublicEvents have a slug field, so this allows
-        us to iterate over that property in templates
+        No property in the Event base class, but PublicEvents have a slug field,
+        so this allows us to iterate over that property in templates
         '''
-        return getattr(getattr(self,'classDescription',None),'slug','')
+        return getattr(getattr(self, 'classDescription', None), 'slug', '')
     slug.fget.short_description = _('Slug')
 
     @property
@@ -1436,12 +1751,12 @@ class Series(Event):
         '''
         Overrides property from Event base class.
         '''
-        cd = getattr(self,'classDescription',None)
+        cd = getattr(self, 'classDescription', None)
         if cd:
             return cd.danceTypeLevel.displayColor
     displayColor.fget.short_description = _('Calendar display color')
 
-    def getBasePrice(self,**kwargs):
+    def getBasePrice(self, **kwargs):
         '''
         This method overrides the method of the base Event class by
         checking the pricingTier associated with this Series and getting
@@ -1461,24 +1776,44 @@ class Series(Event):
 
         if self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
             return None
-        elif orgRule in ['SessionFirst', 'SessionAlphaFirst', 'SessionMonth','SessionAlphaMonth'] and self.session:
-            return reverse('classViewSessionMonth',args=[self.session.slug,self.year,month_name[self.month or 0] or None,self.classDescription.slug])
-        elif orgRule in ['Session','SessionAlpha'] and self.session:
-            return reverse('classViewSession',args=[self.session.slug,self.classDescription.slug])
-        else:        
-            return reverse('classView',args=[self.year,month_name[self.month or 0] or None,self.classDescription.slug])
+        elif orgRule in [
+            'SessionFirst', 'SessionAlphaFirst', 'SessionMonth', 'SessionAlphaMonth'
+        ] and self.session:
+            return reverse(
+                'classViewSessionMonth',
+                args=[
+                    self.session.slug,
+                    self.year,
+                    month_name[self.month or 0] or None,
+                    self.classDescription.slug
+                ]
+            )
+        elif orgRule in ['Session', 'SessionAlpha'] and self.session:
+            return reverse('classViewSession', args=[self.session.slug, self.classDescription.slug])
+        else:
+            return reverse(
+                'classView', args=[
+                    self.year,
+                    month_name[self.month or 0] or None,
+                    self.classDescription.slug
+                ]
+            )
 
     url.fget.short_description = _('Class series URL')
 
     def clean(self):
         if self.allowDropins and not self.pricingTier.dropinPrice:
-            raise ValidationError(_('If drop-ins are allowed then drop-in price must be specified by the Pricing Tier.'))
-        super(Series,self).clean()
+            raise ValidationError(_(
+                'If drop-ins are allowed then drop-in price must be specified by the Pricing Tier.'
+            ))
+        super(Series, self).clean()
 
     def __str__(self):
         if self.month and self.year and self.classDescription:
             # In case of unsaved series, month and year are not yet set.
-            return str(_('%s %s: %s' % (month_name[self.month or 0],str(self.year),self.classDescription.title)))
+            return str(_('%s %s: %s' % (
+                month_name[self.month or 0], str(self.year), self.classDescription.title
+            )))
         elif self.classDescription:
             return str(_('Class Series: %s' % self.classDescription.title))
         else:
@@ -1496,7 +1831,7 @@ class SeriesTeacherManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(SeriesTeacherManager,self).get_queryset().filter(
+        return super(SeriesTeacherManager, self).get_queryset().filter(
             category=getConstant('general__eventStaffCategoryInstructor')
         )
 
@@ -1505,7 +1840,7 @@ class SeriesTeacherManager(models.Manager):
             'category': getConstant('general__eventStaffCategoryInstructor').id,
             'occurrences': kwargs.get('event').eventoccurrence_set.all(),
         })
-        return super(SeriesTeacherManager,self).create(**kwargs)
+        return super(SeriesTeacherManager, self).create(**kwargs)
 
 
 class SeriesTeacher(EventStaffMember):
@@ -1542,20 +1877,21 @@ class SubstituteTeacherManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(SubstituteTeacherManager,self).get_queryset().filter(
+        return super(SubstituteTeacherManager, self).get_queryset().filter(
             category=getConstant('general__eventStaffCategorySubstitute')
         )
 
     def create(self, **kwargs):
         kwargs.update({
             'category': getConstant('general__eventStaffCategorySubstitute').id})
-        return super(SubstituteTeacherManager,self).create(**kwargs)
+        return super(SubstituteTeacherManager, self).create(**kwargs)
 
 
 class SubstituteTeacher(EventStaffMember):
     '''
-    Keeps track of substitute teaching.  The series and seriesTeacher fields are both needed, because
-    this allows the substitute teaching inline to be displayed for each series.
+    Keeps track of substitute teaching.  The series and seriesTeacher fields are
+    both needed, because this allows the substitute teaching inline to be
+    displayed for each series.
     '''
     objects = SubstituteTeacherManager()
 
@@ -1569,7 +1905,10 @@ class SubstituteTeacher(EventStaffMember):
         if not self.replacedStaffMember:
             return '%(name)s %(subbed)s: %(month)s %(year)s' % replacements
 
-        replacements.update({'subbed': _(' subbed for '), 'staffMember': self.replacedStaffMember.staffMember.fullName})
+        replacements.update({
+            'subbed': _(' subbed for '),
+            'staffMember': self.replacedStaffMember.staffMember.fullName
+        })
         return '%(name)s %(subbed)s %(staffMember)s: %(month)s %(year)s' % replacements
 
     def clean(self):
@@ -1580,7 +1919,7 @@ class SubstituteTeacher(EventStaffMember):
     class Meta:
         proxy = True
         permissions = (
-            ('report_substitute_teaching',_('Can access the substitute teaching reporting form')),
+            ('report_substitute_teaching', _('Can access the substitute teaching reporting form')),
         )
         verbose_name = _('Substitute instructor')
         verbose_name_plural = _('Substitute instructors')
@@ -1593,7 +1932,7 @@ class EventDJManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(EventDJManager,self).get_queryset().filter(
+        return super(EventDJManager, self).get_queryset().filter(
             category=getConstant('general__eventStaffCategoryDJ')
         )
 
@@ -1601,7 +1940,7 @@ class EventDJManager(models.Manager):
         kwargs.update({
             'category': getConstant('general__eventStaffCategoryDJ').id,
         })
-        return super(EventDJManager,self).create(**kwargs)
+        return super(EventDJManager, self).create(**kwargs)
 
 
 class EventDJ(EventStaffMember):
@@ -1635,7 +1974,7 @@ class SeriesStaffManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(SeriesStaffManager,self).get_queryset().exclude(
+        return super(SeriesStaffManager, self).get_queryset().exclude(
             category__in=[
                 getConstant('general__eventStaffCategoryInstructor'),
                 getConstant('general__eventStaffCategorySubstitute'),
@@ -1645,7 +1984,7 @@ class SeriesStaffManager(models.Manager):
 
 class SeriesStaffMember(EventStaffMember):
     '''
-    A proxy model with a custom manager that excludes SeriesTeachers and 
+    A proxy model with a custom manager that excludes SeriesTeachers and
     SubstituteTeachers for easier admin integration.
     '''
     objects = SeriesStaffManager()
@@ -1661,19 +2000,49 @@ class PublicEvent(Event):
     Special Events which may have their own display page.
     '''
 
-    title = models.CharField(_('Title'),max_length=100,help_text=_('Give the event a title'))
-    slug = models.SlugField(_('Slug'),max_length=100,help_text=_('This is for the event page URL, you can override the default.'))
+    title = models.CharField(_('Title'), max_length=100, help_text=_('Give the event a title'))
+    slug = models.SlugField(
+        _('Slug'), max_length=100,
+        help_text=_('This is for the event page URL, you can override the default.')
+    )
 
-    category = models.ForeignKey(PublicEventCategory,null=True,blank=True,verbose_name=_('Category (optional)'),help_text=_('Custom event categories may be used to display special types of events (e.g. practice sessions) separately on your registration page.  They may also be displayed in different colors on the public calendar.'),on_delete=models.SET_NULL)
-    descriptionField = HTMLField(_('Description'),null=True,blank=True,help_text=_('Describe the event for the event page.'))
-    shortDescriptionField = models.TextField(_('Short description'),null=True,blank=True,help_text=_('Shorter description for \"taglines\" and feeds.'))
-    link = models.URLField(_('External link to event (if applicable)'),blank=True,null=True,help_text=_('Optionally include the URL to a page for this Event.  If set, then the site\'s auto-generated Event page will instead redirect to this URL.'))
+    category = models.ForeignKey(
+        PublicEventCategory, null=True, blank=True,
+        verbose_name=_('Category (optional)'),
+        help_text=_(
+            'Custom event categories may be used to display special types of ' +
+            'events (e.g. practice sessions) separately on your registration ' +
+            'page.  They may also be displayed in different colors on the ' +
+            'public calendar.'
+        ),
+        on_delete=models.SET_NULL
+    )
+    descriptionField = HTMLField(
+        _('Description'), null=True, blank=True,
+        help_text=_('Describe the event for the event page.')
+    )
+    shortDescriptionField = models.TextField(
+        _('Short description'), null=True, blank=True,
+        help_text=_('Shorter description for \"taglines\" and feeds.')
+    )
+    link = models.URLField(
+        _('External link to event (if applicable)'), blank=True, null=True,
+        help_text=_(
+            'Optionally include the URL to a page for this Event.  If set, ' +
+            'then the site\'s auto-generated Event page will instead redirect ' +
+            'to this URL.'
+        )
+    )
 
-    # The pricing tier is optional, but registrations cannot be enabled unless a pricing tier is
-    # specified (the pricing tier may specify the price as free for Free events).
-    pricingTier = models.ForeignKey(PricingTier,null=True,blank=True,verbose_name=_('Pricing Tier'),on_delete=models.SET_NULL)
+    # The pricing tier is optional, but registrations cannot be enabled unless a
+    # pricing tier is specified (the pricing tier may specify the price as free
+    # for Free events).
+    pricingTier = models.ForeignKey(
+        PricingTier, null=True, blank=True, verbose_name=_('Pricing Tier'),
+        on_delete=models.SET_NULL
+    )
 
-    def getBasePrice(self,**kwargs):
+    def getBasePrice(self, **kwargs):
         '''
         This method overrides the method of the base Event class by
         checking the pricingTier associated with this PublicEvent and getting
@@ -1727,12 +2096,22 @@ class PublicEvent(Event):
 
         if self.status in [self.RegStatus.hidden, self.RegStatus.linkOnly]:
             return None
-        elif orgRule in ['SessionFirst', 'SessionAlphaFirst', 'SessionMonth','SessionAlphaMonth'] and self.session:
-            return reverse('eventViewSessionMonth',args=[self.session.slug,self.year,month_name[self.month or 0] or None,self.slug])
-        elif orgRule in ['Session','SessionAlpha'] and self.session:
-            return reverse('eventViewSession',args=[self.session.slug,self.slug])
-        else:        
-            return reverse('eventView',args=[self.year,month_name[self.month or 0] or None,self.slug])
+        elif orgRule in [
+            'SessionFirst', 'SessionAlphaFirst', 'SessionMonth', 'SessionAlphaMonth'
+        ] and self.session:
+            return reverse(
+                'eventViewSessionMonth', args=[
+                    self.session.slug, self.year,
+                    month_name[self.month or 0] or None, self.slug
+                ]
+            )
+        elif orgRule in ['Session', 'SessionAlpha'] and self.session:
+            return reverse('eventViewSession', args=[self.session.slug, self.slug])
+        else:
+            return reverse(
+                'eventView',
+                args=[self.year, month_name[self.month or 0] or None, self.slug]
+            )
 
     def __str__(self):
         try:
@@ -1751,7 +2130,7 @@ class CustomerGroup(EmailRecipientMixin, models.Model):
     A customer group can be used to send emails and to define group-specific
     discounts and vouchers.
     '''
-    name = models.CharField(_('Group name'),max_length=100)
+    name = models.CharField(_('Group name'), max_length=100)
 
     def memberCount(self):
         return self.customer_set.count()
@@ -1771,31 +2150,39 @@ class CustomerGroup(EmailRecipientMixin, models.Model):
 
 class Customer(EmailRecipientMixin, models.Model):
     '''
-    Not all customers choose to log in when they sign up for classes, and sometimes Users register their spouses, friends,
-    or other customers.  However, we still need to keep track of those customers' registrations.  So, Customer objects
-    are unique for each combination of name and email address, even though Users are unique by email address only.  Customers
+    Not all customers choose to log in when they sign up for classes, and
+    sometimes Users register their spouses, friends, or other customers.
+    However, we still need to keep track of those customers' registrations.
+    So, Customer objects are unique for each combination of name and email
+    address, even though Users are unique by email address only.  Customers
     also store name and email information separately from the User object.
     '''
-    user = models.OneToOneField(User,null=True,blank=True,verbose_name=_('User account'),on_delete=models.SET_NULL)
+    user = models.OneToOneField(
+        User, null=True, blank=True, verbose_name=_('User account'),
+        on_delete=models.SET_NULL
+    )
 
     first_name = models.CharField(_('First name'), max_length=30)
     last_name = models.CharField(_('Last name'), max_length=30)
     email = models.EmailField(_('Email address'))
-    phone = models.CharField(_('Telephone'),max_length=20,null=True,blank=True)
+    phone = models.CharField(_('Telephone'), max_length=20, null=True, blank=True)
 
     groups = models.ManyToManyField(
         CustomerGroup,
-        verbose_name=_('Customer groups'),blank=True,
-        help_text=_('Customer groups may be used for group-specific discounts and vouchers, as well as for email purposes.')
+        verbose_name=_('Customer groups'), blank=True,
+        help_text=_(
+            'Customer groups may be used for group-specific discounts and ' +
+            'vouchers, as well as for email purposes.'
+        )
     )
 
     # PostgreSQL can store arbitrary additional information associated with this customer
     # in a JSONfield, but to remain database agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={},blank=True)
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     @property
     def fullName(self):
-        return ' '.join([self.first_name or '',self.last_name or ''])
+        return ' '.join([self.first_name or '', self.last_name or ''])
     fullName.fget.short_description = _('Name')
 
     @property
@@ -1805,63 +2192,76 @@ class Customer(EmailRecipientMixin, models.Model):
 
     @property
     def numClassSeries(self):
-        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).count()
+        return EventRegistration.objects.filter(
+            registration__customer=self, event__series__isnull=False
+        ).count()
     numClassSeries.fget.short_description = _('# Series registered')
 
     @property
     def numPublicEvents(self):
-        return EventRegistration.objects.filter(registration__customer=self,event__publicevent__isnull=False).count()
+        return EventRegistration.objects.filter(
+            registration__customer=self, event__publicevent__isnull=False
+        ).count()
     numPublicEvents.fget.short_description = _('# Public events registered')
 
     @property
     def firstSeries(self):
-        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
-            order_by('event__startTime').first().event
+        return EventRegistration.objects.filter(
+            registration__customer=self, event__series__isnull=False
+        ).order_by('event__startTime').first().event
     firstSeries.fget.short_description = _('Customer\'s first series')
 
     @property
     def firstSeriesDate(self):
-        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
-            order_by('event__startTime').first().event.startTime
+        return EventRegistration.objects.filter(
+            registration__customer=self, event__series__isnull=False
+        ).order_by('event__startTime').first().event.startTime
     firstSeriesDate.fget.short_description = _('Customer\'s first series date')
 
     @property
     def lastSeries(self):
-        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
-            order_by('-event__startTime').first().event
+        return EventRegistration.objects.filter(
+            registration__customer=self, event__series__isnull=False
+        ).order_by('-event__startTime').first().event
     lastSeries.fget.short_description = _('Customer\'s most recent series')
 
     @property
     def lastSeriesDate(self):
-        return EventRegistration.objects.filter(registration__customer=self,event__series__isnull=False).\
-            order_by('-event__startTime').first().event.startTime
+        return EventRegistration.objects.filter(
+            registration__customer=self, event__series__isnull=False
+        ).order_by('-event__startTime').first().event.startTime
     lastSeriesDate.fget.short_description = _('Customer\'s most recent series date')
 
-    def getSeriesRegistered(self,q_filter=Q(),distinct=True,counter=False,**kwargs):
+    def getSeriesRegistered(self, q_filter=Q(), distinct=True, counter=False, **kwargs):
         '''
         Return a list that indicates each series the person has registered for
         and how many registrations they have for that series (because of couples).
         This can be filtered by any keyword arguments passed (e.g. year and month).
         '''
-        series_set = Series.objects.filter(q_filter,eventregistration__registration__customer=self,**kwargs)
+        series_set = Series.objects.filter(
+            q_filter, eventregistration__registration__customer=self, **kwargs
+        )
 
         if not distinct:
             return series_set
         elif distinct and not counter:
             return series_set.distinct()
         elif 'year' in kwargs or 'month' in kwargs:
-            return [str(x[1]) + 'x: ' + x[0].classDescription.title for x in Counter(series_set).items()]
+            return [
+                str(x[1]) + 'x: ' + x[0].classDescription.title for x in
+                Counter(series_set).items()
+            ]
         else:
             return [str(x[1]) + 'x: ' + x[0].__str__() for x in Counter(series_set).items()]
 
-    def getMultiSeriesRegistrations(self,q_filter=Q(),name_series=False,**kwargs):
+    def getMultiSeriesRegistrations(self, q_filter=Q(), name_series=False, **kwargs):
         '''
         Use the getSeriesRegistered method above to get a list of each series the
         person has registered for.  The return only indicates whether they are
         registered more than once for the same series (e.g. for keeping track of
         dance admissions for couples who register under one name).
         '''
-        series_registered = self.getSeriesRegistered(q_filter,distinct=False,counter=False,**kwargs)
+        series_registered = self.getSeriesRegistered(q_filter, distinct=False, counter=False, **kwargs)
         counter_items = Counter(series_registered).items()
         multireg_list = [x for x in counter_items if x[1] > 1]
 
@@ -1875,11 +2275,11 @@ class Customer(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        return [self.email,]
+        return [self.email, ]
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Customer,self).get_email_context(**kwargs)
+        context = super(Customer, self).get_email_context(**kwargs)
         context.update({
             'first_name': self.first_name,
             'last_name': self.last_name,
@@ -1893,40 +2293,52 @@ class Customer(EmailRecipientMixin, models.Model):
         return '%s: %s' % (self.fullName, self.email)
 
     class Meta:
-        unique_together = ('last_name','first_name','email')
-        ordering = ('last_name','first_name')
+        unique_together = ('last_name', 'first_name', 'email')
+        ordering = ('last_name', 'first_name')
         permissions = (
-            ('can_autocomplete_users',_('Able to use customer and User autocomplete features (in various admin forms)')),
-            ('view_other_user_profiles',_('Able to view other Customer and User profile pages')),
+            (
+                'can_autocomplete_users',
+                _('Able to use customer and User autocomplete features (in various admin forms)')
+            ),
+            ('view_other_user_profiles', _('Able to view other Customer and User profile pages')),
         )
         verbose_name = _('Customer')
         verbose_name_plural = _('Customers')
 
 
 class TemporaryRegistration(EmailRecipientMixin, models.Model):
-    firstName = models.CharField(_('First name'),max_length=100,null=True)
-    lastName = models.CharField(_('Last name'),max_length=100,null=True)
-    email = models.CharField(_('Email address'),max_length=200,null=True)
-    phone = models.CharField(_('Telephone'),max_length=20,null=True,blank=True)
+    firstName = models.CharField(_('First name'), max_length=100, null=True)
+    lastName = models.CharField(_('Last name'), max_length=100, null=True)
+    email = models.CharField(_('Email address'), max_length=200, null=True)
+    phone = models.CharField(_('Telephone'), max_length=20, null=True, blank=True)
 
-    howHeardAboutUs = models.TextField(_('How they heard about us'),default='',blank=True,null=True)
-    student = models.BooleanField(_('Eligible for student discount'),default=False)
-    payAtDoor = models.BooleanField(_('At-the-door registration'),default=False)
+    howHeardAboutUs = models.TextField(
+        _('How they heard about us'), default='', blank=True, null=True
+    )
+    student = models.BooleanField(_('Eligible for student discount'), default=False)
+    payAtDoor = models.BooleanField(_('At-the-door registration'), default=False)
 
-    submissionUser = models.ForeignKey(User, verbose_name=_('registered by user'),related_name='submittedtemporaryregistrations',null=True,blank=True,on_delete=models.SET_NULL)
+    submissionUser = models.ForeignKey(
+        User, verbose_name=_('registered by user'),
+        related_name='submittedtemporaryregistrations', null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
 
-    comments = models.TextField(_('Comments'),default='')
-    dateTime = models.DateTimeField(_('Registration date/time'),blank=True,null=True)
-    priceWithDiscount = models.FloatField(_('Price net of discounts'),null=True,validators=[MinValueValidator(0)])
+    comments = models.TextField(_('Comments'), default='')
+    dateTime = models.DateTimeField(_('Registration date/time'), blank=True, null=True)
+    priceWithDiscount = models.FloatField(
+        _('Price net of discounts'), null=True, validators=[MinValueValidator(0)]
+    )
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield.  This allows
     # hooked in registration-related procedures to hang on to miscellaneous data
     # for the duration of the registration process without having to create models in another app.
-    # By default (and for security reasons), the registration system ignores any passed data that it does not
-    # expect, so you will need to hook into the registration system to ensure that any extra information that
-    # you want to use is not discarded.
-    data = JSONField(_('Additional data'),default={},blank=True)
+    # By default (and for security reasons), the registration system ignores any
+    # passed data that it does not expect, so you will need to hook into the
+    # registration system to ensure that any extra information that you want to
+    # use is not discarded.
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     expirationDate = models.DateTimeField(
         _('Expiration date'),
@@ -1939,17 +2351,21 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
 
     @property
     def fullName(self):
-        return ' '.join([self.firstName or '',self.lastName or '']).strip()
+        return ' '.join([self.firstName or '', self.lastName or '']).strip()
     fullName.fget.short_description = _('Name')
 
     @property
     def seriesPrice(self):
-        return self.temporaryeventregistration_set.filter(Q(event__series__isnull=False)).aggregate(Sum('price')).get('price__sum')
+        return self.temporaryeventregistration_set.filter(
+            Q(event__series__isnull=False)
+        ).aggregate(Sum('price')).get('price__sum')
     seriesPrice.fget.short_description = _('Price of class series')
 
     @property
     def publicEventPrice(self):
-        return self.temporaryeventregistration_set.filter(Q(event__publicevent__isnull=False)).aggregate(Sum('price')).get('price__sum')
+        return self.temporaryeventregistration_set.filter(
+            Q(event__publicevent__isnull=False)
+        ).aggregate(Sum('price')).get('price__sum')
     publicEventPrice.fget.short_description = _('Price of public events')
 
     @property
@@ -1989,7 +2405,10 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
 
     @property
     def firstSeriesStartTime(self):
-        return min([x.event.startTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+        return min([
+            x.event.startTime for x in
+            self.temporaryeventregistration_set.filter(event__series__isnull=False)
+        ])
     firstSeriesStartTime.fget.short_description = _('First class series starts')
 
     @property
@@ -1999,16 +2418,23 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
 
     @property
     def lastSeriesEndTime(self):
-        return max([x.event.endTime for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)])
+        return max([
+            x.event.endTime for x in
+            self.temporaryeventregistration_set.filter(event__series__isnull=False)
+        ])
     lastSeriesEndTime.fget.short_description = _('Last class series ends')
 
-    def getTimeOfClassesRemaining(self,numClasses=0):
+    def getTimeOfClassesRemaining(self, numClasses=0):
         '''
         For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
         '''
         occurrences = EventOccurrence.objects.filter(
             cancelled=False,
-            event__in=[x.event for x in self.temporaryeventregistration_set.filter(event__series__isnull=False)],
+            event__in=[
+                x.event for x in self.temporaryeventregistration_set.filter(
+                    event__series__isnull=False
+                )
+            ],
         ).order_by('-endTime')
         if occurrences.count() > numClasses:
             return occurrences[numClasses].endTime
@@ -2017,27 +2443,30 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        return [self.email,]
+        return [self.email, ]
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(TemporaryRegistration,self).get_email_context(**kwargs)
+        context = super(TemporaryRegistration, self).get_email_context(**kwargs)
         context.update({
             'first_name': self.firstName,
             'last_name': self.lastName,
             'registrationComments': self.comments,
             'registrationHowHeardAboutUs': self.howHeardAboutUs,
-            'eventList': [x.get_email_context(includeName=False) for x in self.temporaryeventregistration_set.all()],
+            'eventList': [
+                x.get_email_context(includeName=False) for x in
+                self.temporaryeventregistration_set.all()
+            ],
         })
 
-        if hasattr(self,'invoice') and self.invoice:
+        if hasattr(self, 'invoice') and self.invoice:
             context.update({
                 'invoice': self.invoice.get_email_context(),
             })
 
         return context
 
-    def finalize(self,**kwargs):
+    def finalize(self, **kwargs):
         '''
         This method is called when the payment process has been completed and a registration
         is ready to be finalized.  It also fires the post-registration signal
@@ -2051,8 +2480,8 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         # one if we have the information needed for it (name and email).
         if self.firstName and self.lastName and self.email:
             customer, created = Customer.objects.update_or_create(
-                first_name=self.firstName,last_name=self.lastName,
-                email=self.email,defaults={'phone': self.phone}
+                first_name=self.firstName, last_name=self.lastName,
+                email=self.email, defaults={'phone': self.phone}
             )
         else:
             customer = None
@@ -2064,8 +2493,8 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
             'dateTime': dateTime,
             'temporaryRegistration': self
         }
-        for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount','payAtDoor']:
-            regArgs[key] = kwargs.pop(key, getattr(self,key,None))
+        for key in ['comments', 'howHeardAboutUs', 'student', 'priceWithDiscount', 'payAtDoor']:
+            regArgs[key] = kwargs.pop(key, getattr(self, key, None))
 
         # All other passed kwargs are put into the data JSON
         regArgs['data'] = self.data
@@ -2077,8 +2506,8 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
 
         for er in self.temporaryeventregistration_set.all():
             logger.debug('Creating eventreg for event: ' + str(er.event.id))
-            realer = EventRegistration(registration=realreg,event=er.event,
-                                       customer=customer,role=er.role,
+            realer = EventRegistration(registration=realreg, event=er.event,
+                                       customer=customer, role=er.role,
                                        price=er.price,
                                        dropIn=er.dropIn,
                                        data=er.data
@@ -2091,8 +2520,8 @@ class TemporaryRegistration(EmailRecipientMixin, models.Model):
         self.expirationDate = timezone.now()
         self.save()
 
-        # This signal can, for example, be caught by the vouchers app to keep track of any vouchers
-        # that were applied
+        # This signal can, for example, be caught by the vouchers app to keep
+        # track of any vouchers that were applied
         post_registration.send(
             sender=TemporaryRegistration,
             registration=realreg
@@ -2136,26 +2565,32 @@ class Registration(EmailRecipientMixin, models.Model):
     There is a single registration for an online transaction.
     A single Registration includes multiple classes, as well as events.
     '''
-    firstName = models.CharField(_('First name'),max_length=100,null=True)
-    lastName = models.CharField(_('Last name'),max_length=100,null=True)
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),null=True,on_delete=models.SET_NULL)
+    firstName = models.CharField(_('First name'), max_length=100, null=True)
+    lastName = models.CharField(_('Last name'), max_length=100, null=True)
+    customer = models.ForeignKey(
+        Customer, verbose_name=_('Customer'), null=True, on_delete=models.SET_NULL
+    )
 
-    howHeardAboutUs = models.TextField(_('How they heard about us'),default='',blank=True,null=True)
-    student = models.BooleanField(_('Eligible for student discount'),default=False)
-    payAtDoor = models.BooleanField(_('At-the-door registration'),default=False)
+    howHeardAboutUs = models.TextField(
+        _('How they heard about us'), default='', blank=True, null=True
+    )
+    student = models.BooleanField(_('Eligible for student discount'), default=False)
+    payAtDoor = models.BooleanField(_('At-the-door registration'), default=False)
 
-    priceWithDiscount = models.FloatField(verbose_name=_('Price net of discounts'),validators=[MinValueValidator(0)])
-    comments = models.TextField(_('Comments'),default='',blank=True,null=True)
+    priceWithDiscount = models.FloatField(
+        verbose_name=_('Price net of discounts'), validators=[MinValueValidator(0)]
+    )
+    comments = models.TextField(_('Comments'), default='', blank=True, null=True)
 
     temporaryRegistration = models.OneToOneField(
-        TemporaryRegistration,null=True,
-        verbose_name=_('Associated temporary registration'),on_delete=models.SET_NULL
+        TemporaryRegistration, null=True,
+        verbose_name=_('Associated temporary registration'), on_delete=models.SET_NULL
     )
-    dateTime = models.DateTimeField(blank=True,null=True,verbose_name=_('Registration date/time'))
+    dateTime = models.DateTimeField(blank=True, null=True, verbose_name=_('Registration date/time'))
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={},blank=True)
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     @property
     def warningFlag(self):
@@ -2165,7 +2600,7 @@ class Registration(EmailRecipientMixin, models.Model):
         these conditions and indicates if anything is amiss so that the template need not
         check each of these conditions individually repeatedly.
         '''
-        if not hasattr(self,'invoice'):
+        if not hasattr(self, 'invoice'):
             return True
         if apps.is_installed('danceschool.financial'):
             '''
@@ -2183,7 +2618,7 @@ class Registration(EmailRecipientMixin, models.Model):
     @property
     def refundFlag(self):
         if (
-            not hasattr(self,'invoice') or
+            not hasattr(self, 'invoice') or
             self.invoice.adjustments != 0 or
             (apps.is_installed('danceschool.financial') and self.invoice.revenueRefundsReported != 0)
         ):
@@ -2193,7 +2628,7 @@ class Registration(EmailRecipientMixin, models.Model):
 
     @property
     def fullName(self):
-        return getattr(self.customer,'fullName',_('Unknown'))
+        return getattr(self.customer, 'fullName', _('Unknown'))
     fullName.fget.short_description = _('Name')
 
     @property
@@ -2203,17 +2638,21 @@ class Registration(EmailRecipientMixin, models.Model):
         registrations or temporary registrations without requiring separate logic
         for each class.
         '''
-        return getattr(self.customer,'email',None)
+        return getattr(self.customer, 'email', None)
     email.fget.short_description = _('Email address')
 
     @property
     def seriesPrice(self):
-        return self.eventregistration_set.filter(Q(event__series__isnull=False)).aggregate(Sum('price')).get('price__sum') or 0
+        return self.eventregistration_set.filter(
+            Q(event__series__isnull=False)
+        ).aggregate(Sum('price')).get('price__sum') or 0
     seriesPrice.fget.short_description = _('Price of class series')
 
     @property
     def publicEventPrice(self):
-        return self.eventregistration_set.filter(Q(event__publicevent__isnull=False)).aggregate(Sum('price')).get('price__sum') or 0
+        return self.eventregistration_set.filter(
+            Q(event__publicevent__isnull=False)
+        ).aggregate(Sum('price')).get('price__sum') or 0
     publicEventPrice.fget.short_description = _('Price of public events')
 
     @property
@@ -2277,7 +2716,10 @@ class Registration(EmailRecipientMixin, models.Model):
 
     @property
     def firstSeriesStartTime(self):
-        return min([x.event.startTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+        return min([
+            x.event.startTime for x in
+            self.eventregistration_set.filter(event__series__isnull=False)
+        ])
     firstSeriesStartTime.fget.short_description = _('First class series starts')
 
     @property
@@ -2287,18 +2729,22 @@ class Registration(EmailRecipientMixin, models.Model):
 
     @property
     def lastSeriesEndTime(self):
-        return max([x.event.endTime for x in self.eventregistration_set.filter(event__series__isnull=False)])
+        return max([
+            x.event.endTime for x in
+            self.eventregistration_set.filter(event__series__isnull=False)
+        ])
     lastSeriesEndTime.fget.short_description = _('Last class series ends')
 
     @property
     def url(self):
         if self.id:
-            return reverse('admin:core_registration_change', args=[self.id,])
+            return reverse('admin:core_registration_change', args=[self.id, ])
     url.fget.short_description = _('Reg. Admin URL')
 
-    def getTimeOfClassesRemaining(self,numClasses=0):
+    def getTimeOfClassesRemaining(self, numClasses=0):
         '''
-        For checking things like prerequisites, it's useful to check if a requirement is 'almost' met
+        For checking things like prerequisites, it's useful to check if a
+        requirement is 'almost' met
         '''
         occurrences = EventOccurrence.objects.filter(
             cancelled=False,
@@ -2309,34 +2755,52 @@ class Registration(EmailRecipientMixin, models.Model):
         else:
             return occurrences.last().startTime
 
-    def getSeriesPriceForMonth(self,dateOfInterest):
+    def getSeriesPriceForMonth(self, dateOfInterest):
         # get all series associated with this registration
-        return sum([x.price for x in self.eventregistration_set.filter(series__year=dateOfInterest.year,series__month=dateOfInterest.month).filter(Q(event__series__isnull=False))])
+        return sum([
+            x.price for x in
+            self.eventregistration_set.filter(
+                series__year=dateOfInterest.year, series__month=dateOfInterest.month
+            ).filter(Q(event__series__isnull=False))
+        ])
 
-    def getEventPriceForMonth(self,dateOfInterest):
+    def getEventPriceForMonth(self, dateOfInterest):
         # get all series associated with this registration
-        return sum([x.price for x in self.eventregistration_set.filter(series__year=dateOfInterest.year,series__month=dateOfInterest.month).filter(Q(event__publicevent__isnull=False))])
+        return sum([
+            x.price for x in
+            self.eventregistration_set.filter(
+                series__year=dateOfInterest.year, series__month=dateOfInterest.month
+            ).filter(Q(event__publicevent__isnull=False))
+        ])
 
-    def getPriceForMonth(self,dateOfInterest):
-        return sum([x.price for x in self.eventregistration_set.filter(series__year=dateOfInterest.year,series__month=dateOfInterest.month)])
+    def getPriceForMonth(self, dateOfInterest):
+        return sum([
+            x.price for x in
+            self.eventregistration_set.filter(
+                series__year=dateOfInterest.year, series__month=dateOfInterest.month
+            )
+        ])
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        this_email = getattr(self.customer,'email',None)
-        return [this_email,] if this_email else []
+        this_email = getattr(self.customer, 'email', None)
+        return [this_email, ] if this_email else []
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Registration,self).get_email_context(**kwargs)
+        context = super(Registration, self).get_email_context(**kwargs)
         context.update({
             'first_name': self.customer.first_name,
             'last_name': self.customer.last_name,
             'registrationComments': self.comments,
             'registrationHowHeardAboutUs': self.howHeardAboutUs,
-            'eventList': [x.get_email_context(includeName=False) for x in self.eventregistration_set.all()],
+            'eventList': [
+                x.get_email_context(includeName=False) for x in
+                self.eventregistration_set.all()
+            ],
         })
 
-        if hasattr(self,'invoice') and self.invoice:
+        if hasattr(self, 'invoice') and self.invoice:
             context.update({
                 'invoice': self.invoice.get_email_context(),
             })
@@ -2345,9 +2809,12 @@ class Registration(EmailRecipientMixin, models.Model):
 
     def __str__(self):
         if self.dateTime and self.customer:
-            return '%s #%s: %s, %s' % (_('Registration'), self.id, self.customer.fullName, self.dateTime.strftime('%b. %Y'))
+            return '%s #%s: %s, %s' % (
+                _('Registration'), self.id, self.customer.fullName,
+                self.dateTime.strftime('%b. %Y')
+            )
         elif self.dateTime or self.customer:
-            x = self.dateTime or getattr(self.customer,'fullName',None)
+            x = self.dateTime or getattr(self.customer, 'fullName', None)
             return '%s #%s: %s' % (_('Registration'), self.id, x)
         else:
             return '%s #%s' % (_('Registration'), self.id)
@@ -2358,14 +2825,32 @@ class Registration(EmailRecipientMixin, models.Model):
         verbose_name_plural = _('Registrations')
 
         permissions = (
-            ('view_registration_summary',_('Can access the series-level registration summary view')),
-            ('checkin_customers',_('Can check-in customers using the summary view')),
-            ('accept_door_payments',_('Can process door payments in the registration system')),
-            ('register_dropins',_('Can register students for drop-ins.')),
-            ('override_register_closed',_('Can register students for series/events that are closed for registration by the public')),
-            ('override_register_soldout',_('Can register students for series/events that are officially sold out')),
-            ('override_register_dropins',_('Can register students for drop-ins even if the series does not allow drop-in registration.')),
-            ('ajax_registration',_('Can register using the Ajax registration view (needed for the door register)')),
+            (
+                'view_registration_summary',
+                _('Can access the series-level registration summary view')
+            ),
+            ('checkin_customers', _('Can check-in customers using the summary view')),
+            ('accept_door_payments', _('Can process door payments in the registration system')),
+            ('register_dropins', _('Can register students for drop-ins.')),
+            (
+                'override_register_closed',
+                _('Can register students for series/events that are closed for registration by the public')
+            ),
+            (
+                'override_register_soldout',
+                _('Can register students for series/events that are officially sold out')
+            ),
+            (
+                'override_register_dropins',
+                _(
+                    'Can register students for drop-ins even if the series ' +
+                    'does not allow drop-in registration.'
+                )
+            ),
+            (
+                'ajax_registration',
+                _('Can register using the Ajax registration view (needed for the door register)')
+            ),
         )
 
 
@@ -2374,18 +2859,35 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     An EventRegistration is associated with a Registration and records
     a registration for a single event.
     '''
-    registration = models.ForeignKey(Registration,verbose_name=_('Registration'),on_delete=models.CASCADE)
-    event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
-    customer = models.ForeignKey(Customer,verbose_name=_('Customer'),null=True,on_delete=models.SET_NULL)
-    role = models.ForeignKey(DanceRole, null=True,blank=True,verbose_name=_('Dance role'),on_delete=models.SET_NULL)
-    price = models.FloatField(_('Price before discounts'),default=0,validators=[MinValueValidator(0)])
+    registration = models.ForeignKey(
+        Registration, verbose_name=_('Registration'), on_delete=models.CASCADE
+    )
+    event = models.ForeignKey(Event, verbose_name=_('Event'), on_delete=models.CASCADE)
+    customer = models.ForeignKey(
+        Customer, verbose_name=_('Customer'), null=True, on_delete=models.SET_NULL
+    )
+    role = models.ForeignKey(
+        DanceRole, null=True, blank=True, verbose_name=_('Dance role'), on_delete=models.SET_NULL
+    )
+    price = models.FloatField(
+        _('Price before discounts'), default=0, validators=[MinValueValidator(0)]
+    )
 
-    dropIn = models.BooleanField(_('Drop-in registration'),default=False,help_text=_('If true, this is a drop-in registration.'))
-    cancelled = models.BooleanField(_('Cancelled'),default=False,help_text=_('Mark as cancelled so that this registration is not counted in student/attendee counts.'))
+    dropIn = models.BooleanField(
+        _('Drop-in registration'), default=False,
+        help_text=_('If true, this is a drop-in registration.')
+    )
+    cancelled = models.BooleanField(
+        _('Cancelled'), default=False,
+        help_text=_(
+            'Mark as cancelled so that this registration is not counted in ' +
+            'student/attendee counts.'
+        )
+    )
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={},blank=True)
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     @property
     def netPrice(self):
@@ -2401,7 +2903,9 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
     @property
     def matchingTemporaryRegistration(self):
-        return self.registration.temporaryRegistration.temporaryeventregistration_set.get(event=self.event)
+        return self.registration.temporaryRegistration.temporaryeventregistration_set.get(
+            event=self.event
+        )
     matchingTemporaryRegistration.fget.short_description = _('Matching temporary registration')
 
     @property
@@ -2412,7 +2916,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         these conditions and indicates if anything is amiss so that the template need not
         check each of these conditions individually repeatedly.
         '''
-        if not hasattr(self,'invoiceitem'):
+        if not hasattr(self, 'invoiceitem'):
             return True
         if apps.is_installed('danceschool.financial'):
             '''
@@ -2430,9 +2934,12 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     @property
     def refundFlag(self):
         if (
-            not hasattr(self,'invoiceitem') or
+            not hasattr(self, 'invoiceitem') or
             self.invoiceitem.invoice.adjustments != 0 or
-            (apps.is_installed('danceschool.financial') and self.invoiceitem.revenueRefundsReported != 0)
+            (
+                apps.is_installed('danceschool.financial') and
+                self.invoiceitem.revenueRefundsReported != 0
+            )
         ):
             return True
         return False
@@ -2441,26 +2948,26 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     def checkedIn(self, occurrence=None, date=None, checkInType='O'):
         '''
         Returns an indicator of whether this EventRegistration has been checked
-        in, either for a specified EventOccurrence, 
+        in, either for a specified EventOccurrence,
         '''
         filters = Q(cancelled=False) & Q(checkInType=checkInType)
 
-        if occurrence and checkInType=='O':
+        if occurrence and checkInType == 'O':
             filters &= Q(occurrence=occurrence)
-        elif date and checkInType=='O':
+        elif date and checkInType == 'O':
             filters &= Q(occurrence=self.event.getNextOccurrenceForDate(date=date))
 
         return self.eventcheckin_set.filter(filters).exists()
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        this_email = getattr(self.registration.customer,'email',None)
-        return [this_email,] if this_email else []
+        this_email = getattr(self.registration.customer, 'email', None)
+        return [this_email, ] if this_email else []
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        includeName = kwargs.pop('includeName',True)
-        context = super(EventRegistration,self).get_email_context(**kwargs)
+        includeName = kwargs.pop('includeName', True)
+        context = super(EventRegistration, self).get_email_context(**kwargs)
         context.update({
             'title': self.event.name,
             'start': self.event.firstOccurrenceTime,
@@ -2484,29 +2991,38 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
 
 class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
-    price = models.FloatField(_('Price before discounts'),validators=[MinValueValidator(0)])
-    event = models.ForeignKey(Event,verbose_name=_('Event'),on_delete=models.CASCADE)
-    role = models.ForeignKey(DanceRole,null=True,blank=True,verbose_name=_('Dance role'),on_delete=models.SET_NULL)
-    dropIn = models.BooleanField(_('Drop-in registration'),default=False,help_text=_('If true, this is a drop-in registration.'))
+    price = models.FloatField(
+        _('Price before discounts'), validators=[MinValueValidator(0)]
+    )
+    event = models.ForeignKey(Event, verbose_name=_('Event'), on_delete=models.CASCADE)
+    role = models.ForeignKey(
+        DanceRole, null=True, blank=True, verbose_name=_('Dance role'),
+        on_delete=models.SET_NULL
+    )
+    dropIn = models.BooleanField(
+        _('Drop-in registration'), default=False,
+        help_text=_('If true, this is a drop-in registration.')
+    )
 
     registration = models.ForeignKey(
-        TemporaryRegistration,verbose_name=_('Associated temporary registration'),on_delete=models.CASCADE
+        TemporaryRegistration, verbose_name=_('Associated temporary registration'),
+        on_delete=models.CASCADE
     )
 
     # PostgreSQL can store arbitrary additional information associated with this registration
     # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'),default={},blank=True)
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        this_email = getattr(self.registration.customer,'email',None)
-        return [this_email,] if this_email else []
+        this_email = getattr(self.registration.customer, 'email', None)
+        return [this_email, ] if this_email else []
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
 
-        includeName = kwargs.pop('includeName',True)
-        context = super(TemporaryEventRegistration,self).get_email_context(**kwargs)
+        includeName = kwargs.pop('includeName', True)
+        context = super(TemporaryEventRegistration, self).get_email_context(**kwargs)
 
         context.update({
             'title': self.event.name,
@@ -2568,7 +3084,7 @@ class EventCheckIn(models.Model):
     # PostgreSQL can store arbitrary additional information associated with this
     # check-in in a JSONfield, but to remain database-agnostic we are using
     # django-jsonfield.
-    data = JSONField(_('Additional data'),default={},blank=True)
+    data = JSONField(_('Additional data'), default={}, blank=True)
 
     creationDate = models.DateTimeField(
         _('Creation date'), auto_now_add=True
@@ -2585,7 +3101,7 @@ class EventCheckIn(models.Model):
 
     @property
     def fullName(self):
-        return ' '.join([self.firstName or '',self.lastName or ''])
+        return ' '.join([self.firstName or '', self.lastName or ''])
     fullName.fget.short_description = _('Name')
 
     def __str__(self):
@@ -2598,14 +3114,14 @@ class EventCheckIn(models.Model):
         verbose_name_plural = _('Event check-ins')
         constraints = [
             models.UniqueConstraint(
-                fields=['event','eventRegistration'],
+                fields=['event', 'eventRegistration'],
                 condition=Q(
                     Q(checkInType='E') & Q(eventRegistration__isnull=False)
                 ),
                 name='unique_event_eventreg_checkin'
             ),
             models.UniqueConstraint(
-                fields=['event','occurrence','eventRegistration'],
+                fields=['event', 'occurrence', 'eventRegistration'],
                 condition=Q(
                     Q(checkInType='O') &
                     Q(occurrence__isnull=False) &
@@ -2614,7 +3130,7 @@ class EventCheckIn(models.Model):
                 name='unique_occurrence_eventreg_checkin'
             ),
             models.UniqueConstraint(
-                fields=['event','firstName','lastName'],
+                fields=['event', 'firstName', 'lastName'],
                 condition=Q(
                     Q(checkInType='E') &
                     Q(eventRegistration__isnull=True) &
@@ -2624,7 +3140,7 @@ class EventCheckIn(models.Model):
                 name='unique_event_name_checkin'
             ),
             models.UniqueConstraint(
-                fields=['event','occurrence','firstName','lastName'],
+                fields=['event', 'occurrence', 'firstName', 'lastName'],
                 condition=Q(
                     Q(checkInType='O') &
                     Q(occurrence__isnull=False) &
@@ -2638,22 +3154,51 @@ class EventCheckIn(models.Model):
 
 
 class EmailTemplate(models.Model):
-    name = models.CharField(_('Template name'),max_length=100,unique=True)
-    subject = models.CharField(_('Subject line'),max_length=200,null=True,blank=True)
+    name = models.CharField(_('Template name'), max_length=100, unique=True)
+    subject = models.CharField(_('Subject line'), max_length=200, null=True, blank=True)
 
-    RICH_TEXT_CHOICES = (('plain',_('Plain text email')),('HTML',_('HTML rich text email')))
+    RICH_TEXT_CHOICES = (('plain', _('Plain text email')), ('HTML', _('HTML rich text email')))
 
-    richTextChoice = models.CharField(_('Send this email as'),max_length=5,choices=RICH_TEXT_CHOICES,default='plain')
+    richTextChoice = models.CharField(
+        _('Send this email as'), max_length=5,
+        choices=RICH_TEXT_CHOICES, default='plain'
+    )
 
-    content = models.TextField(_('Plain text Content'),null=True,blank=True,help_text=_('See the list of available variables for details on what information can be included with template tags.'))
-    html_content = HTMLField(_('HTML rich text content'),null=True,blank=True,help_text=_('Emails are sent as plain text by default.  To send an HTML email instead, enter your desired content in this field.'))
+    content = models.TextField(
+        _('Plain text Content'), null=True, blank=True,
+        help_text=_(
+            'See the list of available variables for details on what ' +
+            'information can be included with template tags.'
+        )
+    )
+    html_content = HTMLField(
+        _('HTML rich text content'), null=True, blank=True,
+        help_text=_(
+            'Emails are sent as plain text by default.  To send an HTML email ' +
+            'instead, enter your desired content in this field.'
+        )
+    )
 
-    defaultFromName = models.CharField(_('From name (default)'),max_length=100,null=True,blank=True,default=get_defaultEmailName)
-    defaultFromAddress = models.EmailField(_('From address (default)'),max_length=100,null=True,blank=True,default=get_defaultEmailFrom)
-    defaultCC = models.CharField(_('CC (default)'),max_length=100,null=True,blank=True)
+    defaultFromName = models.CharField(
+        _('From name (default)'), max_length=100, null=True,
+        blank=True, default=get_defaultEmailName
+    )
+    defaultFromAddress = models.EmailField(
+        _('From address (default)'), max_length=100, null=True, blank=True,
+        default=get_defaultEmailFrom
+    )
+    defaultCC = models.CharField(_('CC (default)'), max_length=100, null=True, blank=True)
 
-    groupRequired = models.ForeignKey(Group,verbose_name=_('Group permissions required to use.'),null=True,blank=True,help_text=_('Some templates should only be visible to some users.'),on_delete=models.SET_NULL)
-    hideFromForm = models.BooleanField(_('Hide from \'Email Students\' form'),default=False,help_text=_('Check this box for templates that are used for automated emails.'))
+    groupRequired = models.ForeignKey(
+        Group, verbose_name=_('Group permissions required to use.'),
+        null=True, blank=True,
+        help_text=_('Some templates should only be visible to some users.'),
+        on_delete=models.SET_NULL
+    )
+    hideFromForm = models.BooleanField(
+        _('Hide from \'Email Students\' form'), default=False,
+        help_text=_('Check this box for templates that are used for automated emails.')
+    )
 
     @property
     def send_html(self):
@@ -2662,8 +3207,9 @@ class EmailTemplate(models.Model):
 
     def save(self, *args, **kwargs):
         '''
-        If this is an HTML template, then set the non-HTML content to be the stripped version of the HTML.
-        If this is a plain text template, then set the HTML content to be null.
+        If this is an HTML template, then set the non-HTML content to be the
+        stripped version of the HTML. If this is a plain text template, then
+        set the HTML content to be null.
         '''
         if self.send_html:
             self.content = get_text_for_html(self.html_content)
@@ -2680,62 +3226,84 @@ class EmailTemplate(models.Model):
         verbose_name = _('Email template')
         verbose_name_plural = _('Email templates')
         permissions = (
-            ('send_email',_('Can send emails using the SendEmailView')),
+            ('send_email', _('Can send emails using the SendEmailView')),
         )
 
 
 class Invoice(EmailRecipientMixin, models.Model):
 
     class PaymentStatus(DjangoChoices):
-        unpaid = ChoiceItem('U',_('Unpaid'))
-        authorized = ChoiceItem('A',_('Authorized using payment processor'))
-        paid = ChoiceItem('P',_('Paid'))
-        needsCollection = ChoiceItem('N',_('Cash payment recorded'))
-        fullRefund = ChoiceItem('R',_('Refunded in full'))
-        cancelled = ChoiceItem('C',_('Cancelled'))
-        rejected = ChoiceItem('X',_('Rejected in processing'))
-        error = ChoiceItem('E',_('Error in processing'))
+        unpaid = ChoiceItem('U', _('Unpaid'))
+        authorized = ChoiceItem('A', _('Authorized using payment processor'))
+        paid = ChoiceItem('P', _('Paid'))
+        needsCollection = ChoiceItem('N', _('Cash payment recorded'))
+        fullRefund = ChoiceItem('R', _('Refunded in full'))
+        cancelled = ChoiceItem('C', _('Cancelled'))
+        rejected = ChoiceItem('X', _('Rejected in processing'))
+        error = ChoiceItem('E', _('Error in processing'))
 
     # The UUID field is the unique internal identifier used for this Invoice.
     # The validationString field is used only so that non-logged in users can view
     # an invoice.
-    id = models.UUIDField(_('Invoice number'),primary_key=True, default=uuid.uuid4, editable=False)
-    validationString = models.CharField(_('Validation string'),max_length=25,default=get_validationString,editable=False)
+    id = models.UUIDField(
+        _('Invoice number'), primary_key=True, default=uuid.uuid4, editable=False
+    )
+    validationString = models.CharField(
+        _('Validation string'), max_length=25, default=get_validationString, editable=False
+    )
 
     # Invoices do not require that a recipient is specified, but doing so ensures
     # that invoice notifications can be sent.
-    firstName = models.CharField(_('Recipient first name'),max_length=100,null=True,blank=True)
-    lastName = models.CharField(_('Recipient last name'),max_length=100,null=True,blank=True)
-    email = models.CharField(_('Recipient email address'),max_length=200,null=True,blank=True)
+    firstName = models.CharField(_('Recipient first name'), max_length=100, null=True, blank=True)
+    lastName = models.CharField(_('Recipient last name'), max_length=100, null=True, blank=True)
+    email = models.CharField(_('Recipient email address'), max_length=200, null=True, blank=True)
 
     temporaryRegistration = models.OneToOneField(
-        TemporaryRegistration,verbose_name=_('Temporary registration'),null=True,blank=True,
+        TemporaryRegistration, verbose_name=_('Temporary registration'), null=True, blank=True,
         on_delete=models.SET_NULL,
     )
-    finalRegistration = models.OneToOneField(Registration,verbose_name=_('Registration'),null=True,blank=True,on_delete=models.SET_NULL)
+    finalRegistration = models.OneToOneField(
+        Registration, verbose_name=_('Registration'), null=True, blank=True,
+        on_delete=models.SET_NULL
+    )
 
-    creationDate = models.DateTimeField(_('Invoice created'),auto_now_add=True)
-    modifiedDate = models.DateTimeField(_('Last modified'),auto_now=True)
+    creationDate = models.DateTimeField(_('Invoice created'), auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last modified'), auto_now=True)
 
-    status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.unpaid)
+    status = models.CharField(
+        _('Payment status'), max_length=1,
+        choices=PaymentStatus.choices, default=PaymentStatus.unpaid
+    )
 
-    paidOnline = models.BooleanField(_('Paid Online'),default=False)
-    submissionUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Registered by user'),related_name='submittedinvoices',on_delete=models.SET_NULL)
-    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedinvoices',on_delete=models.SET_NULL)
+    paidOnline = models.BooleanField(_('Paid Online'), default=False)
+    submissionUser = models.ForeignKey(
+        User, null=True, blank=True, verbose_name=_('Registered by user'),
+        related_name='submittedinvoices', on_delete=models.SET_NULL
+    )
+    collectedByUser = models.ForeignKey(
+        User, null=True, blank=True, verbose_name=_('Collected by user'),
+        related_name='collectedinvoices', on_delete=models.SET_NULL
+    )
 
-    grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)
-    total = models.FloatField(_('Total billed amount'),validators=[MinValueValidator(0)], default=0)
-    adjustments = models.FloatField(_('Refunds/adjustments'),default=0)
-    taxes = models.FloatField(_('Taxes'),validators=[MinValueValidator(0)],default=0)
-    fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)],default=0)
+    grossTotal = models.FloatField(
+        _('Total before discounts'), validators=[MinValueValidator(0)], default=0
+    )
+    total = models.FloatField(
+        _('Total billed amount'), validators=[MinValueValidator(0)], default=0
+    )
+    adjustments = models.FloatField(_('Refunds/adjustments'), default=0)
+    taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
+    fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
     buyerPaysSalesTax = models.BooleanField(_('Buyer pays sales tax'), default=False)
 
-    amountPaid = models.FloatField(default=0,verbose_name=_('Net Amount Paid'),validators=[MinValueValidator(0)])
+    amountPaid = models.FloatField(
+        default=0, verbose_name=_('Net Amount Paid'), validators=[MinValueValidator(0)]
+    )
 
-    comments = models.TextField(_('Comments'),null=True,blank=True)
+    comments = models.TextField(_('Comments'), null=True, blank=True)
 
     # Additional information (record of specific transactions) can go in here
-    data = JSONField(_('Additional data'),blank=True,default={})
+    data = JSONField(_('Additional data'), blank=True, default={})
 
     @classmethod
     def create_from_item(cls, amount, item_description, **kwargs):
@@ -2746,7 +3314,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         submissionUser = kwargs.pop('submissionUser', None)
         collectedByUser = kwargs.pop('collectedByUser', None)
         calculate_taxes = kwargs.pop('calculate_taxes', False)
-        grossTotal = kwargs.pop('grossTotal',None)
+        grossTotal = kwargs.pop('grossTotal', None)
 
         new_invoice = cls(
             grossTotal=grossTotal or amount,
@@ -2775,11 +3343,11 @@ class Invoice(EmailRecipientMixin, models.Model):
     def get_or_create_from_registration(cls, reg, **kwargs):
 
         # Return the existing Invoice if it exists
-        if hasattr(reg,'invoice') and reg.invoice:
+        if hasattr(reg, 'invoice') and reg.invoice:
             return reg.invoice
 
         # Otherwise, create a new Invoice
-        return cls.create_from_registration(reg,**kwargs)
+        return cls.create_from_registration(reg, **kwargs)
 
     @classmethod
     def create_from_registration(cls, reg, **kwargs):
@@ -2790,12 +3358,12 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         submissionUser = kwargs.pop('submissionUser', None)
         collectedByUser = kwargs.pop('collectedByUser', None)
-        status = kwargs.pop('status',Invoice.PaymentStatus.unpaid)
+        status = kwargs.pop('status', Invoice.PaymentStatus.unpaid)
 
         new_invoice = cls(
-            firstName=reg.firstName or kwargs.pop('firstName',None),
+            firstName=reg.firstName or kwargs.pop('firstName', None),
             lastName=reg.lastName or kwargs.pop('lastName', None),
-            email=reg.email or kwargs.pop('email',None),
+            email=reg.email or kwargs.pop('email', None),
             grossTotal=reg.totalPrice,
             total=reg.priceWithDiscount,
             submissionUser=submissionUser,
@@ -2839,9 +3407,9 @@ class Invoice(EmailRecipientMixin, models.Model):
                     'fees': new_invoice.fees,
                 })
 
-            if isinstance(ter,TemporaryEventRegistration):
+            if isinstance(ter, TemporaryEventRegistration):
                 item_kwargs['temporaryEventRegistration'] = ter
-            elif isinstance(ter,EventRegistration):
+            elif isinstance(ter, EventRegistration):
                 item_kwargs['finalEventRegistration'] = ter
 
             this_item = InvoiceItem(**item_kwargs)
@@ -2859,7 +3427,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         balance = self.total + self.adjustments - self.amountPaid
         if self.buyerPaysSalesTax:
             balance += self.taxes
-        return round(balance,2)
+        return round(balance, 2)
     outstandingBalance.fget.short_description = _('Outstanding balance')
 
     @property
@@ -2897,7 +3465,7 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     @property
     def statusLabel(self):
-        return self.PaymentStatus.values.get(self.status,'')
+        return self.PaymentStatus.values.get(self.status, '')
     statusLabel.fget.short_description = _('Status')
 
     @property
@@ -2911,7 +3479,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             return '%s://%s%s' % (
                 getConstant('email__linkProtocol'),
                 Site.objects.get_current().domain,
-                reverse('viewInvoice', args=[self.id,]),
+                reverse('viewInvoice', args=[self.id, ]),
             )
     url.fget.short_description = _('Invoice URL')
 
@@ -2919,7 +3487,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         For adding 'View on Site' links to the admin
         '''
-        return reverse('viewInvoice', args=[self.id,])
+        return reverse('viewInvoice', args=[self.id, ])
 
     def get_default_recipients(self):
         '''
@@ -2928,15 +3496,15 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         email_set = set([
             self.email,
-            getattr(getattr(self.finalRegistration,'customer',None),'email',None),
-            getattr(self.temporaryRegistration,'email',None),
+            getattr(getattr(self.finalRegistration, 'customer', None), 'email', None),
+            getattr(self.temporaryRegistration, 'email', None),
         ])
-        email_set.difference_update([None,''])
+        email_set.difference_update([None, ''])
         return list(email_set)
 
-    def get_email_context(self,**kwargs):
+    def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Invoice,self).get_email_context(**kwargs)
+        context = super(Invoice, self).get_email_context(**kwargs)
         context.update({
             'id': self.id,
             'url': '%s?v=%s' % (self.url, self.validationString),
@@ -2957,8 +3525,8 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def get_payments(self):
         '''
-        Since there may be many payment processors, this method simplifies the process of getting
-        the list of payments
+        Since there may be many payment processors, this method simplifies the
+        process of getting the list of payments
         '''
         return self.paymentrecord_set.order_by('creationDate')
 
@@ -3007,7 +3575,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         # The payment history record is primarily for convenience, and passed values are not
         # validated.  Payment processing apps should keep individual transaction records with
         # a ForeignKey to the Invoice object.
-        paymentHistory = self.data.get('paymentHistory',[])
+        paymentHistory = self.data.get('paymentHistory', [])
         paymentHistory.append({
             'dateTime': paymentTime.isoformat(),
             'amount': amount,
@@ -3015,8 +3583,8 @@ class Invoice(EmailRecipientMixin, models.Model):
             'paidOnline': paidOnline,
             'methodName': methodName,
             'methodTxn': methodTxn,
-            'submissionUser': getattr(submissionUser,'id',None),
-            'collectedByUser': getattr(collectedByUser,'id',None),
+            'submissionUser': getattr(submissionUser, 'id', None),
+            'collectedByUser': getattr(collectedByUser, 'id', None),
         })
         self.data['paymentHistory'] = paymentHistory
 
@@ -3036,7 +3604,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             if not self.finalRegistration and self.temporaryRegistration:
                 self.finalRegistration = self.temporaryRegistration.finalize(dateTime=paymentTime)
             else:
-                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount,payerEmail=notify)
+                self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
             self.save()
             if self.finalRegistration:
                 for eventReg in self.finalRegistration.eventregistration_set.filter(cancelled=False):
@@ -3053,9 +3621,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         else:
             # The payment wasn't completed so don't finalize, but do send a notification recording the payment.
             if notify:
-                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount,payerEmail=notify)
+                self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
             else:
-                self.sendNotification(invoicePaid=True,thisPaymentAmount=amount)
+                self.sendNotification(invoicePaid=True, thisPaymentAmount=amount)
             self.save()
 
         # If there were transaction fees, then these also need to be allocated among the InvoiceItems
@@ -3076,7 +3644,10 @@ class Invoice(EmailRecipientMixin, models.Model):
             logger.error(str(msg))
             raise ValidationError(msg)
         if abs(self.adjustments - sum([x.adjustments for x in items])) > epsilon:
-            msg = _('Invoice item adjustments do not match invoice adjustments.  Unable to allocate fees.')
+            msg = _(
+                'Invoice item adjustments do not match invoice adjustments.  ' +
+                'Unable to allocate fees.'
+            )
             logger.error(str(msg))
             raise ValidationError(msg)
 
@@ -3084,7 +3655,11 @@ class Invoice(EmailRecipientMixin, models.Model):
             saveFlag = False
 
             if self.total - self.adjustments > 0:
-                item.fees = self.fees * ((item.total - item.adjustments) / (self.total - self.adjustments))
+                item.fees = (
+                    self.fees * (
+                        (item.total - item.adjustments) / (self.total - self.adjustments)
+                    )
+                )
                 saveFlag = True
 
             # In the case of full refunds, allocate fees according to the
@@ -3109,7 +3684,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             return
         logger.info('Sending invoice notification to customer.')
 
-        payerEmail = kwargs.pop('payerEmail','')
+        payerEmail = kwargs.pop('payerEmail', '')
         amountDue = kwargs.pop('amountDue', self.outstandingBalance)
 
         if not payerEmail and not self.get_default_recipients():
@@ -3126,7 +3701,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             from_address=template.defaultFromAddress,
             from_name=template.defaultFromName,
             cc=template.defaultCC,
-            bcc=[payerEmail,],
+            bcc=[payerEmail, ],
             amountDue=amountDue,
             **kwargs
         )
@@ -3137,9 +3712,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         verbose_name = _('Invoice')
         verbose_name_plural = _('Invoices')
         permissions = (
-            ('view_all_invoices',_('Can view invoices without passing the validation string.')),
-            ('send_invoices',_('Can send invoices to students requesting payment')),
-            ('process_refunds',_('Can refund customers for registrations and other invoice payments.')),
+            ('view_all_invoices', _('Can view invoices without passing the validation string.')),
+            ('send_invoices', _('Can send invoices to students requesting payment')),
+            ('process_refunds', _('Can refund customers for registrations and other invoice payments.')),
         )
 
 
@@ -3154,21 +3729,30 @@ class InvoiceItem(models.Model):
     '''
 
     # The UUID field is the unique internal identifier used for this InvoiceItem
-    id = models.UUIDField(_('Invoice item number'),primary_key=True, default=uuid.uuid4, editable=False)
-    invoice = models.ForeignKey(Invoice,verbose_name=_('Invoice'),on_delete=models.CASCADE)
-    description = models.CharField(_('Description'), max_length=300,null=True,blank=True)
+    id = models.UUIDField(
+        _('Invoice item number'), primary_key=True, default=uuid.uuid4, editable=False
+    )
+    invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), on_delete=models.CASCADE)
+    description = models.CharField(_('Description'), max_length=300, null=True, blank=True)
 
     temporaryEventRegistration = models.OneToOneField(
-        TemporaryEventRegistration,verbose_name=_('Temporary event registration'),
-        null=True,blank=True,on_delete=models.SET_NULL
+        TemporaryEventRegistration, verbose_name=_('Temporary event registration'),
+        null=True, blank=True, on_delete=models.SET_NULL
     )
-    finalEventRegistration = models.OneToOneField(EventRegistration,verbose_name=_('Event registration'),null=True,blank=True,on_delete=models.SET_NULL)
+    finalEventRegistration = models.OneToOneField(
+        EventRegistration, verbose_name=_('Event registration'), null=True,
+        blank=True, on_delete=models.SET_NULL
+    )
 
-    grossTotal = models.FloatField(_('Total before discounts'),validators=[MinValueValidator(0)],default=0)
-    total = models.FloatField(_('Total billed amount'),validators=[MinValueValidator(0)], default=0)
-    adjustments = models.FloatField(_('Refunds/adjustments'),default=0)
-    taxes = models.FloatField(_('Taxes'),validators=[MinValueValidator(0)],default=0)
-    fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)],default=0)
+    grossTotal = models.FloatField(
+        _('Total before discounts'), validators=[MinValueValidator(0)], default=0
+    )
+    total = models.FloatField(
+        _('Total billed amount'), validators=[MinValueValidator(0)], default=0
+    )
+    adjustments = models.FloatField(_('Refunds/adjustments'), default=0)
+    taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
+    fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
 
     @property
     def netRevenue(self):
@@ -3206,12 +3790,17 @@ class PaymentRecord(PolymorphicModel):
     only payment method that is enabled by default is the 'Cash' payment method.
     '''
 
-    invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), null=True,blank=True,on_delete=models.SET_NULL)
+    invoice = models.ForeignKey(
+        Invoice, verbose_name=_('Invoice'), null=True, blank=True, on_delete=models.SET_NULL
+    )
 
-    creationDate = models.DateTimeField(_('Created'),auto_now_add=True)
-    modifiedDate = models.DateTimeField(_('Last updated'),auto_now=True)
+    creationDate = models.DateTimeField(_('Created'), auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last updated'), auto_now=True)
 
-    submissionUser = models.ForeignKey(User,verbose_name=_('Submission user'), null=True,blank=True,related_name='payments_submitted',on_delete=models.SET_NULL)
+    submissionUser = models.ForeignKey(
+        User, verbose_name=_('Submission user'), null=True, blank=True,
+        related_name='payments_submitted', on_delete=models.SET_NULL
+    )
 
     @property
     def refundable(self):
@@ -3247,7 +3836,7 @@ class PaymentRecord(PolymorphicModel):
         '''
         return None
 
-    def refund(self,amount):
+    def refund(self, amount):
         '''
         This method should be overridden by individual payment methods to process refunds.
         '''
@@ -3267,16 +3856,24 @@ class CashPaymentRecord(PaymentRecord):
     '''
 
     class PaymentStatus(DjangoChoices):
-        needsCollection = ChoiceItem('N',_('Cash payment recorded, needs collection'))
-        collected = ChoiceItem('C',_('Cash payment collected'))
-        fullRefund = ChoiceItem('R',_('Refunded in full'))
+        needsCollection = ChoiceItem('N', _('Cash payment recorded, needs collection'))
+        collected = ChoiceItem('C', _('Cash payment collected'))
+        fullRefund = ChoiceItem('R', _('Refunded in full'))
 
-    amount = models.FloatField(_('Amount paid'),validators=[MinValueValidator(0),])
-    payerEmail = models.EmailField(_('Payer email'),null=True,blank=True)
+    amount = models.FloatField(_('Amount paid'), validators=[MinValueValidator(0), ])
+    payerEmail = models.EmailField(_('Payer email'), null=True, blank=True)
 
-    status = models.CharField(_('Payment status'), max_length=1, choices=PaymentStatus.choices,default=PaymentStatus.needsCollection)
-    collectedByUser = models.ForeignKey(User,null=True,blank=True,verbose_name=_('Collected by user'),related_name='collectedcashpayments',on_delete=models.SET_NULL)
-    paymentMethod = models.CharField(_('Payment method'),max_length=30,default='Cash')
+    status = models.CharField(
+        _('Payment status'), max_length=1, choices=PaymentStatus.choices,
+        default=PaymentStatus.needsCollection
+    )
+    collectedByUser = models.ForeignKey(
+        User, null=True, blank=True, verbose_name=_('Collected by user'),
+        related_name='collectedcashpayments', on_delete=models.SET_NULL
+    )
+    paymentMethod = models.CharField(
+        _('Payment method'), max_length=30, default='Cash'
+    )
 
     @property
     def methodName(self):
@@ -3296,8 +3893,12 @@ class CashPaymentRecord(PaymentRecord):
 
 class StaffMemberPluginModel(CMSPlugin):
     ''' Views on an individual staff member or instructor use this model for configuration. '''
-    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Staff member'),on_delete=models.CASCADE)
-    template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
+    staffMember = models.ForeignKey(
+        StaffMember, verbose_name=_('Staff member'), on_delete=models.CASCADE
+    )
+    template = models.CharField(
+        _('Plugin template'), max_length=250, null=True, blank=True
+    )
 
     def get_short_description(self):
         return self.staffMember.fullName
@@ -3305,33 +3906,43 @@ class StaffMemberPluginModel(CMSPlugin):
 
 class StaffMemberListPluginModel(CMSPlugin):
     '''
-    The Instructor photo list, instructor bio listing, and instructor directory all use this model for configuration.
+    The Instructor photo list, instructor bio listing, and instructor directory
+    all use this model for configuration.
     '''
 
     class OrderChoices(DjangoChoices):
-        firstName = ChoiceItem('firstName',_('First Name'))
-        lastName = ChoiceItem('lastName',_('Last Name'))
-        status = ChoiceItem('status',_('Instructor Status'))
-        random = ChoiceItem('random',_('Randomly Ordered'))
+        firstName = ChoiceItem('firstName', _('First Name'))
+        lastName = ChoiceItem('lastName', _('Last Name'))
+        status = ChoiceItem('status', _('Instructor Status'))
+        random = ChoiceItem('random', _('Randomly Ordered'))
 
     statusChoices = MultiSelectField(
         verbose_name=_('Limit to Instructors with Status'),
         choices=Instructor.InstructorStatus.choices,
-        default=[Instructor.InstructorStatus.roster,Instructor.InstructorStatus.assistant,Instructor.InstructorStatus.guest]
+        default=[
+            Instructor.InstructorStatus.roster,
+            Instructor.InstructorStatus.assistant,
+            Instructor.InstructorStatus.guest
+        ]
     )
-    orderChoice = models.CharField(_('Order By'),max_length=10,choices=OrderChoices.choices)
-    imageThumbnail = models.ForeignKey(ThumbnailOption,verbose_name=_('Image thumbnail option'),null=True,blank=True,on_delete=models.SET_NULL)
+    orderChoice = models.CharField(_('Order By'), max_length=10, choices=OrderChoices.choices)
+    imageThumbnail = models.ForeignKey(
+        ThumbnailOption, verbose_name=_('Image thumbnail option'),
+        null=True, blank=True, on_delete=models.SET_NULL
+    )
 
-    bioRequired = models.BooleanField(_('Exclude staff members with no bio'),default=False)
-    photoRequired = models.BooleanField(_('Exclude staff members with no photo'),default=False)
-    activeUpcomingOnly = models.BooleanField(_('Include only staff members with upcoming classes/events'),default=False)
+    bioRequired = models.BooleanField(_('Exclude staff members with no bio'), default=False)
+    photoRequired = models.BooleanField(_('Exclude staff members with no photo'), default=False)
+    activeUpcomingOnly = models.BooleanField(
+        _('Include only staff members with upcoming classes/events'), default=False
+    )
 
-    title = models.CharField(_('Listing Title'),max_length=200,null=True,blank=True)
-    template = models.CharField(_('Template'),max_length=250,null=True,blank=True)
+    title = models.CharField(_('Listing Title'), max_length=200, null=True, blank=True)
+    template = models.CharField(_('Template'), max_length=250, null=True, blank=True)
 
     def get_short_description(self):
         desc = self.title or ''
-        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choices = getattr(self.get_plugin_class(), 'template_choices', [])
         choice_name = [x[1] for x in choices if x[0] == self.template]
         if choice_name:
             if desc:
@@ -3348,11 +3959,13 @@ class StaffMemberListPluginModel(CMSPlugin):
 
 class LocationListPluginModel(CMSPlugin):
     ''' A model for listing of all active locations '''
-    template = models.CharField(verbose_name=_('Plugin template'),max_length=250,null=True,blank=True)
+    template = models.CharField(
+        verbose_name=_('Plugin template'), max_length=250, null=True, blank=True
+    )
 
     def get_short_description(self):
         desc = self.id
-        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choices = getattr(self.get_plugin_class(), 'template_choices', [])
         choice_name = [x[1] for x in choices if x[0] == self.template]
         if choice_name:
             desc = choice_name[0]
@@ -3363,12 +3976,14 @@ class LocationListPluginModel(CMSPlugin):
 
 class LocationPluginModel(CMSPlugin):
     ''' Individual location directions, etc. use this view '''
-    location = models.ForeignKey(Location,verbose_name=_('Location'),on_delete=models.CASCADE)
-    template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
+    location = models.ForeignKey(
+        Location, verbose_name=_('Location'), on_delete=models.CASCADE
+    )
+    template = models.CharField(_('Plugin template'), max_length=250, null=True, blank=True)
 
     def get_short_description(self):
         desc = self.location.name or ''
-        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choices = getattr(self.get_plugin_class(), 'template_choices', [])
         choice_name = [x[1] for x in choices if x[0] == self.template]
         if choice_name:
             if desc:
@@ -3385,60 +4000,103 @@ class LocationPluginModel(CMSPlugin):
 
 class EventListPluginModel(CMSPlugin):
     '''
-    This model is typically used to configure upcoming event listings, but it can be customized to a variety of purposes using
-    custom templates, etc.
+    This model is typically used to configure upcoming event listings, but it
+    can be customized to a variety of purposes using custom templates, etc.
     '''
     LIMIT_CHOICES = [
-        ('S',_('Event start date')),
-        ('E',_('Event end date')),
+        ('S', _('Event start date')),
+        ('E', _('Event end date')),
     ]
     EVENT_TYPE_CHOICES = [
-        ('S',_('Class Series')),
-        ('P',_('Public Events')),
+        ('S', _('Class Series')),
+        ('P', _('Public Events')),
     ]
     SORT_CHOICES = [
-        ('A',_('Ascending')),
-        ('D',_('Descending')),
+        ('A', _('Ascending')),
+        ('D', _('Descending')),
     ]
 
-    title = models.CharField(_('Custom list title'),max_length=250,default=_('Upcoming Events'),blank=True)
+    title = models.CharField(
+        _('Custom list title'), max_length=250, default=_('Upcoming Events'), blank=True
+    )
 
-    eventType = models.CharField(_('Limit to event type'),max_length=1,choices=EVENT_TYPE_CHOICES,null=True,blank=True,help_text=_('Leave blank to include all Events.'))
-    limitNumber = models.PositiveSmallIntegerField(_('Limit number'),help_text=_('Leave blank for no restriction'),null=True,blank=True)
-    sortOrder = models.CharField(_('Sort by start time'),max_length=1,choices=SORT_CHOICES,default='A',help_text=_('This may be overridden by the particular template in use'))
+    eventType = models.CharField(
+        _('Limit to event type'), max_length=1, choices=EVENT_TYPE_CHOICES,
+        null=True, blank=True, help_text=_('Leave blank to include all Events.')
+    )
+    limitNumber = models.PositiveSmallIntegerField(
+        _('Limit number'), help_text=_('Leave blank for no restriction'), null=True, blank=True
+    )
+    sortOrder = models.CharField(
+        _('Sort by start time'), max_length=1, choices=SORT_CHOICES, default='A',
+        help_text=_('This may be overridden by the particular template in use')
+    )
 
-    limitTypeStart = models.CharField(_('Limit interval start by'),max_length=1,choices=LIMIT_CHOICES,default='E')
-    daysStart = models.SmallIntegerField(_('Interval limited to __ days from present'),null=True,blank=True,help_text=_('(E.g. enter -30 for an interval that starts with 30 days prior to today) Leave blank for no limit, or enter 0 to limit to future events'))
-    startDate = models.DateField(_('Exact interval start date'),null=True,blank=True,help_text=_('Leave blank for no limit (overrides relative interval limits)'))
+    limitTypeStart = models.CharField(
+        _('Limit interval start by'), max_length=1, choices=LIMIT_CHOICES, default='E'
+    )
+    daysStart = models.SmallIntegerField(
+        _('Interval limited to __ days from present'), null=True, blank=True,
+        help_text=_(
+            '(E.g. enter -30 for an interval that starts with 30 days prior ' +
+            'to today) Leave blank for no limit, or enter 0 to limit to future events'
+        )
+    )
+    startDate = models.DateField(
+        _('Exact interval start date'), null=True, blank=True,
+        help_text=_('Leave blank for no limit (overrides relative interval limits)')
+    )
 
-    limitTypeEnd = models.CharField(_('Limit interval end by'),max_length=1,choices=LIMIT_CHOICES,default='S')
-    daysEnd = models.SmallIntegerField(_('Interval limited to __ days from present'),null=True,blank=True,help_text=_('(E.g. enter 30 for an interval that ends 30 days from today) Leave blank for no limit, or enter 0 to limit to past events'))
-    endDate = models.DateField(_('Exact interval end date '),null=True,blank=True,help_text=_('Leave blank for no limit (overrides relative interval limits)'))
+    limitTypeEnd = models.CharField(
+        _('Limit interval end by'), max_length=1, choices=LIMIT_CHOICES, default='S'
+    )
+    daysEnd = models.SmallIntegerField(
+        _('Interval limited to __ days from present'), null=True, blank=True,
+        help_text=_(
+            '(E.g. enter 30 for an interval that ends 30 days from today) Leave ' +
+            'blank for no limit, or enter 0 to limit to past events'
+        )
+    )
+    endDate = models.DateField(
+        _('Exact interval end date '), null=True, blank=True,
+        help_text=_('Leave blank for no limit (overrides relative interval limits)')
+    )
 
-    limitToOpenRegistration = models.BooleanField(_('Limit to open for registration only'),default=False)
-    location = models.ManyToManyField(Location,verbose_name=_('Limit to locations'),help_text=_('Leave blank for no restriction'),blank=True)
-    weekday = models.PositiveSmallIntegerField(_('Limit to weekday'),null=True,blank=True,choices=[(x,_(day_name[x])) for x in range(0,7)])
+    limitToOpenRegistration = models.BooleanField(
+        _('Limit to open for registration only'), default=False
+    )
+    location = models.ManyToManyField(
+        Location, verbose_name=_('Limit to locations'),
+        help_text=_('Leave blank for no restriction'), blank=True
+    )
+    weekday = models.PositiveSmallIntegerField(
+        _('Limit to weekday'), null=True, blank=True,
+        choices=[(x, _(day_name[x])) for x in range(0, 7)]
+    )
 
     eventCategories = models.ManyToManyField(
-        PublicEventCategory,verbose_name=_('Limit to public event categories'),
+        PublicEventCategory, verbose_name=_('Limit to public event categories'),
         help_text=_('Leave blank for no restriction'),
         blank=True
     )
 
     seriesCategories = models.ManyToManyField(
-        SeriesCategory,verbose_name=_('Limit to series categories'),
+        SeriesCategory, verbose_name=_('Limit to series categories'),
         help_text=_('Leave blank for no restriction'),
         blank=True
     )
 
     levels = models.ManyToManyField(
-        DanceTypeLevel,verbose_name=_('Limit to type and levels'),
+        DanceTypeLevel, verbose_name=_('Limit to type and levels'),
         help_text=_('Leave blank for no restriction'),
         blank=True
     )
 
-    cssClasses = models.CharField(_('Custom CSS classes'),max_length=250,null=True,blank=True,help_text=_('Classes are applied to surrounding &lt;div&gt;'))
-    template = models.CharField(_('Plugin template'),max_length=250,null=True,blank=True)
+    cssClasses = models.CharField(
+        _('Custom CSS classes'), max_length=250, null=True, blank=True,
+        help_text=_('Classes are applied to surrounding &lt;div&gt;')
+    )
+    template = models.CharField(_('Plugin template'), max_length=250, null=True, blank=True)
 
     def copy_relations(self, oldinstance):
         self.location.set(oldinstance.location.all())
@@ -3448,7 +4106,7 @@ class EventListPluginModel(CMSPlugin):
 
     def get_short_description(self):
         desc = self.title or ''
-        choices = getattr(self.get_plugin_class(),'template_choices',[])
+        choices = getattr(self.get_plugin_class(), 'template_choices', [])
         choice_name = [x[1] for x in choices if x[0] == self.template]
         if choice_name:
             if desc:
@@ -3464,5 +4122,8 @@ class EventListPluginModel(CMSPlugin):
 
     class Meta:
         permissions = (
-            ('choose_custom_plugin_template',_('Can enter a custom plugin template for plugins with selectable template.')),
+            (
+                'choose_custom_plugin_template',
+                _('Can enter a custom plugin template for plugins with selectable template.')
+            ),
         )

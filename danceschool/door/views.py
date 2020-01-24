@@ -21,7 +21,10 @@ from .forms import CustomerGuestAutocompleteForm
 from .models import DoorRegister
 
 
-class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin, PermissionRequiredMixin, TemplateView):
+class DoorRegisterView(
+    FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
+    PermissionRequiredMixin, TemplateView
+):
     permission_required = 'core.accept_door_payments'
     template_name = 'door/register.html'
 
@@ -34,7 +37,7 @@ class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
         events, etc.  Additional restrictions are made on a per-plugin basis.
         '''
 
-        if not hasattr(self,'allEvents'):
+        if not hasattr(self, 'allEvents'):
             self.allEvents = Event.objects.filter(
                 Q(instance_of=PublicEvent) |
                 Q(instance_of=Series)
@@ -48,8 +51,8 @@ class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
 
         return self.allEvents
 
-    def get_context_data(self,**kwargs):
-        ''' 
+    def get_context_data(self, **kwargs):
+        '''
         Add the event and series listing data.  If If "today" is specified,
         then use today instead of passed arguments.
         '''
@@ -69,7 +72,7 @@ class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
                 raise Http404(_('Invalid date.'))
 
         try:
-            register =  DoorRegister.objects.get(slug=self.kwargs.get('slug'), enabled=True)
+            register = DoorRegister.objects.get(slug=self.kwargs.get('slug'), enabled=True)
         except ObjectDoesNotExist:
             raise Http404(_('Invalid register.'))
 
@@ -87,7 +90,6 @@ class DoorRegisterView(FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
 
         # Update the site session data so that registration processes know to send
         # return links to the registration page.  set_return_page() is in SiteHistoryMixin.
-        self.set_return_page('doorRegister',pageName=_('Registration'),**self.kwargs)
+        self.set_return_page('doorRegister', pageName=_('Registration'), **self.kwargs)
 
         return super().get_context_data(**context)
-

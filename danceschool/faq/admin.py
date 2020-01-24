@@ -12,10 +12,10 @@ class FAQCategoryAdmin(SortableAdminMixin, admin.ModelAdmin):
 
 
 class FAQAdmin(SortableAdminMixin, FrontendEditableAdminMixin, admin.ModelAdmin):
-    list_display = ('question','category','draft')
-    list_filter = ('category','draft')
+    list_display = ('question', 'category', 'draft')
+    list_filter = ('category', 'draft')
     list_editable = ('category',)
-    actions = ('publishFaq','makeDraft',)
+    actions = ('publishFaq', 'makeDraft',)
 
     def publishFaq(self, request, queryset):
         rows_updated = queryset.update(draft=False)

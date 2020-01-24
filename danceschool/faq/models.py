@@ -8,16 +8,20 @@ from djangocms_text_ckeditor.fields import HTMLField
 
 class FAQCategory(models.Model):
 
-    name = models.CharField(_('Name'),max_length=200,unique=True)
+    name = models.CharField(_('Name'), max_length=200, unique=True)
 
     # This defines the order number on the FAQ page
-    orderNum = models.PositiveIntegerField(_('Order number'),help_text=_('This number specifies the order in which categories will be shown.'), default=0)
+    orderNum = models.PositiveIntegerField(
+        _('Order number'),
+        help_text=_('This number specifies the order in which categories will be shown.'),
+        default=0
+    )
 
     def __str__(self):
-        return '%s: %s' % (_('FAQ Category'),self.name)
+        return '%s: %s' % (_('FAQ Category'), self.name)
 
     class Meta:
-        ordering = ('orderNum',)
+        ordering = ('orderNum', )
         verbose_name = _('FAQ category')
         verbose_name_plural = _('FAQ categories')
 
@@ -29,16 +33,26 @@ class FAQ(models.Model):
         on_delete=models.SET_NULL
     )
 
-    question = models.CharField(_('Question'),max_length=200)
-    answer = HTMLField(_('Answer'),help_text=_('Answer the question.'))
+    question = models.CharField(_('Question'), max_length=200)
+    answer = HTMLField(_('Answer'), help_text=_('Answer the question.'))
 
     # This defines the order number on the FAQ page
-    orderNum = models.PositiveIntegerField(_('Order number'),help_text=_('This number specifies the order in which the questions will be shown on the FAQ page.'), default=0)
+    orderNum = models.PositiveIntegerField(
+        _('Order number'),
+        help_text=_(
+            'This number specifies the order in which the questions will be ' +
+            'shown on the FAQ page.'
+        ),
+        default=0
+    )
 
-    draft = models.BooleanField(_('Draft status'),default=False, help_text=_('Check this box to prevent publication.'))
+    draft = models.BooleanField(
+        _('Draft status'), default=False,
+        help_text=_('Check this box to prevent publication.')
+    )
 
-    creationDate = models.DateTimeField(_('Creation date'),auto_now_add=True)
-    modifiedDate = models.DateTimeField(_('Last modified date'),auto_now=True)
+    creationDate = models.DateTimeField(_('Creation date'), auto_now_add=True)
+    modifiedDate = models.DateTimeField(_('Last modified date'), auto_now=True)
 
     def __str__(self):
         return '%s: %s' % (_('FAQ'), self.question)
@@ -46,14 +60,14 @@ class FAQ(models.Model):
     class Meta:
         verbose_name = _('FAQ')
         verbose_name_plural = _('FAQs')
-        ordering = ('orderNum',)
+        ordering = ('orderNum', )
 
 
 class FAQCategoryPluginModel(CMSPlugin):
     category = models.ForeignKey(
         FAQCategory, verbose_name=_('Category'), on_delete=models.CASCADE
     )
-    showTitle = models.BooleanField(verbose_name=_('Show Category Title'),default=False)
+    showTitle = models.BooleanField(verbose_name=_('Show Category Title'), default=False)
 
     def get_short_description(self):
         return self.category.name

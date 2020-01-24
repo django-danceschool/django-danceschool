@@ -24,7 +24,10 @@ class AllowPublicBooking(BooleanPreference):
     section = privateLessons
     name = 'allowPublicBooking'
     verbose_name = _('Allow non-staff to book private lessons for themselves.')
-    help_text = _('The private lesson booking functions will only be available to individuals with permissions unless this box is checked.')
+    help_text = _(
+        'The private lesson booking functions will only be available to ' +
+        'individuals with permissions unless this box is checked.'
+    )
     default = True
 
 
@@ -33,7 +36,12 @@ class AllowRegistration(BooleanPreference):
     section = privateLessons
     name = 'allowRegistration'
     verbose_name = _('Allow payment for private lessons through the registration system.')
-    help_text = _('If the studio handles payment for private lessons, then checking this box allows users to process payment through the regular online registration system.  If the studio only handles booking for private lessons, but not payment, then this box should not be checked.')
+    help_text = _(
+        'If the studio handles payment for private lessons, then checking ' +
+        'this box allows users to process payment through the regular online ' +
+        'registration system.  If the studio only handles booking for private ' +
+        'lessons, but not payment, then this box should not be checked.'
+    )
     default = True
 
 
@@ -42,7 +50,10 @@ class NotifyPrivateLessonInstructor(BooleanPreference):
     section = privateLessons
     name = 'notifyInstructor'
     verbose_name = _('Notify instructor when a private lesson is booked')
-    help_text = _('If checked, then instructors will receive a notification email whenever a private lesson is scheduled with them.')
+    help_text = _(
+        'If checked, then instructors will receive a notification email ' +
+        'whenever a private lesson is scheduled with them.'
+    )
     default = True
 
 
@@ -51,7 +62,11 @@ class OpenBookingDaysAhead(IntegerPreference):
     section = privateLessons
     name = 'openBookingDays'
     verbose_name = _('Open private lesson booking days in advance')
-    help_text = _('If instructor availability has been configured, permitted users will be able to book private lessons beginning this many days in advance.  Enter 0 for no restiction.')
+    help_text = _(
+        'If instructor availability has been configured, permitted users ' +
+        'will be able to book private lessons beginning this many days in ' +
+        'advance.  Enter 0 for no restiction.'
+    )
     default = 30
 
 
@@ -115,14 +130,17 @@ class LessonBookedEmailTemplate(ModelChoicePreference):
     section = privateLessons
     name = 'lessonBookedEmailTemplate'
     verbose_name = _('Email template used to notify customers that their lesson is scheduled')
-    help_text = _('This email template will only be used for lesson bookings that do not go through the full online registration and payment system.')
+    help_text = _(
+        'This email template will only be used for lesson bookings that do ' +
+        'not go through the full online registration and payment system.'
+    )
     model = EmailTemplate
     queryset = EmailTemplate.objects.all()
 
     def get_default(self):
 
         initial_template = get_template('email/private_lesson_registration_success.html')
-        with open(initial_template.origin.name,'r') as infile:
+        with open(initial_template.origin.name, 'r') as infile:
             content = infile.read()
             infile.close()
 
@@ -150,7 +168,7 @@ class LessonBookedInstructorEmailTemplate(ModelChoicePreference):
     def get_default(self):
 
         initial_template = get_template('email/private_lesson_booking_alert.html')
-        with open(initial_template.origin.name,'r') as infile:
+        with open(initial_template.origin.name, 'r') as infile:
             content = infile.read()
             infile.close()
 

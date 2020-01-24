@@ -14,8 +14,8 @@ from danceschool.core.models import (
 
 
 class VoucherCategory(models.Model):
-    name = models.CharField(_('Name'),max_length=80,unique=True)
-    description = models.TextField(_('Description'),null=True,blank=True)
+    name = models.CharField(_('Name'), max_length=80, unique=True)
+    description = models.TextField(_('Description'), null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -29,7 +29,7 @@ class Voucher(models.Model):
     # unique identifier
     voucherId = models.CharField(
         _('Voucher Code'), max_length=100, unique=True,
-        validators=[RegexValidator(regex='^[a-zA-Z\-_0-9]+$')]
+        validators=[RegexValidator(regex=r'^[a-zA-Z\-_0-9]+$')]
     )
 
     # i.e. Social Living April 2013
@@ -79,7 +79,7 @@ class Voucher(models.Model):
     )
 
     # i.e. For Groupon and LivingSocial, these are single use
-    singleUse = models.BooleanField(_('Single Use'),default=False)
+    singleUse = models.BooleanField(_('Single Use'), default=False)
 
     # If a customer has been with us before, we don't want them to be able to use
     # LivingSocial or Groupon
@@ -95,10 +95,10 @@ class Voucher(models.Model):
     doorOnly = models.BooleanField(_('At-the-door Registrations Only'), default=False)
 
     # Keep track of when vouchers are created
-    creationDate = models.DateTimeField(_('Creation Date'),auto_now_add=True)
+    creationDate = models.DateTimeField(_('Creation Date'), auto_now_add=True)
 
     # If null, then there is no expiration date
-    expirationDate = models.DateTimeField(_('Expiration Date'), null=True,blank=True)
+    expirationDate = models.DateTimeField(_('Expiration Date'), null=True, blank=True)
 
     # Vouchers can be disabled manually with this field.
     disabled = models.BooleanField(
@@ -107,11 +107,11 @@ class Voucher(models.Model):
     )
 
     @classmethod
-    def create_new_code(cls,**kwargs):
+    def create_new_code(cls, **kwargs):
         '''
         Creates a new Voucher with a unique voucherId
         '''
-        prefix = kwargs.pop('prefix','')
+        prefix = kwargs.pop('prefix', '')
 
         new = False
         while not new:
@@ -120,7 +120,7 @@ class Voucher(models.Model):
             if not Voucher.objects.filter(voucherId='%s%s' % (prefix, random_string)).exists():
                 new = True
 
-        return Voucher.objects.create(voucherId='%s%s' % (prefix, random_string),**kwargs)
+        return Voucher.objects.create(voucherId='%s%s' % (prefix, random_string), **kwargs)
 
     def getHasExpired(self):
         if self.expirationDate and timezone.now() > self.expirationDate:
@@ -166,7 +166,7 @@ class Voucher(models.Model):
     amountLeft.fget.short_description = _('Amount remaining')
 
     def getMaxToUse(self):
-        # If max amount per use is specified, use that, otherwise use amountLeft 
+        # If max amount per use is specified, use that, otherwise use amountLeft
         return min(
             self.amountLeft, self.maxAmountPerUse or self.amountLeft
         )
@@ -195,7 +195,7 @@ class Voucher(models.Model):
         errors = []
         warnings = []
 
-        if not hasattr(event_list,'__iter__'):
+        if not hasattr(event_list, '__iter__'):
             raise ValueError(_('Invalid event list.'))
         if (type(customer) not in [Customer, type(None)]):
             raise ValueError(_('Invalid customer.'))
@@ -413,15 +413,15 @@ class VoucherReferralDiscount(models.Model):
 
 class VoucherUse(models.Model):
     voucher = models.ForeignKey(
-        Voucher,verbose_name=_('Voucher'), on_delete=models.CASCADE,
+        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,
     )
     registration = models.ForeignKey(
         Registration, null=True, verbose_name=_('Registration'),
         on_delete=models.SET_NULL,
     )
-    amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
-    notes = models.CharField(_('Notes'),max_length=100,null=True,blank=True)
-    creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
+    amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
+    notes = models.CharField(_('Notes'), max_length=100, null=True, blank=True)
+    creationDate = models.DateTimeField(_('Date of use'), auto_now_add=True, null=True)
 
     class Meta:
         verbose_name = _('Voucher use')
@@ -525,9 +525,9 @@ class VoucherCredit(models.Model):
     voucher = models.ForeignKey(
         Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
     )
-    amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
-    description = models.TextField(_('Description'),null=True, blank=True)
-    creationDate = models.DateTimeField(_('Date of credit'),auto_now_add=True,null=True)
+    amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
+    description = models.TextField(_('Description'), null=True, blank=True)
+    creationDate = models.DateTimeField(_('Date of credit'), auto_now_add=True, null=True)
 
     class Meta:
         verbose_name = _('Voucher credit')
@@ -541,8 +541,8 @@ class TemporaryVoucherUse(models.Model):
     voucher = models.ForeignKey(
         Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
     )
-    amount = models.FloatField(_('Amount'),validators=[MinValueValidator(0)])
-    creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
+    amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
+    creationDate = models.DateTimeField(_('Date of use'), auto_now_add=True, null=True)
 
     class Meta:
         verbose_name = _('Tentative voucher use')
@@ -560,7 +560,7 @@ class VoucherReferralDiscountUse(models.Model):
     voucherCredit = models.ForeignKey(
         VoucherCredit, verbose_name=_('Voucher credit'), on_delete=models.CASCADE
     )
-    creationDate = models.DateTimeField(_('Date of use'),auto_now_add=True,null=True)
+    creationDate = models.DateTimeField(_('Date of use'), auto_now_add=True, null=True)
 
     class Meta:
         verbose_name = _('Use of voucher referral discount')

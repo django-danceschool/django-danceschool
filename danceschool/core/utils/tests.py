@@ -5,7 +5,11 @@ from django.utils import timezone
 from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
-from danceschool.core.models import DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier, Location, StaffMember, Instructor, Event, Series, EventStaffMember, EventOccurrence
+from danceschool.core.models import (
+    DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier,
+    Location, StaffMember, Instructor, Event, Series, EventStaffMember,
+    EventOccurrence
+)
 from danceschool.core.constants import getConstant
 
 
@@ -25,10 +29,10 @@ class DefaultSchoolTestCase(TestCase):
         gp.load_from_db()
 
         # Create Lead and Follow roles
-        DanceRole.objects.create(name='Lead',order=1)
-        DanceRole.objects.create(name='Follow',order=2)
-        cls.defaultDanceRoles = DanceRole.objects.filter(name__in=['Lead','Follow'])
-        cls.defaultDanceType = DanceType.objects.create(name='Lindy Hop',order=1)
+        DanceRole.objects.create(name='Lead', order=1)
+        DanceRole.objects.create(name='Follow', order=2)
+        cls.defaultDanceRoles = DanceRole.objects.filter(name__in=['Lead', 'Follow'])
+        cls.defaultDanceType = DanceType.objects.create(name='Lindy Hop', order=1)
         cls.defaultDanceType.roles.set(cls.defaultDanceRoles)
         cls.defaultDanceType.save()
 
@@ -101,8 +105,7 @@ class DefaultSchoolTestCase(TestCase):
             status=Instructor.InstructorStatus.roster,
         )
 
-
-    def create_series(self,**kwargs):
+    def create_series(self, **kwargs):
         """
         This method just creates a new series with the loaded class
         description that can be modified or used for various tests.
@@ -112,13 +115,13 @@ class DefaultSchoolTestCase(TestCase):
         # starts tomorrow, is a Level One Lindy Hop class with default
         # pricing and location, is enabled for registration, and is taught
         # by Frankie Manning.
-        occurrences = max(kwargs.get('occurrences',1),1)
+        occurrences = max(kwargs.get('occurrences', 1), 1)
         startTime = kwargs.get('startTime', timezone.now() + timedelta(days=1))
         classDescription = kwargs.get('classDescription', self.levelOneClassDescription)
         pricingTier = kwargs.get('pricingTier', self.defaultPricing)
         location = kwargs.get('location', self.defaultLocation)
         status = kwargs.get('status', Event.RegStatus.enabled)
-        instructors = kwargs.get('instructors', [self.defaultInstructor,])
+        instructors = kwargs.get('instructors', [self.defaultInstructor, ])
 
         s = Series(
             classDescription=classDescription,
@@ -130,11 +133,11 @@ class DefaultSchoolTestCase(TestCase):
         # Add an occurrence at the start Time
         # and if requested to set more than one occurrence, then
         # each additional occurrence is the day after the last one.
-        for k in range(1,occurrences + 1):
+        for k in range(1, occurrences + 1):
             EventOccurrence.objects.create(
                 event=s,
                 startTime=startTime + timedelta(days=k - 1),
-                endTime=startTime + timedelta(days=k - 1,hours=1)
+                endTime=startTime + timedelta(days=k - 1, hours=1)
             )
         # Add instructors (Frankie Manning by default)
         for i in instructors:
@@ -150,15 +153,15 @@ class DefaultSchoolTestCase(TestCase):
         s.save()
         return s
 
-    def create_instructor(self,**kwargs):
+    def create_instructor(self, **kwargs):
         '''
         This method creates a new instructor (other than the default)
         for testing things like substitute teaching.
         '''
         status = kwargs.get('status', Instructor.InstructorStatus.roster)
-        firstName = kwargs.get('firstName','Norma')
-        lastName = kwargs.get('lastName','Miller')
-        publicEmail = kwargs.get('publicEmail','norma@miller.com')
+        firstName = kwargs.get('firstName', 'Norma')
+        lastName = kwargs.get('lastName', 'Miller')
+        publicEmail = kwargs.get('publicEmail', 'norma@miller.com')
         privateEmail = kwargs.get('privateEmail', 'norma@miller.com')
         bio = kwargs.get('bio', 'This is Norma Miller.')
         userAccount = kwargs.get('userAccount', None)

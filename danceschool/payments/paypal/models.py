@@ -21,9 +21,9 @@ class PaypalPaymentRecord(PaymentRecord):
     using the REST API.
     '''
 
-    paymentId = models.CharField(_('Paypal Payment ID'),max_length=50,unique=True)
-    payerId = models.CharField(_('Paypal Payer ID'),max_length=50,null=True,blank=True)
-    status = models.CharField(_('Current status'),max_length=30,null=True,blank=True)
+    paymentId = models.CharField(_('Paypal Payment ID'), max_length=50, unique=True)
+    payerId = models.CharField(_('Paypal Payer ID'), max_length=50, null=True, blank=True)
+    status = models.CharField(_('Current status'), max_length=30, null=True, blank=True)
 
     @property
     def methodName(self):
@@ -48,7 +48,7 @@ class PaypalPaymentRecord(PaymentRecord):
         payment = self.getPayment()
         for t in payment.transactions:
             for r in t.related_resources:
-                if hasattr(r,'sale') and r.sale:
+                if hasattr(r, 'sale') and r.sale:
                     ids.append(r.sale.id)
         return ids
 
@@ -57,7 +57,7 @@ class PaypalPaymentRecord(PaymentRecord):
         payment = self.getPayment()
         for t in payment.transactions:
             for r in t.related_resources:
-                if hasattr(r,'refund') and r.refund:
+                if hasattr(r, 'refund') and r.refund:
                     ids.append(r.refund.id)
         return ids
 
@@ -126,8 +126,19 @@ class PaypalPaymentRecord(PaymentRecord):
 class PayNowFormModel(CMSPlugin):
     ''' This model holds options for instances of the GiftCertificateFormPlugin and the CartPaymentFormPlugin '''
 
-    successPage = PageField(verbose_name=_('Success Page'),help_text=_('When the user returns to the site after a successful transaction, send them to this page.'),related_name='successPageFor')
-    defaultAmount = models.FloatField(verbose_name=_('Default amount'),help_text=_('The initial value for gift certificate forms.'),default=0)
+    successPage = PageField(
+        verbose_name=_('Success Page'),
+        help_text=_(
+            'When the user returns to the site after a successful ' +
+            'transaction, send them to this page.'
+        ),
+        related_name='successPageFor'
+    )
+    defaultAmount = models.FloatField(
+        verbose_name=_('Default amount'),
+        help_text=_('The initial value for gift certificate forms.'),
+        default=0
+    )
 
     def get_short_description(self):
         return self.plugin_type or self.id

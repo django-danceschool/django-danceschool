@@ -11,7 +11,10 @@ class VoucherLinksToolbar(CMSToolbar):
     ''' Add vouchers to the financial menu '''
 
     def populate(self):
-        if not (self.request.user.has_perm('vouchers.change_voucher') or self.request.user.has_perm('vouchers.change_vouchercategory')):
+        if not (
+            self.request.user.has_perm('vouchers.change_voucher') or
+            self.request.user.has_perm('vouchers.change_vouchercategory')
+        ):
             return
 
         financial_menu = self.toolbar.get_or_create_menu(
@@ -29,9 +32,17 @@ class VoucherLinksToolbar(CMSToolbar):
                 identifier='financial_related_items_break'
             ) + 1
 
-        related_menu = financial_menu.get_or_create_menu('financial-related',_('Related Items'), position=position)
+        related_menu = financial_menu.get_or_create_menu(
+            'financial-related', _('Related Items'), position=position
+        )
 
         if self.request.user.has_perm('vouchers.change_vouchercategory'):
-            related_menu.add_link_item(_('Voucher Categories'), url=reverse('admin:vouchers_vouchercategory_changelist'))
+            related_menu.add_link_item(
+                _('Voucher Categories'),
+                url=reverse('admin:vouchers_vouchercategory_changelist')
+            )
         if self.request.user.has_perm('vouchers.change_voucher'):
-            related_menu.add_link_item(_('Vouchers'), url=reverse('admin:vouchers_voucher_changelist'))
+            related_menu.add_link_item(
+                _('Vouchers'),
+                url=reverse('admin:vouchers_voucher_changelist')
+            )

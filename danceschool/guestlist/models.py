@@ -10,24 +10,36 @@ from intervaltree import IntervalTree
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 
-from danceschool.core.models import PublicEventCategory, SeriesCategory, EventStaffCategory, EventSession, Event, StaffMember, Registration
+from danceschool.core.models import (
+    PublicEventCategory, SeriesCategory, EventStaffCategory, EventSession,
+    Event, StaffMember, Registration
+)
 from danceschool.core.utils.timezone import ensure_localtime
 from .constants import GUESTLIST_ADMISSION_CHOICES, GUESTLIST_SORT_CHOICES
 
 
 class GuestList(models.Model):
 
-    name = models.CharField(_('Name'),max_length=200,unique=True)
-    sortOrder = models.CharField(_('Sort order'),choices=GUESTLIST_SORT_CHOICES,default='Last',max_length=5)
+    name = models.CharField(_('Name'), max_length=200, unique=True)
+    sortOrder = models.CharField(_('Sort order'), choices=GUESTLIST_SORT_CHOICES, default='Last', max_length=5)
 
     # Rules for which events a guest list applies to
-    seriesCategories = models.ManyToManyField(SeriesCategory,verbose_name=_('Series categories'),blank=True)
-    eventCategories = models.ManyToManyField(PublicEventCategory,verbose_name=_('Public event categories'),blank=True)
-    eventSessions = models.ManyToManyField(EventSession,verbose_name=_('Event sessions'),blank=True)
-    individualEvents = models.ManyToManyField(Event,verbose_name=_('Individual events'),blank=True,related_name='specifiedGuestLists')
+    seriesCategories = models.ManyToManyField(
+        SeriesCategory, verbose_name=_('Series categories'), blank=True
+    )
+    eventCategories = models.ManyToManyField(
+        PublicEventCategory, verbose_name=_('Public event categories'), blank=True
+    )
+    eventSessions = models.ManyToManyField(
+        EventSession, verbose_name=_('Event sessions'), blank=True
+    )
+    individualEvents = models.ManyToManyField(
+        Event, verbose_name=_('Individual events'), blank=True,
+        related_name='specifiedGuestLists'
+    )
 
-    includeStaff = models.BooleanField(_('Include all scheduled event staff'),default=True,blank=True)
-    includeRegistrants = models.BooleanField(_('Include event registrants'),default=True,blank=True)
+    includeStaff = models.BooleanField(_('Include all scheduled event staff'), default=True, blank=True)
+    includeRegistrants = models.BooleanField(_('Include event registrants'), default=True, blank=True)
 
     @property
     def recentEvents(self):
@@ -35,7 +47,7 @@ class GuestList(models.Model):
         Get the set of recent and upcoming events to which this list applies.
         '''
         return Event.objects.filter(
-            Q(pk__in=self.individualEvents.values_list('pk',flat=True)) |
+            Q(pk__in=self.individualEvents.values_list('pk', flat=True)) |
             Q(session__in=self.eventSessions.all()) |
             Q(publicevent__category__in=self.eventCategories.all()) |
             Q(series__category__in=self.seriesCategories.all())
@@ -50,7 +62,7 @@ class GuestList(models.Model):
         Return the first event that hasn't ended yet, or if there are no
         future events, the last one to end.
         '''
-        currentEvent =  self.recentEvents.filter(endTime__gte=timezone.now()).order_by('startTime').first()
+        currentEvent = self.recentEvents.filter(endTime__gte=timezone.now()).order_by('startTime').first()
         if not currentEvent:
             currentEvent = self.recentEvents.filter(
                 endTime__lte=timezone.now()
@@ -64,13 +76,13 @@ class GuestList(models.Model):
             event.session in self.eventSessions.all() or
             event.category in self.seriesCategories.all() or
             event.category in self.eventCategories.all()
-        ) 
+        )
 
     def getDayStart(self, dateTime):
         ''' Ensure local time and get the beginning of the day '''
-        return ensure_localtime(dateTime).replace(hour=0,minute=0,second=0,microsecond=0)
+        return ensure_localtime(dateTime).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def getComponentFilters(self,component,event=None,dateTime=None):
+    def getComponentFilters(self, component, event=None, dateTime=None):
         '''
         Get a parsimonious set of intervals and the associated Q() objects
         based on the occurrences of a specified event, and the rule that
@@ -83,26 +95,31 @@ class GuestList(models.Model):
         else:
             filters = Q(eventstaffmember__category=component.staffCategory)
 
-        # Handle 'Always' and 'EventOnly' rules first, because they do not require an analysis of intervals.
+        # Handle 'Always' and 'EventOnly' rules first, because they do not
+        # require an analysis of intervals.
         if component.admissionRule == 'EventOnly' and event:
-            # Skip the analysis of intervals and include only those who are staffed for the event.
+            # Skip the analysis of intervals and include only those who are
+            # staffed for the event.
             return Q(filters & Q(eventstaffmember__event=event))
-        elif component.admissionRule in ['Always','EventOnly']:
+        elif component.admissionRule in ['Always', 'EventOnly']:
             # If 'Always' or no event is specified, include all associated staff
             return Q(filters)
 
         # Start with the event occurrence intervals, or with the specified time.
         if event:
-            intervals = [(x.startTime,x.endTime) for x in event.eventoccurrence_set.all()]
+            intervals = [(x.startTime, x.endTime) for x in event.eventoccurrence_set.all()]
         elif dateTime:
-            intervals = [(dateTime,dateTime)]
+            intervals = [(dateTime, dateTime)]
         else:
-            raise ValueError(_('Must provide either an event or a datetime to get interval queries.'))
+            raise ValueError(_(
+                'Must provide either an event or a datetime to get interval queries.'
+            ))
 
         if component.admissionRule == 'Day':
             # The complete days of each event occurrence
             intervals = [
-                (self.getDayStart(x[0]),self.getDayStart(x[1]) + timedelta(days=1)) for x in intervals
+                (self.getDayStart(x[0]), self.getDayStart(x[1]) + timedelta(days=1))
+                for x in intervals
             ]
         elif component.admissionRule == 'Week':
             # The complete weeks of each event occurrence
@@ -124,8 +141,8 @@ class GuestList(models.Model):
             # The complete years of each event occurrence
             intervals = [
                 (
-                    self.getDayStart(x[0]).replace(month=1,day=1),
-                    self.getDayStart(x[1]).replace(year=x[1].year + 1,month=1,day=1)
+                    self.getDayStart(x[0]).replace(month=1, day=1),
+                    self.getDayStart(x[1]).replace(year=x[1].year + 1, month=1, day=1)
                 ) for x in intervals
             ]
         else:
@@ -159,7 +176,7 @@ class GuestList(models.Model):
                 default=Value(ugettext('Manually Added')),
                 output_field=models.CharField()
             )
-        ).filter(filters).values('id','firstName','lastName','guestType').order_by()
+        ).filter(filters).values('id', 'firstName', 'lastName', 'guestType').order_by()
 
         # Component-by-component, OR append filters to an initial filter that always
         # evaluates to False.
@@ -169,9 +186,9 @@ class GuestList(models.Model):
         # Add prior staff based on the component rule.
         for component in components:
             if event and self.appliesToEvent(event):
-                component_filters = component_filters | self.getComponentFilters(component,event=event)
+                component_filters = component_filters | self.getComponentFilters(component, event=event)
             else:
-                component_filters = component_filters | self.getComponentFilters(component,dateTime=timezone.now())
+                component_filters = component_filters | self.getComponentFilters(component, dateTime=timezone.now())
 
         # Add all event staff if that box is checked (no need for separate components)
         if self.includeStaff and event and self.appliesToEvent(event):
@@ -180,24 +197,32 @@ class GuestList(models.Model):
         # Execute the constructed query and add the names of staff
         names = names.union(StaffMember.objects.filter(component_filters).filter(filters).annotate(
             guestType=Case(
-                When(eventstaffmember__event=event, then=Concat(Value('Event Staff: '), 'eventstaffmember__category__name')),
+                When(
+                    eventstaffmember__event=event,
+                    then=Concat(
+                        Value('Event Staff: '), 'eventstaffmember__category__name'
+                    )
+                ),
                 default=Value(ugettext('Other Staff')),
                 output_field=models.CharField()
             )
-        ).distinct().values('id','firstName','lastName','guestType').order_by())
+        ).distinct().values('id', 'firstName', 'lastName', 'guestType').order_by())
 
         if includeRegistrants and self.includeRegistrants and event and self.appliesToEvent(event):
-            names = names.union(Registration.objects.filter(filters & Q(eventregistration__event=event)).annotate(
-                guestType=Value(_('Registered'),output_field=models.CharField())
-            ).values('id','firstName','lastName','guestType').order_by())
-        return names.order_by('lastName','firstName')
-
+            names = names.union(
+                Registration.objects.filter(
+                    filters & Q(eventregistration__event=event)
+                ).annotate(
+                    guestType=Value(_('Registered'), output_field=models.CharField())
+                ).values('id', 'firstName', 'lastName', 'guestType').order_by()
+            )
+        return names.order_by('lastName', 'firstName')
 
     def __str__(self):
-        return '%s: %s' % (_('Guest list'),self.name)
+        return '%s: %s' % (_('Guest list'), self.name)
 
     class Meta:
-        ordering = ('name',)
+        ordering = ('name', )
         verbose_name = _('Guest list')
         verbose_name_plural = _('Guest lists')
 
@@ -205,46 +230,56 @@ class GuestList(models.Model):
 class GuestListName(models.Model):
     ''' Additional names to be manually added to a particular guest list '''
 
-    guestList = models.ForeignKey(GuestList,on_delete=models.CASCADE)
-    firstName = models.CharField(_('First name'),max_length=50)
-    lastName = models.CharField(_('Last name'),max_length=50)
+    guestList = models.ForeignKey(GuestList, on_delete=models.CASCADE)
+    firstName = models.CharField(_('First name'), max_length=50)
+    lastName = models.CharField(_('Last name'), max_length=50)
 
-    notes = models.CharField(_('Notes (optional)'),help_text=_('These will be included on the list for reference.'),null=True,blank=True,max_length=200)
+    notes = models.CharField(
+        _('Notes (optional)'),
+        help_text=_('These will be included on the list for reference.'),
+        null=True, blank=True, max_length=200
+    )
 
     @property
     def fullName(self):
-        return ' '.join([self.firstName or '',self.lastName or ''])
+        return ' '.join([self.firstName or '', self.lastName or ''])
     fullName.fget.short_description = _('Name')
 
     def __str__(self):
         return '%s: %s' % (_('Guest'), self.fullName)
 
     class Meta:
-        ordering = ('guestList', 'lastName','firstName')
+        ordering = ('guestList', 'lastName', 'firstName')
         verbose_name = _('Manually-added guest')
         verbose_name_plural = _('Manually added guests')
         permissions = (
-            ('view_guestlist',_('Can view guest lists')),
+            ('view_guestlist', _('Can view guest lists')),
         )
 
 
 class GuestListComponent(models.Model):
-    guestList = models.ForeignKey(GuestList,on_delete=models.CASCADE)
+    guestList = models.ForeignKey(GuestList, on_delete=models.CASCADE)
 
-    staffCategory = models.ForeignKey(EventStaffCategory,verbose_name=_('Category of staff members'),null=True, blank=True, on_delete=models.CASCADE)
-    staffMember = models.ForeignKey(StaffMember,verbose_name=_('Individual staff member'),null=True,blank=True,on_delete=models.CASCADE)
+    staffCategory = models.ForeignKey(
+        EventStaffCategory, verbose_name=_('Category of staff members'),
+        null=True, blank=True, on_delete=models.CASCADE
+    )
+    staffMember = models.ForeignKey(
+        StaffMember, verbose_name=_('Individual staff member'),
+        null=True, blank=True, on_delete=models.CASCADE
+    )
 
-    admissionRule = models.CharField(_('Event admission rule'),choices=GUESTLIST_ADMISSION_CHOICES,max_length=10)
+    admissionRule = models.CharField(_('Event admission rule'), choices=GUESTLIST_ADMISSION_CHOICES, max_length=10)
 
     def clean(self):
         ''' Either staffCategory or staffMember must be filled in, but not both. '''
         if not self.staffCategory and not self.staffMember:
             raise ValidationError(_('Either staff category or staff member must be specified.'))
         if self.staffCategory and self.staffMember:
-           raise ValidationError(_('Specify either a staff category or a staff member, not both.'))      
+            raise ValidationError(_('Specify either a staff category or a staff member, not both.'))
 
     class Meta:
-        ordering = ('guestList','admissionRule')
+        ordering = ('guestList', 'admissionRule')
         verbose_name = _('Guest list component')
         verbose_name_plural = _('Guest list components')
-        unique_together = ('guestList','staffCategory','staffMember')
+        unique_together = ('guestList', 'staffCategory', 'staffMember')
