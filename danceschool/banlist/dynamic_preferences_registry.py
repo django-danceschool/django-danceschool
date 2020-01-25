@@ -31,6 +31,7 @@ class BanListContactEmail(StringPreference):
     )
     help_text = _('If no email is specified, then the default school email will be used.')
     default = ''
+    required = False
 
 
 @global_preferences_registry.register
@@ -43,3 +44,4 @@ class BanListNotificationEmail(StringPreference):
     )
     help_text = _('If no email is specified, then no notification will be sent.')
     default = ''
+    required = False

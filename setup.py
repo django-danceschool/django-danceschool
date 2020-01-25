@@ -34,7 +34,7 @@ setup(
         'django-colorful>=1.2',
         'django-crispy-forms>=1.6.0',
         'django-daterange-filter>=1.2.0',
-        'django-dynamic-preferences>=1.4.2',
+        'django-dynamic-preferences>=1.8.1',
         'django-easy-pdf>=0.1.1',
         'django-filer>=1.4.4',
         'django-ical>=1.4',
