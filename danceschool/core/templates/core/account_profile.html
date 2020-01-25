@@ -89,8 +89,10 @@
 	<dl>
 		<dt>{% trans "Customer Since" %}:</dt>
 			<dd>{{ customer.eventregistration_set.first.event.month|readable_month }} {{ customer.eventregistration_set.first.event.year }}</dd>
-		<dt>{% trans "Number of Series Taken" %}:</dt>
-			<dd>{{ customer.numClassSeries }}</dd>
+		<dt>{% trans "Registration History" %}:</dt>
+			{% if customer.numClassSeries > 0 %}<dd>{% trans "Class Series" %}: {{ customer.numClassSeries }}</dd>{% endif %}
+			{% if customer.numPublicEvents > 0 %}<dd>{% trans "Events" %}: {{ customer.numPublicEvents }}</dd>{% endif %}
+			{% if customer.numDropIns > 0 %}<dd>{% trans "Drop-ins" %}: {{ customer.numDropIns }}</dd>{% endif %}
 		{% if referralVoucherId %}
 		<dt>{% trans "Customer Referral ID" %}:
 			<dd>{{ referralVoucherId }}</dd>

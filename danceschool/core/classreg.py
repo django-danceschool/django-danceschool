@@ -81,7 +81,12 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     def get_context_data(self, **kwargs):
         ''' Add the event and series listing data '''
         context = self.get_listing()
-        context['showDescriptionRule'] = getConstant('registration__showDescriptionRule') or 'all'
+        context.update({
+            'showDescriptionRule': getConstant('registration__showDescriptionRule') or 'all',
+            'multiRegSeriesRule': getConstant('registration__multiRegSeriesRule') or 'N',
+            'multiRegPublicEventRule': getConstant('registration__multiRegPublicEventRule') or 'N',
+            'multiRegDropInRule': getConstant('registration__multiRegDropInRule') or 'Y',
+        })
         context.update(kwargs)
 
         # Update the site session data so that registration processes know to send return links to
@@ -127,12 +132,21 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
         permitted_keys = getattr(form, 'permitted_event_keys', ['role', ])
 
+        # These are prefixes that may be used for events in the form.  Each one
+        # corresponds to a polymorphic content type (PublicEvent, Series, etc.)
+        event_types = ['event_', 'publicevent_', 'series_']
+
         try:
             event_listing = {
-                int(key.split("_")[-1]): {k: v for k, v in json.loads(value[0]).items() if k in permitted_keys}
-                for key, value in form.cleaned_data.items() if 'event' in key and value
+                int(key.split("_")[-1]): [
+                    {k: v for k, v in json.loads(y).items() if k in permitted_keys} for y in value
+                ]
+                for key, value in form.cleaned_data.items() if any(x in key for x in event_types) and value
             }
-            non_event_listing = {key: value for key, value in form.cleaned_data.items() if 'event' not in key}
+            non_event_listing = {
+                key: value for key, value in form.cleaned_data.items() if
+                not any(x in key for x in event_types)
+            }
         except (ValueError, TypeError) as e:
             form.add_error(None, ValidationError(_('Invalid event information passed.'), code='invalid'))
             return self.form_invalid(form)
@@ -163,53 +177,56 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         self.event_registrations = []
         grossPrice = 0
 
-        for key, value in event_listing.items():
+        for key, value_list in event_listing.items():
             this_event = associated_events.get(id=key)
 
-            # Check if registration is still feasible based on both completed registrations
-            # and registrations that are not yet complete
-            this_role_id = value.get('role', None) if 'role' in permitted_keys else None
-            soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
+            for value in value_list:
 
-            if soldOut:
-                if self.request.user.has_perm('core.override_register_soldout'):
-                    # This message will be displayed on the Step 2 page by default.
-                    messages.warning(self.request, _(
-                        'Registration for \'%s\' is sold out. Based on your user permission level, ' % this_event.name +
-                        'you may proceed with registration.  However, if you do not wish to exceed ' +
-                        'the listed capacity of the event, please do not proceed.'
-                    ))
-                else:
-                    # For users without permissions, don't allow registration for sold out things
-                    # at all.
-                    form.add_error(None, ValidationError(
-                        _(
-                            'Registration for "%s" is tentatively sold out while ' +
-                            'others complete their registration.  Please try ' +
-                            'again later.' % this_event.name
-                        ), code='invalid')
+                # Check if registration is still feasible based on both completed registrations
+                # and registrations that are not yet complete
+                this_role_id = value.get('role', None) if 'role' in permitted_keys else None
+                soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
+
+                if soldOut:
+                    if self.request.user.has_perm('core.override_register_soldout'):
+                        # This message will be displayed on the Step 2 page by default.
+                        messages.warning(self.request, _(
+                            'Registration for \'%s\' is sold out. ' % this_event.name +
+                            'Based on your user permission level, you may proceed ' +
+                            'with registration.  However, if you do not wish to exceed ' +
+                            'the listed capacity of the event, please do not proceed.'
+                        ))
+                    else:
+                        # For users without permissions, don't allow registration for sold out things
+                        # at all.
+                        form.add_error(None, ValidationError(
+                            _(
+                                'Registration for "%s" is tentatively sold out while ' +
+                                'others complete their registration.  Please try ' +
+                                'again later.' % this_event.name
+                            ), code='invalid')
+                        )
+                        return self.form_invalid(form)
+
+                dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
+
+                # If nothing is sold out, then proceed to create a TemporaryRegistration and
+                # TemporaryEventRegistration objects for the items selected by this form.  The
+                # expiration date is set to be identical to that of the session.
+
+                logger.debug('Creating temporary event registration for: %s' % key)
+                if len(dropInList) > 0:
+                    tr = TemporaryEventRegistration(
+                        event=this_event, dropIn=True, price=this_event.getBasePrice(dropIns=len(dropInList))
                     )
-                    return self.form_invalid(form)
-
-            dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
-
-            # If nothing is sold out, then proceed to create a TemporaryRegistration and
-            # TemporaryEventRegistration objects for the items selected by this form.  The
-            # expiration date is set to be identical to that of the session.
-
-            logger.debug('Creating temporary event registration for: %s' % key)
-            if len(dropInList) > 0:
-                tr = TemporaryEventRegistration(
-                    event=this_event, dropIn=True, price=this_event.getBasePrice(dropIns=len(dropInList))
-                )
-            else:
-                tr = TemporaryEventRegistration(
-                    event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role_id=this_role_id
-                )
-            # If it's possible to store additional data and such data exist, then store them.
-            tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
-            self.event_registrations.append(tr)
-            grossPrice += tr.price
+                else:
+                    tr = TemporaryEventRegistration(
+                        event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role_id=this_role_id
+                    )
+                # If it's possible to store additional data and such data exist, then store them.
+                tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
+                self.event_registrations.append(tr)
+                grossPrice += tr.price
 
         # If we got this far with no issues, then save
         reg.priceWithDiscount = grossPrice
@@ -448,26 +465,104 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         if regSession.get('marketing_id'):
             reg.data.update({'marketing_id': regSession.pop('marketing_id', None)})
 
+        # Should be a list of dictionaries describing event registrations,
+        # either existing or to be created.  Some keys are intended to be boolean
+        # but are passed as strings, so handle those as well to avoid
+        # unexpected behavior.
         event_post = post_data.get('events')
+        for e in event_post:
+            for k in ['dropIn', 'requireFull']:
+                if isinstance(e.get(k, None), str):
+                    e[k] = ('true' in e[k].lower())
+
+        eventregs = TemporaryEventRegistration.objects.filter(
+            id__in=[x['eventreg'] for x in event_post if x.get('eventreg', None)]
+        )
         events = Event.objects.filter(
-            id__in=[x['event'] for x in event_post.values() if x.get('event', None)]
+            id__in=[x['event'] for x in event_post if x.get('event', None)]
         )
 
         grossPrice = 0
-        eventreg_event_ids = [
-            x.event.id for x in reg.temporaryeventregistration_set.all()
-        ]
-        unmatched_ids = eventreg_event_ids.copy()
+        existing_eventreg_ids = list(reg.temporaryeventregistration_set.values_list('id', flat=True))
+        unmatched_eventreg_ids = existing_eventreg_ids.copy()
 
-        for e in event_post.values():
+        for e in event_post:
             try:
-                this_event = events.get(id=e.get('event', None))
+                this_event = events.get(id=e['event'])
             except ObjectDoesNotExist:
                 errors.append({
                     'code': 'invalid_event_id',
                     'message': _('Invalid event ID passed.')
                 })
                 continue
+
+            # The existing event registration should be found if its ID is passed.
+            # Otherwise, update an existing one.
+            created_eventreg = False
+
+            if e.get('eventreg', None):
+                try:
+                    this_eventreg = eventregs.get(id=e['eventreg'])
+                    logger.debug('Found existing temporary event registration: {}'.format(this_eventreg.id))
+                    unmatched_eventreg_ids.remove(this_eventreg.id)
+                except [ObjectDoesNotExist, ValueError]:
+                    errors.append({
+                        'code': 'invalid_eventreg_id',
+                        'message': _('Invalid event registration ID passed.')
+                    })
+                    continue
+            else:
+                # Before continuing, enforce rules on duplicate registrations, etc.
+                dropIn = e.get('dropIn', False)
+                # Check the other eventregistrations in POST data to ensure
+                # that this is the only one for this event.
+                same_event = [x for x in event_post if x.get('event', None) == this_event.id]
+
+                if len(same_event) > 1 and ((
+                    this_event.polymorphic_ctype.model == 'series' and not dropIn and (
+                        (getConstant('registration__multiRegSeriesRule') == 'N') or
+                        (getConstant('registration__multiRegSeriesRule') == 'D' and not reg.payAtDoor)
+                    )
+                ) or (
+                    this_event.polymorphic_ctype.model == 'publicevent' and not dropIn and (
+                        (getConstant('registration__multiRegPublicEventRule') == 'N') or
+                        (getConstant('registration__multiRegPublicEventRule') == 'D' and not reg.payAtDoor)
+                    )
+                ) or (
+                    dropIn and (
+                        (getConstant('registration__multiRegDropInRule') == 'N') or
+                        (getConstant('registration__multiRegDropInRule') == 'D' and not reg.payAtDoor)
+                    )
+                )):
+                    errors.append({
+                        'code': 'duplicate_event',
+                        'message': _(
+                            'You cannot register more than once for event: {event_name}. '.format(
+                                event_name=this_event.name
+                            ) +
+                            'Please remove the existing item from your cart and try again.'
+                        )
+                    })
+                    continue
+                elif (
+                    len(same_event) > 1 and
+                    len([x for x in same_event if x.get('dropIn', False) != dropIn]) > 0
+                ):
+                    errors.append({
+                        'code': 'dropin_with_full',
+                        'message': _(
+                            'You cannot register as both a drop-in and as a ' +
+                            'full registrant for event: {event_name}. '.format(
+                                event_name=this_event.name
+                            ) +
+                            'Please remove the existing item from your cart and try again.'
+                        )
+                    })
+                    continue
+
+                logger.debug('Creating temporary event registration for event: {}'.format(this_event.id))
+                this_eventreg = TemporaryEventRegistration(event=this_event)
+                created_eventreg = True
 
             if not (
                 this_event.registrationOpen or
@@ -479,7 +574,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 })
 
             if (
-                this_event.soldOut and not
+                created_eventreg and this_event.soldOut and not
                 request.user.has_perm('core.override_register_soldout')
             ):
                 errors.append({
@@ -489,6 +584,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             this_role = e.get('roleId', None)
             if (
+                created_eventreg and
                 this_event.soldOutForRole(this_role, includeTemporaryRegs=True) and not
                 request.user.has_perm('core.override_register_soldout')
             ):
@@ -517,47 +613,43 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     'message': _('You are not permitted to register for drop-in classes.')
                 })
 
+            # No need to continue if we've already identified errors
             if errors:
                 continue
 
-            if this_event.id in eventreg_event_ids:
-                logger.warning('Found existing temporary event registration for: {}'.format(this_event.id))
-                ter = reg.temporaryeventregistration_set.filter(event=this_event).first()
-                unmatched_ids.remove(this_event.id)
-            else:
-                logger.warning('Creating temporary event registration for: {}'.format(this_event.id))
-                ter = TemporaryEventRegistration(event=this_event)
-
+            # Update the contents of the event registration.
             if dropIn:
-                ter.dropIn = True
-                ter.price = price = this_event.getBasePrice(dropIns=1)
+                this_eventreg.dropIn = True
+                this_eventreg.price = price = this_event.getBasePrice(dropIns=1)
             else:
-                ter.dropIn = False
-                ter.price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
-                ter.role = DanceRole.objects.filter(id=this_role).first()
+                this_eventreg.dropIn = False
+                this_eventreg.price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
+                this_eventreg.role = DanceRole.objects.filter(id=this_role).first()
 
             # Sometimes requireFull is passed as a string and sometimes as boolean,
             # this just ensures that it works correctly either way.  Also,
             # record payment methods if they were passed.
-            ter.data['requireFull'] = (str(e.get('requireFull', 'True')).lower() == 'true')
+            this_eventreg.data['requireFull'] = (str(e.get('requireFull', 'True')).lower() == 'true')
             if e.get('paymentMethod', None):
-                ter.data['paymentMethod'] = e['paymentMethod']
-                ter.data['autoSubmit'] = e.get('autoSubmit', None)
+                this_eventreg.data['paymentMethod'] = e['paymentMethod']
+                this_eventreg.data['autoSubmit'] = e.get('autoSubmit', None)
+            if e.get('doorChoiceId', None):
+                this_eventreg.data['doorChoiceId'] = e['doorChoiceId']
 
             if e.get('data', False):
                 if isinstance(e['data'], dict):
-                    ter.data.update(e['data'])
+                    this_eventreg.data.update(e['data'])
                 else:
                     try:
-                        ter.data.update(json.loads(e['data']))
+                        this_eventreg.data.update(json.loads(e['data']))
                     except json.decoder.JSONDecodeError:
                         errors.append({
                             'code': 'invalid_json',
                             'message': _('You have passed invalid JSON data for this registation.')
                         })
 
-            self.event_registrations.append(ter)
-            grossPrice += ter.price
+            self.event_registrations.append(this_eventreg)
+            grossPrice += this_eventreg.price
 
         # We now have a registration, but before going further, return failure
         # if any errors have arisen.
@@ -572,7 +664,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # in via POST.
         reg.priceWithDiscount = grossPrice
         reg.save()
-        reg.temporaryeventregistration_set.filter(event__id__in=unmatched_ids).delete()
+        reg.temporaryeventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
 
         for er in self.event_registrations:
             er.registration = reg
@@ -587,8 +679,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             'subtotal': grossPrice,
             'total': grossPrice,
             'itemCount': len(self.event_registrations),
-            'events': {
-                x.event.id: {
+            'events': [
+                {
                     'event': x.event.id, 'name': x.event.name,
                     'eventreg': x.id,
                     'dropIn': x.dropIn, 'roleId': getattr(x.role, 'id', None),
@@ -596,9 +688,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     'requireFull': x.data.get('requireFull', True),
                     'paymentMethod': x.data.get('paymentMethod', None),
                     'autoSubmit': x.data.get('autoSubmit', None),
+                    'doorChoiceId': x.data.get('doorChoiceId', None),
                 }
                 for x in self.event_registrations
-            },
+            ],
         }
 
         # Pass back student status.
@@ -681,18 +774,18 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             # requireFull, and if all of them are False.
             requireFullRegistration = (
                 True in
-                [x.get('requireFull', True) for x in event_post.values()]
+                [x.get('requireFull', True) for x in event_post]
             )
 
             # If all events are to be registered using the same payment method
             # and auto-submit is always True, then pass this info to the registration.
-            methods = [x.get('paymentMethod', None) for x in event_post.values()]
+            methods = [x.get('paymentMethod', None) for x in event_post]
             if len(set(methods)) == 1 and methods[0]:
                 data_changed_flag = True
                 reg.data['paymentMethod'] = methods[0]
 
                 if False not in [
-                    x.get('autoSubmit', False) for x in event_post.values()
+                    x.get('autoSubmit', False) for x in event_post
                 ]:
                     reg.data['autoSubmit'] = True
 
@@ -842,7 +935,7 @@ class RegistrationSummaryView(
         regSession['total_voucher_amount'] = adjustment_amount
         request.session[REG_VALIDATION_STR] = regSession
 
-        return super(RegistrationSummaryView, self).get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         ''' Pass the initial kwargs, then update with the needed registration info. '''

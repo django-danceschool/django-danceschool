@@ -390,6 +390,71 @@ class ShowDescriptionRule(ChoicePreference):
 
 
 @global_preferences_registry.register
+class MultiRegSeriesRule(ChoicePreference):
+    section = registration
+    name = 'multiRegSeriesRule'
+    choices = [
+        ('N', _('Never allow multiple registrations')),
+        ('D', _('Only registrations at the door')),
+        ('Y', _('Always allow multiple registrations')),
+    ]
+    verbose_name = _('Allow customers to register for a class series more than once')
+    help_text = _(
+        'This option determines whether the same customer (name and email address) ' +
+        'may register more than once for the same class series under the same name. ' +
+        'It is recommended to keep this disabled if you would like to keep precise ' +
+        'track of customer registration histories.  Drop-in ' +
+        'registrations are not counted when enforcing this rule, but if it ' +
+        'is not enabled, then customers will not be able to drop into a class ' +
+        'series for which they have also registered in full.'
+    )
+    default = 'N'
+
+
+@global_preferences_registry.register
+class MultiRegPublicEventRule(ChoicePreference):
+    section = registration
+    name = 'multiRegPublicEventRule'
+    choices = [
+        ('N', _('Never allow multiple registrations')),
+        ('D', _('Only registrations at the door')),
+        ('Y', _('Always allow multiple registrations')),
+    ]
+    verbose_name = _('Allow customers to register for a public event more than once')
+    help_text = _(
+        'This option determines whether the same customer (name and email address) ' +
+        'may register more than once for the same public event under the same name. ' +
+        'It is recommended to keep this disabled if you are collecting customer ' +
+        'information with your public event registrations and would like to keep ' +
+        'precise track of customer registration histories.'
+    )
+    default = 'N'
+
+
+@global_preferences_registry.register
+class MultiRegDropInRule(ChoicePreference):
+    section = registration
+    name = 'multiRegDropInRule'
+    choices = [
+        ('N', _('Never allow multiple registrations')),
+        ('D', _('Only registrations at the door')),
+        ('Y', _('Always allow multiple registrations')),
+    ]
+    verbose_name = _(
+        'Allow customers to register as a drop-in for a class series more than once'
+    )
+    help_text = _(
+        'This option determines whether the same customer (name and email address) ' +
+        'may register more than once as a drop-in for the same class series under ' +
+        'the same name.  Drop-in registrations are typically not counted in ' +
+        'customer registration histories, so this is enabled by default, but ' +
+        'you may choose to disable it to enforce restrictions on repeated drop-in ' +
+        'registrations.'
+    )
+    default = 'Y'
+
+
+@global_preferences_registry.register
 class SalesTaxRate(FloatPreference):
     section = registration
     name = 'salesTaxRate'

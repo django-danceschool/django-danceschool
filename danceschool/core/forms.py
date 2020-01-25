@@ -143,7 +143,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
                 u'<button class="btn btn-outline-secondary btn-sm mb-4" ' +
                 'type="button" data-toggle="collapse" ' +
                 ('data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s">' % {
-                    {'id': collapse_id, 'string': _('Additional Choices')}
+                    'id': collapse_id, 'string': _('Additional Choices')
                 }) +
                 '<ul class="list-unstyled">'
             )
@@ -333,7 +333,7 @@ class ClassChoiceForm(forms.Form):
                         ),)
                         self.permitted_event_keys.append('dropin_' + str(occurrence.id))
 
-            self.fields['event_' + str(event.id)] = CheckboxSeriesChoiceField(
+            self.fields[event.polymorphic_ctype.model + '_' + str(event.id)] = CheckboxSeriesChoiceField(
                 label=event.name,
                 choices=field_choices,
                 event=event,
@@ -345,6 +345,8 @@ class ClassChoiceForm(forms.Form):
         ''' Check that the registration is not empty. '''
         cleaned_data = super(ClassChoiceForm, self).clean()
         hasContent = False
+
+        payAtDoor = cleaned_data.get('payAtDoor', False)
 
         for key, value in cleaned_data.items():
             if value and key != 'payAtDoor':
@@ -362,9 +364,20 @@ class ClassChoiceForm(forms.Form):
                 # Get the list of dropIns
                 dropIns = [k.replace('dropin_', '') for k in value_dict.keys() if 'dropin_' in k]
 
-                if len(roles) > 1:
+                if (
+                    len(roles) > 1 and ((
+                        'series_' in key and (
+                            (getConstant('registration__multiRegSeriesRule') == 'N') or
+                            (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
+                        )) or (
+                        'publicevent_' in key and (
+                            (getConstant('registration__multiRegPublicEventRule') == 'N') or
+                            (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
+                        ))
+                    )
+                ):
                     raise ValidationError(_('Must select only one role.'), code='invalid')
-                elif len(roles) == 1 and len(dropIns) > 0:
+                elif len(roles) >= 1 and len(dropIns) > 0:
                     raise ValidationError(_(
                         'Cannot register for drop-in classes and also for the entire series.'
                     ), code='invalid')
@@ -512,17 +525,69 @@ class RegistrationContactForm(forms.Form):
         last = self.cleaned_data.get('lastName')
         email = self.cleaned_data.get('email')
 
-        # Check that this customer is not already registered for any of the Events in the list
+        payAtDoor = self._session.get('payAtDoor', False)
+
+        # If the dynamic preference rules do not allow multiple registrations for
+        # the same thing, then ensure that this customer is not already registered
+        # for any of the Events in the list
         customer = Customer.objects.filter(
             first_name=first,
             last_name=last,
             email=email).first()
 
+        # Compile a list of Events for which the customer has already registered
+        # that are not eligible for multiple registrations.  The logic also allows
+        # registration for a full series after registering for a drop-in, but
+        # not the other way around.
+        already_registered_list = []
+
         if customer:
-            eventids = [x.event.id for x in self._registration.temporaryeventregistration_set.all()]
-            already_registered_list = customer.getSeriesRegistered().filter(id__in=eventids)
-        else:
-            already_registered_list = []
+            eventregs_all = self._registration.temporaryeventregistration_set.all()
+            event_ids_dropIn = [x.event.id for x in eventregs_all if x.dropIn is True]
+            event_ids_series = [
+                x.event.id for x in eventregs_all if
+                x.dropIn is False and x.event.polymorphic_ctype.model == 'series'
+            ]
+            event_ids_publicevent = [
+                x.event.id for x in eventregs_all if
+                x.dropIn is False and x.event.polymorphic_ctype.model == 'publicevent'
+            ]
+
+            if event_ids_series and (
+                (getConstant('registration__multiRegSeriesRule') == 'N') or
+                (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
+            ):
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__dropIn=False, eventregistration__cancelled=False
+                ).filter(
+                    id__in=event_ids_series
+                ))
+
+            if event_ids_publicevent and (
+                (getConstant('registration__multiRegPublicEventRule') == 'N') or
+                (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
+            ):
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__dropIn=False, eventregistration__cancelled=False
+                ).filter(
+                    id__in=event_ids_publicevent
+                ))
+
+            if event_ids_dropIn and (
+                (getConstant('registration__multiRegDropInRule') == 'N') or
+                (getConstant('registration__multiRegDropInRule') == 'D' and not payAtDoor)
+            ):
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__cancelled=False
+                ).filter(
+                    id__in=event_ids_dropIn
+                ))
+            elif event_ids_dropIn:
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__dropIn=False, eventregistration__cancelled=False
+                ).filter(
+                    id__in=event_ids_dropIn
+                ))
 
         if already_registered_list:
             error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in already_registered_list])

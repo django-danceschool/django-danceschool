@@ -338,7 +338,7 @@ class Voucher(models.Model):
                         )
                     )
 
-            if self.forFirstTimeCustomersOnly and customer and customer.numClassSeries > 0:
+            if self.forFirstTimeCustomersOnly and customer and customer.numEventRegistrations > 0:
                 errors.append(
                     ValidationError(
                         _('This voucher can only be used by first time customers.'),
@@ -346,7 +346,7 @@ class Voucher(models.Model):
                     )
                 )
 
-            if self.forPreviousCustomersOnly and (not customer or customer.numClassSeries == 0):
+            if self.forPreviousCustomersOnly and (not customer or customer.numEventRegistrations == 0):
                 errors.append(
                     ValidationError(
                         _(

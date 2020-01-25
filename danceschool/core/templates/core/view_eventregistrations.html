@@ -36,8 +36,7 @@
 		<th>{% trans "Name" %}</th>
 		<th>{% trans "This Series Price" %}</th>
 		<th>{% trans "Total Payment" %}</th>
-		{% if event.availableRoles %}<th>{% trans "Role" %}</th>{% endif %}
-		{% if event.allowDropins %}<th>{% trans "Drop-In" %}</th>{% endif %}
+		<th>{% trans "Role" %}</th>
 		<th>{% trans "Student" %}</th>
 		<th>{% trans "Customer Email" %}</th>
 		<th>{% trans "All-Time Classes" %}</th>
@@ -127,8 +126,11 @@
 			{% endif %}
 		</td>
 		
-		{% if event.availableRoles %}<td>{{ reg.role }}</td>{% endif %}
-		{% if event.allowDropins %}<td>{{ reg.dropIn }}</td>{% endif %}
+		<td>
+			{% if reg.role %}{{ reg.role }}{% endif %}
+			{% if reg.dropIn %}{% trans "Drop-in" %}{% endif %}
+			{% if not reg.role and not reg.dropIn %}{% trans "N/A" %}{% endif %}
+		</td>
 		<td>{{ reg.registration.student }}</td>
 		<td>{{ reg.registration.customer.email }}</td>
 		<td>{{ reg.registration.customer.numClassSeries }}</td>

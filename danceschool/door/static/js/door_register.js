@@ -1,5 +1,25 @@
 $(document).ready(function() {
 
+    // This function makes and returns a deep copy of the existing regData.
+    // It's useful for error handling.
+    function deepCopyFunction(regData) {
+        if(typeof regData !== "object" || regData === null) {
+            return regData // Return the value if inObject is not an object
+          }
+        
+          // Create an array or object to hold the values
+          var deepCopy = Array.isArray(regData) ? [] : {};
+
+          for (key in regData) {
+            value = regData[key];
+        
+            // Recursively (deep) copy for nested objects, including arrays
+            deepCopy[key] = (typeof value === "object" && value !== null) ? deepCopyFunction(value) : value;
+          }
+
+        return deepCopy;
+    }
+
     // Used to clear out regData as needed (expired registration, inital page load, cart cleared)
     function initializeRegData() {
         regData = {
@@ -7,7 +27,7 @@ $(document).ready(function() {
             subtotal: 0,
             total: 0,
             itemCount: 0,
-            events: {},
+            events: [],
         }
     }
 
@@ -23,6 +43,7 @@ $(document).ready(function() {
         $('#discountList').text('');
         $('#voucherList').text('');
         $('#addonList').text('');
+        $('.badge-choice-counter').text('');;
         $('#cart-submit').addClass('invisible');
 
         // Then, add the items based on regData;
@@ -36,13 +57,20 @@ $(document).ready(function() {
             }
             var this_price = parseFloat(this['price']).toFixed(2);
     
+            // Add item to the shopping cart
             $('#cartItems').append(
-                '<tr data-event="' + this['event'] + '" data-eventreg="' + this['eventreg'] + '"><td>' +
+                '<tr data-event="' + this['event'] + '" data-event-reg="' + this['eventreg'] + '"><td>' +
                     this_name +
                 '</td><td>' +
                     regParams.currencySymbol + this_price +
                 '<button type="button" class="close remove-item" aria-label="Remove" data-id="' + this['event'] + '"><span aria-hidden="true">&times;</span></button></td></tr>'
             );
+
+            // Update the badge for the button that was pressed for each selection.
+            if (this['doorChoiceId']) {
+                var this_badge = $("#" + this['doorChoiceId'] + " .badge-choice-counter");
+                this_badge.text((parseInt(this_badge.text()) | 0) + 1);
+            }
         });
 
         // Add discounts
@@ -128,7 +156,7 @@ $(document).ready(function() {
         }
     }
 
-    function submitData(redirect=false, removeAlerts=false){
+    function submitData(prior, redirect=false, removeAlerts=false){
 
         // The Ajax view should only return a redirect URL if we are moving forward.;
         if (redirect) {
@@ -163,11 +191,21 @@ $(document).ready(function() {
                     errorText += '</ul>';
                     addAlert(errorText);
 
+                    // To ensure that server and client side remain in sync, get
+                    // the existing data from the server without any submission
+                    // information other than the ID of the existing registration.
+                    // TODO THIS IN THE MORNING
+
                     // reset regData for expired registrations
                     if (response.errors.filter(function(e){return e.code == 'expired'}).length > 0) {
                         initializeRegData();
-                        refreshCart();
                     }
+                    // Otherwise, return to whatever previous regData was passed.
+                    else {
+                        regData = deepCopyFunction(prior);
+                    }
+
+                    refreshCart();
                 }
             },
         });
@@ -217,16 +255,12 @@ $(document).ready(function() {
     // Add Item to Cart
     $('.add-item').click(function (){
 
-        // Before proceeding, validate to ensure that there is not already an
-        // item in the cart for this event.
+        // Grab the data and also add the ID of the element that was clicked.
         var this_data = $(this).data();
-        var this_key = this_data['event'];
-        existing_data = regData['events'][this_key];
+        this_data['doorChoiceId'] = $(this).attr('id');
 
-        if (existing_data) {
-            addAlert(regParams.multipleRegisterString);
-            return;
-        }
+        // Copy existing regData in case there is an error
+        var old_regData = deepCopyFunction(regData);
 
         // Events can also be set to apply vouchers at the same time.
         if (this_data['voucherId']) {
@@ -258,9 +292,8 @@ $(document).ready(function() {
         }
 
         // Add the data from the button to the regData and submit
-        regData['events'][this_key] = this_data;
-
-        submitData(redirect=false, removeAlerts=true);
+        regData['events'].push(this_data);
+        submitData(prior=old_regData, redirect=false, removeAlerts=true);
 
     });
 
@@ -272,20 +305,30 @@ $(document).ready(function() {
     // Empty Cart
     $('#emptyCart').click(function() {
         initializeRegData();
-        submitData(redirect=false, removeAlerts=true);
+        submitData(prior=regData, redirect=false, removeAlerts=true);
     });
 
     // Remove Item From Cart
     $('#shoppingCart').on('click', '.remove-item', function(){
-        var this_event_id = $($(this).closest('tr')).data('event');
-        delete regData['events'][this_event_id];
-        submitData(redirect=false);
+        var this_eventreg_id = $($(this).closest('tr')).data('eventReg');
+
+        // Copy existing regData in case there is an error
+        var old_regData = deepCopyFunction(regData);
+
+        for( var i = 0; i < regData['events'].length; i++){ 
+            if ( regData['events'][i]['eventreg'] === this_eventreg_id) {
+              regData['events'].splice(i, 1); 
+              i--;
+            }
+         }
+
+        submitData(prior=old_regData, redirect=false);
     });
 
     // Submit registration
     $('.submit-button').click(function(e) {
         e.preventDefault();
-        submitData(redirect=true);
+        submitData(prior=regData, redirect=true);
     });
 
     // Add voucher code
@@ -305,21 +348,28 @@ $(document).ready(function() {
             return;
         }
 
+        // Copy existing regData in case there is an error
+        var old_regData = deepCopyFunction(regData);
+
         regData['voucherId'] = this_code;
 
         if ($.isEmptyObject(regData['events'])) {
             addAlert(regParams.emptyRegisterVoucherString, alertClass='alert-info');
         }
         else {
-            submitData(redirect=false);
+            submitData(prior=old_regData, redirect=false);
         }
     });
 
     // Remove voucher code
     $('#shoppingCart').on('click', '.remove-voucher', function(){
+
+        // Copy existing regData in case there is an error
+        var old_regData = deepCopyFunction(regData);
+
         delete regData['voucherId'];
-        delete regData['voucher'];        
-        submitData(redirect=false);
+        delete regData['voucher'];
+        submitData(prior=old_regData, redirect=false);
     });
 
     // Lookup customer
@@ -357,8 +407,6 @@ $(document).ready(function() {
                             statusString += ' (' + regParams.outstandingBalanceString + ' ' + regParams.currencySymbol + parseFloat(this.registration.invoice.outstandingBalance).toFixed(2) + ')';
                         }
 
-                        console.log(this);
-
                         this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id);
                         this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id);
                         this_row.find('.customerCheckIn').attr('checked', this.checkedIn);
@@ -378,8 +426,6 @@ $(document).ready(function() {
                         this_row.find('.customerInfoPaymentStatus').text(statusString);
                         this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
                         this_row.find('.customerRegistrationLink').attr('href',this.registration.url);
-
-                        console.log(this_row.find('.customerCheckIn').data());
                     });
     
                 },
@@ -403,8 +449,6 @@ $(document).ready(function() {
 
     // Check-in customer.
     $(document).on("click", ".customerCheckIn", function() {
-
-        console.log($(this).data());
 
         $(this).attr("disabled", true);
         var initial_status = ($(this).prop('checked') == false);

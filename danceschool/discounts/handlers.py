@@ -49,7 +49,7 @@ def getBestDiscount(sender, **kwargs):
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
     customer = Customer.objects.filter(email=reg.email, first_name=reg.firstName, last_name=reg.lastName).first()
-    if (customer and customer.numClassSeries > 0) or sender != RegistrationSummaryView:
+    if (customer and customer.numEventRegistrations > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
     eligible_filter = (
@@ -217,7 +217,7 @@ def getAddonItems(sender, **kwargs):
 
     newCustomer = True
     customer = Customer.objects.filter(email=reg.email, first_name=reg.firstName, last_name=reg.lastName).first()
-    if (customer and customer.numClassSeries > 0) or sender != RegistrationSummaryView:
+    if (customer and customer.numEventRegistrations > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
     # No need to get all objects, just the ones that could qualify one for an add-on

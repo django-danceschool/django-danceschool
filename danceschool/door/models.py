@@ -450,6 +450,9 @@ class DoorRegisterEventPluginChoice(models.Model):
         if not roles or not self.byRole:
             roles = [{'name': None, 'id': None, 'soldOut': event.soldOut}, ]
 
+        # Used to populate the unique choice ID
+        choice_counter = 0
+
         for role in roles:
             if role['soldOut'] and self.soldOutRule == 'H':
                 continue
@@ -479,6 +482,9 @@ class DoorRegisterEventPluginChoice(models.Model):
                         'paymentMethod': method['name'],
                         'requireFullRegistration': requireFullRegistration,
                         'autoSubmit': method['autoSubmit'],
+                        'choiceId': 'eventchoice_{}_{}_{}'.format(
+                            event.id, self.id, choice_counter
+                        )
                 }
 
                 # Add additional data needed for vouchers, drop-ins, students,
@@ -503,8 +509,10 @@ class DoorRegisterEventPluginChoice(models.Model):
                     role['soldOut'] and self.soldOutRule == 'A'
                 )):
                     primary_options.append(this_choice)
+                    choice_counter += 1
                 else:
                     additional_options.append(this_choice)
+                    choice_counter += 1
 
         return (primary_options, additional_options)
 

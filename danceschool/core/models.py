@@ -2187,48 +2187,64 @@ class Customer(EmailRecipientMixin, models.Model):
 
     @property
     def numEventRegistrations(self):
-        return EventRegistration.objects.filter(registration__customer=self).count()
+        return EventRegistration.objects.filter(
+            registration__customer=self, dropIn=False, cancelled=False
+        ).count()
     numEventRegistrations.fget.short_description = _('# Events/series registered')
 
     @property
     def numClassSeries(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False
+            registration__customer=self, event__series__isnull=False,
+            dropIn=False, cancelled=False
         ).count()
     numClassSeries.fget.short_description = _('# Series registered')
 
     @property
     def numPublicEvents(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__publicevent__isnull=False
+            registration__customer=self, event__publicevent__isnull=False,
+            dropIn=False, cancelled=False
         ).count()
     numPublicEvents.fget.short_description = _('# Public events registered')
 
     @property
+    def numDropIns(self):
+        return EventRegistration.objects.filter(
+            registration__customer=self,
+            dropIn=True, cancelled=False
+        ).count()
+    numPublicEvents.fget.short_description = _('# Drop-ins registered')
+
+    @property
     def firstSeries(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False
+            registration__customer=self, event__series__isnull=False,
+            dropIn=False, cancelled=False
         ).order_by('event__startTime').first().event
     firstSeries.fget.short_description = _('Customer\'s first series')
 
     @property
     def firstSeriesDate(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False
+            registration__customer=self, event__series__isnull=False,
+            dropIn=False, cancelled=False
         ).order_by('event__startTime').first().event.startTime
     firstSeriesDate.fget.short_description = _('Customer\'s first series date')
 
     @property
     def lastSeries(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False
+            registration__customer=self, event__series__isnull=False,
+            dropIn=False, cancelled=False
         ).order_by('-event__startTime').first().event
     lastSeries.fget.short_description = _('Customer\'s most recent series')
 
     @property
     def lastSeriesDate(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False
+            registration__customer=self, event__series__isnull=False,
+            dropIn=False, cancelled=False
         ).order_by('-event__startTime').first().event.startTime
     lastSeriesDate.fget.short_description = _('Customer\'s most recent series date')
 
@@ -2985,7 +3001,6 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         return str(self.customer) + " " + str(self.event)
 
     class Meta:
-        unique_together = ['registration', 'event']
         verbose_name = _('Event registration')
         verbose_name_plural = _('Event registrations')
 
@@ -3038,7 +3053,6 @@ class TemporaryEventRegistration(EmailRecipientMixin, models.Model):
         return context
 
     class Meta:
-        unique_together = ['registration', 'event']
         verbose_name = _('Temporary event registration')
         verbose_name_plural = _('Temporary event registrations')
 
@@ -3353,7 +3367,7 @@ class Invoice(EmailRecipientMixin, models.Model):
     def create_from_registration(cls, reg, **kwargs):
         '''
         Handles the creation of an Invoice as well as one InvoiceItem per
-        assodciated TemporaryEventRegistration or registration.  Also handles taxes
+        associated TemporaryEventRegistration or registration.  Also handles taxes
         appropriately.
         '''
         submissionUser = kwargs.pop('submissionUser', None)

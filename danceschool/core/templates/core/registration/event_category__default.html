@@ -62,7 +62,7 @@
 						</div>
 						<div class="col-lg-3 col-md-4 reg-event-register pt-3">
 							{% if event.registrationOpen or perms.core.override_register_closed %}
-								{% get_field_for_object 'event' event.id form as field %}
+								{% get_field_for_object event.polymorphic_ctype.model event.id form as field %}
 		                    	{{ field }}
 		                        {% if validationStr %}
 									<div class="alert alert-danger">
