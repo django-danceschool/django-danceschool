@@ -70,7 +70,7 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         # Because of the way that roles are encoded on this form, we just grab the value to pass
         # from the form itself.
         post_data = {
-            'event_%s' % s.id: response.context_data['form'].fields['event_%s' % s.id].choices[0][0]
+            'series_%s' % s.id: response.context_data['form'].fields['series_%s' % s.id].choices[0][0]
         }
 
         response = self.client.post(reverse('registration'), post_data, follow=True)
