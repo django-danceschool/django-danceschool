@@ -7,7 +7,11 @@ from .views import (
     CompensationRuleUpdateView, CompensationRuleResetView, ExpenseRuleGenerationView
 )
 from .ajax import updateEventRegistrations
-from .autocomplete_light_registry import PaymentMethodAutoComplete, TransactionPartyAutoComplete
+from .autocomplete_light_registry import (
+    PaymentMethodAutoComplete, TransactionPartyAutoComplete,
+    ApprovalStatusAutoComplete
+)
+
 
 urlpatterns = [
     url(r'^staff-payments/$', StaffMemberPaymentsView.as_view(), name='staffMemberPayments'),
@@ -47,6 +51,10 @@ urlpatterns = [
     url(
         r'^autocomplete/paymentmethod/$', PaymentMethodAutoComplete.as_view(),
         name='paymentMethod-list-autocomplete'
+    ),
+    url(
+        r'^autocomplete/approved/$', ApprovalStatusAutoComplete.as_view(),
+        name='approved-list-autocomplete'
     ),
     url(
         r'^autocomplete/transactionparty/$',

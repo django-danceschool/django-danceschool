@@ -132,7 +132,7 @@ class ExpensesTest(DefaultSchoolTestCase):
             'paymentMethod': 'Cash',
             'reimbursement': False,
             'paid': True,
-            'approved': True,
+            'approved': 'Approved',
             'submissionUser': self.superuser.id,
             'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(
                 settings, 'DATETIME_INPUT_FORMATS', ['%Y-%m-%d %H:%M:%S', ])[0]
@@ -146,7 +146,7 @@ class ExpensesTest(DefaultSchoolTestCase):
         ei = ExpenseItem.objects.get(description='Test Expense Item')
 
         self.assertEqual(ei.total, 20)
-        self.assertTrue(ei.approved and ei.paid)
+        self.assertTrue(ei.approved == 'Approved' and ei.paid)
         self.assertEqual(ei.payTo.user, self.superuser)
 
         # Create a second expense item for $50, paid to a location
@@ -161,7 +161,7 @@ class ExpensesTest(DefaultSchoolTestCase):
             'paymentMethod': 'Cash',
             'reimbursement': False,
             'paid': False,
-            'approved': False,
+            'approved': '',
             'submissionUser': self.superuser.id,
             'accrualDate': ensure_localtime(timezone.now()).strftime(getattr(
                 settings, 'DATETIME_INPUT_FORMATS', ['%Y-%m-%d %H:%M:%S', ])[0]
@@ -212,7 +212,7 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         ei = ExpenseItem.objects.create(
             hours=1,
             category=default_expense_cat,
-            approved=True,
+            approved='Approved',
             paid=True,
             paymentDate=timezone.now(),
             accrualDate=timezone.now(),

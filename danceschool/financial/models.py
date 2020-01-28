@@ -786,16 +786,21 @@ class ExpenseItem(models.Model):
     reimbursement = models.BooleanField(
         _('Reimbursement'),
         help_text=_('Check to indicate that this is a reimbursement expense (i.e. not compensation).'),
-        default=False)
-
-    approved = models.BooleanField(
+        default=False
+    )
+    approved = models.CharField(
         _('Approved'),
-        help_text=_('Check to indicate that expense is approved for payment.'),
-        default=False)
+        max_length=100, null=True, blank=True,
+        help_text=_(
+            'Indicate that expense is approved for payment, or enter any ' +
+            'other approval status code information that is needed.'
+        ),
+    )
     paid = models.BooleanField(
         _('Paid'),
         help_text=_('Check to indicate that payment has been made.'),
-        default=False)
+        default=False
+    )
 
     approvalDate = models.DateTimeField(_('Approval date'), null=True, blank=True)
     paymentDate = models.DateTimeField(_('Payment date'), null=True, blank=True)

@@ -25,7 +25,7 @@ from .models import (
     ExpenseItem, ExpenseCategory, RevenueItem, RepeatedExpenseRule, GenericRepeatedExpense,
     LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo, TransactionParty
 )
-from .autocomplete_light_registry import get_method_list
+from .autocomplete_light_registry import get_method_list, get_approval_status_list
 
 
 # Define logger for this file
@@ -97,6 +97,12 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         required=False,
         widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete'),
         label=_('Payment method'),
+    )
+    approved = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_approval_status_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='approved-list-autocomplete'),
+        label=_('Approved'),
     )
 
     def __init__(self, *args, **kwargs):

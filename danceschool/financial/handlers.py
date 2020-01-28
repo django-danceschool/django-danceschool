@@ -45,7 +45,7 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
             logger.debug('Updating expense item %s.' % expense.id)
             expense.hours = instance.netHours
             expense.total = expense.hours * expense.wageRate
-            expense.approved = False
+            expense.approved = None
             expense.save()
 
     if hasattr(instance.replacedStaffMember, 'staffMember'):
@@ -62,7 +62,7 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
             logger.debug('Updating expense item %s' % expense.id)
             expense.hours = instance.replacedStaffMember.netHours
             expense.total = expense.hours * expense.wageRate
-            expense.approved = False
+            expense.approved = None
             expense.save()
 
 
@@ -95,7 +95,7 @@ def modifyExistingExpenseItemsForSeriesClass(sender, instance, **kwargs):
             esm = eventstaffmembers.first()
             expense.hours = esm.netHours
             expense.total = expense.hours * expense.wageRate
-            expense.approved = False
+            expense.approved = None
             expense.save()
 
 

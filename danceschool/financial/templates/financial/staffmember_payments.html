@@ -1,6 +1,8 @@
 {% extends "cms/admin_home.html" %}
 {% load thumbnail sekizai_tags danceschool_tags i18n %}
 
+{% trans 'No' as trans_no %}
+
 {% block content %}
 
 <h1>{% blocktrans with name=staff_member.fullName %}Payment History for {{ name }}{% endblocktrans %}</h1>
@@ -51,7 +53,7 @@
 		<td>{{ this_item.hours }}</td>
 		<td>{{ this_item.total }}</td>
 		<td>{{ this_item.reimbursement|yesno }}</td>
-		<td>{{ this_item.approved|yesno }}</td>
+		<td>{{ this_item.approved|default:trans_no }}</td>
 		{% if 'financial.change_expenseitem' in perms %}<td><a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_expenseitem_change' this_item.id %}">{% trans "Edit" %}</a></td>{% endif %}
 	</tr>
 {% endfor %}

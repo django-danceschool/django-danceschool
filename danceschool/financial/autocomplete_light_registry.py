@@ -23,6 +23,22 @@ def get_method_list():
     return methods_list
 
 
+def get_approval_status_list():
+    '''
+    Include 'Approved' as an option by default.
+    '''
+    statuses = [str(_('Approved')), ]
+    statuses += ExpenseItem.objects.order_by().values_list('approved', flat=True).distinct()
+    status_list = list(set(statuses))
+
+    if None in status_list:
+        status_list.remove(None)
+    if '' in status_list:
+        status_list.remove('')
+
+    return status_list
+
+
 class PaymentMethodAutoComplete(autocomplete.Select2ListView):
     '''
     This is the autocomplete view used to indicate payment methods in the
@@ -36,6 +52,24 @@ class PaymentMethodAutoComplete(autocomplete.Select2ListView):
         '''
         Since this autocomplete is used to create new RevenueItems, and the set of
         RevenueItem paymentMethods is automatically updated in get_method_list(),
+        this function does not need to do anything
+        '''
+        return text
+
+
+class ApprovalStatusAutoComplete(autocomplete.Select2ListView):
+    '''
+    This is the autocomplete view used to indicate payment methods in the
+    Revenue Reporting view.
+    '''
+
+    def get_list(self):
+        return get_approval_status_list()
+
+    def create(self, text):
+        '''
+        Since this autocomplete is used to create new ExpenseItems, and the set of
+        ExpenseItem statuses is automatically updated in get_approval_status_list(),
         this function does not need to do anything
         '''
         return text

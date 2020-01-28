@@ -601,6 +601,8 @@ def createGenericExpenseItems(request=None, datetimeTuple=None, rule=None):
                 'total': rule.rentalRate,
                 'accrualDate': this_time,
                 'payTo': rule.payTo,
+                'approved': str(_('Approved')) if rule.markApproved else None,
+                'paid': rule.markPaid,
             }
             item, created = ExpenseItem.objects.get_or_create(
                 expenseRule=rule,
@@ -685,13 +687,19 @@ def prepareFinancialStatement(year=None):
         RevenueItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values()
     )[0]
     expenses_awaiting_approval = list(
-        ExpenseItem.objects.filter(approved=False, paid=False).aggregate(Sum('total')).values()
+        ExpenseItem.objects.filter(
+            Q(paid=False) & (Q(approved__isnull=True) | Q(approved__exact=''))
+        ).aggregate(Sum('total')).values()
     )[0]
     expenses_awaiting_payment = list(
-        ExpenseItem.objects.filter(approved=True, paid=False).aggregate(Sum('total')).values()
+        ExpenseItem.objects.filter(
+            Q(paid=False) & ~(Q(approved__isnull=True) | Q(approved__exact=''))
+        ).aggregate(Sum('total')).values()
     )[0]
     expenses_paid_notapproved = list(
-        ExpenseItem.objects.filter(approved=False, paid=True).aggregate(Sum('total')).values()
+        ExpenseItem.objects.filter(
+            Q(paid=True) & (Q(approved__isnull=True) | Q(approved__exact=''))
+        ).aggregate(Sum('total')).values()
     )[0]
 
     return {

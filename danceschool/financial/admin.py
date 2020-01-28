@@ -23,7 +23,7 @@ from .models import (
     StaffMemberWageInfo, GenericRepeatedExpense, TransactionParty
 )
 from .forms import ExpenseCategoryWidget
-from .autocomplete_light_registry import get_method_list
+from .autocomplete_light_registry import get_method_list, get_approval_status_list
 
 
 class EventLinkMixin(object):
@@ -95,6 +95,12 @@ class ExpenseItemAdminForm(ModelForm):
         choice_list=get_method_list,
         required=False,
         widget=autocomplete.ListSelect2(url='paymentMethod-list-autocomplete')
+    )
+
+    approved = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_approval_status_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='approved-list-autocomplete'),
     )
 
     class Meta:
@@ -178,7 +184,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
     eventLink.short_description = _('Related Links')
 
     def approveExpense(self, request, queryset):
-        rows_updated = queryset.update(approved=True)
+        rows_updated = queryset.update(approved=_('Approved'))
         if rows_updated == 1:
             message_bit = "1 expense item was"
         else:
@@ -187,7 +193,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
     approveExpense.short_description = _('Mark Expense Items as approved')
 
     def unapproveExpense(self, request, queryset):
-        rows_updated = queryset.update(approved=False)
+        rows_updated = queryset.update(approved=None)
         if rows_updated == 1:
             message_bit = "1 expense item was"
         else:
