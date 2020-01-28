@@ -1,10 +1,10 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .views import GiftCertificateCustomizeView
 from .stats import popularVouchersJSON, voucherFrequencyJSON
 
 urlpatterns = [
-    url(r'^gift_certificate/customize/$', GiftCertificateCustomizeView.as_view(), name='customizeGiftCertificate'),
-    url(r'^popularvouchers/json/$', popularVouchersJSON, name='popularVouchersJSON'),
-    url(r'^voucherfrequency/json/$', voucherFrequencyJSON, name='voucherFrequencyJSON'),
+    path('gift_certificate/customize/', GiftCertificateCustomizeView.as_view(), name='customizeGiftCertificate'),
+    path('popularvouchers/json/', popularVouchersJSON, name='popularVouchersJSON'),
+    path('voucherfrequency/json/', voucherFrequencyJSON, name='voucherFrequencyJSON'),
 ]

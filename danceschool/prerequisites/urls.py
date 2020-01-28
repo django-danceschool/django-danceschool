@@ -1,7 +1,7 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .ajax import CustomerRequirementAjaxView
 
 urlpatterns = [
-    url(r'^customer/$', CustomerRequirementAjaxView.as_view(), name='customerRequirementAjax'),
+    path('customer/', CustomerRequirementAjaxView.as_view(), name='customerRequirementAjax'),
 ]

@@ -1,8 +1,8 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .stats import popularDiscountsJSON, discountFrequencyJSON
 
 urlpatterns = [
-    url(r'^populardiscounts/json/$', popularDiscountsJSON, name='popularDiscountsJSON'),
-    url(r'^discountfrequency/json/$', discountFrequencyJSON, name='discountFrequencyJSON'),
+    path('populardiscounts/json/', popularDiscountsJSON, name='popularDiscountsJSON'),
+    path('discountfrequency/json/', discountFrequencyJSON, name='discountFrequencyJSON'),
 ]

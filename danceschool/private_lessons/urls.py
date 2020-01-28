@@ -1,4 +1,4 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .feeds import json_availability_feed, json_lesson_feed
 from .views import (
@@ -9,35 +9,35 @@ from .views import (
 
 urlpatterns = [
     # JSON private lesson availability feeds
-    url(
-        r'^availability/feed/json/(?P<instructor_id>[\w\-_]+)/$',
+    path(
+        'availability/feed/json/<slug:instructor_id>/',
         json_availability_feed, name='jsonPrivateLessonAvailabilityFeed'
     ),
-    url(r'^availability/feed/json/$', json_availability_feed, name='jsonPrivateLessonAvailabilityFeed'),
+    path('availability/feed/json/', json_availability_feed, name='jsonPrivateLessonAvailabilityFeed'),
 
     # JSON scheduled lesson feeds
-    url(r'^scheduled/feed/json/$', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
-    url(r'^scheduled/feed/json/all/$', json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'),
-    url(
-        r'^scheduled/feed/json/(?P<location_id>[0-9]+)/(?P<room_id>[0-9]+)/$',
+    path('scheduled/feed/json/', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
+    path('scheduled/feed/json/all/', json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'),
+    path(
+        'scheduled/feed/json/<int:location_id>/<int:room_id>/',
         json_lesson_feed, name='jsonOwnPrivateLessonFeed'
     ),
-    url(
-        r'^scheduled/feed/json/(?P<location_id>[0-9]+)/(?P<room_id>[0-9]+)/all/$',
+    path(
+        'scheduled/feed/json/<int:location_id>/<int:room_id>/all/$',
         json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'
     ),
-    url(r'^scheduled/feed/json/(?P<location_id>[0-9]+)/$', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
-    url(
-        r'^scheduled/feed/json/(?P<location_id>[0-9]+)/all/$',
+    path('scheduled/feed/json/<int:location_id>/', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),
+    path(
+        'scheduled/feed/json/<int:location_id>/all/',
         json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'
     ),
 
     # Views for scheduling a private lesson
-    url(r'^schedule/$', BookPrivateLessonView.as_view(), name='bookPrivateLesson'),
-    url(r'^schedule/getinfo/$', PrivateLessonStudentInfoView.as_view(), name='privateLessonStudentInfo'),
+    path('schedule/', BookPrivateLessonView.as_view(), name='bookPrivateLesson'),
+    path('schedule/getinfo/', PrivateLessonStudentInfoView.as_view(), name='privateLessonStudentInfo'),
 
     # Views for setting instructor availability
-    url(r'^instructor/availability/$', InstructorAvailabilityView.as_view(), name='instructorAvailability'),
-    url(r'^instructor/availability/add/$', AddAvailabilitySlotView.as_view(), name='addAvailabilitySlot'),
-    url(r'^instructor/availability/update/$', UpdateAvailabilitySlotView.as_view(), name='updateAvailabilitySlot'),
+    path('instructor/availability/', InstructorAvailabilityView.as_view(), name='instructorAvailability'),
+    path('instructor/availability/add/', AddAvailabilitySlotView.as_view(), name='addAvailabilitySlot'),
+    path('instructor/availability/update/', UpdateAvailabilitySlotView.as_view(), name='updateAvailabilitySlot'),
 ]

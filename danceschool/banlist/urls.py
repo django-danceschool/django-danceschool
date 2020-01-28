@@ -1,7 +1,7 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .views import BanListView
 
 urlpatterns = [
-    url(r'^view-list/$', BanListView.as_view(), name='viewBanList'),
+    path('view-list/', BanListView.as_view(), name='viewBanList'),
 ]

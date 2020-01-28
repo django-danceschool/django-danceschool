@@ -1,16 +1,16 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .views import GuestListView, GuestListJsonView
 
 urlpatterns = [
-    url(r'^json/(?P<guestlist_id>[0-9\+]+)/$', GuestListJsonView.as_view(), name='guestListJSON'),
-    url(
-        r'^json/(?P<guestlist_id>[0-9\+]+)/(?P<event_id>[0-9\+]+)/$',
+    path('json/<int:guestlist_id>/', GuestListJsonView.as_view(), name='guestListJSON'),
+    path(
+        'json/<int:guestlist_id>/<int:event_id>/',
         GuestListJsonView.as_view(), name='guestListJSON'
     ),
-    url(r'^(?P<guestlist_id>[0-9\+]+)/$', GuestListView.as_view(), name='viewGuestList'),
-    url(
-        r'^(?P<guestlist_id>[0-9\+]+)/(?P<event_id>[0-9\+]+)/$',
+    path('<int:guestlist_id>/', GuestListView.as_view(), name='viewGuestList'),
+    path(
+        '<int:guestlist_id>/<int:event_id>/',
         GuestListView.as_view(), name='viewGuestList'
     ),
 ]

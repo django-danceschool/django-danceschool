@@ -1,7 +1,7 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .views import handle_stripe_checkout
 
 urlpatterns = [
-    url(r'^process/$', handle_stripe_checkout, name='stripeHandler'),
+    path('process/', handle_stripe_checkout, name='stripeHandler'),
 ]

@@ -1,19 +1,19 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .feeds import EventFeed, json_event_feed
 from .views import addPrivateEvent, PrivateCalendarView
 
 urlpatterns = [
     # These are the calendar feeds.
-    url(r'^feed/json/$', json_event_feed, name='jsonPrivateCalendarFeed'),
-    url(
-        r'^feed/json/location/(?P<location_id>[0-9]+)/(?P<room_id>[0-9]+)/$',
+    path('feed/json/', json_event_feed, name='jsonPrivateCalendarFeed'),
+    path(
+        'feed/json/location/<int:location_id>/<int:room_id>/',
         json_event_feed, name='jsonPrivateCalendarFeed'
     ),
-    url(r'^feed/json/location/(?P<location_id>[0-9]+)/$', json_event_feed, name='jsonPrivateCalendarFeed'),
-    url(r'^feed/(?P<instructorFeedKey>[\w\-_]+)/$', EventFeed(), name='privateCalendarFeed'),
+    path('feed/json/location/<int:location_id>/', json_event_feed, name='jsonPrivateCalendarFeed'),
+    path('feed/<slug:instructorFeedKey>/', EventFeed(), name='privateCalendarFeed'),
 
-    url(r'^calendar/$', PrivateCalendarView.as_view(), name='privateCalendar'),
+    path('calendar/', PrivateCalendarView.as_view(), name='privateCalendar'),
 
-    url(r'^add/$', addPrivateEvent, name='addPrivateEvent'),
+    path('add/', addPrivateEvent, name='addPrivateEvent'),
 ]
