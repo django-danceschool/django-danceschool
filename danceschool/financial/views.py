@@ -18,6 +18,7 @@ from calendar import month_name
 from urllib.parse import unquote_plus
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFormKwargsMixin
 from collections import OrderedDict
+from itertools import chain
 
 from danceschool.core.models import Instructor, Location, Event, StaffMember, EventStaffCategory
 from danceschool.core.constants import getConstant
@@ -284,15 +285,22 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="financialStatementByEvent.csv"'
 
+        roles = set()
+        for y in statement['statementByEvent']:
+            roles.update(list(y.get('registrations', {}).keys()))
+
         writer = csv.writer(response, csv.excel)
         response.write(u'\ufeff'.encode('utf8'))  # BOM (optional...Excel needs it to open UTF-8 file properly)
 
         header_list = [
             _('Event'),
             _('Month'),
-            _('Registrations: Total'),
-            _('Registrations: Leads'),
-            _('Registrations: Follows'),
+        ]
+        for role in roles:
+            header_list.append(
+                _('Registrations: {role}'.format(role=str(role or _('Unspecified')).title()))
+            )
+        header_list += [
             _('Revenues: Gross'),
             _('Revenues: Net'),
             _('Expenses: Instruction'),
@@ -307,9 +315,10 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
             this_row_data = [
                 x['event_name'],
                 x['month_name'],
-                x['registrations']['total'],
-                x['registrations']['leads'],
-                x['registrations']['follows'],
+            ]
+            for role in roles:
+                this_row_data.append(x.get('registrations', {}).get(role, 0))
+            this_row_data += [
                 x['revenues']['gross'],
                 x['revenues']['net'],
                 x['expenses']['instruction'],

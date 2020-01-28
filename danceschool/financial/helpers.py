@@ -89,7 +89,7 @@ def getRevenueItemsCSV(queryset):
         _('Gross Total (Pre-Discounts & Vouchers)'),
         _('Net Total'),
         _('Received From'),
-        _('Registration'),
+        _('Invoice ID'),
         _('Event'),
         _('Received'),
         _('Received Date')
@@ -101,14 +101,9 @@ def getRevenueItemsCSV(queryset):
             x.description,
             x.category.name,
             x.grossTotal,
-            x.total
-        ]
-        if x.registration:
-            this_row_data.append(x.registration.fullName)
-        else:
-            this_row_data.append(x.receivedFrom.name)
-        this_row_data += [
-            x.registration,
+            x.total,
+            getattr(x.receivedFrom, 'name', None),
+            getattr(getattr(x.invoiceItem, 'invoice', None), 'id', None),
             x.event,
             x.received,
             x.receivedDate
