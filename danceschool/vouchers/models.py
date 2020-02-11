@@ -393,6 +393,12 @@ class Voucher(models.Model):
     class Meta:
         verbose_name = _('Voucher')
         verbose_name_plural = _('Vouchers')
+        permissions = (
+            (
+                'generate_and_email_vouchers',
+                _('Can generate and email vouchers using the quick voucher email view.')
+            ),
+        )
 
 
 class VoucherReferralDiscount(models.Model):

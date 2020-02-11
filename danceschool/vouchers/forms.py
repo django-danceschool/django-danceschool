@@ -1,8 +1,10 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
+from .models import VoucherCategory, Voucher
 
-class VoucherCustomizationForm(forms.Form):
+
+class GiftCertificateCustomizationForm(forms.Form):
 
     emailTo = forms.EmailField(label=_('Email gift certificate to'), required=True)
     emailType = forms.ChoiceField(
@@ -26,3 +28,22 @@ class VoucherCustomizationForm(forms.Form):
     message = forms.CharField(
         label=_('Enter a message to the recipient (optional)'), required=False
     )
+
+
+class VoucherGenerationForm(forms.Form):
+
+    voucherId = forms.CharField(label=_('Voucher code'))
+    description = forms.CharField(label=_('Voucher description'), required=False)
+    amount = forms.FloatField(label=_('Voucher amount'))
+    category = forms.ModelChoiceField(VoucherCategory.objects.all())
+
+    emailTo = forms.EmailField(label=_('Email voucher to (optional)'), required=False)
+    recipientName = forms.CharField(
+        label=_('Recipient name (optional)'), required=False,
+    )
+
+    def clean_voucherId(self):
+        voucherId = self.cleaned_data['voucherId']
+        if Voucher.objects.filter(voucherId=voucherId).exists():
+            raise forms.ValidationError(_('Invalid voucher code'))
+        return voucherId

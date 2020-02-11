@@ -154,6 +154,35 @@ class GiftCertPDFTemplate(ModelChoicePreference):
         )[0]
 
 
+@global_preferences_registry.register
+class AutoGenerationTemplate(ModelChoicePreference):
+    section = vouchers
+    name = 'autoGenerationTemplate'
+    verbose_name = _('Email template for vouchers generated via the quick generation view.')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
+
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('email/voucher_generation.html')
+        with open(initial_template.origin.name, 'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('Generated Voucher Email'),
+            defaults={
+                'subject': _('Your Dance Voucher'),
+                'content': content,
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
+
+
 ##############################
 # Referral Program Preferences
 #

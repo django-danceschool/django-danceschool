@@ -10,14 +10,17 @@ from django.urls import reverse
 from easy_pdf.views import PDFTemplateView
 import re
 import logging
+import random
+import string
+from braces.views import PermissionRequiredMixin
 
 from danceschool.core.models import Invoice
 from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
-from danceschool.core.mixins import EmailRecipientMixin
+from danceschool.core.mixins import EmailRecipientMixin, SiteHistoryMixin
 from danceschool.core.helpers import emailErrorMessage
 
-from .forms import VoucherCustomizationForm
-from .models import Voucher
+from .forms import GiftCertificateCustomizationForm, VoucherGenerationForm
+from .models import Voucher, VoucherCategory
 
 
 # Define logger for this file
@@ -26,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class GiftCertificateCustomizeView(FormView):
     template_name = 'cms/forms/display_form_classbased.html'
-    form_class = VoucherCustomizationForm
+    form_class = GiftCertificateCustomizationForm
 
     def dispatch(self, request, *args, **kwargs):
         '''
@@ -157,3 +160,97 @@ class GiftCertificatePDFView(PDFTemplateView):
         })
 
         return context
+
+
+class VoucherGenerationView(PermissionRequiredMixin, SiteHistoryMixin, FormView):
+    ''' A simple view to rapidly generate and email vouchers. '''
+
+    permission_required = 'vouchers.generate_and_email_vouchers'
+    template_name = 'cms/forms/display_form_classbased.html'
+    form_class = VoucherGenerationForm
+
+    def get_initial(self):
+        '''
+        If request contains initial values for a prefix, an amount, or a category,
+        then use it to populate the form.
+        '''
+
+        prefix_valid = re.compile(r'^[a-zA-Z\-_0-9]+$')
+        prefix = (
+            self.request.GET.get('prefix', '') if
+            prefix_valid.match(self.request.GET.get('prefix', '')) else ''
+        )
+
+        name_valid = re.compile(r'^[a-zA-Z\-_0-9\+]+$')
+        description = (
+            self.request.GET.get('name', '').replace('-', ' ') if
+            name_valid.match(self.request.GET.get('name', '')) else ''
+        )
+
+        new = False
+        while not new:
+            # Standard is a ten-letter random string of uppercase letters
+            random_string = ''.join(random.choice(string.ascii_uppercase) for z in range(10))
+            if not Voucher.objects.filter(voucherId='%s%s' % (prefix, random_string)).exists():
+                new = True
+
+        initial = {
+            'voucherId': '%s%s' % (prefix, random_string),
+            'description': description,
+        }
+
+        try:
+            amount = float(self.request.GET.get('amount', ''))
+            initial['amount'] = amount
+        except ValueError:
+            pass
+
+        try:
+            category = VoucherCategory.objects.get(id=self.request.GET.get('category', ''))
+            initial['category'] = category
+        except (ValueError, ObjectDoesNotExist):
+            pass
+
+        return initial
+
+    def form_valid(self, form):
+
+        voucherId = form.cleaned_data.get('voucherId')
+        description = form.cleaned_data.get('description')
+        amount = form.cleaned_data.get('amount')
+        category = form.cleaned_data.get('category')
+
+        emailTo = form.cleaned_data.get('emailTo')
+        recipientName = form.cleaned_data.get('recipientName')
+
+        logger.info('Processing voucher generation.')
+
+        voucher = Voucher.objects.create(
+            voucherId=voucherId, name=description, originalAmount=amount,
+            category=category
+        )
+
+        if emailTo:
+            template = getConstant('vouchers__autoGenerationTemplate')
+
+            email_class = EmailRecipientMixin()
+            email_class.email_recipient(
+                subject=template.subject,
+                content=template.content,
+                send_html=template.send_html,
+                html_content=template.html_content,
+                from_address=template.defaultFromAddress,
+                from_name=template.defaultFromName,
+                cc=template.defaultCC,
+                to=emailTo,
+                currencySymbol=getConstant('general__currencySymbol'),
+                businessName=getConstant('contact__businessName'),
+                certificateAmount=voucher.originalAmount,
+                certificateCode=voucher.voucherId,
+                recipientName=recipientName,
+                recipient_name=recipientName,
+            )
+
+        return HttpResponseRedirect(
+            self.get_return_page().get('url') or reverse('registration')
+        )

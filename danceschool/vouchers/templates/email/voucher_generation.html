@@ -1,0 +1,14 @@
+{% if recipientName %}Dear {{ recipientName }},{% else %}Hello!{% endif %}
+
+You have received a voucher from {{ businessName }}!
+
+Your voucher is in the amount of {{ currencySymbol }}{{ certificateAmount|floatformat:2 }}.  To use this voucher for classes or events, please enter the following voucher code when registering:
+
+{{ certificateCode }}
+
+If the amount of the voucher is greater than the amount of your registration, then you can continue to use this code until the full value of the voucher has been applied.
+
+We look forward to seeing you out on the dance floor soon!
+
+Sincerely,
+{{ businessName }}
