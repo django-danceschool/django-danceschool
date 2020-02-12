@@ -84,7 +84,8 @@
         voucherString: "{% trans 'Voucher' %}",
         dropInString: "{% trans 'Drop-in' %}",
         registerUrl: "{% url 'ajaxRegistration' %}",
-        guestLookupUrl: "{% url 'viewregistrations_json' %}",
+        customerLookupUrl: "{% url 'viewregistrations_json' %}",
+        guestLookupUrl: "{% url 'guestCheckInfoJSON' %}",
         checkInUrl: "{% url 'ajax_checkin' %}",
         registerDate: "{{ year }}-{{ month }}-{{ day }}",
     }

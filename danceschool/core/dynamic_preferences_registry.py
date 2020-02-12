@@ -458,7 +458,7 @@ class MultiRegDropInRule(ChoicePreference):
 class SalesTaxRate(FloatPreference):
     section = registration
     name = 'salesTaxRate'
-    verbose_name = _('Sales tax percentage rate to be applied registrations')
+    verbose_name = _('Sales tax percentage rate to be applied to registrations')
     help_text = _(
         'Enter, e.g. \'10\' for a 10% tax rate to be applied to all class and event registrations.'
     )

@@ -185,7 +185,7 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
             these_registrations = EventRegistration.objects.none()
 
         these_full_names = [
-            ' '.join(x.get('first_name', ''), x.get('last_name'), '').strip()
+            ' '.join([x.get('first_name', ''), x.get('last_name', '')]).strip()
             for x in names
         ]
 

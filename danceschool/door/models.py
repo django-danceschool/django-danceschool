@@ -1,15 +1,21 @@
 from django.db import models
+from django.db.models.query import QuerySet
 from django.utils.translation import ugettext_lazy as _
+from django.utils import timezone
 
 from calendar import day_name
 import logging
 from jsonfield import JSONField
 import json
+from datetime import datetime, timedelta
 
 from cms.models.pluginmodel import CMSPlugin
 from cms.models.fields import PlaceholderField
 
-from danceschool.core.models import SeriesCategory, PublicEventCategory, Location, DanceTypeLevel
+from danceschool.core.models import (
+    Event, SeriesCategory, PublicEventCategory, Location, DanceTypeLevel,
+    PublicEvent, Series
+)
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -94,10 +100,10 @@ class DoorRegisterPaymentMethod(models.Model):
         ordering = ('name',)
 
 
-class DoorRegisterEventPluginModel(CMSPlugin):
+class DoorRegisterEventLimitedModel(CMSPlugin):
     '''
-    This model is typically used to configure upcoming event listings, but it can
-    be customized to a variety of purposes using custom templates, etc.
+    This is an abstract base class for models that need to provide a limited
+    set of events.
     '''
     LIMIT_CHOICES = [
         ('S', _('Event start date')),
@@ -117,11 +123,6 @@ class DoorRegisterEventPluginModel(CMSPlugin):
         ('A', _('Ascending')),
         ('D', _('Descending')),
     ]
-
-    title = models.CharField(
-        _('Custom list title'), max_length=250, default=_('Upcoming Events'),
-        blank=True
-    )
 
     eventType = models.CharField(
         _('Limit to event type'), max_length=1, choices=EVENT_TYPE_CHOICES,
@@ -209,6 +210,102 @@ class DoorRegisterEventPluginModel(CMSPlugin):
         blank=True
     )
 
+    def getEvents(self, dateTime=None, initial=None):
+        '''
+        Return the set of events that match the parameters specified by this
+        model instance, optionally limited to a particular date or to a subset
+        of an initial listing.
+        '''
+        if initial and isinstance(initial, QuerySet):
+            listing = initial
+        else:
+            listing = Event.objects.all()
+
+        # Filter on event type (Series vs. PublicEvent)
+        if self.eventType == 'S':
+            listing = listing.instance_of(Series)
+        elif self.eventType == 'P':
+            listing = listing.instance_of(PublicEvent)
+
+        filters = {}
+
+        # Filter on event start and/or end times
+        startKey = 'endTime__gte'
+        endKey = 'startTime__lte'
+
+        if self.limitTypeStart == 'S':
+            startKey = 'startTime__gte'
+        if self.limitTypeEnd == 'E':
+            endKey = 'endTime__lte'
+
+        if self.startDate:
+            filters[startKey] = datetime.combine(self.startDate, datetime.min.time())
+        elif self.daysStart is not None:
+            filters[startKey] = timezone.now() + timedelta(days=self.daysStart)
+
+        if self.endDate:
+            filters[endKey] = datetime.combine(self.endDate, datetime.max.time())
+        elif self.daysEnd is not None:
+            filters[endKey] = timezone.now() + timedelta(days=self.daysEnd)
+
+        # Filter on event occurrence time (relative to the current date, in local time)
+        if self.occursWithinDays is not None and dateTime:
+            filters['eventoccurrence__endTime__gte'] = dateTime
+            filters['eventoccurrence__startTime__lte'] = dateTime + timedelta(
+                days=1 + self.occursWithinDays
+            )
+
+        # Filter on open or closed registrations
+        if self.registrationOpenLimit == 'O':
+            filters['registrationOpen'] = True
+        elif self.registrationOpenLimit == 'C':
+            filters['registrationOpen'] = False
+
+        # Filter on location
+        if self.location.all():
+            filters['location__in'] = self.location.all()
+
+        # Filter on category
+        if self.eventCategories.all():
+            filters['publicevent__category__in'] = self.eventCategories.all()
+
+        if self.seriesCategories.all():
+            filters['series__category__in'] = self.seriesCategories.all()
+
+        # Filter on class level (for Series only)
+        if self.levels.all():
+            filters['series__classDescription__danceTypeLevel__in'] = self.levels.all()
+
+        # Filter on weekday
+        # Python calendar module indexes weekday differently from Django
+        if self.weekday is not None:
+            filters['startTime__week_day'] = (self.weekday + 2) % 7
+
+        order_by = '-startTime' if self.sortOrder == 'D' else 'startTime'
+        listing = listing.filter(**filters).order_by(order_by).distinct()[:self.limitNumber]
+        return listing
+
+    def copy_relations(self, oldinstance):
+        self.location.set(oldinstance.location.all())
+        self.eventCategories.set(oldinstance.eventCategories.all())
+        self.seriesCategories.set(oldinstance.seriesCategories.all())
+        self.levels.set(oldinstance.levels.all())
+
+    class Meta:
+        abstract = True
+
+
+class DoorRegisterEventPluginModel(DoorRegisterEventLimitedModel):
+    '''
+    This model is typically used to configure upcoming event listings, but it can
+    be customized to a variety of purposes using custom templates, etc.
+    '''
+
+    title = models.CharField(
+        _('Custom list title'), max_length=250, default=_('Upcoming Events'),
+        blank=True
+    )
+
     cssClasses = models.CharField(
         _('Custom CSS classes'), max_length=250, null=True, blank=True,
         help_text=_('Classes are applied to surrounding &lt;div&gt;')
@@ -236,10 +333,7 @@ class DoorRegisterEventPluginModel(CMSPlugin):
     )
 
     def copy_relations(self, oldinstance):
-        self.location.set(oldinstance.location.all())
-        self.eventCategories.set(oldinstance.eventCategories.all())
-        self.seriesCategories.set(oldinstance.seriesCategories.all())
-        self.levels.set(oldinstance.levels.all())
+        super().copy_relations(oldinstance)
 
         # Delete existing choice instances to avoid duplicates, then duplicate
         # choice instances from the old plugin instance.  Following Django CMS
@@ -287,6 +381,15 @@ class DoorRegisterEventPluginModel(CMSPlugin):
                 _('Can enter a custom plugin template for plugins with selectable template.')
             ),
         )
+
+
+class DoorRegisterGuestSearchPluginModel(DoorRegisterEventLimitedModel):
+    '''
+    For checking in guests, we need to limit the set of events that they
+    may be checked into.  This doesn't need anything more than general event
+    limitations.
+    '''
+    pass
 
 
 class DoorRegisterEventPluginChoice(models.Model):

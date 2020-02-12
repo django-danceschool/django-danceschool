@@ -14,7 +14,7 @@
                 <tr>
                     {% if 'core.checkin_customers' in perms %}
                     <td>
-                        <input class="customerCheckIn" type="checkbox" name="reg_id" />
+                        <input class="customerCheckIn registrationCheckIn" type="checkbox" name="reg_id" />
                         <label class="customerCheckInLabel"></label>
                     </td>
                     {% endif %}
@@ -34,6 +34,19 @@
                     </td>
                 </tr>
             </table>
+            <table id="guestInfoExample" class="d-none">
+                <tr>
+                    {% if 'guestlist.checkin_guests' in perms %}
+                    <td>
+                        <input class="customerCheckIn guestCheckIn" type="checkbox" name="reg_id" />
+                        <label class="customerCheckInLabel"></label>
+                    </td>
+                    {% endif %}
+                    <td class="guestInfoName"></td>
+                    <td class="guestInfoEvent"></td>
+                    <td class="guestInfoType"></td>
+                </tr>
+            </table>
             <table id="customerInfoTable" class="table d-none">
                 <thead><tr>
                     {% if 'core.checkin_customers' in perms %}
@@ -49,10 +62,26 @@
             </table>
             <table id="guestInfoTable" class="table d-none">
                 <thead><tr>
-                    <th>{% trans "Guest List Name" %}<button class="float-right btn btn-sm" role="button" data-toggle="collapse" data-target="#customerInfoCard" aria-expanded="true" aria-controls="customerInfoCard" aria-label="Hide Table" title="Hide Table"><i class="fa fa-chevron-up" aria-hidden="true"></i></button></th>
+                    {% if 'guestlist.checkin_guests' in perms %}
+                    <th>{% trans "Check-in" %}</th>
+                    {% endif %}
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Event" %}</th>
+                    <th>{% trans "Guest Type" %}
+                    <button class="float-right btn btn-sm" role="button" data-toggle="collapse" data-target="#customerInfoCard" aria-expanded="true" aria-controls="customerInfoCard" aria-label="Hide Table" title="Hide Table"><i class="fa fa-chevron-up" aria-hidden="true"></i></button></th>
                 </tr></thead>
-                <tbody><tr><td></td></tr></tbody>
+                <tbody></tbody>
             </table>
         </div>
     </div>
 </div>
+
+
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+    regParams['guestLookupEvents'] = "{{ event_list|join:',' }}".split(",");
+});
+</script>
+{% endaddtoblock %}
+

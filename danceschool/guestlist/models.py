@@ -166,17 +166,10 @@ class GuestList(models.Model):
 
         return Q(filters & intervalFilters)
 
-    def getListForEvent(self, event=None, filters=Q(), includeRegistrants=True):
+    def getStaffForEvent(self, event=None, filters=Q()):
         '''
-        Get a union-ed queryset with a list of names associated with a particular event.
+        Get all StaffMembers associated with a specified event.
         '''
-        names = self.guestlistname_set.annotate(
-            guestType=Case(
-                When(notes__isnull=False, then=F('notes')),
-                default=Value(ugettext('Manually Added')),
-                output_field=models.CharField()
-            )
-        ).filter(filters).values('id', 'firstName', 'lastName', 'guestType').order_by()
 
         # Component-by-component, OR append filters to an initial filter that always
         # evaluates to False.
@@ -194,8 +187,47 @@ class GuestList(models.Model):
         if self.includeStaff and event and self.appliesToEvent(event):
             component_filters = component_filters | Q(eventstaffmember__event=event)
 
+        return StaffMember.objects.filter(component_filters).filter(filters)
+
+    def getDescriptionForGuest(self, guest, event=None):
+        '''
+        Return a string that indicates the type of guest, depending on the rule
+        that was used to add the guest to the list.
+        '''
+        if isinstance(guest, GuestListName):
+            return guest.notes or ugettext('Manually Added')
+        elif isinstance(guest, Registration):
+            return ugettext('Registered')
+        elif isinstance(guest, StaffMember):
+            if event:
+                staff_for = guest.eventstaffmember_set.filter(event=event).first()
+                if staff_for:
+                    return ugettext(
+                        'Event Staff: {category}'.format(category=staff_for.category.name)
+                    )
+            return ugettext('Other Staff')
+
+    def getListForEvent(self, event=None, filters=Q(), includeRegistrants=True):
+        '''
+        Get a union-ed queryset with a list of names associated with a particular event.
+        '''
+        names = self.guestlistname_set.annotate(
+            modelType=Value('GuestListName', output_field=models.CharField()),
+            guestListId=Value(self.id, output_field=models.IntegerField()),
+            guestType=Case(
+                When(notes__isnull=False, then=F('notes')),
+                default=Value(ugettext('Manually Added')),
+                output_field=models.CharField()
+            ),
+        ).filter(filters).values(
+            'id', 'modelType', 'guestListId', 'firstName', 'lastName',
+            'guestType'
+        ).order_by()
+
         # Execute the constructed query and add the names of staff
-        names = names.union(StaffMember.objects.filter(component_filters).filter(filters).annotate(
+        names = names.union(self.getStaffForEvent(event, filters).annotate(
+            modelType=Value('StaffMember', output_field=models.CharField()),
+            guestListId=Value(self.id, output_field=models.IntegerField()),
             guestType=Case(
                 When(
                     eventstaffmember__event=event,
@@ -205,16 +237,24 @@ class GuestList(models.Model):
                 ),
                 default=Value(ugettext('Other Staff')),
                 output_field=models.CharField()
-            )
-        ).distinct().values('id', 'firstName', 'lastName', 'guestType').order_by())
+            ),
+        ).distinct().values(
+            'id', 'modelType', 'guestListId', 'firstName', 'lastName',
+            'guestType',
+        ).order_by())
 
         if includeRegistrants and self.includeRegistrants and event and self.appliesToEvent(event):
             names = names.union(
                 Registration.objects.filter(
                     filters & Q(eventregistration__event=event)
                 ).annotate(
-                    guestType=Value(_('Registered'), output_field=models.CharField())
-                ).values('id', 'firstName', 'lastName', 'guestType').order_by()
+                    modelType=Value('Registration', output_field=models.CharField()),
+                    guestListId=Value(self.id, output_field=models.IntegerField()),
+                    guestType=Value(_('Registered'), output_field=models.CharField()),
+                ).values(
+                    'id', 'modelType', 'guestListId', 'firstName', 'lastName',
+                    'guestType',
+                ).order_by()
             )
         return names.order_by('lastName', 'firstName')
 
@@ -254,6 +294,10 @@ class GuestListName(models.Model):
         verbose_name_plural = _('Manually added guests')
         permissions = (
             ('view_guestlist', _('Can view guest lists')),
+            (
+                'checkin_guests',
+                _('Can check in guests using the JSON check-in view (used by door plugins)')
+            )
         )
 
 

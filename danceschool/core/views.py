@@ -139,7 +139,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
     '''
     permission_required = 'core.view_registration_summary'
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         ''' Parse the date and customer information that is passed. '''
 
         def recurse_listing(listing, obj, extras=None, startTime=None, checkInType='O'):
@@ -196,16 +196,25 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
 
             return this_dict
 
-        if self.request.GET.get('date', None):
+        try:
+            post_data = json.loads(self.request.body)
+        except json.decoder.JSONDecodeError:
+            data = json.dumps(
+                {'code': 'invalid_json', 'message': _('Invalid JSON.')},
+                cls=DjangoJSONEncoder
+            )
+            return HttpResponse(data, content_type='application/json')
+
+        if post_data.get('date', None):
             try:
-                self.startTime = ensure_localtime(datetime.strptime(self.request.GET.get('date', ''), '%Y-%m-%d'))
+                self.startTime = ensure_localtime(datetime.strptime(post_data.get('date', ''), '%Y-%m-%d'))
                 self.endTime = self.startTime + timedelta(days=1)
             except ValueError:
                 logger.warning('Invalid date passed to EventRegistrationJsonView.')
 
-        if self.request.GET.get('id', None):
+        if post_data.get('id', None):
             try:
-                self.customer = Customer.objects.get(id=self.request.GET.get('id'))
+                self.customer = Customer.objects.get(id=post_data.get('id'))
             except ObjectDoesNotExist:
                 logger.warning('Invalid customer passed to EventRegistrationJsonView.')
 
@@ -213,12 +222,15 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         # attribute default to occurrence-based check-in unless otherwise
         # specified. Ignore invalid choices.
         if (
-            self.request.GET.get('checkInType', None) in
+            post_data.get('checkInType', None) in
             [x[0] for x in EventCheckIn.CHECKIN_TYPE_CHOICES]
         ):
-            self.checkInType = self.request.GET.get('checkInType')
+            self.checkInType = post_data.get('checkInType')
 
         queryset = self.get_queryset()
+
+        if post_data.get('eventList'):
+            queryset = queryset.filter(event__id__in=post_data.get('eventList'))
 
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [

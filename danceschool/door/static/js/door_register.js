@@ -382,6 +382,7 @@ $(document).ready(function() {
                 id: this_data['id'],
                 guestType: this_data['type'],
                 date: regParams.registerDate,
+                eventList: regParams.guestLookupEvents,
             };
 
             $('#guestInfoTable tbody tr td').empty();
@@ -391,9 +392,10 @@ $(document).ready(function() {
             $('#customerInfoCard').addClass('show');
 
             $.ajax({
-                url: regParams.guestLookupUrl,
-                type: "GET",
-                data: ajaxData,
+                url: regParams.customerLookupUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(ajaxData),
                 success: function(response){
     
                     $('#customerInfoTable').removeClass('d-none');
@@ -432,22 +434,57 @@ $(document).ready(function() {
             });
         }
         else if (this_data['type']) {
+            var ajaxData = {
+                id: this_data['id'],
+                guestListId: this_data['guestListId'],
+                modelType: this_data['modelType'],
+                date: regParams.registerDate,
+                eventList: regParams.guestLookupEvents,
+                checkinType: "O",
+            };
+
             $('#customerInfoTable tbody').empty();
             $('#customerInfoTable').addClass('d-none');
             $('#customerInfoCard').removeClass('collapse');
             $('#customerInfoCard').addClass('show');
-            $('#guestInfoTable tbody tr td').text($('#id_name').val());
-            $('#guestInfoTable').removeClass('d-none');
+            $('#guestInfoTable tbody').empty();
+
+            $.ajax({
+                url: regParams.guestLookupUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(ajaxData),
+                success: function(response){
+                    $('#guestInfoTable').removeClass('d-none');
+
+                    $.each(response.events, function() {
+                        $('#guestInfoExample tr').clone().appendTo($('#guestInfoTable tbody'));
+                        var this_row = $('#guestInfoTable tbody tr:last');
+
+                        this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id + '_' + this.eventId);
+                        this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id + '_' + this.eventId);
+                        this_row.find('.customerCheckIn').attr('checked', this.checkedIn);
+                        this_row.find('.customerCheckIn').attr('value', this.id);
+                        this_row.find('.customerCheckIn').data('first-name', this.firstName);
+                        this_row.find('.customerCheckIn').data('last-name', this.lastName);
+                        this_row.find('.customerCheckIn').data('model-type', this.modelType);
+                        this_row.find('.customerCheckIn').data('event-id', this.eventId);
+                        this_row.find('.customerCheckIn').data('occurrence-id', this.occurrenceId);
+                        this_row.find('.guestInfoEvent').text(this.eventName);
+                        this_row.find('.guestInfoType').text(this.guestType);
+                    });
+                },
+            });
         }
         else {
-            $('#guestInfoTable tbody tr td').empty();
+            $('#guestInfoTable tbody').empty();
             $('#guestInfoTable').addClass('d-none');
             $('#customerInfoTable tbody').empty();
             $('#customerInfoTable').addClass('d-none');
         }
     });
 
-    // Check-in customer.
+    // Check-in customer, guest.
     $(document).on("click", ".customerCheckIn", function() {
 
         $(this).attr("disabled", true);
@@ -458,14 +495,22 @@ $(document).ready(function() {
 			event_id: $(this).data('eventId'),
             checkin_type: "O",
             occurrence_id: $(this).data('occurrenceId'),
-			registrations: [
-                {
-                    id: $(this).attr("value"),
-                    cancelled: ($(this).prop('checked') == false),
-                },
-            ],
         };
-        
+
+        if ($(this).hasClass("guestCheckIn")) {
+            this_request["names"] = [{
+                first_name: $(this).data("firstName"),
+                last_name: $(this).data("lastName"),
+                cancelled: ($(this).prop('checked') == false),
+            },];
+        }
+        else if ($(this).hasClass("registrationCheckIn")) {
+            this_request["registrations"] = [{
+                id: $(this).attr("value"),
+                cancelled: ($(this).prop('checked') == false),
+            },];
+        }
+
 	    $.ajax(
 	    {
 	        url : regParams.checkInUrl,
@@ -474,9 +519,9 @@ $(document).ready(function() {
             data: JSON.stringify(this_request),
 	        success:function(data, textStatus, jqXHR)
 	        {
-				if (data["status"] !== "success") {
+                if (data["status"] == "success") {
                     setTimeout(function() {
-                        $(".customerCheckIn").removeAttr("disabled");
+                        $(".customerCheckIn,.guestCheckIn").removeAttr("disabled");
                     }, 500);
 				}
 				else {
@@ -484,7 +529,7 @@ $(document).ready(function() {
                     setTimeout(function() {
                         // Reset the checkbox before re-enabling it.
                         $(this).prop('checked', initial_status);
-                        $(".customerCheckIn").removeAttr("disabled");
+                        $(".customerCheckIn,.guestCheckIn").removeAttr("disabled");
                     }, 500);
                 }
 	        },

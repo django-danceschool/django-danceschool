@@ -1,4 +1,4 @@
-from django.db.models import Q, F, Value, CharField, Case, When
+from django.db.models import Q, F, Value, CharField, Case, When, IntegerField
 from django.utils.translation import ugettext
 from django.utils.html import format_html
 from django.apps import apps
@@ -23,11 +23,13 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
         """Return the label of a result."""
         if result.get('guestType') != 'Customer':
             return format_html(
-                '<span data-id="{id}" data-type="{guestType}">{firstName} {lastName} ({guestType})</span>',
+                '<span data-id="{id}" data-type="{guestType}" data-model-type="{modelType}"' +
+                'data-guest-list-id="{guestListId}">{firstName} {lastName} ({guestType})</span>',
                 **result
             )
         return format_html(
-            '<span data-id="{id}" data-type="{guestType}">{firstName} {lastName}</span>',
+            '<span data-id="{id}" data-type="{guestType}" data-model-type="{modelType}"' +
+            'data-guest-list-id="{guestListId}">{firstName} {lastName}</span>',
             **result
         )
 
@@ -58,8 +60,13 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
 
         queryset = Customer.objects.annotate(
             firstName=F('first_name'), lastName=F('last_name'),
-            guestType=Value(ugettext('Customer'), output_field=CharField())
-        ).filter(name_filters).filter(customer_filters).values('id', 'firstName', 'lastName', 'guestType')
+            modelType=Value('Customer', output_field=CharField()),
+            guestListId=Value(None, output_field=IntegerField()),
+            guestType=Value(ugettext('Customer'), output_field=CharField()),
+        ).filter(name_filters).filter(customer_filters).values(
+            'id', 'modelType', 'guestListId', 'firstName', 'lastName',
+            'guestType',
+        )
 
         if date and apps.is_installed('danceschool.guestlist'):
 
@@ -93,8 +100,9 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
             # Now that all the subqueries are together, order by the common
             # lastName and firstName fields.
             queryset = queryset.values(
-                'id', 'firstName', 'lastName', 'guestType'
-            ).order_by(
+                'id', 'modelType', 'guestListId', 'firstName', 'lastName',
+                'guestType',
+            ).distinct().order_by(
                 'lastName', 'firstName'
             )
 
