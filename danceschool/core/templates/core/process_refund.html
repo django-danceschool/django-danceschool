@@ -145,6 +145,8 @@
 
 {% addtoblock "js" %}
 <script type="text/javascript">
+	var $ = django.jQuery;
+
 	$(document).ready(function(){
 		$('input[id*=_refundamount_]').change(function(){
 			var totalRefund = 0;
