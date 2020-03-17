@@ -955,9 +955,20 @@ class RefundForm(forms.ModelForm):
             raise ValidationError('ID not in cleaned data')
 
         if summed_refunds != total:
-            raise ValidationError(_('Passed value does not match sum of allocated refunds.'))
-        elif summed_refunds > self.cleaned_data['id'].amountPaid + self.cleaned_data['id'].refunds:
-            raise ValidationError(_('Total refunds allocated exceed revenue received.'))
+            raise ValidationError(_(
+                'Passed value %s does not match sum of allocated refunds %s.' % (
+                    total, allocated_refunds
+                )
+            ))
+        elif (
+            summed_refunds > self.cleaned_data['id'].amountPaid +
+            self.cleaned_data['id'].refunds
+        ):
+            raise ValidationError(_(
+                'Total refunds allocated %s exceed revenue received %s.' % (
+                    summed_refunds, self.cleaned_data['id'].amountPaid + self.cleaned_data['id'].refunds
+                )
+            ))
         elif total < initial:
             raise ValidationError(_('Cannot reduce the total amount of the refund.'))
         return total
