@@ -957,7 +957,7 @@ class RefundForm(forms.ModelForm):
         if summed_refunds != total:
             raise ValidationError(_(
                 'Passed value %s does not match sum of allocated refunds %s.' % (
-                    total, allocated_refunds
+                    total, summed_refunds
                 )
             ))
         elif (
