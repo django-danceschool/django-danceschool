@@ -111,7 +111,7 @@ class ExpenseItemAdminForm(ModelForm):
         }
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js')
+        js = ('admin/js/vendor/jquery/jquery.min.js',)
 
 
 class ExpenseItemAdminChangelistForm(ExpenseItemAdminForm):
@@ -262,7 +262,7 @@ class RevenueItemAdminForm(ModelForm):
         exclude = []
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js')
+        js = ('admin/js/vendor/jquery/jquery.min.js',)
 
 
 @admin.register(RevenueItem)
@@ -574,7 +574,7 @@ class GenericRepeatedExpenseAdminForm(ModelForm):
         self.fields.get('applyRateRule').choices = updatedChoices
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js')
+        js = ('admin/js/vendor/jquery/jquery.min.js',)
 
 
 @admin.register(GenericRepeatedExpense)

@@ -963,9 +963,10 @@ class SeriesAdminForm(ModelForm):
 
     class Media:
         js = (
+            'admin/js/vendor/jquery/jquery.min.js',
             'js/serieslocation_capacity_change.js',
             'js/location_related_objects_lookup.js',
-            'admin/js/vendor/jquery/jquery.min.js'
+
         )
 
 

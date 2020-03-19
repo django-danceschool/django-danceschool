@@ -182,4 +182,4 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         return user
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js')
+        js = ('admin/js/vendor/jquery/jquery.min.js',)

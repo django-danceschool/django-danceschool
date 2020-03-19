@@ -49,7 +49,7 @@ class CustomerDiscountInlineForm(ModelForm):
         exclude = []
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js')
+        js = ('admin/js/vendor/jquery/jquery.min.js',)
 
 
 class CustomerGroupDiscountInline(admin.StackedInline):

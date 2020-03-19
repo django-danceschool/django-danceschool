@@ -66,4 +66,4 @@ class CustomerGuestAutocompleteForm(forms.Form):
         )
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js')
+        js = ('admin/js/vendor/jquery/jquery.min.js',)
