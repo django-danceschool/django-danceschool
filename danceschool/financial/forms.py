@@ -260,7 +260,8 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         js = (
             'admin/js/admin/RelatedObjectLookups.js',
             'jquery-ui/jquery-ui.min.js',
-            'js/expense_reporting.js'
+            'js/expense_reporting.js',
+            'admin/js/vendor/jquery/jquery.min.js',
         )
         css = {
             'all': ('jquery-ui/jquery-ui.min.css', ),
@@ -461,7 +462,11 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         ]
 
     class Media:
-        js = ('js/revenue_reporting.js', 'jquery-ui/jquery-ui.min.js', )
+        js = (
+            'js/revenue_reporting.js',
+            'jquery-ui/jquery-ui.min.js',
+            'admin/js/vendor/jquery/jquery.min.js'
+        ),
         css = {
             'all': ('jquery-ui/jquery-ui.min.css', ),
         }

@@ -45,6 +45,9 @@ class RequirementAdminForm(ModelForm):
         model = Requirement
         exclude = []
 
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
+
 
 @admin.register(Requirement)
 class RequirementAdmin(admin.ModelAdmin):

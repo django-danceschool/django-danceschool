@@ -180,3 +180,6 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         if not user.has_perm('core.accept_door_payments'):
             raise ValidationError(_('Invalid user submitted door payment.'))
         return user
+
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')

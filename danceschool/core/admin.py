@@ -78,6 +78,9 @@ class EventStaffMemberInlineForm(ModelForm):
         )
     )
 
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
+
 
 class SeriesTeacherInlineForm(ModelForm):
 
@@ -611,6 +614,9 @@ class CustomerGroupAdminForm(ModelForm):
         model = CustomerGroup
         exclude = []
 
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
+
 
 @admin.register(CustomerGroup)
 class CustomerGroupAdmin(admin.ModelAdmin):
@@ -956,7 +962,11 @@ class SeriesAdminForm(ModelForm):
         }
 
     class Media:
-        js = ('js/serieslocation_capacity_change.js', 'js/location_related_objects_lookup.js')
+        js = (
+            'js/serieslocation_capacity_change.js',
+            'js/location_related_objects_lookup.js',
+            'admin/js/vendor/jquery/jquery.min.js'
+        )
 
 
 @admin.register(Series)

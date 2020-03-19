@@ -110,6 +110,9 @@ class ExpenseItemAdminForm(ModelForm):
             'category': ExpenseCategoryWidget
         }
 
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
+
 
 class ExpenseItemAdminChangelistForm(ExpenseItemAdminForm):
     ''' Make the payTo field optional. '''
@@ -257,6 +260,9 @@ class RevenueItemAdminForm(ModelForm):
     class Meta:
         model = RevenueItem
         exclude = []
+
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
 
 
 @admin.register(RevenueItem)
@@ -566,6 +572,9 @@ class GenericRepeatedExpenseAdminForm(ModelForm):
             updatedChoices[index + 1:]
         )
         self.fields.get('applyRateRule').choices = updatedChoices
+
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
 
 
 @admin.register(GenericRepeatedExpense)

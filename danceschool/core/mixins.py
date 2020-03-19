@@ -292,7 +292,10 @@ class PluginTemplateMixin(object):
                 if self.request and self.request.user.has_perm('core.choose_custom_plugin_template'):
                     return Media(
                         css={'all': ('autocomplete_light/select2.css',)},
-                        js=('autocomplete_light/select2.js', 'js/select2_newtemplate.js')
+                        js=(
+                            'autocomplete_light/select2.js', 'js/select2_newtemplate.js',
+                            'admin/js/vendor/jquery/jquery.min.js'
+                        )
                     )
                 return Media()
             media = property(_media)

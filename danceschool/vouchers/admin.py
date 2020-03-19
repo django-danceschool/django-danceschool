@@ -36,6 +36,9 @@ class CustomerVoucherInlineForm(ModelForm):
         model = CustomerVoucher
         exclude = []
 
+    class Media:
+        js = ('admin/js/vendor/jquery/jquery.min.js')
+
 
 class CustomerGroupVoucherInline(admin.StackedInline):
     model = CustomerGroupVoucher
