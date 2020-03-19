@@ -441,10 +441,7 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                     'event': staffer.event,
                     'category': expense_category,
                     'expenseRule': rule,
-                    'description': (
-                        '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' %
-                        replacements,
-                    ),
+                    'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
                     'submissionUser': submissionUser,
                     'hours': staffer.netHours,
                     'wageRate': rule.rentalRate,
