@@ -419,13 +419,13 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                 # Item generate under this rule.
                 replacements['event'] = staffer.event.name
                 replacements['name'] = staffer.staffMember.fullName
-                replacements['dates'] = staffer.event.startTime.strftime('%Y-%m-%d')
+                replacements['dates'] = staffer.event.localStartTime.strftime('%Y-%m-%d')
                 if (
-                        staffer.event.startTime.strftime('%Y-%m-%d') !=
-                        staffer.event.endTime.strftime('%Y-%m-%d')
+                        staffer.event.localStartTime.strftime('%Y-%m-%d') !=
+                        staffer.event.localEndTime.strftime('%Y-%m-%d')
                 ):
                     replacements['dates'] += ' %s %s' % (
-                        _('to'), staffer.event.endTime.strftime('%Y-%m-%d')
+                        _('to'), staffer.event.localEndTime.strftime('%Y-%m-%d')
                     )
 
                 # Find or create the TransactionParty associated with the staff member.
