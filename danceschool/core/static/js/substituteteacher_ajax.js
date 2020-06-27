@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 	$('#id_occurrences').attr('disabled',true);
 	$('#id_occurrences').parent('p').hide();
@@ -71,3 +72,4 @@ $(document).ready(function(){
 		});
 	});
 });
+})(django.jQuery);

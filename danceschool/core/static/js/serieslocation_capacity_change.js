@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 	var isInt = function(n) { return parseInt(Number(n)) === Number(n) };
 
@@ -50,3 +51,4 @@ $(document).ready(function(){
 	}
 
 });
+})(django.jQuery);

@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 
 	function checkRichTextChoice() {
@@ -38,3 +39,4 @@ $(document).ready(function(){
 	});
 
 });
+})(django.jQuery);

@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 
 	function checkDiscountType() {
@@ -52,3 +53,4 @@ $(document).ready(function(){
 	});
 
 });
+})(django.jQuery);

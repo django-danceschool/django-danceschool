@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 	$('#id_invoiceItem').attr('disabled',true);
 
@@ -98,3 +99,4 @@ $(document).ready(function(){
 		});
 	});
 });
+})(django.jQuery);

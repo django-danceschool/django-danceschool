@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 	$("#id_template").select2({
 	  tags: true,
@@ -23,3 +24,4 @@ $(document).ready(function(){
 
 
 });
+})(django.jQuery);

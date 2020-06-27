@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 
     var this_js_script = $('script[src*=classregistration_ajax]');
@@ -67,3 +68,4 @@ $(document).ready(function(){
         });
     });
 });
+})(django.jQuery);

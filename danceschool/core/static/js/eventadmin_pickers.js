@@ -1,5 +1,9 @@
 (function($) {
-    $(document).on('formset:added', function(event, $row, formsetName) {
+	$(document).ready(function() {
+		makepickers();	
+	});
+	
+	$(document).on('formset:added', function(event, $row, formsetName) {
     	if (formsetName == 'eventoccurrence_set') {
 			makepickers();
 			set_new_times();
@@ -7,10 +11,6 @@
     	}
     });
 })(django.jQuery);
-
-$(document).ready(function() {
-	makepickers();	
-});
 
 function makepickers() {
 	// Add classes needed to make the datepair work

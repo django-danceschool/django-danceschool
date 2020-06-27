@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 
 	function checkVisibility() {
@@ -26,3 +27,4 @@ $(document).ready(function(){
 		checkVisibility();
 	});
 });
+})(django.jQuery);

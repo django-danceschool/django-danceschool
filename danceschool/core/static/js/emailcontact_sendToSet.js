@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 
 	function checkSendToSet() {
@@ -19,3 +20,4 @@ $(document).ready(function(){
 		checkSendToSet();
 	});
 });
+})(django.jQuery);

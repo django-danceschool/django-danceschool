@@ -1,3 +1,4 @@
+(function($) {
 $(document).ready(function(){
 	$('#div_id_total').show();
 	$('#div_id_hours').hide();
@@ -27,3 +28,4 @@ $(document).ready(function(){
 	});
 
 });
+})(django.jQuery);
