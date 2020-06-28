@@ -1086,7 +1086,7 @@ class RevenueItem(models.Model):
 
     @property
     def netRevenue(self):
-        net = self.total + self.adjustments - self.fees
+        net = (self.total or 0) + self.adjustments - self.fees
         if not self.buyerPaysSalesTax:
             net -= self.taxes
         return net
