@@ -847,9 +847,6 @@ class DoorAmountForm(forms.Form):
 
         return form_data
 
-    class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js',)
-
 
 class EventAutocompleteForm(forms.Form):
     '''
