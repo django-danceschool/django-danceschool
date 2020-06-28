@@ -252,11 +252,12 @@ class EventOccurrenceInline(admin.TabularInline):
 
     class Media:
         js = (
-            'timepicker/jquery.timepicker.min.js',
+            'admin/js/vendor/jquery/jquery.min.js',
             'jquery-ui/jquery-ui.min.js',
-            'datepair/datepair.min.js',
             'moment/moment.min.js',
+            'datepair/datepair.min.js',
             'datepair/jquery.datepair.min.js',
+            'timepicker/jquery.timepicker.min.js',
             'js/eventadmin_pickers.js'
         )
         css = {
