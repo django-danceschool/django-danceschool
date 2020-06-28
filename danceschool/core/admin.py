@@ -725,7 +725,7 @@ class LocationAdmin(admin.ModelAdmin):
             to_field = request.POST.get(TO_FIELD_VAR)
             attr = str(to_field) if to_field else obj._meta.pk.attname
             # Retrieve the `object_id` from the resolved pattern arguments.
-            value = request.resolver_match.args[0]
+            value = request.resolver_match.args[0] if request.resolver_match.args else None
             new_value = obj.serializable_value(attr)
             popup_response_data = json.dumps({
                 'action': 'change',

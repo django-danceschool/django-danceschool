@@ -886,9 +886,6 @@ class EventAutocompleteForm(forms.Form):
             Submit('submit', _('Submit'))
         )
 
-    class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js',)
-
 
 class RefundForm(forms.ModelForm):
     '''

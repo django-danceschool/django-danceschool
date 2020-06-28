@@ -258,7 +258,6 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
 
     class Media:
         js = (
-            'admin/js/vendor/jquery/jquery.min.js',
             'admin/js/admin/RelatedObjectLookups.js',
             'jquery-ui/jquery-ui.min.js',
             'js/expense_reporting.js',
@@ -463,7 +462,6 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
 
     class Media:
         js = (
-            'admin/js/vendor/jquery/jquery.min.js',
             'js/revenue_reporting.js',
             'jquery-ui/jquery-ui.min.js',
         )

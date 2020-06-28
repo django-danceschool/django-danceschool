@@ -72,7 +72,10 @@ class DiscountComboAdminForm(ModelForm):
         exclude = []
 
     class Media:
-        js = ('js/discountcombo_collapsetypes.js', )
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'js/discountcombo_collapsetypes.js',
+        )
 
 
 class DiscountComboAdmin(admin.ModelAdmin):

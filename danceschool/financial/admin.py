@@ -111,7 +111,10 @@ class ExpenseItemAdminForm(ModelForm):
         }
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js',)
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'js/update_task_wages.js',
+        )
 
 
 class ExpenseItemAdminChangelistForm(ExpenseItemAdminForm):
@@ -211,9 +214,6 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.submissionUser = request.user
         obj.save()
-
-    class Media:
-        js = ('js/update_task_wages.js', )
 
 
 class RevenueItemAdminForm(ModelForm):
@@ -572,9 +572,6 @@ class GenericRepeatedExpenseAdminForm(ModelForm):
             updatedChoices[index + 1:]
         )
         self.fields.get('applyRateRule').choices = updatedChoices
-
-    class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js',)
 
 
 @admin.register(GenericRepeatedExpense)
