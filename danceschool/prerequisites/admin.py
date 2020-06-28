@@ -46,7 +46,10 @@ class RequirementAdminForm(ModelForm):
         exclude = []
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js',)
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'autocomplete_light/jquery.init.js',
+        )
 
 
 @admin.register(Requirement)

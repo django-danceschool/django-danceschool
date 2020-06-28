@@ -37,7 +37,10 @@ class CustomerVoucherInlineForm(ModelForm):
         exclude = []
 
     class Media:
-        js = ('admin/js/vendor/jquery/jquery.min.js',)
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'autocomplete_light/jquery.init.js',
+        )
 
 
 class CustomerGroupVoucherInline(admin.StackedInline):
