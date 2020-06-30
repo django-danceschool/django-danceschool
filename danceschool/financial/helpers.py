@@ -44,8 +44,11 @@ def getExpenseItemsCSV(queryset, scope='instructor'):
         _('Submission Date'),
         _('Event'),
         _('Approved'),
+        _('Approval Date'),
         _('Paid'),
         _('Payment Date'),
+        _('Payment Method'),
+        _('Accrual Date'),
     ]
 
     if scope != 'instructor':
@@ -64,8 +67,11 @@ def getExpenseItemsCSV(queryset, scope='instructor'):
             x.submissionDate,
             x.event,
             x.approved,
+            x.approvalDate,
             x.paid,
             x.paymentDate,
+            x.paymentMethod,
+            x.accrualDate,
         ]
 
         if scope != 'instructor':
@@ -91,8 +97,11 @@ def getRevenueItemsCSV(queryset):
         _('Received From'),
         _('Invoice ID'),
         _('Event'),
+        _('Submission Date'),
         _('Received'),
-        _('Received Date')
+        _('Received Date'),
+        _('Payment Method'),
+        _('Accrual Date'),
     ]
     writer.writerow(header_list)
 
@@ -105,8 +114,11 @@ def getRevenueItemsCSV(queryset):
             getattr(x.receivedFrom, 'name', None),
             getattr(getattr(x.invoiceItem, 'invoice', None), 'id', None),
             x.event,
+            x.submissionDate,
             x.received,
-            x.receivedDate
+            x.receivedDate,
+            x.paymentMethod,
+            x.accrualDate,
         ]
 
         writer.writerow(this_row_data)
