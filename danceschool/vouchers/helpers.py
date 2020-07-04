@@ -4,7 +4,15 @@ from django.utils.translation import ugettext_lazy as _
 from danceschool.core.models import DanceTypeLevel, ClassDescription
 from danceschool.core.constants import getConstant
 
-from .models import Voucher, VoucherCategory, ClassVoucher, CustomerVoucher, VoucherReferralDiscount, VoucherCredit, VoucherReferralDiscountUse
+from .models import (
+    ClassVoucher,
+    CustomerVoucher,
+    Voucher,
+    VoucherCategory,
+    VoucherCredit,
+    VoucherReferralDiscount,
+    VoucherReferralDiscountUse,
+)
 
 
 def generateUniqueVoucherId(prefix):
@@ -19,7 +27,7 @@ def generateUniqueVoucherId(prefix):
     return result
 
 
-def createReferreeVoucher(name,amountPerUse):
+def createReferreeVoucher(name, amountPerUse):
     voucherId = generateUniqueVoucherId(getConstant('referrals__voucherPrefix'))
     category = getConstant('referrals__refereeCategory')
     originalAmount = 1e9
@@ -30,7 +38,7 @@ def createReferreeVoucher(name,amountPerUse):
     disabled = False
 
     voucher = Voucher(
-        voucherId=voucherId,name=name,
+        voucherId=voucherId, name=name,
         category=category,
         originalAmount=originalAmount,
         maxAmountPerUse=maxAmountPerUse,
@@ -42,10 +50,10 @@ def createReferreeVoucher(name,amountPerUse):
     voucher.save()
 
     # Find all beginner classes
-    dts = DanceTypeLevel.objects.filter(name="Beginner",danceType__name="Lindy Hop")
+    dts = DanceTypeLevel.objects.filter(name="Beginner", danceType__name="Lindy Hop")
     classes = ClassDescription.objects.filter(danceTypeLevel=dts.first())
     for c in classes:
-        cv = ClassVoucher(voucher=voucher,classDescription=c)
+        cv = ClassVoucher(voucher=voucher, classDescription=c)
         cv.save()
     return voucher
 
@@ -59,10 +67,10 @@ def createReferrerVoucher(customer):
     forFirstTimeCustomersOnly = False
     expirationDate = None
     disabled = False
-    name = _("Referral Bonus for %s, %s" % (customer.fullName,customer.email))
+    name = _("Referral Bonus for %s, %s") % (customer.fullName, customer.email)
 
     voucher = Voucher(
-        voucherId=voucherId,name=name,
+        voucherId=voucherId, name=name,
         category=category,
         originalAmount=originalAmount,
         maxAmountPerUse=maxAmountPerUse,
@@ -73,7 +81,7 @@ def createReferrerVoucher(customer):
     )
     voucher.save()
 
-    cv = CustomerVoucher(customer=customer,voucher=voucher)
+    cv = CustomerVoucher(customer=customer, voucher=voucher)
     cv.save()
 
     return voucher
@@ -85,6 +93,7 @@ def referralVoucherExists(customer):
         vrd = VoucherReferralDiscount.objects.filter(referrerVoucher=cv.voucher).first()
         if vrd:
             return vrd
+
 
 def ensureReferralVouchersExist(customer):
     # is there a referral voucher for this person?
