@@ -5,7 +5,7 @@ import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
 import filer.fields.image
-import merch.models
+import danceschool.merch.models
 
 
 class Migration(migrations.Migration):
@@ -25,8 +25,8 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(help_text='Give a descriptive name for this item.', max_length=100, verbose_name='Name')),
                 ('description', models.TextField(blank=True, help_text='Provide a full item description for customers.', null=True, verbose_name='Item Description')),
                 ('defaultPrice', models.FloatField(default=0, help_text='This price may be overridden by a particular item variant.', validators=[django.core.validators.MinValueValidator(0)], verbose_name='Default price')),
-                ('salesTaxRate', models.FloatField(default=merch.models.get_defaultSalesTaxRate, help_text="The sales tax percentage rate to be applied to this item (e.g. enter '10' to apply 10 percent sales tax).", validators=[django.core.validators.MinValueValidator(0)], verbose_name='Sales tax rate')),
-                ('buyerPaysSalesTax', models.BooleanField(default=merch.models.get_defaultBuyerPaysSalesTax, help_text='If unchecked, then the buyer will not be charged sales tax directly, but the amount of tax collected by the business will be reported.', verbose_name='Buyer pays sales tax (added to total price)')),
+                ('salesTaxRate', models.FloatField(default=danceschool.merch.models.get_defaultSalesTaxRate, help_text="The sales tax percentage rate to be applied to this item (e.g. enter '10' to apply 10 percent sales tax).", validators=[django.core.validators.MinValueValidator(0)], verbose_name='Sales tax rate')),
+                ('buyerPaysSalesTax', models.BooleanField(default=danceschool.merch.models.get_defaultBuyerPaysSalesTax, help_text='If unchecked, then the buyer will not be charged sales tax directly, but the amount of tax collected by the business will be reported.', verbose_name='Buyer pays sales tax (added to total price)')),
                 ('disabled', models.BooleanField(default=False, help_text='If checked, then this item will not be available for purchase, regardless of current inventory.', verbose_name='Item disabled')),
                 ('creationDate', models.DateTimeField(auto_now_add=True, verbose_name='Creation Date')),
                 ('photo', filer.fields.image.FilerImageField(blank=True, help_text='Individual item variants may have their own photos.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='item_photo', to=settings.FILER_IMAGE_MODEL, verbose_name='Photo')),
