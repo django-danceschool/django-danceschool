@@ -1,0 +1,34 @@
+{% load sekizai_tags i18n crispy_forms_tags %}
+
+<div class="col-12 my-1 merch-register-set {{instance.cssClasses}}">
+    {% if instance.title and register_choices %}<h4 class="event-register-set-title">{{ instance.title }}</h4>{% endif %}
+    {% for key,item in register_choices.items %}
+        <div class="card">
+            <div class="card-body item">
+                {% block cart_title %}<h5 class="cart-title">{{ item.fullName }}</h5>{% endblock %}
+
+                <div class="btn-group">
+                {% for choice in item.options %}
+                    <button class="btn btn-outline-primary my-2 mx-2 add-item"
+                        id="{{ choice.choiceId }}"
+                        data-item-type="merch"
+                        data-item-id="{{ choice.itemId }}"
+                        data-variant-id="{{ choice.variantId }}" data-name="{{ item.fullName }}"
+                        data-price="{{ choice.price }}"
+                        data-quantity="1"
+                        data-require-full="{{ choice.requireFullRegistration }}"
+                        {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
+                        {% if choice.paymentMethod %}
+                            data-payment-method="{{ choice.paymentMethod }}"
+                            data-auto-submit="{{ choice.autoSubmit }}"
+                        {% endif %}
+                        {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
+                    >
+                        {{ choice.label }} <span class="badge badge-pill badge-primary badge-choice-counter"></span>
+                    </button>
+                {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
