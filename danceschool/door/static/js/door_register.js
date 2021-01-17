@@ -28,6 +28,8 @@ $(document).ready(function() {
             total: 0,
             itemCount: 0,
             events: [],
+            items: [],
+            orders: {},
         }
     }
 
@@ -46,9 +48,9 @@ $(document).ready(function() {
         $('.badge-choice-counter').text('');;
         $('#cart-submit').addClass('invisible');
 
-        // Then, add the items based on regData;
+        // Then, add the event-based items based on regData;
         $.each(regData['events'], function() {
-            var this_name = this['name']
+            var this_name = this['name'];
             if (this['roleName']) {
                 this_name += ': ' + this['roleName'];
             }
@@ -60,6 +62,27 @@ $(document).ready(function() {
             // Add item to the shopping cart
             $('#cartItems').append(
                 '<tr data-event="' + this['event'] + '" data-event-reg="' + this['eventreg'] + '"><td>' +
+                    this_name +
+                '</td><td>' +
+                    regParams.currencySymbol + this_price +
+                '<button type="button" class="close remove-item" aria-label="Remove" data-id="' + this['event'] + '"><span aria-hidden="true">&times;</span></button></td></tr>'
+            );
+
+            // Update the badge for the button that was pressed for each selection.
+            if (this['doorChoiceId']) {
+                var this_badge = $("#" + this['doorChoiceId'] + " .badge-choice-counter");
+                this_badge.text((parseInt(this_badge.text()) | 0) + 1);
+            }
+        });
+
+        // Then, add any non-event-based items based on regData;
+        $.each(regData['items'], function() {
+            var this_name = this['name'];
+            var this_price = parseFloat(this['price']).toFixed(2);
+    
+            // Add item to the shopping cart
+            $('#cartItems').append(
+                '<tr data-item="' + this['variantId'] + '" data-order="' + this['order'] + '"><td>' +
                     this_name +
                 '</td><td>' +
                     regParams.currencySymbol + this_price +
@@ -292,7 +315,16 @@ $(document).ready(function() {
         }
 
         // Add the data from the button to the regData and submit
-        regData['events'].push(this_data);
+        if (this_data['event']) {
+            regData['events'].push(this_data);
+        }
+        else if (this_data['itemId'] & this_data['orderType']) {
+            if (!(this_data['orderType'] in this_data['orders'])) {
+                regData['orders'][this_data['orderType']] = null;
+            }
+            regData['items'].push(this_data);
+        }
+
         submitData(prior=old_regData, redirect=false, removeAlerts=true);
 
     });
@@ -310,18 +342,30 @@ $(document).ready(function() {
 
     // Remove Item From Cart
     $('#shoppingCart').on('click', '.remove-item', function(){
-        var this_eventreg_id = $($(this).closest('tr')).data('eventReg');
 
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);
 
-        for( var i = 0; i < regData['events'].length; i++){ 
-            if ( regData['events'][i]['eventreg'] === this_eventreg_id) {
-              regData['events'].splice(i, 1); 
-              i--;
-            }
-         }
+        var this_eventreg_id = $($(this).closest('tr')).data('eventReg');
+        var this_orderitem_id = $($(this).closest('tr')).data('orderItem');
 
+        if (this_eventreg_id) {
+            for( var i = 0; i < regData['events'].length; i++){ 
+                if ( regData['events'][i]['eventreg'] === this_eventreg_id) {
+                  regData['events'].splice(i, 1); 
+                  i--;
+                }
+             }
+        }
+        else if (this_orderitem_id) {
+            for( var i = 0; i < regData['items'].length; i++){ 
+                if ( regData['items'][i]['orderitem'] === this_orderitem_id) {
+                  regData['items'].splice(i, 1); 
+                  i--;
+                }
+             }
+        }    
+        
         submitData(prior=old_regData, redirect=false);
     });
 

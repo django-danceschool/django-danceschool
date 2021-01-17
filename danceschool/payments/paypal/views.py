@@ -12,7 +12,7 @@ from paypalrestsdk.exceptions import ResourceNotFound
 from datetime import timedelta
 
 from danceschool.core.models import TemporaryRegistration, Invoice
-from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
+from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 
 from .models import PaypalPaymentRecord
 
@@ -66,8 +66,11 @@ def createPaypalPayment(request):
         elif tr_id:
             tr = TemporaryRegistration.objects.get(id=int(tr_id))
             tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+            this_invoice = tr.link_invoice(
+                status=Invoice.PaymentStatus.unpaid,
+                submissionUser=submissionUser,
+            )
             tr.save()
-            this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
             this_description = _('Registration Payment: #%s' % tr_id)
             if not amount:
                 amount = this_invoice.outstandingBalance
@@ -232,14 +235,14 @@ def executePaypalPayment(request):
         )
 
         if addSessionInfo:
-            paymentSession = request.session.get(INVOICE_VALIDATION_STR, {})
+            paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
 
             paymentSession.update({
                 'invoiceID': str(this_invoice.id),
                 'amount': float(payment.transactions[0].amount.total),
                 'successUrl': successUrl,
             })
-            request.session[INVOICE_VALIDATION_STR] = paymentSession
+            request.session[PAYMENT_VALIDATION_STR] = paymentSession
 
         return JsonResponse({'paid': True})
     else:

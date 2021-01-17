@@ -2,7 +2,9 @@ from django.contrib.auth.views import redirect_to_login
 from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.urls import reverse
-from django.db.models import Case, When, F, Q, IntegerField, ExpressionWrapper
+from django.db.models import (
+    Case, When, F, Q, IntegerField, ExpressionWrapper, Sum
+)
 from django.db.models.functions import ExtractWeekDay
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils import timezone
@@ -18,12 +20,20 @@ from urllib.parse import quote
 from six import string_types
 import re
 from datetime import timedelta
+import logging
 
 from .constants import getConstant, REG_VALIDATION_STR
 from .tasks import sendEmail
 from .registries import plugin_templates_registry
 from .helpers import getReturnPage
-from .signals import request_discounts, apply_addons
+from .signals import (
+    request_discounts, apply_addons, check_voucher, process_cart_items
+)
+# from .models import Invoice, InvoiceItem, TemporaryRegistration, EventOccurrence
+
+
+# Define logger for this file
+logger = logging.getLogger(__name__)
 
 
 class EmailRecipientMixin(object):
@@ -135,6 +145,333 @@ class EmailRecipientMixin(object):
         included on the BCC line.  This should return a list.
         '''
         return []
+
+
+class RegistrationModelMixin(object):
+    ''' Common methods for TemporaryRegistration and Registration models '''
+
+    @property
+    def fullName(self):
+        return ' '.join([self.firstName or '', self.lastName or '']).strip()
+    fullName.fget.short_description = _('Name')
+
+    @property
+    def seriesPrice(self):
+        return self.eventregistration_set.filter(
+            Q(event__series__isnull=False)
+        ).aggregate(Sum('price')).get('price__sum')
+    seriesPrice.fget.short_description = _('Price of class series')
+
+    @property
+    def publicEventPrice(self):
+        return self.eventregistration_set.filter(
+            Q(event__publicevent__isnull=False)
+        ).aggregate(Sum('price')).get('price__sum')
+    publicEventPrice.fget.short_description = _('Price of public events')
+
+    @property
+    def totalPrice(self):
+        return self.eventregistration_set.aggregate(Sum('price')).get('price__sum')
+    totalPrice.fget.short_description = _('Total price before discounts')
+
+    # This alias just makes it easier to register properties in other apps.
+    @property
+    def netPrice(self):
+        return self.priceWithDiscount
+    netPrice.fget.short_description = _('Net price')
+
+    # For now, revenue is allocated proportionately between series and events
+    # as a percentage of the discounted total amount paid.  Ideally, revenue would
+    # be allocated by applying discounts proportionately only to the items for which
+    # they apply.  However, this has not been implemented.
+    @property
+    def seriesNetPrice(self):
+        if self.totalPrice == 0:
+            return 0
+        return self.priceWithDiscount * (self.seriesPrice / self.totalPrice)
+    seriesNetPrice.fget.short_description = _('Net price of class series')
+
+    @property
+    def eventNetPrice(self):
+        if self.totalPrice == 0:
+            return 0
+        return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
+    eventNetPrice.fget.short_description = _('Net price of public events')
+
+    @property
+    def addTaxes(self):
+        '''
+        If the buyer is expected to pay sales tax, this can be used in the
+        registration process to show a line item of what the taxes are.
+        '''
+        if getConstant('registration__buyerPaysSalesTax'):
+            return self.priceWithDiscount * (getConstant('registration__salesTaxRate') or 0) / 100
+        else:
+            return 0
+
+    @property
+    def priceWithDiscountAndTaxes(self):
+        '''
+        Some payment processors don't separate out taxes as a line item, so this
+        method ensures that individuals are charged the appropriate amount depending
+        on whether or no we expect them to pay any taxes on their purchase.
+        '''
+        return self.priceWithDiscount + self.addTaxes
+
+    @property
+    def totalDiscount(self):
+        return self.totalPrice - self.priceWithDiscount
+    totalDiscount.fget.short_description = _('Total discounts')
+
+    @property
+    def discounted(self):
+        return (self.totalPrice != self.priceWithDiscount)
+    discounted.fget.short_description = _('Is discounted')
+
+    @property
+    def firstStartTime(self):
+        return min([x.event.startTime for x in self.eventregistration_set.all()])
+    firstStartTime.fget.short_description = _('First event starts')
+
+    @property
+    def firstSeriesStartTime(self):
+        return min([
+            x.event.startTime for x in
+            self.eventregistration_set.filter(event__series__isnull=False)
+        ])
+    firstSeriesStartTime.fget.short_description = _('First class series starts')
+
+    @property
+    def lastEndTime(self):
+        return max([x.event.endTime for x in self.eventregistration_set.all()])
+    lastEndTime.fget.short_description = _('Last event ends')
+
+    @property
+    def lastSeriesEndTime(self):
+        return max([
+            x.event.endTime for x in
+            self.eventregistration_set.filter(event__series__isnull=False)
+        ])
+    lastSeriesEndTime.fget.short_description = _('Last class series ends')
+
+    def getTimeOfClassesRemaining(self, numClasses=0):
+        '''
+        For checking things like prerequisites, it's useful to check if a
+        requirement is 'almost' met
+        '''
+        occurrences = EventOccurrence.objects.filter(
+            cancelled=False,
+            event__in=[
+                x.event for x in self.eventregistration_set.filter(
+                    event__series__isnull=False
+                )
+            ],
+        ).order_by('-endTime')
+        if occurrences.count() > numClasses:
+            return occurrences[numClasses].endTime
+        else:
+            return occurrences.last().startTime
+
+    def getSeriesPriceForMonth(self, dateOfInterest):
+        ''' get all series associated with this registration '''
+        return sum([
+            x.price for x in
+            self.eventregistration_set.filter(
+                series__year=dateOfInterest.year, series__month=dateOfInterest.month
+            ).filter(Q(event__series__isnull=False))
+        ])
+
+    def getEventPriceForMonth(self, dateOfInterest):
+        # get all series associated with this registration
+        return sum([
+            x.price for x in
+            self.eventregistration_set.filter(
+                series__year=dateOfInterest.year, series__month=dateOfInterest.month
+            ).filter(Q(event__publicevent__isnull=False))
+        ])
+
+    def getPriceForMonth(self, dateOfInterest):
+        return sum([
+            x.price for x in
+            self.eventregistration_set.filter(
+                series__year=dateOfInterest.year, series__month=dateOfInterest.month
+            )
+        ])
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        return [self.email, ]
+
+    def get_email_context(self, **kwargs):
+        ''' Overrides EmailRecipientMixin '''
+        context = super().get_email_context(**kwargs)
+        context.update({
+            'first_name': self.firstName,
+            'last_name': self.lastName,
+            'registrationComments': self.comments,
+            'registrationHowHeardAboutUs': self.howHeardAboutUs,
+            'eventList': [
+                x.get_email_context(includeName=False) for x in
+                self.eventregistration_set.all()
+            ],
+        })
+
+        if hasattr(self, 'invoice') and self.invoice:
+            context.update({
+                'invoice': self.invoice.get_email_context(),
+            })
+
+        return context
+
+    def link_invoice(self, update=True, **kwargs):
+        '''
+        If an invoice does not already exist for this registration,
+        then create one.  Return the linked invoice.  TODO: Deal with updating
+        invoice totals that already have non-registration items associated with
+        them.
+        '''
+
+        submissionUser = kwargs.pop('submissionUser', None)
+        collectedByUser = kwargs.pop('collectedByUser', None)
+        status = kwargs.pop('status', None)
+        expirationDate = kwargs.pop('expirationDate', None)
+
+        if not self.invoice:
+
+            invoice_kwargs = {
+                'firstName': kwargs.pop('firstName', None) or self.firstName,
+                'lastName': kwargs.pop('lastName', None) or self.lastName,
+                'email': kwargs.pop('email', None) or self.email,
+                'grossTotal': self.totalPrice,
+                'total': self.priceWithDiscount,
+                'submissionUser': submissionUser,
+                'collectedByUser': collectedByUser,
+                'buyerPaysSalesTax': getConstant('registration__buyerPaysSalesTax'),
+                'data': kwargs,
+            }
+
+            if (
+                (not status or status == Invoice.PaymentStatus.preliminary) and
+                isinstance(self, TemporaryRegistration)
+            ):
+                invoice_kwargs.update({
+                    'status': Invoice.PaymentStatus.preliminary,
+                    'expirationDate': expirationDate or self.expirationDate,
+                })
+            elif not status:
+                invoice_kwargs.update({
+                    'status': Invoice.PaymentStatus.unpaid,
+                })
+
+            new_invoice = Invoice(**invoice_kwargs)
+            new_invoice.calculateTaxes()
+            new_invoice.save()
+            self.invoice = new_invoice
+        elif update:
+            needs_update = False
+
+            if (
+                self.invoice.firstName != (self.firstName or kwargs.get('firstName', None)) or
+                self.invoice.lastName != (self.lastName or kwargs.get('lastName', None)) or
+                self.invoice.email != (self.email or kwargs.get('email', None))
+            ):
+                self.invoice.firstName = self.firstName or kwargs.pop('firstName', None)
+                self.invoice.lastName = self.lastName or kwargs.pop('lastName', None)
+                self.invoice.email = self.email or kwargs.pop('email', None)
+                needs_update = True
+            if (
+                self.invoice.grossTotal != self.totalPrice or
+                self.invoice.total != self.priceWithDiscount
+            ):
+                self.invoice.grossTotal = self.totalPrice
+                self.invoice.total = self.priceWithDiscount
+                needs_update = True
+            if status and status != self.invoice.status:
+                self.invoice.status = status
+                needs_update = True
+
+            if (
+                expirationDate and expirationDate != self.invoice.expirationDate
+                and self.invoice.status == Invoice.PaymentStatus.preliminary
+            ):
+                self.invoice.expirationDate = expirationDate
+                needs_update = True
+            elif self.invoice.status != Invoice.PaymentStatus.preliminary:
+                self.invoice.expirationDate = None
+                needs_update = True
+
+            if needs_update:
+                self.invoice.save()
+
+        return self.invoice
+
+
+class EventRegistrationModelMixin(object):
+    ''' Common methods for TemporaryEventRegistration and EventRegistration models '''
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        this_email = self.registration.email
+        return [this_email, ] if this_email else []
+
+    def get_email_context(self, **kwargs):
+        ''' Overrides EmailRecipientMixin '''
+
+        includeName = kwargs.pop('includeName', True)
+        context = super().get_email_context(**kwargs)
+
+        context.update({
+            'title': self.event.name,
+            'start': self.event.firstOccurrenceTime,
+            'end': self.event.lastOccurrenceTime,
+        })
+
+        if includeName:
+            context.update({
+                'first_name': self.registration.firstName,
+                'last_name': self.registration.lastName,
+            })
+        return context
+
+    def link_invoice_item(self, invoice):
+        '''
+        If an invoice item does not already exist for this event registration,
+        then create one.  Return the linked invoice item.
+        '''
+
+        if not isinstance(invoice, Invoice):
+            raise ValidationError(
+                _('Invalid passed invoice.')
+            )
+        elif self.invoiceItem and self.invoiceItem.invoice != invoice:
+            raise ValidationError(
+                _('Existing invoice item not associated with passed invoice.')
+            )
+
+        if not self.invoiceItem:
+            item_kwargs = {
+                'invoice': invoice,
+                'grossTotal': self.price,
+            }
+
+            if invoice.grossTotal > 0:
+                item_kwargs.update({
+                    'total': self.price * (invoice.total / invoice.grossTotal),
+                    'taxes': invoice.taxes * (self.price / invoice.grossTotal),
+                    'fees': invoice.fees * (self.price / invoice.grossTotal),
+                })
+            else:
+                item_kwargs.update({
+                    'total': self.price,
+                    'taxes': invoice.taxes,
+                    'fees': invoice.fees,
+                })
+
+            new_item = InvoiceItem(**item_kwargs)
+            new_item.save()
+            self.invoiceItem = new_item
+
+        return self.invoiceItem
 
 
 ######################################
@@ -510,9 +847,96 @@ class RegistrationAdjustmentsMixin(object):
     it; that should be done in the view itself.
     '''
 
+    def getAdditionalItems(self, items_data=[], orders_data={}):
+        '''
+        Add any additional items from third-party apps, such as merchandise,
+        that may adjust the shopping cart listing or total in any step.
+        '''
+
+        subtotal = 0
+        itemCount = 0
+        items = []
+        orders = {}
+
+        items_responses = process_cart_items.send(
+            sender=RegistrationAdjustmentsMixin, items_data=items_data,
+            orders_data=orders_data, invoice=self.invoice,
+        )
+
+        items_responses = [x[1] for x in items_response if len(x) > 1 and x[1]]
+
+        # Append all signal responses if there is more than one, and tabulate
+        # an item count and subtotal.
+        for response in item_responses:
+            items += response.get('items', [])
+            subtotal += sum([x.get('price', 0) for x in items])
+            itemCount += sum([x.get('quantity', 1) for x in items])
+            orders[response.get('orderType')] = response.get('orderNumber', None)
+
+        if items:
+            return {
+                'items': items,
+                'orders': orders,
+                'subtotal': subtotal,
+                'itemCount': itemCount,
+            }
+
+    def getVoucher(
+        self, voucherId, reg, subtotal, first_name=None, last_name=None, email=None
+    ):
+        '''
+        This method looks for a voucher with the associated voucher ID, it checks
+        for eligibility, and it returns an updated dictionary
+        '''
+
+        from danceschool.core.models import Customer
+
+        first_name = first_name or reg.firstName
+        last_name = last_name or reg.lastName
+        email = email or reg.email
+
+        # This will only find a customer if all three are specified.
+        customer = Customer.objects.filter(
+            first_name=first_name,
+            last_name=last_name,
+            email=email
+        ).first()
+
+        voucher_response = check_voucher.send(
+            sender=RegistrationAdjustmentsMixin, voucherId=voucherId,
+            customer=customer, validateCustomer=(customer is not None),
+            registration=reg
+        )
+
+        voucher_response = [x[1] for x in voucher_response if len(x) > 1 and x[1]]
+        if (len(voucher_response) > 1):
+            # This shouldn't happen
+            logger.error('Received multiple voucher responses from signal handler.')
+        elif voucher_response:
+            if (
+                voucher_response[0].get('status', None) == 'valid' and
+                voucher_response[0].get('available', 0) > 0
+            ):
+                total = max(
+                    0, subtotal - voucher_response[0].get('available', 0)
+                )
+            else:
+                total = subtotal
+
+            return {
+                'voucher_id': voucher_response[0].get('id', None),
+                'voucher_name': voucher_response[0].get('name', None),
+                'voucher_amount': subtotal - total,
+                'discounted_subtotal': total,
+            }
+        else:
+            return {}
+
     def getDiscounts(self, reg, initial_price):
         '''
-        This method takes a registration and an initial price, and it returns an
+        This method takes a registration and an initial price, and it returns
+        a tuple that contains all the information needed to process any
+        applicable discounts.
         '''
 
         # If the discounts app is enabled, then the return value to this signal

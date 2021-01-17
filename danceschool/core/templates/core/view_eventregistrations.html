@@ -64,11 +64,11 @@
 				<strong>{% trans "Gross" %}:</strong> {{ reg.price|floatformat:2 }} <br />
 				<strong>{% trans "Net" %}:</strong> {{ reg.netPrice|floatformat:2 }}
 				{% if reg.refundFlag %}<br />
-				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ reg.invoiceitem.adjustments|floatformat:2 }}
+				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ reg.invoiceItem.adjustments|floatformat:2 }}
 				{% endif %}
-				{% if reg.invoiceitem.revenueMismatch or reg.invoiceitem.revenueNotYetReceived %}<br />
-				<strong>{% trans "Recorded Revenue" %}:</strong> {{ reg.invoiceitem.revenueReported|floatformat:2 }}<br />
-				<strong>{% trans "Received Revenue" %}:</strong> {{ reg.invoiceitem.revenueReceived|floatformat:2 }}<br />
+				{% if reg.invoiceItem.revenueMismatch or reg.invoiceItem.revenueNotYetReceived %}<br />
+				<strong>{% trans "Recorded Revenue" %}:</strong> {{ reg.invoiceItem.revenueReported|floatformat:2 }}<br />
+				<strong>{% trans "Received Revenue" %}:</strong> {{ reg.invoiceItem.revenueReceived|floatformat:2 }}<br />
 				{% endif %}
 			{% else %}
 				{{reg.price|floatformat:2 }}
@@ -145,8 +145,8 @@
 		{% if 'core.process_refunds' in perms and reg.registration.invoice %}
 			<a class="btn btn-outline-secondary btn-sm" href="{% url 'refundProcessing' reg.registration.invoice.id %}">{% trans "Refund" %}</a>
 		{% endif %}
-		{% if 'financial.change_revenueitem' in perms and reg.invoiceitem.revenueitem %}
-			<a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_revenueitem_change' reg.invoiceitem.revenueitem.id %}">{% trans "Rev. Item" %}</a>
+		{% if 'financial.change_revenueitem' in perms and reg.invoiceItem.revenueitem %}
+			<a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_revenueitem_change' reg.invoiceItem.revenueitem.id %}">{% trans "Rev. Item" %}</a>
 		{% endif %}
 		</div>
 		</td>

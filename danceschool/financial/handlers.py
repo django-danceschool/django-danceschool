@@ -181,15 +181,15 @@ def reportRevenue(sender, **kwargs):
         return
 
     extras = {}
-    regs = regs.filter(invoiceitem__revenueitem__isnull=False).select_related(
-        'invoiceitem__revenueitem'
+    regs = regs.filter(invoiceItem__revenueitem__isnull=False).select_related(
+        'invoiceItem__revenueitem'
     )
 
     for reg in regs:
         extras[reg.id] = [{
-            'id': reg.invoiceitem.revenueitem.id,
-            'name': reg.invoiceitem.revenueitem.description,
+            'id': reg.invoiceItem.revenueitem.id,
+            'name': reg.invoiceItem.revenueitem.description,
             'type': 'revenueitem',
-            'amount': reg.invoiceitem.revenueitem.total,
+            'amount': reg.invoiceItem.revenueitem.total,
         }, ]
     return extras

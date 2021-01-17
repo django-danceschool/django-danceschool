@@ -112,7 +112,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             event=self.object, cancelled=False
         ).select_related(
             'registration', 'event', 'customer',
-            'invoiceitem', 'role', 'registration__invoice',
+            'invoiceItem', 'role', 'registration__invoice',
         ).order_by('registration__firstName', 'registration__lastName')
 
         extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
@@ -243,7 +243,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
                 ('customer', ['id', 'fullName', 'email', 'numClassSeries']),
                 ('invoice', ['id', 'adjustments', 'outstandingBalance', 'statusLabel', 'url']),
             ]),
-            ('invoiceitem', [
+            ('invoiceItem', [
                 'id', 'adjustments', 'revenueMismatch', 'revenueNotYetReceived',
                 'revenueReceived', 'revenueReported'
             ]),
@@ -280,7 +280,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
             **filters
         ).distinct().select_related(
             'registration', 'event', 'customer',
-            'invoiceitem', 'role', 'registration__invoice',
+            'invoiceItem', 'role', 'registration__invoice',
         ).order_by('registration__firstName', 'registration__lastName')
         return registrations
 
@@ -431,35 +431,6 @@ class InvoiceNotificationView(FinancialContextMixin, AdminSuccessURLMixin,
             'cannotNotify': self.cannotNotify,
         })
         return context
-
-
-class CreateInvoiceView(UserFormKwargsMixin, FormView):
-    form_class = CreateInvoiceForm
-
-    def form_valid(self, form):
-        regSession = self.request.session[REG_VALIDATION_STR]
-        reg_id = regSession["temp_reg_id"]
-        tr = TemporaryRegistration.objects.get(id=reg_id)
-
-        # Create a new Invoice if one does not already exist.
-        new_invoice = Invoice.get_or_create_from_registration(tr)
-
-        if form.cleaned_data.get('invoiceSent'):
-            # Do not finalize this registration, but set the expiration date
-            # on the TemporaryRegistration such that it will not be deleted
-            # until after the last series ends, in case this person does not make
-            # a payment right away.  This will also hold this individual's spot
-            # in anything for which they have registered indefinitely.
-            payerEmail = form.cleaned_data['invoicePayerEmail']
-            tr.expirationDate = tr.lastEndTime
-            tr.save()
-            new_invoice.sendNotification(payerEmail=payerEmail, newRegistration=True)
-
-        return HttpResponseRedirect(reverse('registration'))
-
-    def form_invalid(self, form):
-        ''' TODO: Figure out better handling for this case. '''
-        return HttpResponseBadRequest()
 
 
 #################################

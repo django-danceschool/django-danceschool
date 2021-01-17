@@ -27,7 +27,7 @@ class CashPaymentMixin(object):
     def clean_submissionUser(self):
         user_id = self.data.get('submissionUser') or None
 
-        if user_id is 'None' or not user_id:
+        if user_id == 'None' or not user_id:
             return None
 
         user = User.objects.get(id=user_id)

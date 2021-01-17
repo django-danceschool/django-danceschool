@@ -453,6 +453,7 @@ class RegistrationContactForm(forms.Form):
     def __init__(self, *args, **kwargs):
         self._request = kwargs.pop('request', None)
         self._registration = kwargs.pop('registration', None)
+        self._invoice = kwargs.pop('invoice', None)
         user = getattr(self._request, 'user', None)
         session = getattr(self._request, 'session', {}).get(REG_VALIDATION_STR, {})
 
@@ -541,7 +542,7 @@ class RegistrationContactForm(forms.Form):
         # not the other way around.
         already_registered_list = []
 
-        if customer:
+        if customer and self._registration:
             eventregs_all = self._registration.temporaryeventregistration_set.all()
             event_ids_dropIn = [x.event.id for x in eventregs_all if x.dropIn is True]
             event_ids_series = [
@@ -603,7 +604,8 @@ class RegistrationContactForm(forms.Form):
         check_student_info.send(
             sender=RegistrationContactForm,
             instance=self, formData=self.cleaned_data, request=self._request,
-            registration=self._registration
+            registration=self._registration,
+            invoice=self._invoice,
         )
 
         return self.cleaned_data

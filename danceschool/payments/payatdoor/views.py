@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
-from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
+from danceschool.core.constants import getConstant
 from danceschool.core.models import Invoice, TemporaryRegistration, CashPaymentRecord
 from danceschool.core.helpers import getReturnPage
 
@@ -27,13 +27,11 @@ def handle_willpayatdoor(request):
     if form.is_valid():
         tr = form.cleaned_data.get('registration')
         instance = form.cleaned_data.get('instance')
-
-        invoice = Invoice.get_or_create_from_registration(
-            tr,
+        invoice = tr.link_invoice(
+            status=Invoice.PaymentStatus.unpaid,
             submissionUser=form.cleaned_data.get('submissionUser'),
         )
-        invoice.finalRegistration = tr.finalize()
-        invoice.save()
+        tr.finalize()
         if instance:
             return HttpResponseRedirect(instance.successPage.get_absolute_url())
     return HttpResponseBadRequest()
@@ -59,13 +57,10 @@ def handle_payatdoor(request):
             return HttpResponseBadRequest()
 
         if not invoice:
-            invoice = Invoice.get_or_create_from_registration(
-                tr,
+            invoice = tr.link_invoice(
+                status=Invoice.PaymentStatus.unpaid,
                 submissionUser=subUser,
-                email=payerEmail,
             )
-            invoice.finalRegistration = tr.finalize()
-            invoice.save()
 
         this_cash_payment = CashPaymentRecord.objects.create(
             invoice=invoice, amount=amountPaid,

@@ -21,7 +21,7 @@ from .models import (
 from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
-    post_student_info, apply_discount, apply_price_adjustments, check_voucher
+    post_student_info, apply_discount, apply_price_adjustments
 )
 from .mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
@@ -230,16 +230,21 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # If we got this far with no issues, then save
         reg.priceWithDiscount = grossPrice
+        invoice = reg.link_invoice()
         reg.save()
+
         for er in self.event_registrations:
             er.registration = reg
+            er.link_invoice_item(invoice=invoice)
             er.save()
 
-        # Put this in a property in case the get_success_url() method needs it.
+        # Put these in a property in case the get_success_url() method needs them.
         self.temporaryRegistration = reg
+        self.invoice = invoice
 
         regSession["temporaryRegistrationId"] = reg.id
-        regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+        regSession["invoiceId"] = invoice.id
+        regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
 
         if self.returnJson:
@@ -409,7 +414,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 })
 
             session_expiry = parse_datetime(
-                regSession.get('temporaryRegistrationExpiry', ''),
+                regSession.get('invoiceExpiry', ''),
             )
             if not session_expiry or session_expiry < timezone.now():
                 errors.append({
@@ -663,18 +668,22 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # existing associated TemporaryEventRegistrations that were not passed
         # in via POST.
         reg.priceWithDiscount = grossPrice
+        invoice = reg.link_invoice()
         reg.save()
         reg.temporaryeventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
 
         for er in self.event_registrations:
             er.registration = reg
+            er.link_invoice_item(invoice=invoice)
             er.save()
 
         # Put this in a property in case the get_success_url() method needs it.
         self.temporaryRegistration = reg
+        self.invoice = invoice
 
         reg_response = {
             'id': reg.id,
+            'invoiceId': invoice.id,
             'payAtDoor': reg.payAtDoor,
             'subtotal': grossPrice,
             'total': grossPrice,
@@ -697,6 +706,22 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # Pass back student status.
         if reg.student:
             reg_response.update({'student': reg.student})
+
+        # Add any additional items (such as merchandise from additional apps)
+        # that could modify the cart totals.
+        additional_items = self.getAdditionalItems(
+            post_data.get('items', []), post_data.get('orders', {})
+        )
+        if additional_items:
+            reg_response.update({
+                'total': grossPrice + additional_items.get('subtotal', 0),
+                'subtotal': grossPrice + additional_items.get('subtotal', 0),
+                'itemCount': (
+                    reg_response.get('itemCount', 0) +
+                    additional_items.get('itemCount', 0)
+                ),
+                'items': additional_items.get('items', {})
+            })
 
         discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
             reg, grossPrice
@@ -725,39 +750,14 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         voucherId = post_data.get('voucherId', None)
         if voucherId:
-            # This will only find a customer if all three are specified.
-            customer = Customer.objects.filter(
-                first_name=post_data.get('firstName', None),
-                last_name=post_data.get('lastName', None),
-                email=post_data.get('email', None)
-            ).first()
-
-            voucher_response = check_voucher.send(
-                sender=AjaxClassRegistrationView, voucherId=voucherId,
-                customer=customer, validateCustomer=(customer is not None),
-                registration=reg
+            reg_response.update(
+                self.getVoucher(
+                    voucherId, reg, discounted_total,
+                    post_data.get('firstName', None),
+                    post_data.get('lastName', None),
+                    post_data.get('email', None),
+                )
             )
-            voucher_response = [x[1] for x in voucher_response if len(x) > 1 and x[1]]
-            if (len(voucher_response) > 1):
-                # This shouldn't happen
-                logger.error('Received multiple voucher responses from signal handler.')
-            elif voucher_response:
-                if (
-                    voucher_response[0].get('status', None) == 'valid' and
-                    voucher_response[0].get('available', 0) > 0
-                ):
-                    total = max(
-                        0, discounted_total - voucher_response[0].get('available', 0)
-                    )
-                else:
-                    total = discounted_total
-
-                reg_response.update({
-                    'voucherId': voucher_response[0].get('id', None),
-                    'voucher': voucher_response[0],
-                    'voucher_amount': discounted_total - total,
-                    'total': total,
-                })
 
         response_dict = {
             'status': 'success',
@@ -814,7 +814,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             regSession["voucher_id"] = reg_response.get('voucherId', None)
 
         regSession["temporaryRegistrationId"] = reg.id
-        regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+        regSession["invoiceId"] = invoice.id
+        regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
 
         return JsonResponse(response_dict)
@@ -865,49 +866,68 @@ class RegistrationSummaryView(
             return HttpResponseRedirect(reverse('registration'))
 
         try:
-            reg = TemporaryRegistration.objects.get(
-                id=self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
-            )
+            invoice = Invoice.objects.get(id=self.request.session[REG_VALIDATION_STR].get('invoiceId'))
         except ObjectDoesNotExist:
-            messages.error(request, _('Invalid registration identifier passed to summary view.'))
+            messages.error(request, _('Invalid invoice identifier passed to summary view.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry', ''),
+            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
         )
         if not expiry or expiry < timezone.now():
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
+        tr_id = self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+
+        if tr_id:
+            reg = TemporaryRegistration.objects.get(
+                id=tr_id
+            )
+        else:
+            reg = None
+        if reg and reg.invoice != invoice:
+            messages.error(request, _('Invoice and registration do not match.'))
+            return HttpResponseRedirect(reverse('registration'))
+
         # If OK, pass the registration and proceed
         kwargs.update({
             'reg': reg,
+            'invoice': invoice,
         })
         return super(RegistrationSummaryView, self).dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         reg = kwargs.get('reg')
+        invoice = kwargs.get('invoice')
 
-        initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
+        # initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
+        initial_price = invoice.grossTotal
 
-        discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
-            reg, initial_price
-        )
-        addons = self.getAddons(reg)
-
-        for discount in discount_codes:
-            apply_discount.send(
-                sender=RegistrationSummaryView,
-                discount=discount.code,
-                discount_amount=discount.discount_amount,
-                registration=reg,
+        if reg:
+            discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
+                reg, initial_price
             )
+            addons = self.getAddons(reg)
+
+            for discount in discount_codes:
+                apply_discount.send(
+                    sender=RegistrationSummaryView,
+                    discount=discount.code,
+                    discount_amount=discount.discount_amount,
+                    registration=reg,
+                )
+        else:
+            total_discount_amount = 0
+            discounted_total = initial_price
+            addons = []
 
         # The return value to this signal should contain any adjustments that
         # need to be made to the price (e.g. from vouchers if the voucher app
         # is installed)
         adjustment_responses = apply_price_adjustments.send(
             sender=RegistrationSummaryView,
+            invoice=invoice,
             registration=reg,
             initial_price=discounted_total
         )
@@ -921,16 +941,26 @@ class RegistrationSummaryView(
 
         # Save the discounted price to the database
         total = discounted_total - adjustment_amount
-        reg.priceWithDiscount = total
-        reg.save()
+
+        if reg:
+            reg.priceWithDiscount = total
+            reg.save()
+
+        invoice.total = total
+        invoice.save()
 
         # Update the session key to keep track of this registration
         regSession = request.session[REG_VALIDATION_STR]
-        regSession["temp_reg_id"] = reg.id
-        if discount_codes:
-            regSession['discount_codes'] = [(x.code.name, x.code.pk, x.discount_amount) for x in discount_codes]
-        regSession['total_discount_amount'] = total_discount_amount
-        regSession['addons'] = addons
+        regSession["temp_invoice_id"] = invoice.id
+        if reg:
+            regSession["temp_reg_id"] = reg.id
+            regSession['addons'] = addons
+            regSession['total_discount_amount'] = total_discount_amount
+            if discount_codes:
+                regSession['discount_codes'] = [
+                    (x.code.name, x.code.pk, x.discount_amount) for x in discount_codes
+                ]
+
         regSession['voucher_names'] = adjustment_list
         regSession['total_voucher_amount'] = adjustment_amount
         request.session[REG_VALIDATION_STR] = regSession
@@ -942,8 +972,14 @@ class RegistrationSummaryView(
         context_data = super(RegistrationSummaryView, self).get_context_data(**kwargs)
 
         regSession = self.request.session[REG_VALIDATION_STR]
-        reg_id = regSession["temp_reg_id"]
-        reg = TemporaryRegistration.objects.get(id=reg_id)
+        invoice_id = regSession["temp_invoice_id"]
+        invoice = Invoice.objects.get(id=invoice_id)
+
+        reg_id = regSession.get("temp_reg_id",None)
+        if reg_id:
+            reg = TemporaryRegistration.objects.get(id=reg_id)
+        else:
+            reg = None
 
         discount_codes = regSession.get('discount_codes', None)
         discount_amount = regSession.get('total_discount_amount', 0)
@@ -951,15 +987,10 @@ class RegistrationSummaryView(
         total_voucher_amount = regSession.get('total_voucher_amount', 0)
         addons = regSession.get('addons', [])
 
-        isFree = (reg.priceWithDiscount == 0)
+        isFree = (invoice.total == 0)
         isComplete = (isFree or regSession.get('direct_payment', False) is True)
 
         if isComplete:
-            # Create a new Invoice if one does not already exist.
-            new_invoice = Invoice.get_or_create_from_registration(
-                reg, status=Invoice.PaymentStatus.paid
-            )
-
             # Include the submission user if the user is authenticated
             if self.request.user.is_authenticated:
                 submissionUser = self.request.user
@@ -967,23 +998,23 @@ class RegistrationSummaryView(
                 submissionUser = None
 
             if isFree:
-                new_invoice.processPayment(
+                invoice.processPayment(
                     amount=0, fees=0, submissionUser=submissionUser,
                     forceFinalize=True
                 )
             else:
-                amountPaid = reg.priceWithDiscount
+                amountPaid = invoice.total
                 paymentMethod = regSession.get('direct_payment_method', 'Cash')
 
                 this_cash_payment = CashPaymentRecord.objects.create(
-                    invoice=new_invoice, amount=amountPaid,
+                    invoice=invoice, amount=amountPaid,
                     status=CashPaymentRecord.PaymentStatus.collected,
                     paymentMethod=paymentMethod,
-                    payerEmail=reg.email,
+                    payerEmail=invoice.email,
                     submissionUser=submissionUser,
                     collectedByUser=submissionUser,
                 )
-                new_invoice.processPayment(
+                invoice.processPayment(
                     amount=amountPaid, fees=0, paidOnline=False,
                     methodName=paymentMethod, submissionUser=submissionUser,
                     collectedByUser=submissionUser,
@@ -996,10 +1027,11 @@ class RegistrationSummaryView(
                 'url', reverse('registration')
             ),
             'registration': reg,
-            "totalPrice": reg.totalPrice,
-            'subtotal': reg.priceWithDiscount,
-            'taxes': reg.addTaxes,
-            "netPrice": reg.priceWithDiscountAndTaxes,
+            'invoice': invoice,
+            "totalPrice": invoice.grossTotal,
+            'subtotal': invoice.total,
+            'taxes': getattr(reg, 'addTaxes', False),
+            "netPrice": getattr(reg, 'priceWithDiscountAndTaxes', invoice.total),
             "addonItems": addons,
             "discount_codes": discount_codes,
             "discount_code_amount": discount_amount,
@@ -1007,7 +1039,7 @@ class RegistrationSummaryView(
             "total_voucher_amount": total_voucher_amount,
             "total_discount_amount": discount_amount + total_voucher_amount,
             "currencyCode": getConstant('general__currencyCode'),
-            'payAtDoor': reg.payAtDoor,
+            'payAtDoor': getattr(reg, 'payAtDoor', True),
             'is_complete': isComplete,
             'is_free': isFree,
         })
@@ -1037,18 +1069,30 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             return HttpResponseRedirect(reverse('registration'))
 
         try:
-            self.temporaryRegistration = TemporaryRegistration.objects.get(
-                id=self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+            self.invoice = Invoice.objects.get(
+                id=self.request.session[REG_VALIDATION_STR].get('invoiceId')
             )
         except ObjectDoesNotExist:
-            messages.error(request, _('Invalid registration identifier passed to sign-up form.'))
+            messages.error(request, _('Invalid invoice identifier passed to sign-up form.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationExpiry', ''),
+            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
         )
         if not expiry or expiry < timezone.now():
             messages.info(request, _('Your registration session has expired. Please try again.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        tr_id = self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+
+        if tr_id:
+            self.temporaryRegistration = TemporaryRegistration.objects.get(
+                id=tr_id
+            )
+        else:
+            self.temporaryRegistration = None
+        if self.temporaryRegistration and self.temporaryRegistration.invoice != self.invoice:
+            messages.error(request, _('Invoice and registration do not match.'))
             return HttpResponseRedirect(reverse('registration'))
 
         # Ensure that session data is always updated when this view is called
@@ -1070,6 +1114,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
         context_data.update({
             'reg': reg,
+            'invoice': self.invoice,
             'payAtDoor': reg.payAtDoor,
             'currencySymbol': getConstant('general__currencySymbol'),
             'subtotal': initial_price,
@@ -1083,40 +1128,9 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
 
         if voucherId:
-            # This will only find a customer if all three are specified.
-            customer = Customer.objects.filter(
-                first_name=reg.firstName,
-                last_name=reg.lastName,
-                email=reg.email
-            ).first()
-
-            voucher_response = check_voucher.send(
-                sender=StudentInfoView, voucherId=voucherId,
-                customer=customer, validateCustomer=(customer is not None),
-                registration=reg
+            context_data.update(
+                self.getVoucher(voucherId, reg, discounted_total)
             )
-
-            voucher_response = [x[1] for x in voucher_response if len(x) > 1 and x[1]]
-            if (len(voucher_response) > 1):
-                # This shouldn't happen
-                logger.error('Received multiple voucher responses from signal handler.')
-            elif voucher_response:
-                if (
-                    voucher_response[0].get('status', None) == 'valid' and
-                    voucher_response[0].get('available', 0) > 0
-                ):
-                    total = max(
-                        0, discounted_total - voucher_response[0].get('available', 0)
-                    )
-                else:
-                    total = discounted_total
-
-                context_data.update({
-                    'voucher_id': voucher_response[0].get('id', None),
-                    'voucher_name': voucher_response[0].get('name', None),
-                    'voucher_amount': discounted_total - total,
-                    'discounted_subtotal': total,
-                })
 
         if (
             reg.payAtDoor or self.request.user.is_authenticated or not
@@ -1138,6 +1152,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         kwargs = super(StudentInfoView, self).get_form_kwargs(**kwargs)
         kwargs['request'] = self.request
         kwargs['registration'] = self.temporaryRegistration
+        kwargs['invoice'] = self.invoice
         return kwargs
 
     def get_success_url(self):
@@ -1150,28 +1165,42 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         were invalid.  Otherwise, update the session data with the form data and then
         move to the next view
         '''
-        reg = self.temporaryRegistration
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session[REG_VALIDATION_STR]["temporaryRegistrationExpiry"] = \
+        self.request.session[REG_VALIDATION_STR]["invoiceExpiry"] = \
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
-        # Update the expiration date for this registration, and pass in the data from
-        # this form.
-        reg.expirationDate = expiry
-        reg.firstName = form.cleaned_data.pop('firstName')
-        reg.lastName = form.cleaned_data.pop('lastName')
-        reg.email = form.cleaned_data.pop('email')
-        reg.phone = form.cleaned_data.pop('phone', None)
-        reg.student = form.cleaned_data.pop('student', False)
-        reg.comments = form.cleaned_data.pop('comments', None)
-        reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs', None)
+        reg = self.temporaryRegistration
+        if reg:
 
-        # Anything else in the form goes to the TemporaryRegistration data.
-        reg.data.update(form.cleaned_data)
-        reg.save()
+            # Update the expiration date for this registration, and pass in the data from
+            # this form.
+            reg.expirationDate = expiry
+            reg.firstName = form.cleaned_data.pop('firstName')
+            reg.lastName = form.cleaned_data.pop('lastName')
+            reg.email = form.cleaned_data.pop('email')
+            reg.phone = form.cleaned_data.pop('phone', None)
+            reg.student = form.cleaned_data.pop('student', False)
+            reg.comments = form.cleaned_data.pop('comments', None)
+            reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs', None)
+
+            # Anything else in the form goes to the TemporaryRegistration data.
+            reg.data.update(form.cleaned_data)
+            invoice = reg.link_invoice(expirationDate=expiry)
+            reg.save()
+        else:
+            invoice = self.invoice
+
+            if invoice.status == Invoice.PaymentStatus.preliminary:
+                invoice.expirationDate = expiry
+
+            invoice.firstName = form.cleaned_data.pop('firstName')
+            invoice.lastName = form.cleaned_data.pop('lastName')
+            invoice.email = form.cleaned_data.pop('email')
+            invoice.data.update(form.cleaned_data)
+            invoice.save()
 
         # This signal (formerly the post_temporary_registration signal) allows
         # vouchers to be applied temporarily, and it can be used for other tasks

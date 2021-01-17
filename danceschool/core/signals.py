@@ -3,7 +3,7 @@ from django.dispatch import Signal
 # Fires during the clean process of the StudentInfoView form, allowing hooked in
 # apps to validate the form data and raise ValidationErrors or send warnings
 # (messages) to the user by adding them to the request.
-check_student_info = Signal(providing_args=['instance', 'formData', 'request', 'registration'])
+check_student_info = Signal(providing_args=['instance', 'formData', 'request', 'registration', 'invoice'])
 
 # Fires after the student info form has been validated and the TemporaryRegistration record
 # has been updated to reflect the submitted information from this form.  Since this signal is
@@ -12,6 +12,14 @@ check_student_info = Signal(providing_args=['instance', 'formData', 'request', '
 # and it can be used to make related changes in other apps (such as creating TemporaryVoucherUse)
 # records in the VoucherUse app
 post_student_info = Signal(providing_args=['registration', ])
+
+# Fires at the point in handling an Ajax shopping cart where additional
+# (non-registration) items may be added or removed from the cart.  The POST
+# data is passed to the signal, and it should return a dictionary that can be
+# passed to the Ajax shopping cart.  Examples of potential uses include merchandise.
+# The order_type flag is a check for the handler that ensures that it is working
+# with the correct type of information.
+process_cart_items = Signal(providing_args=['items_data', 'orders_data', 'invoice'])
 
 # Fires at the point when automatically-applied discounts may be applied to
 # a preliminary registration.  Any handler that attaches to this signal should
@@ -46,10 +54,13 @@ apply_addons = Signal(providing_args=['registration'])
 # Fires when vouchers or any other direct price adjustments are ready to be applied.
 # Any handler that attaches to this signal should return a name/description of the
 # adjustment as well as the amount of the adjustment, in tuple form as (name, amount).
-apply_price_adjustments = Signal(providing_args=['registration', 'initial_price'])
+apply_price_adjustments = Signal(providing_args=['registration', 'invoice', 'initial_price'])
 
 # Fires after a Registration is created.
 post_registration = Signal(providing_args=['registration', ])
+
+# Fires whenever an invoice is finalized.
+invoice_finalized = Signal(providing_args=['invoice', ])
 
 # Fires on the customer profile page to collect customer information from other apps
 # without overriding the CustomerStatsView.

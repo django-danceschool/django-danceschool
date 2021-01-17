@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
-from danceschool.core.constants import getConstant, INVOICE_VALIDATION_STR
+from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.models import Invoice, TemporaryRegistration
 
 from .models import StripeCharge
@@ -73,8 +73,11 @@ def handle_stripe_checkout(request):
         elif tr_id:
             tr = TemporaryRegistration.objects.get(id=int(tr_id))
             tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+            this_invoice = tr.link_invoice(
+                status=Invoice.PaymentStatus.unpaid,
+                submissionUser=submissionUser,
+            )
             tr.save()
-            this_invoice = Invoice.get_or_create_from_registration(tr, submissionUser=submissionUser)
             this_description = _('Registration Payment: #%s' % tr_id)
             if not amount:
                 amount = this_invoice.outstandingBalance
@@ -94,6 +97,7 @@ def handle_stripe_checkout(request):
                 submissionUser=submissionUser,
                 calculate_taxes=(taxable is not False),
                 transactionType=transactionType,
+                status=Invoice.PaymentStatus.unpaid,
             )
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error(
@@ -173,14 +177,14 @@ def handle_stripe_checkout(request):
         )
 
         if addSessionInfo:
-            paymentSession = request.session.get(INVOICE_VALIDATION_STR, {})
+            paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
 
             paymentSession.update({
                 'invoiceID': str(this_invoice.id),
                 'amount': charge.amount / 100,
                 'successUrl': successUrl,
             })
-            request.session[INVOICE_VALIDATION_STR] = paymentSession
+            request.session[PAYMENT_VALIDATION_STR] = paymentSession
             return HttpResponseRedirect(customizeUrl)
 
         return HttpResponseRedirect(successUrl)

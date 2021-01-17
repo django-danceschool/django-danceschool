@@ -291,8 +291,10 @@ class BookPrivateLessonView(FormView):
 
             # Now we are ready to save and proceed.
             reg.priceWithDiscount = tr.price
+            invoice = reg.link_invoice()
             reg.save()
             tr.registration = reg
+            tr.link_invoice_item(invoice=invoice)
             tr.save()
 
             affectedSlots.update(
@@ -304,7 +306,8 @@ class BookPrivateLessonView(FormView):
             # Load the temporary registration into session data like a regular registration
             # and redirect to Step 2 as usual.
             regSession["temporaryRegistrationId"] = reg.id
-            regSession["temporaryRegistrationExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+            regSession["invoiceId"] = invoice.id
+            regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
             self.request.session[REG_VALIDATION_STR] = regSession
             return HttpResponseRedirect(reverse('getStudentInfo'))
 
