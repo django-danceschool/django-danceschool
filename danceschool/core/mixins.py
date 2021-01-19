@@ -323,12 +323,30 @@ class RegistrationModelMixin(object):
 
         return context
 
+    def save(self, *args, **kwargs):
+        '''
+        Before saving this registration, ensure that an associated invoice
+        exists.  If an invoice already exists, then update the invoice if
+        anything requires updating.
+        '''
+        link_kwargs = {
+            'submissionUser': kwargs.pop('submissionUser', None),
+            'collectedByUser': kwargs.pop('collectedByUser', None),
+            'status': kwargs.pop('status', None),
+            'expirationDate': kwargs.pop('expirationDate', None),
+            'update': kwargs.pop('updateInvoice', True),
+        }
+
+        self.invoice = self.link_invoice(**link_kwargs)
+        super().save(*args, **kwargs)
+
+
     def link_invoice(self, update=True, **kwargs):
         '''
         If an invoice does not already exist for this registration,
-        then create one.  Return the linked invoice.  TODO: Deal with updating
-        invoice totals that already have non-registration items associated with
-        them.
+        then create one.  If an update is requested, then ensure that all
+        details of the invoice match the registration.
+        Return the linked invoice.
         '''
 
         submissionUser = kwargs.pop('submissionUser', None)
@@ -370,6 +388,8 @@ class RegistrationModelMixin(object):
         elif update:
             needs_update = False
 
+            other_details = self.getOtherInvoiceDetails()
+
             if (
                 self.invoice.firstName != (self.firstName or kwargs.get('firstName', None)) or
                 self.invoice.lastName != (self.lastName or kwargs.get('lastName', None)) or
@@ -379,15 +399,15 @@ class RegistrationModelMixin(object):
                 self.invoice.lastName = self.lastName or kwargs.pop('lastName', None)
                 self.invoice.email = self.email or kwargs.pop('email', None)
                 needs_update = True
-            if (
-                self.invoice.grossTotal != self.totalPrice or
-                self.invoice.total != self.priceWithDiscount
-            ):
-                self.invoice.grossTotal = self.totalPrice
-                self.invoice.total = self.priceWithDiscount
-                needs_update = True
             if status and status != self.invoice.status:
                 self.invoice.status = status
+                needs_update = True
+            if (
+                self.invoice.grossTotal != self.totalPrice + other_details.get('grossTotal',0) or
+                self.invoice.total != self.priceWithDiscount + other_details.get('total', 0)
+            ):
+                self.invoice.grossTotal = self.totalPrice + other_details.get('grossTotal', 0)
+                self.invoice.total = self.priceWithDiscount + other_details.get('total', 0)
                 needs_update = True
 
             if (
@@ -404,6 +424,26 @@ class RegistrationModelMixin(object):
                 self.invoice.save()
 
         return self.invoice
+
+    def getOtherInvoiceDetails(self):
+        '''
+        Return a dictionary with details on the sum of totals for non-registration
+        items on the invoice associated with this registration.
+        '''
+
+        if not self.invoice:
+            return {}
+        return self.invoice.invoiceitem_set.exclude(
+            id__in=self.eventregistration_set.values_list(
+                'invoiceItem', flat=True
+            )
+        ).aggregate(
+            grossTotal=Sum('grossTotal'),
+            total=Sum('total'),
+            adjustments=Sum('adjustments'),
+            taxes=Sum('taxes'),
+            fees=Sum('fees'),
+        )
 
 
 class EventRegistrationModelMixin(object):
@@ -432,6 +472,25 @@ class EventRegistrationModelMixin(object):
                 'last_name': self.registration.lastName,
             })
         return context
+
+    def save(self, *args, **kwargs):
+        '''
+        Before saving, create an invoice item for this registration if one does
+        not already exist.
+        '''
+
+        invoice = kwargs.pop(
+            'invoice', getattr(self.registration, 'invoice', None)
+        )
+
+        if not invoice:
+            raise ValidationError(_(
+                'Cannot create invoice item for event registration: ' +
+                'no invoice has been specified.'
+            ))
+
+        self.invoiceItem = self.link_invoice_item(invoice=invoice)
+        super().save(*args, **kwargs)
 
     def link_invoice_item(self, invoice):
         '''

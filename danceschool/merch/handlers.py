@@ -1,8 +1,17 @@
-from collections import Counter
+from django.utils.translation import ugettext_lazy as _
 
-from danceschool.core.signals import process_cart_items
+from collections import Counter
+import logging
+
+from danceschool.core.signals import process_cart_items, invoice_finalized
+from danceschool.core.models import Invoice
 
 from .models import MerchItemVariant, MerchOrder, MerchOrderItem
+
+
+# Define logger for this file
+logger = logging.getLogger(__name__)
+
 
 @receiver(process_cart_items)
 def processMerch(sender, **kwargs):
@@ -104,3 +113,29 @@ def processMerch(sender, **kwargs):
         
     print(new_items_data)
     return new_items_data
+
+
+@receiver(invoice_finalized)
+def processFinalizedInvoice(sender, **kwargs):
+    '''
+    When an invoice is finalized because a payment has been made, any
+    order items associated with that invoice may need to have their status
+    updated in order to indicate that they are ready to be fulfilled.
+    '''
+    invoice = kwargs.pop('invoice', None)
+
+    
+    if not invoice or not isinstance(invoice, Invoice):
+        logger.error('invoice_finalized signal fired without passing a valid invoice.')        
+        return
+
+    order = getattr(invoice, 'merchOrder', None)
+
+    if not order:
+        logger.debug('Invoice {} does not have an associated merchandise order'.format(invoice.id))
+        return
+
+    order.submitOrder(
+        submissionUser=kwargs.pop('submissionUser', None),
+        collectedByUser=kwargs.pop('collectedByUser', None),
+    )

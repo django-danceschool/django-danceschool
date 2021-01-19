@@ -60,7 +60,7 @@ apply_price_adjustments = Signal(providing_args=['registration', 'invoice', 'ini
 post_registration = Signal(providing_args=['registration', ])
 
 # Fires whenever an invoice is finalized.
-invoice_finalized = Signal(providing_args=['invoice', ])
+invoice_finalized = Signal(providing_args=['invoice', 'submissionUser', 'collectedByUser'])
 
 # Fires on the customer profile page to collect customer information from other apps
 # without overriding the CustomerStatsView.

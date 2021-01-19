@@ -1225,7 +1225,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         if includeTemporaryRegs:
             excludes = Q(registration__expirationDate__lte=timezone.now())
             if isinstance(dateTime, datetime):
-                excludes = exclude | Q(registration__dateTime__gte=dateTime)
+                excludes = excludes | Q(registration__dateTime__gte=dateTime)
             count += self.temporaryeventregistration_set.filter(dropIn=False).exclude(excludes).count()
         return count
 
@@ -2414,7 +2414,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         collectedByUser = kwargs.pop('collectedByUser', None)
         calculate_taxes = kwargs.pop('calculate_taxes', False)
         grossTotal = kwargs.pop('grossTotal', None)
-        status = kwargs.pop('status', PaymentStatus.unpaid)
+        status = kwargs.pop('status', cls.PaymentStatus.unpaid)
 
         new_invoice = cls(
             grossTotal=grossTotal or amount,
@@ -2442,7 +2442,7 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def add_item(
         self, grossTotal=0, total=0, adjustments=0, taxes=0, fees=0,
-        save=True, updateTotals=True, allocateFees=False
+        save=True, updateTotals=True, allocateFees=False, **kwargs
     ):
         '''
         A convenience method to quickly add an item to an invoice based on
@@ -2664,6 +2664,8 @@ class Invoice(EmailRecipientMixin, models.Model):
             invoice_finalized.send(
                 sender=Invoice,
                 invoice=self,
+                submissionUser=submissionUser,
+                collectedByUser=collectedByUser,
             )
 
         else:
@@ -2811,6 +2813,10 @@ class InvoiceItem(models.Model):
     and InvoiceItems may link uniquely to registration items.  Although this may seem
     like duplicated functionality, it permits the core app (as well as the payment apps)
     to operate completely independently of the financial app, making that app fully optional.
+
+    Note also that handlers.py has post_save and post_delete signal handlers that
+    ensure that the invoice totals are kept current with the set of associated
+    invoice items.
     '''
 
     # The UUID field is the unique internal identifier used for this InvoiceItem

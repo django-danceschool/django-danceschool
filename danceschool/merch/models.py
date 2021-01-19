@@ -294,7 +294,12 @@ class MerchOrder(models.Model):
         ).aggregate(total=Sum('totalPrice')).get('total', 0) or 0
 
     def submitOrder(self, invoice=None, **kwargs):
-        self.status = OrderStatus.submitted
+        if self.status == self.OrderStatus.cancelled:
+            # Orders that have already been cancelled are ignored.
+            return
+        if self.status == self.OrderStatus.unsubmitted:
+            self.status = self.OrderStatus.submitted
+
         if invoice and self.invoice != invoice:
             raise ValidationError(_('Invalid invoice for submission'))
         elif invoice:
@@ -302,27 +307,30 @@ class MerchOrder(models.Model):
         else:
             submissionUser = kwargs.pop('submissionUser', None)
             collectedByUser = kwargs.pop('collectedByUser', None)
-            status = kwargs.pop('status', Invoice.PaymentStatus.unpaid)
 
-            self.invoice = Invoice(
-                firstName=kwargs.pop('firstName', None),
-                lastName=kwargs.pop('lastName', None),
-                email=kwargs.pop('email', None),
-                grossTotal=self.grossTotal,
-                total=kwargs.pop('priceWithDiscount') or self.grossTotal,
-                submissionUser=submissionUser,
-                collectedByUser=collectedByUser,
-                buyerPaysSalesTax=False,
-                status=status,
-                data=kwargs,
-            )
-            self.invoice.save()
+            if not self.invoice:
+                self.invoice = Invoice(
+                    firstName=kwargs.pop('firstName', None),
+                    lastName=kwargs.pop('lastName', None),
+                    email=kwargs.pop('email', None),
+                    grossTotal=self.grossTotal,
+                    total=kwargs.pop('priceWithDiscount', self.grossTotal),
+                    submissionUser=submissionUser,
+                    collectedByUser=collectedByUser,
+                    buyerPaysSalesTax=False,
+                    status=kwargs.pop('status', Invoice.PaymentStatus.unpaid),
+                    data=kwargs,
+                )
+                self.invoice.save()
         self.save()
 
     def cancelOrder(self):
         ''' TODO: Handle invoice update when an order is cancelled. '''
-        self.status = OrderStatus.cancelled
+        self.status = self.OrderStatus.cancelled
         self.save()
+
+        for item in self.items:
+            item.unlinkInvoice()
 
     class Meta:
         verbose_name = _('Merchandise order')
@@ -354,15 +362,62 @@ class MerchOrderItem(models.Model):
     )
 
     invoiceItem = models.OneToOneField(
-        InvoiceItem, on_delete=models.CASCADE, null=True, blank=True,
+        InvoiceItem, on_delete=models.SET_NULL, null=True, blank=True,
         help_text=_(
-            'All submitted merchandise order must be associated with an invoice.'
+            'All submitted merchandise orders must be associated with an invoice.'
         )
     )
 
     quantity = models.PositiveIntegerField(
         _('Quantity'), default=1,
     )
+
+    @property
+    def grossTotal(self):
+        return self.quantity * self.item.price
+
+    def linkInvoice(self, update=True):
+        '''
+        If an order's contents are created or modified, this method ensures that
+        the corresponding invoice items exist and that the totals are updated
+        accordingly.
+        '''
+        newTotal = self.grossTotal
+        invoice = self.order.invoice
+
+        if (
+            invoice and self.invoiceItem and self.invoiceItem.invoice != invoice
+        ):
+            raise ValidationError(_('Invoice item does not match order invoice'))
+
+        if (
+            update and self.invoiceItem and (
+                self.invoiceItem.grossTotal != newTotal or
+                self.invoiceItem.total != newTotal
+            )
+        ):
+            self.invoiceItem.grossTotal = newTotal
+            self.invoiceItem.total = newTotal
+            self.invoiceItem.save()
+        elif not self.invoiceItem and invoice:
+            new_item = InvoiceItem(
+                invoice=invoice,
+                description=self.item.fullName,
+                grossTotal=newTotal,
+                total=newTotal,
+            )
+            new_item.save()
+            self.invoiceItem = new_item
+            self.save()
+
+    def unlinkInvoice(self):
+        '''
+        If an order is cancelled, then the corresponding invoice items are
+        removed from the invoice.  The merch order item remains so that the
+        details of the cancelled order remain available.
+        '''
+        self.invoiceItem.delete()
+
 
     class Meta:
         verbose_name = _('Merchandise order item')
@@ -374,6 +429,7 @@ class MerchOrderItem(models.Model):
             CheckConstraint(
                 check=(
                     Q(order__status=MerchOrder.OrderStatus.unsubmitted) |
+                    Q(order__status=MerchOrder.OrderStatus.cancelled) |
                     Q(invoiceItem__isnull=False)
                 ),
                 name='submitted_item_has_invoice_item',

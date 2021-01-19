@@ -294,8 +294,7 @@ class BookPrivateLessonView(FormView):
             invoice = reg.link_invoice()
             reg.save()
             tr.registration = reg
-            tr.link_invoice_item(invoice=invoice)
-            tr.save()
+            tr.save(invoice=invoice)
 
             affectedSlots.update(
                 lessonEvent=lesson,

@@ -1,12 +1,13 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.dispatch import receiver
+from django.db.models.signals import post_delete, post_save
 
 from allauth.account.signals import email_confirmed
 from allauth.account.models import EmailAddress
 import logging
 
 from .signals import post_registration
-from .models import Registration
+from .models import Registration, InvoiceItem
 
 
 # Define logger for this file
@@ -100,3 +101,8 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
              This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
              The email field should be unique for each account.\n"
         logger.exception(errmsg, customer.email)
+
+
+@receiver([post_save, post_delete], sender=InvoiceItem)
+def updateInvoiceTotals(sender, instance, **kwargs):
+    instance.invoice.updateTotals()

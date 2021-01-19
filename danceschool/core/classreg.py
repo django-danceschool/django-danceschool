@@ -234,9 +234,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         reg.save()
 
         for er in self.event_registrations:
+            # Saving the event registration automatically creates an InvoiceItem.
             er.registration = reg
-            er.link_invoice_item(invoice=invoice)
-            er.save()
+            er.save(invoice=invoice)
 
         # Put these in a property in case the get_success_url() method needs them.
         self.temporaryRegistration = reg
@@ -673,9 +673,9 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         reg.temporaryeventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
 
         for er in self.event_registrations:
+            # Saving the event registration automatically creates an InvoiceItem.
             er.registration = reg
-            er.link_invoice_item(invoice=invoice)
-            er.save()
+            er.save(invoice=invoice)
 
         # Put this in a property in case the get_success_url() method needs it.
         self.temporaryRegistration = reg
