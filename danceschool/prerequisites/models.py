@@ -6,8 +6,8 @@ from django.core.exceptions import ValidationError
 from djchoices import DjangoChoices, ChoiceItem
 
 from danceschool.core.models import (
-    Customer, ClassDescription, DanceTypeLevel, DanceRole, Registration,
-    TemporaryRegistration, EventRegistration
+    Customer, ClassDescription, DanceTypeLevel, DanceRole,
+    Registration, EventRegistration
 )
 
 
@@ -94,7 +94,9 @@ class Requirement(models.Model):
 
         cust_reqs = self.customerrequirement_set.filter(customer=customer, met=True)
         if customer:
-            cust_priors = customer.eventregistration_set.filter(event__series__isnull=False)
+            cust_priors = customer.eventregistration_set.filter(
+                event__series__isnull=False, registration__final=True,
+            )
         else:
             cust_priors = EventRegistration.objects.none()
 
@@ -127,10 +129,6 @@ class Requirement(models.Model):
                     current_matches = registration.eventregistration_set.filter(
                         **filter_dict
                     ).count()
-                elif isinstance(registration, TemporaryRegistration):
-                    current_matches = registration.temporaryeventregistration_set.filter(
-                        **filter_dict
-                    ).count()
 
                 nonconcurrent_filter = {'event__endTime__lte': registration.firstSeriesStartTime}
                 overlap_matches = cust_priors.filter(**filter_dict).exclude(
@@ -156,7 +154,11 @@ class Requirement(models.Model):
                     ).count()
             elif item.concurrentRule == item.ConcurrencyRule.allowed:
                 matches = priors_matches + overlap_matches + \
-                    (current_matches if isinstance(registration, TemporaryRegistration) else 0)
+                    (
+                        current_matches if
+                        isinstance(registration, Registration) and not
+                        registration.final else 0
+                    )
             elif item.concurrentRule == item.ConcurrencyRule.required:
                 matches = overlap_matches + current_matches
 

@@ -90,11 +90,13 @@ def getApplicableDiscountCombos(
     useableCodes = []
 
     for x in availableDiscountCodes:
-        # Create two lists, one that starts with all of the items necessary for the discount to apply,
-        # and one that starts empty.  As we find an item in the cart that matches an item in the discount
-        # requirements, move the item in the discount requirements from the first list to the second list.
-        # If, after all items have been checked, the first list is empty and the second list is full, then
-        # the discount is applicable to the cart.  The third list keeps track of the items used to apply
+        # Create two lists, one that starts with all of the items necessary for
+        # the discount to apply, and one that starts empty.  As we find an item
+        # in the cart that matches an item in the discount requirements, move
+        # the item in the discount requirements from the first list to the
+        # second list. If, after all items have been checked, the first list is
+        # empty and the second list is full, then the discount is applicable to
+        # the cart.  The third list keeps track of the items used to apply
         # the discount.
         necessary_discount_items = x.getComponentList()[:]
         count_necessary_items = len(necessary_discount_items)
@@ -128,7 +130,7 @@ def getApplicableDiscountCombos(
                         match_flag = False
                     # If the discount combo is only available for the first X registrants,
                     # then check that we don't already have X individuals registered.
-                    # This includes TemporaryRegistrations (so too many discounts don't get
+                    # This includes temporary Registrations (so too many discounts don't get
                     # handed out if registration is in progress).
                     elif (
                         x.firstXRegistered is not None and

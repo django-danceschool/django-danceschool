@@ -11,13 +11,13 @@ from danceschool.core.signals import (
     check_voucher
 )
 from danceschool.core.models import (
-    Customer, Series, Registration, EventRegistration, Event
+    Customer, EventRegistration, Event
 )
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 
 import logging
 
-from .models import Voucher, TemporaryVoucherUse, VoucherUse
+from .models import Voucher, VoucherUse
 from .helpers import awardReferrers, ensureReferralVouchersExist
 
 
@@ -56,7 +56,7 @@ def checkVoucherField(sender, **kwargs):
     if session.get('gift', '') != '':
         raise ValidationError({'gift': _('Can\'t have more than one voucher')})
 
-    eventids = [x.event.id for x in registration.temporaryeventregistration_set.exclude(dropIn=True)]
+    eventids = [x.event.id for x in registration.eventregistration_set.exclude(dropIn=True)]
 
     obj = Voucher.objects.filter(voucherId=id).first()
     if not obj:
@@ -126,7 +126,7 @@ def checkVoucherCode(sender, **kwargs):
     # dictionary that it returns takes the same form as the one that is returned
     # above if an error has already been found.
     eventids = [
-        x.event.id for x in registration.temporaryeventregistration_set.exclude(dropIn=True)
+        x.event.id for x in registration.eventregistration_set.exclude(dropIn=True)
     ]
 
     return obj.validate(
@@ -141,10 +141,10 @@ def checkVoucherCode(sender, **kwargs):
 def applyVoucherCodeTemporarily(sender, **kwargs):
     '''
     When the core registration system creates a temporary registration with a voucher code,
-    the voucher app looks for vouchers that match that code and creates TemporaryVoucherUse
+    the voucher app looks for vouchers that match that code and creates VoucherUse
     objects to keep track of the fact that the voucher may be used.
     '''
-    logger.debug('Signal fired to apply temporary vouchers.')
+    logger.debug('Signal fired to apply vouchers preliminarily.')
 
     reg = kwargs.pop('registration')
     voucherId = reg.data.get('gift', '')
@@ -155,9 +155,9 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
         logger.debug('No applicable vouchers found.')
         return
 
-    tvu = TemporaryVoucherUse(voucher=voucher, registration=reg, amount=0)
+    tvu = VoucherUse(voucher=voucher, registration=reg, amount=0, applied=False)
     tvu.save()
-    logger.debug('Temporary voucher use object created.')
+    logger.debug('Preliminary voucher use object created.')
 
 
 @receiver(post_student_info)
@@ -187,7 +187,7 @@ def applyReferrerVouchersTemporarily(sender, **kwargs):
         return
 
     for v in vouchers:
-        TemporaryVoucherUse(voucher=v, registration=reg, amount=0).save()
+        VoucherUse(voucher=v, registration=reg, amount=0, applied=False).save()
 
 
 @receiver(apply_price_adjustments)
@@ -195,15 +195,17 @@ def applyTemporaryVouchers(sender, **kwargs):
     reg = kwargs.get('registration')
     price = kwargs.get('initial_price')
 
-    logger.debug('Signal fired to apply temporary vouchers.')
+    logger.debug('Signal fired to apply preliminary vouchers.')
 
     # Put referral vouchers first, so that they are applied last in the loop.
     referral_cat = getConstant('referrals__referrerCategory')
 
-    tvus = list(reg.temporaryvoucheruse_set.filter(
-        voucher__category=referral_cat
-    )) + list(reg.temporaryvoucheruse_set.exclude(
-        voucher__category=referral_cat
+    tvus = list(reg.voucheruse_set.filter(
+        voucher__category=referral_cat,
+        applied=False
+    )) + list(reg.voucheruse_set.exclude(
+        voucher__category=referral_cat,
+        applied=False
     ))
 
     if not tvus:
@@ -239,13 +241,11 @@ def applyVoucherCodesFinal(sender, **kwargs):
     '''
     logger.debug('Signal fired to mark voucher codes as applied.')
 
-    finalReg = kwargs.pop('registration')
-    tr = finalReg.temporaryRegistration
+    reg = kwargs.pop('registration')
+    tvus = VoucherUse.objects.filter(registration=reg, applied=False)
 
-    tvus = TemporaryVoucherUse.objects.filter(registration=tr)
-
-    for tvu in tvus:
-        vu = VoucherUse(voucher=tvu.voucher, registration=finalReg, amount=tvu.amount)
+    for vu in tvus:
+        vu.applied = True
         vu.save()
         if getConstant('referrals__enableReferralProgram'):
             awardReferrers(vu)

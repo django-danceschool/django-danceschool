@@ -37,18 +37,19 @@ def updateSeriesRegistrationStatus():
 @db_periodic_task(crontab(minute='*/60'))
 def clearExpiredTemporaryRegistrations():
     '''
-    Every hour, look for TemporaryRegistrations that have expired and delete them.
+    Every hour, look for temporary Registrations that have expired and delete them.
     To ensure that there are no issues that arise from slight differences between
-    session expiration dates and TemporaryRegistration expiration dates, only
+    session expiration dates and temporary Registration expiration dates, only
     delete instances that have been expired for one minute.
     '''
-    from .models import TemporaryRegistration
+    from .models import Registration
 
     if not getConstant('general__enableCronTasks'):
         return
 
     if getConstant('registration__deleteExpiredTemporaryRegistrations'):
-        TemporaryRegistration.objects.filter(
+        Registration.objects.filter(
+            final=False,
             expirationDate__lte=timezone.now() - timedelta(minutes=1)
         ).delete()
         call_command('clearsessions')

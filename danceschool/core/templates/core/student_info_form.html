@@ -12,7 +12,7 @@
 
 			<table class="table">
 			<tbody>
-			{% for item in reg.temporaryeventregistration_set.all %}
+			{% for item in reg.eventregistration_set.all %}
 				<tr>
 					<td>{% if item.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.event.name }}{% if item.role %} - {{ item.role.name }}{% endif %}</td>
 					<td>{{ currencySymbol }}{{ item.price|floatformat:2 }}</td>

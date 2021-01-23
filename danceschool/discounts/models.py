@@ -7,8 +7,7 @@ from calendar import day_name
 from collections import namedtuple
 
 from danceschool.core.models import (
-    PricingTier, DanceTypeLevel, Registration, TemporaryRegistration,
-    Customer, CustomerGroup
+    PricingTier, DanceTypeLevel, Registration, Customer, CustomerGroup
 )
 
 
@@ -364,22 +363,6 @@ class DiscountComboComponent(models.Model):
         verbose_name_plural = _('Required components of discount')
 
 
-class TemporaryRegistrationDiscount(models.Model):
-    registration = models.ForeignKey(
-        TemporaryRegistration, verbose_name=_('Temporary registration'),
-        on_delete=models.CASCADE,
-    )
-    discount = models.ForeignKey(
-        DiscountCombo, verbose_name=_('Discount'), on_delete=models.CASCADE
-    )
-    discountAmount = models.FloatField(verbose_name=_('Amount of discount'), validators=[MinValueValidator(0)])
-
-    class Meta:
-        unique_together = ('registration', 'discount')
-        verbose_name = _('Discount applied to temporary registration')
-        verbose_name_plural = _('Discounts applied to temporary registrations')
-
-
 class RegistrationDiscount(models.Model):
     registration = models.ForeignKey(
         Registration, verbose_name=_('Registration'), on_delete=models.CASCADE
@@ -389,6 +372,7 @@ class RegistrationDiscount(models.Model):
         on_delete=models.CASCADE,
     )
     discountAmount = models.FloatField(verbose_name=_('Amount of discount'), validators=[MinValueValidator(0)])
+    applied = models.BooleanField(_('Use finalized'), default=False)
 
     class Meta:
         unique_together = ('registration', 'discount')

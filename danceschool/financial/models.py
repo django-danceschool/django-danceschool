@@ -1111,10 +1111,10 @@ class RevenueItem(models.Model):
         # is the same as the reported month of the event/series by accruing to the start date of the first
         # occurrence in that month.
         if not self.accrualDate:
-            if self.invoiceItem and self.invoiceItem.finalEventRegistration:
+            if self.invoiceItem and getattr(self.invoiceItem, 'eventRegistration', None):
                 min_event_time = (
-                    self.invoiceItem.finalEventRegistration.event.eventoccurrence_set.filter(
-                        startTime__month=self.invoiceItem.finalEventRegistration.event.month
+                    self.invoiceItem.eventRegistration.event.eventoccurrence_set.filter(
+                        startTime__month=self.invoiceItem.eventRegistration.event.month
                     ).first().startTime
                 )
                 self.accrualDate = min_event_time
@@ -1136,10 +1136,10 @@ class RevenueItem(models.Model):
 
         # Now, set the registration property and check that this item is not attributed
         # to multiple categories.
-        if self.invoiceItem and self.invoiceItem.finalEventRegistration:
-            self.event = self.invoiceItem.finalEventRegistration.event
-        elif self.invoiceItem and self.invoiceItem.temporaryEventRegistration:
-            self.event = self.invoiceItem.temporaryEventRegistration.event
+        if self.invoiceItem and getattr(self.invoiceItem,'eventRegistration', None):
+            self.event = self.invoiceItem.eventRegistration.event
+        elif self.invoiceItem and getattr(self.invoiceItem,'eventRegistration', None):
+            self.event = self.invoiceItem.eventRegistration.event
 
         # If no grossTotal is reported, use the net total.  If no net total is reported, use the grossTotal
         if self.grossTotal is None and self.total:

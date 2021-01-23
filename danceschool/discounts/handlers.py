@@ -11,11 +11,11 @@ from danceschool.core.signals import (
     get_eventregistration_data
 )
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Customer, EventRegistration, Registration
+from danceschool.core.models import Customer, EventRegistration
 from danceschool.core.classreg import RegistrationSummaryView
 
 from .helpers import getApplicableDiscountCombos
-from .models import DiscountCombo, TemporaryRegistrationDiscount, RegistrationDiscount
+from .models import DiscountCombo, RegistrationDiscount
 
 
 # Define logger for this file
@@ -69,7 +69,7 @@ def getBestDiscount(sender, **kwargs):
         )
 
     # The items for which the customer registered.
-    eventregs_list = reg.temporaryeventregistration_set.all()
+    eventregs_list = reg.eventregistration_set.all()
     eligible_list = eventregs_list.filter(dropIn=False).filter(eligible_filter)
     ineligible_list = eventregs_list.filter(ineligible_filter)
 
@@ -193,12 +193,12 @@ def applyTemporaryDiscount(sender, **kwargs):
         logger.warning('Incomplete information passed, discounts not applied.')
         return
 
-    obj, created = TemporaryRegistrationDiscount.objects.update_or_create(
+    obj = RegistrationDiscount.objects.update_or_create(
         registration=reg,
         discount=discount,
-        defaults={'discountAmount': discountAmount, },
-    )
-    logger.debug('Discount applied.')
+        defaults={'discountAmount': discountAmount, 'applied': False},
+    )[0]
+    logger.debug('Temporary discount record created.')
     return obj
 
 
@@ -221,7 +221,7 @@ def getAddonItems(sender, **kwargs):
         newCustomer = False
 
     # No need to get all objects, just the ones that could qualify one for an add-on
-    cart_object_list = reg.temporaryeventregistration_set.filter(dropIn=False).filter(
+    cart_object_list = reg.eventregistration_set.filter(dropIn=False).filter(
         Q(event__series__pricingTier__isnull=False) |
         Q(event__publicevent__pricingTier__isnull=False)
     )
@@ -247,18 +247,13 @@ def applyFinalDiscount(sender, **kwargs):
         logger.debug('No registration passed, discounts not applied.')
         return
 
-    trds = TemporaryRegistrationDiscount.objects.filter(registration=reg.temporaryRegistration)
-
-    obj = None
+    trds = RegistrationDiscount.objects.filter(registration=reg)
     for temp_discount in trds:
-        obj = RegistrationDiscount.objects.create(
-            registration=reg,
-            discount=temp_discount.discount,
-            discountAmount=temp_discount.discountAmount,
-        )
+        temp_discount.applied = True
+        temp_discount.save()
 
     logger.debug('Discounts applied.')
-    return obj
+    return trds
 
 
 @receiver(get_eventregistration_data)

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Sum
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.translation import ugettext_lazy as _
@@ -7,7 +8,7 @@ import random
 import string
 
 from danceschool.core.models import (
-    CustomerGroup, Customer, Registration, TemporaryRegistration,
+    CustomerGroup, Customer, Registration,
     ClassDescription, DanceTypeLevel, SeriesCategory, PublicEventCategory,
     EventSession
 )
@@ -150,18 +151,13 @@ class Voucher(models.Model):
     isValidForAnyClass.fget.short_description = _('Voucher is valid for any class')
 
     def getAmountLeft(self):
-        amount = self.originalAmount - self.refundAmount
-        uses = VoucherUse.objects.filter(voucher=self)
-        for use in uses:
-            amount -= use.amount
-
-        credits = VoucherCredit.objects.filter(voucher=self)
-
-        for credit in credits:
-            amount += credit.amount
-
-        return amount
-
+        return (
+            self.originalAmount - self.refundAmount -
+            (self.voucheruse_set.filter().aggregate(
+                sum=Sum('amount')
+            ).get('sum') or 0) +
+            (self.vouchercredit_set.aggregate(sum=Sum('amount')).get('sum') or 0)
+        )
     amountLeft = property(fget=getAmountLeft)
     amountLeft.fget.short_description = _('Amount remaining')
 
@@ -221,7 +217,7 @@ class Voucher(models.Model):
             )
 
         # not used (for single-use vouchers)
-        if self.singleUse and self.voucheruse_set.count() > 0:
+        if self.singleUse and self.voucheruse_set.filter(applied=True).count() > 0:
             errors.append(
                 ValidationError(
                     _('This single-use voucher has already been used.'),
@@ -428,6 +424,7 @@ class VoucherUse(models.Model):
     amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
     notes = models.CharField(_('Notes'), max_length=100, null=True, blank=True)
     creationDate = models.DateTimeField(_('Date of use'), auto_now_add=True, null=True)
+    applied = models.BooleanField(_('Use finalized'), default=False)
 
     class Meta:
         verbose_name = _('Voucher use')
@@ -538,21 +535,6 @@ class VoucherCredit(models.Model):
     class Meta:
         verbose_name = _('Voucher credit')
         verbose_name_plural = _('Voucher credits')
-
-
-class TemporaryVoucherUse(models.Model):
-    registration = models.ForeignKey(
-        TemporaryRegistration, verbose_name=_('Registration'), on_delete=models.CASCADE
-    )
-    voucher = models.ForeignKey(
-        Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE
-    )
-    amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
-    creationDate = models.DateTimeField(_('Date of use'), auto_now_add=True, null=True)
-
-    class Meta:
-        verbose_name = _('Tentative voucher use')
-        verbose_name_plural = _('Tentative voucher uses')
 
 
 class VoucherReferralDiscountUse(models.Model):

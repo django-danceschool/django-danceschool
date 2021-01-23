@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.utils.tests import DefaultSchoolTestCase
-from danceschool.core.models import Invoice, TemporaryRegistration
+from danceschool.core.models import Invoice, Registration
 
 from .models import (
     PointGroup, PricingTierGroup, DiscountCategory, DiscountCombo, DiscountComboComponent
@@ -76,14 +76,15 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = TemporaryRegistration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+        tr = Registration.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
         )
-        self.assertTrue(tr.temporaryeventregistration_set.filter(event__id=s.id).exists())
+        self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
+        self.assertFalse(tr.final)
 
         # Check that the student info page lists the correct item amounts and subtotal
         # with no discounts applied
-        self.assertEqual(tr.temporaryeventregistration_set.get(event__id=s.id).price, s.getBasePrice())
+        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice())
         self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
 
         # Continue to the summary page
@@ -388,8 +389,8 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(finalReg.invoice.outstandingBalance, 0)
         self.assertEqual(finalReg.invoice.total, 0)
 
-        # Check that the associated temporary registration is now expired
-        self.assertTrue(finalReg.temporaryRegistration.expirationDate <= timezone.now())
+        # Check that the registration no longer has an expiration date
+        self.assertIsNone(finalReg.expirationDate)
 
         # Show that multiple registrations by the same customer are not permitted
         response = self.register_to_check_discount(s)

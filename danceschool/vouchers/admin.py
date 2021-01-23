@@ -4,13 +4,13 @@ from django.utils.translation import ugettext_lazy as _
 
 from dal import autocomplete
 
-from danceschool.core.models import Customer, Registration, TemporaryRegistration
+from danceschool.core.models import Customer, Registration
 from danceschool.core.admin import CustomerAdmin
 
 from .models import (
     VoucherCategory, Voucher, DanceTypeVoucher, ClassVoucher,
     SeriesCategoryVoucher, PublicEventCategoryVoucher, SessionVoucher,
-    CustomerGroupVoucher, CustomerVoucher, VoucherUse, TemporaryVoucherUse,
+    CustomerGroupVoucher, CustomerVoucher, VoucherUse,
     VoucherCredit
 )
 
@@ -64,20 +64,7 @@ class RegistrationVoucherInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
     readonly_fields = ['voucher', 'amount']
-
-    # Prevents adding new voucher uses without going through
-    # the standard registration process
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
-class TemporaryRegistrationVoucherInline(admin.TabularInline):
-    model = TemporaryVoucherUse
-    extra = 0
-    readonly_fields = ['voucher', 'amount']
+    exclude = ['applied',]
 
     # Prevents adding new voucher uses without going through
     # the standard registration process
@@ -128,6 +115,7 @@ class VoucherUseInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
     readonly_fields = ['registration', 'amount']
+    exclude = ['applied',]
 
     # Prevents adding new voucher uses without going through
     # the standard registration process.
@@ -136,6 +124,13 @@ class VoucherUseInline(admin.TabularInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def get_queryset(self, request):
+        '''
+        Inline only shows voucher uses associated with finalized registrations.
+        '''
+        qs = super().get_queryset(request)
+        return qs.filter(applied=True)
 
 
 class VoucherCreditInlineForm(ModelForm):
@@ -235,9 +230,8 @@ class VoucherAdmin(admin.ModelAdmin):
     enableVoucher.short_description = _('Enable selected Vouchers')
 
 
-# This adds inlines to Registration and TemporaryRegistration without subclassing
+# This adds inlines to Registration without subclassing
 admin.site._registry[Registration].inlines.insert(0, RegistrationVoucherInline)
-admin.site._registry[TemporaryRegistration].inlines.insert(0, TemporaryRegistrationVoucherInline)
 
 admin.site.register(VoucherCategory)
 admin.site.register(Voucher, VoucherAdmin)

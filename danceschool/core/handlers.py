@@ -38,7 +38,8 @@ def linkUserToMostRecentCustomer(sender, **kwargs):
         last_reg = Registration.objects.filter(
             customer__email=email_address.email,
             customer__user__isnull=True,
-            dateTime__isnull=False
+            dateTime__isnull=False,
+            final=True
         ).order_by('-dateTime').first()
 
         if last_reg:

@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from datetime import timedelta
 
-from danceschool.core.models import TemporaryRegistration, Invoice
+from danceschool.core.models import Registration, Invoice
 from danceschool.core.constants import getConstant
 
 
@@ -19,7 +19,10 @@ class Command(BaseCommand):
                 status=Invoice.PaymentStatus.preliminary,
                 expirationDate__lte=timezone.now() - timedelta(minutes=1)
             ).delete()
-            TemporaryRegistration.objects.filter(expirationDate__lte=timezone.now() - timedelta(minutes=1)).delete()
+            Registration.objects.filter(
+                final=False,
+                expirationDate__lte=timezone.now() - timedelta(minutes=1)
+            ).delete()
             call_command('clearsessions')
         else:
             self.stdout.write('Clearing expired data is disabled.  Nothing was deleted.')

@@ -246,7 +246,7 @@ class GuestList(models.Model):
         if includeRegistrants and self.includeRegistrants and event and self.appliesToEvent(event):
             names = names.union(
                 Registration.objects.filter(
-                    filters & Q(eventregistration__event=event)
+                    filters & Q(final=True) & Q(eventregistration__event=event)
                 ).annotate(
                     modelType=Value('Registration', output_field=models.CharField()),
                     guestListId=Value(self.id, output_field=models.IntegerField()),

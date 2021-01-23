@@ -53,8 +53,8 @@ class EventLinkMixin(object):
                 ),
             ]
 
-            if getattr(obj.invoiceItem, 'finalEventRegistration', None):
-                reg = obj.invoiceItem.finalEventRegistration.registration
+            if getattr(obj.invoiceItem, 'eventRegistration', None):
+                reg = obj.invoiceItem.eventRegistration.registration
                 links += [
                     'Registration: ' + str(self.get_admin_change_link(
                         'core', 'registration', reg.id, reg.__str__()

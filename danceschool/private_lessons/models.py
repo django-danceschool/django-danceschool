@@ -9,7 +9,7 @@ from djchoices import DjangoChoices, ChoiceItem
 
 from danceschool.core.models import (
     Instructor, Location, Room, DanceRole, Event, PricingTier,
-    TemporaryEventRegistration, EventRegistration, Customer
+    EventRegistration, Customer
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import EmailRecipientMixin
@@ -156,8 +156,8 @@ class PrivateLessonEvent(Event):
         teacherNames = ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()])
         if self.customers:
             customerNames = ' ' + ' and '.join([x.fullName for x in self.customers])
-        elif self.temporaryeventregistration_set.all():
-            names = ' and '.join([x.registration.fullName for x in self.temporaryeventregistration_set.all()])
+        elif self.eventregistration_set.all():
+            names = ' and '.join([x.registration.fullName for x in self.eventregistration_set.all()])
             customerNames = ' ' + names if names else ''
         else:
             customerNames = ''
@@ -244,18 +244,14 @@ class InstructorAvailabilitySlot(models.Model):
     status = models.CharField(max_length=1, choices=SlotStatus.choices, default=SlotStatus.available)
 
     # We need both a link to the registrations and a link to the event because
-    # in the event that an expired TemporaryRegistration is deleted, we still want to
+    # in the event that an expired (temporary) Registration is deleted, we still want to
     # be able to identify the Event that was created for this private lesson.
     lessonEvent = models.ForeignKey(
         PrivateLessonEvent, verbose_name=_('Scheduled lesson'), null=True, blank=True,
         on_delete=models.SET_NULL,
     )
-    temporaryEventRegistration = models.ForeignKey(
-        TemporaryEventRegistration, verbose_name=_('Temporary event registration'),
-        null=True, blank=True, on_delete=models.SET_NULL, related_name='privateLessonSlots'
-    )
     eventRegistration = models.ForeignKey(
-        EventRegistration, verbose_name=_('Final event registration'),
+        EventRegistration, verbose_name=_('event registration'),
         null=True, blank=True, on_delete=models.SET_NULL, related_name='privateLessonSlots'
     )
 
@@ -322,7 +318,7 @@ class InstructorAvailabilitySlot(models.Model):
                 self.status == self.SlotStatus.available or (
                     self.status == self.SlotStatus.tentative and
                     getattr(
-                        getattr(self.temporaryEventRegistration, 'registration', None),
+                        getattr(self.eventRegistration, 'registration', None),
                         'expirationDate',
                         timezone.now()
                     ) <= timezone.now()

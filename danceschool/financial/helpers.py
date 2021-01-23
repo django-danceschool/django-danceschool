@@ -637,34 +637,38 @@ def createRevenueItemsForRegistrations(request=None, datetimeTuple=None):
 
     this_category = getConstant('financial__registrationsRevenueCat')
 
-    filters_events = {'revenueitem__isnull': True, 'finalEventRegistration__isnull': False}
+    filters_events = {
+        'revenueitem__isnull': True,
+        'eventRegistration__isnull': False,
+        'eventRegistration__registration__final': True,
+    }
 
     if datetimeTuple:
         timelist = list(datetimeTuple)
         timelist.sort()
 
         filters_events[
-            'finalEventRegistration__event__eventoccurrence__startTime__gte'
+            'eventRegistration__event__eventoccurrence__startTime__gte'
         ] = timelist[0]
         filters_events[
-            'finalEventRegistration__event__eventoccurrence__startTime__lte'
+            'eventRegistration__event__eventoccurrence__startTime__lte'
         ] = timelist[1]
     else:
         c = getConstant('financial__autoGenerateRevenueRegistrationsWindow') or 0
         if c > 0:
             filters_events[
-                'finalEventRegistration__event__eventoccurrence__startTime__gte'
+                'eventRegistration__event__eventoccurrence__startTime__gte'
             ] = timezone.now() - relativedelta(months=c)
 
     for item in InvoiceItem.objects.filter(**filters_events).distinct():
-        if item.finalRegistration.paidOnline:
+        if item.invoice.registration.paidOnline:
             received = True
         else:
             received = False
 
         revenue_description = _('Event Registration ') + \
-            str(item.finalEventRegistration.id) + ': ' + \
-            item.invoice.finalRegistration.fullName
+            str(item.eventRegistration.id) + ': ' + \
+            item.invoice.registration.fullName
         RevenueItem.objects.create(
             invoiceItem=item,
             category=this_category,

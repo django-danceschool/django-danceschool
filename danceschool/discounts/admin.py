@@ -5,12 +5,12 @@ from django.utils.translation import ugettext_lazy as _
 from dal import autocomplete
 
 from .models import (
-    DiscountCategory, DiscountCombo, DiscountComboComponent, PointGroup,
-    PricingTierGroup, RegistrationDiscount, TemporaryRegistrationDiscount,
+    DiscountCategory, DiscountCombo, DiscountComboComponent,
+    PointGroup, PricingTierGroup, RegistrationDiscount,
     CustomerGroupDiscount, CustomerDiscount
 )
 from danceschool.core.models import (
-    Registration, TemporaryRegistration, PricingTier, Customer
+    Registration, Registration, PricingTier, Customer
 )
 
 
@@ -156,20 +156,7 @@ class DiscountComboAdmin(admin.ModelAdmin):
 class RegistrationDiscountInline(admin.TabularInline):
     model = RegistrationDiscount
     readonly_fields = ('discount', 'discountAmount')
-    extra = 0
-
-    # Prevents adding new discounts without going through
-    # the standard registration process
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
-class TemporaryRegistrationDiscountInline(admin.TabularInline):
-    model = TemporaryRegistrationDiscount
-    readonly_fields = ('discount', 'discountAmount')
+    exclude = ('applied',)
     extra = 0
 
     # Prevents adding new discounts without going through
@@ -195,9 +182,8 @@ class PointGroupAdmin(admin.ModelAdmin):
     ordering = ('name', )
 
 
-# This adds the inlines to Registration and TemporyRegistration without subclassing
+# This adds the inlines to Registration and PricingTier without subclassing
 admin.site._registry[Registration].inlines.insert(0, RegistrationDiscountInline)
-admin.site._registry[TemporaryRegistration].inlines.insert(0, TemporaryRegistrationDiscountInline)
 admin.site._registry[PricingTier].inlines.insert(0, PricingTierGroupInline)
 
 admin.site.register(DiscountCategory, DiscountCategoryAdmin)

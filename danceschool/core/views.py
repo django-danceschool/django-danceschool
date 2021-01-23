@@ -610,10 +610,8 @@ class RefundProcessingView(FinancialContextMixin, PermissionRequiredMixin, Staff
             'invoice': self.object,
             'payments': self.get_payments(),
         })
-        if self.object.finalRegistration:
-            context['registration'] = self.object.finalRegistration
-        elif self.object.temporaryRegistration:
-            context['registration'] = self.object.temporaryRegistration
+        if getattr(self.object, 'registration', None):
+            context['registration'] = self.object.registration
 
         return context
 

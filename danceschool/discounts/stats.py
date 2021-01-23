@@ -15,7 +15,10 @@ def popularDiscountsJSON(request):
     startDate = getDateTimeFromGet(request, 'startDate')
     endDate = getDateTimeFromGet(request, 'endDate')
 
-    timeLimit = Q(registrationdiscount__registration__dateTime__isnull=False)
+    timeLimit = (
+        Q(registrationdiscount__registration__dateTime__isnull=False) &
+        Q(registrationdiscount__applied=True)
+    )
 
     if startDate:
         timeLimit = timeLimit & Q(registrationdiscount__registration__dateTime__gte=startDate)
@@ -35,7 +38,7 @@ def discountFrequencyJSON(request):
     startDate = getDateTimeFromGet(request, 'startDate')
     endDate = getDateTimeFromGet(request, 'endDate')
 
-    timeLimit = Q()
+    timeLimit = Q(final=True)
 
     if startDate:
         timeLimit = timeLimit & Q(dateTime__gte=startDate)

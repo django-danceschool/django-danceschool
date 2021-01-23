@@ -5,12 +5,12 @@ from django.dispatch import Signal
 # (messages) to the user by adding them to the request.
 check_student_info = Signal(providing_args=['instance', 'formData', 'request', 'registration', 'invoice'])
 
-# Fires after the student info form has been validated and the TemporaryRegistration record
+# Fires after the student info form has been validated and the temporary Registration record
 # has been updated to reflect the submitted information from this form.  Since this signal is
 # fired before price adjustments from vouchers and discounts are incorporated into the registration,
-# this signal can be used to modify the TemporaryRegistration itself (be sure to save changes),
-# and it can be used to make related changes in other apps (such as creating TemporaryVoucherUse)
-# records in the VoucherUse app
+# this signal can be used to modify the temporary Registration itself (be sure to save changes),
+# and it can be used to make related changes in other apps (such as creating VoucherUse
+# records in the vouchers app
 post_student_info = Signal(providing_args=['registration', ])
 
 # Fires at the point in handling an Ajax shopping cart where additional

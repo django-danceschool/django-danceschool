@@ -24,11 +24,10 @@ from dal import autocomplete
 from .models import (
     EventSession, Event, PublicEventCategory, Series, SeriesCategory,
     PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor,
-    SubstituteTeacher, Registration, TemporaryRegistration, EventRegistration,
-    TemporaryEventRegistration, ClassDescription, CustomerGroup, Customer,
-    Location, PricingTier, DanceRole, DanceType, DanceTypeLevel, EmailTemplate,
-    EventStaffMember, SeriesStaffMember, EventStaffCategory, EventRole,
-    Invoice, InvoiceItem, Room
+    SubstituteTeacher, Registration, EventRegistration, ClassDescription,
+    CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType,
+    DanceTypeLevel, EmailTemplate, EventStaffMember, SeriesStaffMember,
+    EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 )
 from .constants import getConstant
 from .forms import LocationWithDataWidget
@@ -347,35 +346,20 @@ class InvoiceAdmin(admin.ModelAdmin):
     notificationLink.allow_tags = True
     notificationLink.short_description = _('Invoice notification')
 
-    def finalRegistrationLink(self, obj):
-        if obj.finalRegistration:
-            change_url = reverse('admin:core_registration_change', args=(obj.finalRegistration.id, ))
+    def registrationLink(self, obj):
+        if getattr(obj, 'registration', None):
+            change_url = reverse('admin:core_registration_change', args=(obj.registration.id, ))
             return mark_safe(
                 '<a class="btn btn-outline-secondary" href="%s">Registration</a>' % (change_url, )
             )
-    finalRegistrationLink.allow_tags = True
-    finalRegistrationLink.short_description = _('Final registration')
-
-    def temporaryRegistrationLink(self, obj):
-        if obj.temporaryRegistration:
-            change_url = reverse(
-                'admin:core_temporaryregistration_change',
-                args=(obj.temporaryRegistration.id, )
-            )
-            return mark_safe(
-                '<a class="btn btn-outline-secondary" href="%s">Temporary Registration</a>' % (
-                    change_url,
-                )
-            )
-    temporaryRegistrationLink.allow_tags = True
-    temporaryRegistrationLink.short_description = _('Temporary registration')
+    registrationLink.allow_tags = True
+    registrationLink.short_description = _('Registration')
 
     def links(self, obj):
         return mark_safe(''.join([
             self.viewInvoiceLink(obj) or '',
             self.notificationLink(obj) or '',
-            self.temporaryRegistrationLink(obj) or '',
-            self.finalRegistrationLink(obj) or '',
+            self.registrationLink(obj) or '',
         ]))
     links.allow_tags = True
     links.short_description = _('Links')
@@ -440,15 +424,18 @@ class InvoiceAdmin(admin.ModelAdmin):
 @admin.register(Registration)
 class RegistrationAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
-    list_display = ['customer', 'dateTime', 'priceWithDiscount', 'student']
-    list_filter = ['dateTime', 'student', 'invoice__paidOnline']
-    search_fields = ['=customer__first_name', '=customer__last_name', 'customer__email']
-    ordering = ('-dateTime', )
+    list_display = ['final', 'customer', 'dateTime', 'priceWithDiscount', 'student']
+    list_filter = ['final', 'dateTime', 'student', 'invoice__paidOnline']
+    search_fields = [
+        '=customer__first_name', '=customer__last_name',
+        'customer__email', 'email', 'phone'
+    ]
+    ordering = ('-final', '-dateTime', )
     fields = (
-        'customer_link', 'priceWithDiscount', 'student', 'dateTime', 'comments',
-        'howHeardAboutUs'
+        'final', 'email', 'phone', 'customer_link', 'priceWithDiscount', 'student', 'dateTime', 'comments',
+        'howHeardAboutUs', 'submissionUser', 'expirationDate'
     )
-    readonly_fields = ('customer_link', )
+    readonly_fields = ('customer_link',)
 
     def customer_link(self, obj):
         change_url = reverse('admin:core_customer_change', args=(obj.customer.id, ))
@@ -466,28 +453,6 @@ class RegistrationAdmin(admin.ModelAdmin):
                 instance.customer = instance.registration.customer
             instance.save()
         formset.save_m2m()
-
-
-class TemporaryEventRegistrationInline(admin.StackedInline):
-    model = TemporaryEventRegistration
-    extra = 0
-
-    # These ensure that registration changes happen through the regular registration
-    # process.
-    def has_add_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
-@admin.register(TemporaryRegistration)
-class TemporaryRegistrationAdmin(admin.ModelAdmin):
-    inlines = [TemporaryEventRegistrationInline, ]
-
-    list_display = ('__str__', 'student', 'dateTime', 'expirationDate')
-    search_fields = ('=firstName', '=lastName', 'email')
-    list_filter = ('dateTime', 'expirationDate', )
 
 
 ######################################
@@ -551,6 +516,11 @@ class CustomerRegistrationInline(admin.StackedInline):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def get_queryset(self, request):
+        ''' Only show finalized registrations. '''
+        qs = super().get_queryset(request)
+        return qs.filter(final=False)
 
 
 @admin.register(Customer)

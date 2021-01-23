@@ -11,7 +11,7 @@ from paypalrestsdk import Payment
 from paypalrestsdk.exceptions import ResourceNotFound
 from datetime import timedelta
 
-from danceschool.core.models import TemporaryRegistration, Invoice
+from danceschool.core.models import Registration, Invoice
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 
 from .models import PaypalPaymentRecord
@@ -64,7 +64,7 @@ def createPaypalPayment(request):
                 amount = this_invoice.outstandingBalance
         # This is typical of payment at the time of registration
         elif tr_id:
-            tr = TemporaryRegistration.objects.get(id=int(tr_id))
+            tr = Registration.objects.get(id=int(tr_id))
             tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
             this_invoice = tr.link_invoice(
                 status=Invoice.PaymentStatus.unpaid,

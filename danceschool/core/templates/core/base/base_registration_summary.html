@@ -32,7 +32,7 @@
 		        <th>{% trans "Price" %}</th>
 		    </tr>
 
-		    {% for item in registration.temporaryeventregistration_set.all %}
+		    {% for item in registration.eventregistration_set.all %}
 		    <tr>
 		        <td>{% if item.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.event.name }}</td>
 		        <td>

@@ -13,7 +13,7 @@ from random import random
 import json
 import logging
 
-from danceschool.core.models import Invoice, TemporaryRegistration, Event
+from danceschool.core.models import Invoice, Registration, Event
 from .models import PayAtDoorFormModel
 from .constants import ATTHEDOOR_PAYMENTMETHOD_CHOICES
 
@@ -54,7 +54,7 @@ class WillPayAtDoorForm(forms.Form):
     When this form is submitted, the registration is allowed
     to proceed, but the invoice is not yet marked as paid.
     '''
-    registration = forms.ModelChoiceField(queryset=TemporaryRegistration.objects.all(), required=True)
+    registration = forms.ModelChoiceField(queryset=Registration.objects.filter(final=False), required=True)
     submissionUser = forms.ModelChoiceField(queryset=User.objects.all(), required=False)
     instance = forms.ModelChoiceField(queryset=PayAtDoorFormModel.objects.all(), required=True)
 
@@ -115,7 +115,7 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         queryset=User.objects.filter(Q(staffmember__isnull=False) | Q(is_staff=True)),
         required=True
     )
-    registration = forms.ModelChoiceField(queryset=TemporaryRegistration.objects.all())
+    registration = forms.ModelChoiceField(queryset=Registration.objects.filter(final=False))
     invoice = forms.ModelChoiceField(queryset=Invoice.objects.all(), required=False)
 
     amountPaid = forms.FloatField(label=_('Amount Paid'), required=True, min_value=0)

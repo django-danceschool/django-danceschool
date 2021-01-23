@@ -6,7 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Invoice, TemporaryRegistration, CashPaymentRecord
+from danceschool.core.models import Invoice, CashPaymentRecord
 from danceschool.core.helpers import getReturnPage
 
 from .forms import WillPayAtDoorForm, DoorPaymentForm

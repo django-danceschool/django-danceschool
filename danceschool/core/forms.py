@@ -543,7 +543,7 @@ class RegistrationContactForm(forms.Form):
         already_registered_list = []
 
         if customer and self._registration:
-            eventregs_all = self._registration.temporaryeventregistration_set.all()
+            eventregs_all = self._registration.eventregistration_set.all()
             event_ids_dropIn = [x.event.id for x in eventregs_all if x.dropIn is True]
             event_ids_series = [
                 x.event.id for x in eventregs_all if

@@ -6,7 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
-from danceschool.core.models import Invoice, TemporaryRegistration
+from danceschool.core.models import Invoice, Registration
 
 from .models import StripeCharge
 
@@ -71,7 +71,7 @@ def handle_stripe_checkout(request):
                 amount = this_invoice.outstandingBalance
         # This is typical of payment at the time of registration
         elif tr_id:
-            tr = TemporaryRegistration.objects.get(id=int(tr_id))
+            tr = Registration.objects.get(id=int(tr_id))
             tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
             this_invoice = tr.link_invoice(
                 status=Invoice.PaymentStatus.unpaid,

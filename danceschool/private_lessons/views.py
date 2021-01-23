@@ -11,7 +11,7 @@ from django.utils.dateparse import parse_datetime
 from datetime import datetime, timedelta
 
 from danceschool.core.models import (
-    Instructor, StaffMember, TemporaryRegistration, TemporaryEventRegistration,
+    Instructor, StaffMember, Registration, EventRegistration,
     DanceRole, Event, EventOccurrence, EventStaffMember, Customer
 )
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
@@ -192,7 +192,7 @@ class BookPrivateLessonView(FormView):
             Q(status=InstructorAvailabilitySlot.SlotStatus.available) |
             (
                 Q(status=InstructorAvailabilitySlot.SlotStatus.tentative) &
-                ~Q(temporaryEventRegistration__registration__expirationDate__gte=timezone.now())
+                ~Q(eventRegistration__registration__expirationDate__gte=timezone.now())
             )
         )
 
@@ -206,7 +206,7 @@ class BookPrivateLessonView(FormView):
 
         if existingEvents.filter(
             Q(eventregistration__isnull=False) |
-            Q(temporaryeventregistration__registration__expirationDate__gte=timezone.now())
+            Q(eventregistration__registration__expirationDate__gte=timezone.now())
         ).exists():
             form.add_error(
                 None,
@@ -251,7 +251,7 @@ class BookPrivateLessonView(FormView):
         # the event.
         lesson.save()
 
-        # The temporary  expires after a period of inactivity that is specified in preferences.
+        # The temporary booking expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
 
         # Slots without pricing tiers can't go through the actual registration process.
@@ -268,20 +268,21 @@ class BookPrivateLessonView(FormView):
             }
             return HttpResponseRedirect(reverse('privateLessonStudentInfo'))
 
-        # Slots with pricing tiers require an TemporaryRegistration to be created,
+        # Slots with pricing tiers require a Registration to be created,
         # and then they are redirected through the registration system.
         else:
 
             regSession = self.request.session.get(REG_VALIDATION_STR, {})
 
-            # Create a Temporary Registration associated with this lesson.
-            reg = TemporaryRegistration(
+            # Create a temporary Registration associated with this lesson.
+            reg = Registration(
                 submissionUser=submissionUser, dateTime=timezone.now(),
                 payAtDoor=payAtDoor,
                 expirationDate=expiry,
+                final=False,
             )
 
-            tr = TemporaryEventRegistration(
+            tr = EventRegistration(
                 event=lesson, role=role,
                 price=lesson.getBasePrice(payAtDoor=payAtDoor) * affectedSlots.count()
             )
@@ -299,12 +300,12 @@ class BookPrivateLessonView(FormView):
             affectedSlots.update(
                 lessonEvent=lesson,
                 status=InstructorAvailabilitySlot.SlotStatus.tentative,
-                temporaryEventRegistration=tr,
+                eventRegistration=tr,
             )
 
             # Load the temporary registration into session data like a regular registration
             # and redirect to Step 2 as usual.
-            regSession["temporaryRegistrationId"] = reg.id
+            regSession["registrationId"] = reg.id
             regSession["invoiceId"] = invoice.id
             regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
             self.request.session[REG_VALIDATION_STR] = regSession

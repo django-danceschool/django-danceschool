@@ -1,7 +1,6 @@
 from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.views.generic import TemplateView, View
-from django.shortcuts import get_object_or_404
 from django.http import Http404, JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -12,7 +11,7 @@ import logging
 
 from .models import GuestList, Event, GuestListName
 from danceschool.core.utils.timezone import ensure_localtime
-from danceschool.core.models import EventCheckIn
+from danceschool.core.models import EventCheckIn, Registration, StaffMember
 
 # Define logger for this file
 logger = logging.getLogger(__name__)

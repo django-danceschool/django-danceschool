@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.utils.tests import DefaultSchoolTestCase
-from danceschool.core.models import TemporaryRegistration
+from danceschool.core.models import Registration
 
 from .models import Voucher
 
@@ -46,14 +46,15 @@ class VouchersTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = TemporaryRegistration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+        tr = Registration.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
         )
-        self.assertTrue(tr.temporaryeventregistration_set.filter(event__id=s.id).exists())
+        self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
+        self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.temporaryeventregistration_set.get(event__id=s.id).price, s.getBasePrice())
+        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice())
         self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
 
         # Continue to the summary page
@@ -163,8 +164,9 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(response.context_data.get('total_voucher_amount'), v.maxAmountPerUse)
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
-        tvu = v.temporaryvoucheruse_set.filter(registration=response.context_data.get('registration'))
+        tvu = v.voucheruse_set.filter(registration=response.context_data.get('registration'))
         self.assertTrue(tvu.exists() and tvu.count() == 1)
+        self.assertFalse(tvu.applied)
         self.assertEqual(tvu.first().amount, v.maxAmountPerUse)
 
     def test_fullamountused(self):
@@ -188,8 +190,9 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(response.context_data.get('total_voucher_amount'), v.originalAmount)
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
-        tvu = v.temporaryvoucheruse_set.filter(registration=response.context_data.get('registration'))
+        tvu = v.voucheruse_set.filter(registration=response.context_data.get('registration'))
         self.assertTrue(tvu.exists() and tvu.count() == 1)
+        self.assertFalse(tvu.applied)
         self.assertEqual(tvu.first().amount, v.originalAmount)
 
     def test_vouchermakesitfree(self):
@@ -214,16 +217,12 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(response.context_data.get('total_voucher_amount'), s.getBasePrice())
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
-        tr = response.context_data.get('registration')
-        tvu = v.temporaryvoucheruse_set.filter(registration=tr)
+        reg = response.context_data.get('registration')
+        tvu = v.voucheruse_set.filter(registration=reg)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
+        self.assertTrue(tvu.applied)
         self.assertEqual(tvu.first().amount, s.getBasePrice())
-
-        reg = tr.registration
         self.assertTrue(reg)
+        self.assertTrue(reg.final)
         self.assertEqual(reg.netPrice, 0)
         self.assertEqual(reg.totalPrice, s.getBasePrice())
-
-        vu = v.voucheruse_set.filter(registration=reg)
-        self.assertTrue(vu.exists() and vu.count() == 1)
-        self.assertEqual(vu.first().amount, s.getBasePrice())

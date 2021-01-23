@@ -15,8 +15,8 @@ import json
 from braces.views import PermissionRequiredMixin
 
 from .models import (
-    Event, Series, PublicEvent, TemporaryRegistration, TemporaryEventRegistration,
-    Invoice, CashPaymentRecord, DanceRole, Customer
+    Event, Series, PublicEvent, Invoice, CashPaymentRecord, DanceRole,
+    Registration, EventRegistration
 )
 from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm
 from .constants import getConstant, REG_VALIDATION_STR
@@ -55,10 +55,10 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     template_name = 'core/registration/event_registration.html'
     returnJson = False
 
-    # The temporary registration and the  list of event registrations is kept
+    # The temporary registration and the list of event registrations is kept
     # as an attribute of the view so that it may be used in subclassed versions
     # of methods like get_success_url() (see e.g. the door app).
-    temporaryRegistration = None
+    registration = None
     event_registrations = []
 
     def dispatch(self, request, *args, **kwargs):
@@ -159,14 +159,15 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         else:
             submissionUser = None
 
-        reg = TemporaryRegistration(
+        reg = Registration(
             submissionUser=submissionUser, dateTime=timezone.now(),
             payAtDoor=non_event_listing.pop('payAtDoor', False),
             expirationDate=expiry,
+            final=False
         )
 
         # Anything passed by this form that is not an Event field (any extra fields) are
-        # passed directly into the TemporaryRegistration's data.
+        # passed directly into the Registration's data.
         reg.data = non_event_listing or {}
 
         if regSession.get('marketing_id'):
@@ -210,17 +211,17 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
                 dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
 
-                # If nothing is sold out, then proceed to create a TemporaryRegistration and
-                # TemporaryEventRegistration objects for the items selected by this form.  The
+                # If nothing is sold out, then proceed to create Registration and
+                # EventRegistration objects for the items selected by this form.  The
                 # expiration date is set to be identical to that of the session.
 
                 logger.debug('Creating temporary event registration for: %s' % key)
                 if len(dropInList) > 0:
-                    tr = TemporaryEventRegistration(
+                    tr = EventRegistration(
                         event=this_event, dropIn=True, price=this_event.getBasePrice(dropIns=len(dropInList))
                     )
                 else:
-                    tr = TemporaryEventRegistration(
+                    tr = EventRegistration(
                         event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role_id=this_role_id
                     )
                 # If it's possible to store additional data and such data exist, then store them.
@@ -239,10 +240,10 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             er.save(invoice=invoice)
 
         # Put these in a property in case the get_success_url() method needs them.
-        self.temporaryRegistration = reg
+        self.registration = reg
         self.invoice = invoice
 
-        regSession["temporaryRegistrationId"] = reg.id
+        regSession["registrationId"] = reg.id
         regSession["invoiceId"] = invoice.id
         regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
@@ -330,9 +331,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
 class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustmentsMixin, View):
     '''
-    This view handles Ajax requests to create or update a TemporaryRegistration.
+    This view handles Ajax requests to create or update a Registration.
     Create requests can be done at any time, but update requests only work if
-    the TemporaryRegistration to be updated is already in the session data and
+    the Registration to be updated is already in the session data and
     has not expired.  The view returns JSON indicating success or failure as well
     as the URL to which the page it returns to can optionally redirect to.
     '''
@@ -350,10 +351,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             returnUrl = reverse('registrationOffline')
             return JsonResponse({'status': 'success', 'redirect': returnUrl})
 
-        # The temporary registration and the list of event registrations is kept
+        # The registration and the list of event registrations is kept
         # as an attribute of the view so that it may be used in subclassed versions
         # of methods like get_success_url() (see e.g. the door app).
-        self.temporaryRegistration = None
+        self.registration = None
         self.event_registrations = []
 
         return super().dispatch(request, *args, **kwargs)
@@ -393,7 +394,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         reg_id = post_data.get('id', None)
         if reg_id:
             try:
-                reg = TemporaryRegistration.objects.get(id=reg_id)
+                reg = Registration.objects.get(id=reg_id)
             except ObjectDoesNotExist:
                 errors.append({
                     'code': 'invalid_id',
@@ -407,7 +408,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             # In order to update an existing registration, the ID passed in POST must
             # match the id contained in the current session data, and the existing
             # registration must not have expired.
-            if reg.id != regSession.get('temporaryRegistrationId'):
+            if reg.id != regSession.get('registrationId'):
                 errors.append({
                     'code': 'invalid_reg_id',
                     'message': _('Invalid registration ID passed.')
@@ -431,6 +432,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'dateTime': timezone.now(),
                 'comments': post_data.get('comments', ''),
                 'data': {},
+                'final': False,
             })
 
             if post_data.get('data', False):
@@ -445,8 +447,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                             'message': _('You have passed invalid JSON data for this registation.')
                         })
 
-            # Create a new TemporaryRegistration
-            reg = TemporaryRegistration(**reg_defaults)
+            # Create a new Registration (not finalized)
+            reg = Registration(**reg_defaults)
 
         # We now have a registration, but before going further, return failure
         # if any errors have arisen.
@@ -480,7 +482,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 if isinstance(e.get(k, None), str):
                     e[k] = ('true' in e[k].lower())
 
-        eventregs = TemporaryEventRegistration.objects.filter(
+        eventregs = EventRegistration.objects.filter(
             id__in=[x['eventreg'] for x in event_post if x.get('eventreg', None)]
         )
         events = Event.objects.filter(
@@ -488,7 +490,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         )
 
         grossPrice = 0
-        existing_eventreg_ids = list(reg.temporaryeventregistration_set.values_list('id', flat=True))
+        existing_eventreg_ids = list(reg.eventregistration_set.values_list('id', flat=True))
         unmatched_eventreg_ids = existing_eventreg_ids.copy()
 
         for e in event_post:
@@ -565,8 +567,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     })
                     continue
 
-                logger.debug('Creating temporary event registration for event: {}'.format(this_event.id))
-                this_eventreg = TemporaryEventRegistration(event=this_event)
+                logger.debug('Creating event registration for event: {}'.format(this_event.id))
+                this_eventreg = EventRegistration(event=this_event)
                 created_eventreg = True
 
             if not (
@@ -665,12 +667,12 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             })
 
         # If we got this far with no issues, then save everything.  Delete any
-        # existing associated TemporaryEventRegistrations that were not passed
+        # existing associated EventRegistrations that were not passed
         # in via POST.
         reg.priceWithDiscount = grossPrice
         invoice = reg.link_invoice()
         reg.save()
-        reg.temporaryeventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
+        reg.eventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
 
         for er in self.event_registrations:
             # Saving the event registration automatically creates an InvoiceItem.
@@ -678,7 +680,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             er.save(invoice=invoice)
 
         # Put this in a property in case the get_success_url() method needs it.
-        self.temporaryRegistration = reg
+        self.registration = reg
         self.invoice = invoice
 
         reg_response = {
@@ -803,7 +805,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
                 post_student_info.send(
                     sender=AjaxClassRegistrationView,
-                    registration=self.temporaryRegistration,
+                    registration=self.registration,
                 )
                 response_dict['redirect'] = reverse('showRegSummary')
             else:
@@ -813,7 +815,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             regSession["voucher_id"] = reg_response.get('voucherId', None)
 
-        regSession["temporaryRegistrationId"] = reg.id
+        regSession["registrationId"] = reg.id
         regSession["invoiceId"] = invoice.id
         regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
@@ -878,10 +880,10 @@ class RegistrationSummaryView(
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
-        tr_id = self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+        tr_id = self.request.session[REG_VALIDATION_STR].get('registrationId')
 
         if tr_id:
-            reg = TemporaryRegistration.objects.get(
+            reg = Registration.objects.get(
                 id=tr_id
             )
         else:
@@ -901,7 +903,7 @@ class RegistrationSummaryView(
         reg = kwargs.get('reg')
         invoice = kwargs.get('invoice')
 
-        # initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
+        # initial_price = sum([x.price for x in reg.eventregistration_set.all()])
         initial_price = invoice.grossTotal
 
         if reg:
@@ -977,7 +979,7 @@ class RegistrationSummaryView(
 
         reg_id = regSession.get("temp_reg_id",None)
         if reg_id:
-            reg = TemporaryRegistration.objects.get(id=reg_id)
+            reg = Registration.objects.get(id=reg_id)
         else:
             reg = None
 
@@ -1063,7 +1065,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         '''
         Require session data to be set to proceed, otherwise go back to step 1.
         Because they have the same expiration date, this also implies that the
-        TemporaryRegistration object is not yet expired.
+        Registration object is not yet expired.
         '''
         if REG_VALIDATION_STR not in request.session:
             return HttpResponseRedirect(reverse('registration'))
@@ -1083,15 +1085,15 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
-        tr_id = self.request.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+        tr_id = self.request.session[REG_VALIDATION_STR].get('registrationId')
 
         if tr_id:
-            self.temporaryRegistration = TemporaryRegistration.objects.get(
+            self.registration = Registration.objects.get(
                 id=tr_id
             )
         else:
-            self.temporaryRegistration = None
-        if self.temporaryRegistration and self.temporaryRegistration.invoice != self.invoice:
+            self.registration = None
+        if self.registration and self.registration.invoice != self.invoice:
             messages.error(request, _('Invoice and registration do not match.'))
             return HttpResponseRedirect(reverse('registration'))
 
@@ -1103,9 +1105,9 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context_data = super(StudentInfoView, self).get_context_data(**kwargs)
-        reg = self.temporaryRegistration
+        reg = self.registration
 
-        initial_price = sum([x.price for x in reg.temporaryeventregistration_set.all()])
+        initial_price = sum([x.price for x in reg.eventregistration_set.all()])
 
         discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
             reg, initial_price
@@ -1151,7 +1153,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         ''' Pass along the request data to the form '''
         kwargs = super(StudentInfoView, self).get_form_kwargs(**kwargs)
         kwargs['request'] = self.request
-        kwargs['registration'] = self.temporaryRegistration
+        kwargs['registration'] = self.registration
         kwargs['invoice'] = self.invoice
         return kwargs
 
@@ -1172,7 +1174,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
-        reg = self.temporaryRegistration
+        reg = self.registration
         if reg:
 
             # Update the expiration date for this registration, and pass in the data from
@@ -1186,7 +1188,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             reg.comments = form.cleaned_data.pop('comments', None)
             reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs', None)
 
-            # Anything else in the form goes to the TemporaryRegistration data.
+            # Anything else in the form goes to the Registration data.
             reg.data.update(form.cleaned_data)
             invoice = reg.link_invoice(expirationDate=expiry)
             reg.save()
@@ -1202,7 +1204,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             invoice.data.update(form.cleaned_data)
             invoice.save()
 
-        # This signal (formerly the post_temporary_registration signal) allows
-        # vouchers to be applied temporarily, and it can be used for other tasks
+        # This signal allows vouchers to be applied temporarily, and it can
+        # be used for other tasks
         post_student_info.send(sender=StudentInfoView, registration=reg)
         return HttpResponseRedirect(self.get_success_url())  # Redirect after POST

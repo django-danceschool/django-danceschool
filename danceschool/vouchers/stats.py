@@ -15,7 +15,7 @@ def popularVouchersJSON(request):
     startDate = getDateTimeFromGet(request, 'startDate')
     endDate = getDateTimeFromGet(request, 'endDate')
 
-    timeLimit = Q(voucheruse__creationDate__isnull=False)
+    timeLimit = Q(voucheruse__creationDate__isnull=False) & Q(voucheruse__applied=True)
 
     if startDate:
         timeLimit = timeLimit & Q(voucheruse__creationDate__gte=startDate)
@@ -35,7 +35,7 @@ def voucherFrequencyJSON(request):
     startDate = getDateTimeFromGet(request, 'startDate')
     endDate = getDateTimeFromGet(request, 'endDate')
 
-    timeLimit = Q()
+    timeLimit = Q(final=True)
 
     if startDate:
         timeLimit = timeLimit & Q(dateTime__gte=startDate)

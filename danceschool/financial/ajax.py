@@ -10,7 +10,7 @@ def updateEventRegistrations(request):
     if not (request.method == 'POST' and request.POST.get('event')):
         return JsonResponse({})
 
-    invoiceItems = InvoiceItem.objects.filter(**{'finalEventRegistration__event__id': request.POST.get('event')})
+    invoiceItems = InvoiceItem.objects.filter(eventRegistration__event__id=request.POST.get('event'))
 
     outRegs = {}
     for option in invoiceItems:

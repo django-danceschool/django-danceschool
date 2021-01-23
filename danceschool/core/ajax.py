@@ -174,7 +174,8 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
 
         if registrations:
             these_registrations = this_event.eventregistration_set.filter(
-                id__in=[x.get('id') for x in registrations]
+                id__in=[x.get('id') for x in registrations],
+                registration__final=True,
             )
             if these_registrations.count() < len(registrations):
                 errors.append({

@@ -45,7 +45,7 @@ def checkRequirements(sender, **kwargs):
     requirement_warnings = []
     requirement_errors = []
 
-    for ter in registration.temporaryeventregistration_set.all():
+    for ter in registration.eventregistration_set.all():
         if hasattr(ter.event, 'getRequirements'):
             for req in ter.event.getRequirements():
                 if not req.customerMeetsRequirement(

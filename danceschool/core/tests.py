@@ -9,7 +9,7 @@ from datetime import timedelta
 from calendar import month_name
 import dateutil.parser
 
-from .models import EventOccurrence, Event, TemporaryRegistration
+from .models import EventOccurrence, Event, Registration
 from .constants import getConstant, REG_VALIDATION_STR
 from .utils.tests import DefaultSchoolTestCase
 
@@ -208,14 +208,15 @@ class RegistrationTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = TemporaryRegistration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('temporaryRegistrationId')
+        tr = Registration.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
         )
-        self.assertTrue(tr.temporaryeventregistration_set.filter(event__id=s.id).exists())
+        self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
+        self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.temporaryeventregistration_set.get(event__id=s.id).price, s.getBasePrice())
+        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice())
         self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
 
         # Try to sign up without agreeing to the policies, and ensure that it fails

@@ -56,7 +56,10 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
                 eventoccurrence__endTime__gte=ensure_localtime(date),
                 eventoccurrence__startTime__lte=ensure_localtime(date) + timedelta(days=1),
             ).distinct()
-            customer_filters = Q(registration__eventregistration__event__in=today_events)
+            customer_filters = (
+                Q(registration__eventregistration__event__in=today_events) &
+                Q(registration__final=True)
+            )
 
         queryset = Customer.objects.annotate(
             firstName=F('first_name'), lastName=F('last_name'),
