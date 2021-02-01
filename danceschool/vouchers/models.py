@@ -153,7 +153,7 @@ class Voucher(models.Model):
     def getAmountLeft(self):
         return (
             self.originalAmount - self.refundAmount -
-            (self.voucheruse_set.filter().aggregate(
+            (self.voucheruse_set.filter(applied=True).aggregate(
                 sum=Sum('amount')
             ).get('sum') or 0) +
             (self.vouchercredit_set.aggregate(sum=Sum('amount')).get('sum') or 0)

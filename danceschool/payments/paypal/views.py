@@ -90,6 +90,7 @@ def createPaypalPayment(request):
                 submissionUser=submissionUser,
                 calculate_taxes=(taxable is not False),
                 transactionType=transactionType,
+                status=Invoice.PaymentStatus.unpaid,
             )
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error(

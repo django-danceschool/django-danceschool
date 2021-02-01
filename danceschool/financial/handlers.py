@@ -106,7 +106,11 @@ def createRevenueItemForInvoiceItem(sender, instance, **kwargs):
 
     logger.debug('RevenueItem signal fired for InvoiceItem %s.' % instance.id)
 
-    received_status = (instance.invoice.status == Invoice.PaymentStatus.paid)
+    if instance.invoice.status == Invoice.PaymentStatus.preliminary:
+        logger.debug('Preliminary invoice. No revenue item will be created.')
+        return
+
+    received_status = (not instance.invoice.unpaid)
 
     related_item = getattr(instance, 'revenueitem', None)
     if not related_item:
@@ -148,6 +152,27 @@ def createRevenueItemForInvoiceItem(sender, instance, **kwargs):
         if saveFlag:
             related_item.save()
             logger.info('RevenueItem associated with InvoiceItem %s updated.' % instance.id)
+
+
+@receiver(post_save, sender=Invoice)
+def createRevenueItemsFromInvoice(sender, instance, **kwargs):
+    '''
+    This signal handler exists because an invoice can be changed from
+    preliminary to non-preliminary without editing the invoice items, in which
+    case revenue items will need to be created.
+    '''
+
+    if 'loaddata' in sys.argv or ('raw' in kwargs and kwargs['raw']):
+        return
+
+    logger.debug('RevenueItem signal fired for Invoice %s.' % instance.id)
+
+    if instance.status == Invoice.PaymentStatus.preliminary:
+        logger.debug('Preliminary invoice. No revenue items will be created.')
+        return
+
+    for item in instance.invoiceitem_set.all():
+        createRevenueItemForInvoiceItem(sender, item, **kwargs)
 
 
 @receiver(post_save, sender=User)

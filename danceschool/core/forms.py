@@ -1261,7 +1261,7 @@ class SubstituteReportingForm(forms.ModelForm):
 
     class Meta:
         model = SubstituteTeacher
-        exclude = []
+        exclude = ['data',]
 
     class Media:
         js = ('js/substituteteacher_ajax.js',)

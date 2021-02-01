@@ -381,16 +381,24 @@ class DiscountsTypesTest(BaseDiscountsTest):
 
         # Since the above registration was free, check that the registration actually
         # processed, and that there exists a paid Invoice for $0
-        finalReg = getattr(response.context_data.get('registration'), 'registration')
+        finalReg = response.context_data.get('registration')
+        invoice = response.context_data.get('invoice')
         self.assertTrue(finalReg)
-        self.assertEqual(finalReg.netPrice, 0)
         self.assertTrue(finalReg.invoice)
-        self.assertTrue(finalReg.invoice.status == Invoice.PaymentStatus.paid)
-        self.assertEqual(finalReg.invoice.outstandingBalance, 0)
-        self.assertEqual(finalReg.invoice.total, 0)
+        self.assertEqual(finalReg.invoice, invoice)
+        self.assertTrue(invoice.status == Invoice.PaymentStatus.paid)
+        self.assertEqual(invoice.outstandingBalance, 0)
+        self.assertEqual(invoice.total, 0)
+        self.assertEqual(finalReg.netPrice, 0)
+        self.assertTrue(finalReg.final)
 
         # Check that the registration no longer has an expiration date
         self.assertIsNone(finalReg.expirationDate)
+        self.assertIsNone(invoice.expirationDate)
+
+        # Check that the RegistrationDiscount associated with this registration
+        # has been applied.
+        self.assertTrue(finalReg.registrationdiscount_set.first().applied)
 
         # Show that multiple registrations by the same customer are not permitted
         response = self.register_to_check_discount(s)

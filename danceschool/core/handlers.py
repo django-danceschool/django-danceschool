@@ -102,8 +102,3 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
              This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
              The email field should be unique for each account.\n"
         logger.exception(errmsg, customer.email)
-
-
-@receiver([post_save, post_delete], sender=InvoiceItem)
-def updateInvoiceTotals(sender, instance, **kwargs):
-    instance.invoice.updateTotals()

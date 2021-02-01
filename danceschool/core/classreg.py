@@ -218,7 +218,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                 logger.debug('Creating temporary event registration for: %s' % key)
                 if len(dropInList) > 0:
                     tr = EventRegistration(
-                        event=this_event, dropIn=True, price=this_event.getBasePrice(dropIns=len(dropInList))
+                        event=this_event, dropIn=True,
+                        price=this_event.getBasePrice(dropIns=len(dropInList)),
+                        occurrences=dropInList,
                     )
                 else:
                     tr = EventRegistration(
@@ -244,7 +246,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         self.invoice = invoice
 
         regSession["registrationId"] = reg.id
-        regSession["invoiceId"] = invoice.id
+        regSession["invoiceId"] = invoice.id.__str__()
         regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
 
@@ -628,6 +630,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             if dropIn:
                 this_eventreg.dropIn = True
                 this_eventreg.price = price = this_event.getBasePrice(dropIns=1)
+                this_eventreg.occurrences = None
             else:
                 this_eventreg.dropIn = False
                 this_eventreg.price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
@@ -685,7 +688,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         reg_response = {
             'id': reg.id,
-            'invoiceId': invoice.id,
+            'invoiceId': invoice.id.__str__(),
             'payAtDoor': reg.payAtDoor,
             'subtotal': grossPrice,
             'total': grossPrice,
@@ -816,7 +819,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             regSession["voucher_id"] = reg_response.get('voucherId', None)
 
         regSession["registrationId"] = reg.id
-        regSession["invoiceId"] = invoice.id
+        regSession["invoiceId"] = invoice.id.__str__()
         regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session[REG_VALIDATION_STR] = regSession
 
@@ -897,13 +900,12 @@ class RegistrationSummaryView(
             'reg': reg,
             'invoice': invoice,
         })
-        return super(RegistrationSummaryView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         reg = kwargs.get('reg')
         invoice = kwargs.get('invoice')
 
-        # initial_price = sum([x.price for x in reg.eventregistration_set.all()])
         initial_price = invoice.grossTotal
 
         if reg:
@@ -941,19 +943,19 @@ class RegistrationSummaryView(
             adjustment_list += response[1][0]
             adjustment_amount += response[1][1]
 
-        # Save the discounted price to the database
-        total = discounted_total - adjustment_amount
-
         if reg:
-            reg.priceWithDiscount = total
+            reg.priceWithDiscount = discounted_total - adjustment_amount
             reg.save()
 
-        invoice.total = total
-        invoice.save()
+        # The updateTotals method allocates the total adjustment across the
+        # invoice items.
+        invoice.updateTotals(allocateAmounts={
+            'total': -1*(adjustment_amount + total_discount_amount)
+        })
 
         # Update the session key to keep track of this registration
         regSession = request.session[REG_VALIDATION_STR]
-        regSession["temp_invoice_id"] = invoice.id
+        regSession["temp_invoice_id"] = invoice.id.__str__()
         if reg:
             regSession["temp_reg_id"] = reg.id
             regSession['addons'] = addons
@@ -971,7 +973,7 @@ class RegistrationSummaryView(
 
     def get_context_data(self, **kwargs):
         ''' Pass the initial kwargs, then update with the needed registration info. '''
-        context_data = super(RegistrationSummaryView, self).get_context_data(**kwargs)
+        context_data = super().get_context_data(**kwargs)
 
         regSession = self.request.session[REG_VALIDATION_STR]
         invoice_id = regSession["temp_invoice_id"]
@@ -1023,6 +1025,10 @@ class RegistrationSummaryView(
                     methodTxn='CASHPAYMENT_%s' % this_cash_payment.recordId,
                     forceFinalize=True,
                 )
+            if reg:
+                # Ensures that the registration has a status that reflects the
+                # payment that has been processed
+                reg.refresh_from_db()
 
         context_data.update({
             'returnPage': self.get_return_page().get(

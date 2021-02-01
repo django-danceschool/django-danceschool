@@ -142,6 +142,9 @@ def processSquarePayment(request):
         )
         return HttpResponseRedirect(sourceUrl)
 
+    if this_invoice.status == Invoice.PaymentStatus.preliminary:
+        this_invoice.status = Invoice.PaymentStatus.unpaid
+
     this_currency = getConstant('general__currencyCode')
     this_total = min(this_invoice.outstandingBalance, amount)
 
@@ -374,7 +377,19 @@ def processPointOfSalePayment(request):
         except (ValueError, ObjectDoesNotExist):
             logger.warning('Invalid user passed, submissionUser will not be recorded.')
 
-    if 'registration' in metadata.keys():
+    if 'invoice' in metadata.keys():
+        try:
+            this_invoice = Invoice.objects.get(id=int(metadata.get('invoice')))
+            this_description = _('Invoice Payment: %s' % this_invoice.id)
+
+        except (ValueError, TypeError, ObjectDoesNotExist):
+            logger.error('Invalid invoice ID passed: %s' % metadata.get('invoice'))
+            messages.error(
+                request,
+                str(_('ERROR: Invalid invoice ID passed')) + ': %s' % metadata.get('invoice')
+            )
+            return HttpResponseRedirect(sourceUrl)
+    elif 'registration' in metadata.keys():
         try:
             tr_id = int(metadata.get('registration'))
             tr = Registration.objects.get(id=tr_id)
@@ -393,19 +408,6 @@ def processPointOfSalePayment(request):
         )
         tr.save()
         this_description = _('Registration Payment: #%s' % tr_id)
-
-    elif 'invoice' in metadata.keys():
-        try:
-            this_invoice = Invoice.objects.get(id=int(metadata.get('invoice')))
-            this_description = _('Invoice Payment: %s' % this_invoice.id)
-
-        except (ValueError, TypeError, ObjectDoesNotExist):
-            logger.error('Invalid invoice ID passed: %s' % metadata.get('invoice'))
-            messages.error(
-                request,
-                str(_('ERROR: Invalid invoice ID passed')) + ': %s' % metadata.get('invoice')
-            )
-            return HttpResponseRedirect(sourceUrl)
     else:
         # Gift certificates automatically get a nicer invoice description
         if transactionType == 'Gift Certificate':

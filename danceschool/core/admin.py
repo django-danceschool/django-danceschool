@@ -225,16 +225,31 @@ class SeriesStaffMemberInline(EventStaffMemberInline):
 class EventRegistrationInline(admin.StackedInline):
     model = EventRegistration
     extra = 0
-    fields = ['event', 'role', 'cancelled', 'dropIn', 'price', 'netPrice']
-    readonly_fields = ['event', 'price', 'netPrice', 'dropIn']
+    fields = ['event', 'role', 'cancelled', 'dropIn', 'occurrences', 'price', 'netPrice']
+    add_readonly_fields = []
+    readonly_fields = ['event', 'price', 'netPrice', 'dropIn', 'occurrences']
 
-    # These ensure that registration changes happen through the regular registration
-    # process.
     def has_add_permission(self, request, obj=None):
-        return False
+        '''
+        EventRegistrations can only be added to Registrations that are not final.
+        '''
+        if obj and obj.final:
+            return False
+        return True
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        '''
+        EventRegistrations can only be deleted from Registrations that are not
+        final.
+        '''
+        if obj and obj.final:
+            return False
+        return True
+
+    def get_readonly_fields(self, request, obj=None):
+        if not obj:
+            return self.add_readonly_fields
+        return self.readonly_fields
 
 
 class EventOccurrenceInlineForm(ModelForm):
@@ -276,11 +291,23 @@ class InvoiceItemInline(admin.StackedInline):
     add_readonly_fields = ['fees', ]
     readonly_fields = ['id', 'grossTotal', 'total', 'taxes', 'fees']
 
-    # This ensures that InvoiceItems are not deleted except through
-    # the regular registration process.  Invoice items can still be
-    # manually added.
+    def has_add_permission(self, request, obj=None):
+        '''
+        InvoiceItems can only be added when an invoice's status is preliminary
+        or unpaid.
+        '''
+        if obj and not obj.invoice.itemsEditable:
+            return False
+        return True
+
     def has_delete_permission(self, request, obj=None):
-        return False
+        '''
+        InvoiceItems can only be deleted when an invoice's status is preliminary
+        or unpaid.
+        '''
+        if obj and not obj.invoice.itemsEditable:
+            return False
+        return True
 
     def get_readonly_fields(self, request, obj=None):
         if not obj:
@@ -290,7 +317,7 @@ class InvoiceItemInline(admin.StackedInline):
     def get_fields(self, request, obj=None):
         if not obj:
             return self.add_fields
-        return super(InvoiceItemInline, self).get_fields(request, obj)
+        return super().get_fields(request, obj)
 
 
 @admin.register(Invoice)
@@ -432,17 +459,23 @@ class RegistrationAdmin(admin.ModelAdmin):
     ]
     ordering = ('-final', '-dateTime', )
     fields = (
-        'final', 'email', 'phone', 'customer_link', 'priceWithDiscount', 'student', 'dateTime', 'comments',
-        'howHeardAboutUs', 'submissionUser', 'expirationDate'
+        'final', 'email', 'phone', 'customer_link', 'invoice_link',
+        'priceWithDiscount', 'student', 'dateTime', 'comments',
+        'howHeardAboutUs', 'submissionUser', 'expirationDate',
     )
-    readonly_fields = ('customer_link',)
+    readonly_fields = ('customer_link', 'invoice_link')
 
     def customer_link(self, obj):
         change_url = reverse('admin:core_customer_change', args=(obj.customer.id, ))
         return mark_safe('<a href="%s">%s</a>' % (change_url, obj.customer))
-
     customer_link.allow_tags = True
     customer_link.short_description = _("Customer")
+
+    def invoice_link(self, obj):
+        change_url = reverse('admin:core_invoice_change', args=(obj.invoice.id, ))
+        return mark_safe('<a href="%s">%s</a>' % (change_url, obj.invoice))
+    invoice_link.allow_tags = True
+    invoice_link.short_description = _("Invoice")
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)
@@ -509,9 +542,11 @@ class CustomerRegistrationInline(admin.StackedInline):
     eventregistration_list.short_description = _('Event Registrations')
     eventregistration_list.allow_tags = True
 
-    # Prevents adding new registrations without going through
-    # the standard registration process
     def has_add_permission(self, request, obj=None):
+        '''
+        Prevents adding new registrations without going through
+        the standard registration process.
+        '''
         return False
 
     def has_delete_permission(self, request, obj=None):
@@ -975,7 +1010,8 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         return '%s %s' % (month_name[obj.month or 0], obj.year or '')
 
     def class_time(self, obj):
-        return obj.startTime.strftime('%A, %I:%M %p')
+        if obj.startTime:
+            return obj.startTime.strftime('%A, %I:%M %p')
 
     fieldsets = (
         (None, {

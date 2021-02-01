@@ -109,6 +109,8 @@ def handle_stripe_checkout(request):
         logger.error(e)
         return HttpResponseBadRequest()
 
+    this_invoice.status = Invoice.PaymentStatus.unpaid
+
     this_total = int(min(this_invoice.outstandingBalance, amount) * 100)
     charge = None
 
@@ -190,5 +192,6 @@ def handle_stripe_checkout(request):
         return HttpResponseRedirect(successUrl)
 
     else:
-        # TODO: Improve error handling.
+        this_invoice.status = Invoice.PaymentStatus.error
+        this_invoice.save()
         return JsonResponse(err)

@@ -109,7 +109,8 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
         self.set_return_page('viewregistrations', _('View Registrations'), event_id=self.object.id)
 
         registrations = EventRegistration.objects.filter(
-            event=self.object, cancelled=False
+            event=self.object, cancelled=False,
+            registration__final=True,
         ).select_related(
             'registration', 'event', 'customer',
             'invoiceItem', 'role', 'registration__invoice',

@@ -3,7 +3,8 @@ from django.contrib.auth.models import User, Group
 from django.contrib.sites.models import Site
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
+from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import ugettext_lazy as _
 from django.apps import apps
@@ -1226,11 +1227,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         excludes = Q()
 
         if includeTemporaryRegs:
-            excludes = Q(final=False) & Q(registration__expirationDate__lte=timezone.now())
+            excludes = Q(registration__final=False) & Q(registration__expirationDate__lte=timezone.now())
             if isinstance(dateTime, datetime):
-                excludes = Q(excludes) | (Q(final=False) & Q(registration__dateTime__gte=dateTime))
+                excludes = Q(excludes) | (Q(registration__final=False) & Q(registration__dateTime__gte=dateTime))
         else:
-            filters = filters & Q(final=True)
+            filters = filters & Q(registration__final=True)
         return self.eventregistration_set.filter(filters).exclude(excludes).count()
 
     @property
@@ -1263,9 +1264,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         excludes = Q()
 
         if includeTemporaryRegs:
-            excludes = Q(final=False) & Q(registration__expirationDate__lte=timezone.now())
+            excludes = Q(registration__final=False) & Q(registration__expirationDate__lte=timezone.now())
         else:
-            filters = filters & Q(final=True)
+            filters = filters & Q(registration__final=True)
         return self.eventregistration_set.filter(filters).exclude(excludes).count()
 
     @property
@@ -2411,63 +2412,13 @@ class Invoice(EmailRecipientMixin, models.Model):
     # Additional information (record of specific transactions) can go in here
     data = JSONField(_('Additional data'), blank=True, default={})
 
-    @classmethod
-    def create_from_item(cls, amount, item_description, **kwargs):
-        '''
-        Creates an Invoice as well as a single associated InvoiceItem
-        with the passed description (for things like gift certificates)
-        '''
-        submissionUser = kwargs.pop('submissionUser', None)
-        collectedByUser = kwargs.pop('collectedByUser', None)
-        calculate_taxes = kwargs.pop('calculate_taxes', False)
-        grossTotal = kwargs.pop('grossTotal', None)
-        status = kwargs.pop('status', cls.PaymentStatus.unpaid)
-
-        new_invoice = cls(
-            grossTotal=grossTotal or amount,
-            total=amount,
-            submissionUser=submissionUser,
-            collectedByUser=collectedByUser,
-            buyerPaysSalesTax=getConstant('registration__buyerPaysSalesTax'),
-            status=status,
-            data=kwargs,
-        )
-
-        if calculate_taxes:
-            new_invoice.calculateTaxes()
-
-        new_invoice.save()
-
-        InvoiceItem.objects.create(
-            invoice=new_invoice,
-            grossTotal=grossTotal or amount,
-            total=amount,
-            taxes=new_invoice.taxes,
-            description=item_description,
-        )
-        return new_invoice
-
-    def add_item(
-        self, grossTotal=0, total=0, adjustments=0, taxes=0, fees=0,
-        save=True, updateTotals=True, allocateFees=False, **kwargs
-    ):
-        '''
-        A convenience method to quickly add an item to an invoice based on
-        passed information.  By default it saves and updates the invoice totals
-        in one step as well.
-        '''
-
-        new_item = InvoiceItem(
-            invoice=self, grossTotal=grossTotal, total=total,
-            adjustments=adjustments, taxes=taxes, fees=fees,
-            description=kwargs.get('description', None)
-        )
-        if save:
-            new_item.save()
-        if updateTotals:
-            self.updateTotals(save=save, allocateFees=allocateFees)
-
-        return new_item
+    @property
+    def itemsEditable(self):
+        ''' Only allow invoices to be edited if their status permits it. '''
+        return (self.status in [
+            self.PaymentStatus.preliminary,
+            self.PaymentStatus.unpaid,
+        ])
 
     @property
     def preliminary(self):
@@ -2596,6 +2547,31 @@ class Invoice(EmailRecipientMixin, models.Model):
         if payments:
             return payments.first().methodName
 
+    def add_item(
+        self, grossTotal=0, total=0, adjustments=0, taxes=0, fees=0,
+        save=True, updateTotals=True, allocateFees=False, **kwargs
+    ):
+        '''
+        A convenience method to quickly add an item to an invoice based on
+        passed information.  By default it saves and updates the invoice totals
+        in one step as well.
+        '''
+
+        if not self.itemsEditable:
+            return None
+
+        new_item = InvoiceItem(
+            invoice=self, grossTotal=grossTotal, total=total,
+            adjustments=adjustments, taxes=taxes, fees=fees,
+            description=kwargs.get('description', None)
+        )
+        if save:
+            new_item.save()
+        if updateTotals:
+            self.updateTotals(save=save, allocateFees=allocateFees)
+
+        return new_item
+
     def calculateTaxes(self):
         '''
         Updates the tax field to reflect the amount of taxes depending on
@@ -2660,7 +2636,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             self.status = status or self.PaymentStatus.paid
 
             if getattr(self, 'registration', None):
-                self.registration.finalize(dateTime=paymentTime)
+                self.registration = self.registration.finalize(dateTime=paymentTime)
             else:
                 self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
             self.save()
@@ -2684,41 +2660,51 @@ class Invoice(EmailRecipientMixin, models.Model):
         # All fees from payments are allocated proportionately.
         self.allocateFees(epsilon=epsilon)
 
-    def updateTotals(self, save=True, allocateFees=False):
+    def updateTotals(self, save=True, allocateFees=False, allocateAmounts={}):
         '''
         This method recalculates the totals from the invoice items associated
-        with the invoice.  If the totals have changed, then the invoice is saved
+        with the invoice.  If the totals have changed, then the invoice is
+        saved.  If an allocate dictionary is passed, then adjustments to each
+        line item can also be proportionately distributed among the items based
+        on their grossTotals.
         '''
 
-        changed = False
+        item_keys = ['grossTotal', 'total', 'adjustments', 'taxes']
+        old_totals = self.invoiceitem_set.aggregate(**{
+            k: Coalesce(Sum(k), 0) for k in item_keys + ['fees',]
+        })
+        new_totals = old_totals.copy()
 
-        new_totals = self.invoiceitem_set.aggregate(
-            grossTotal=Sum('total'), total=Sum('total'),
-            adjustments=Sum('adjustments'), taxes=Sum('taxes'),
-            fees=Sum('fees'),
-        )
+        # Ignore keys other than the ones that apply to invoice items and
+        # also 0 adjustment amounts
+        allocateAmounts = {
+            k: x for k, x in allocateAmounts.items() if abs(x) != 0 and
+            k in item_keys + ['fees',]
+        }
 
-        changed = False
+        if allocateAmounts:
+            update_dict = {}
+            for k, x in allocateAmounts.items():
+                update_dict[k] = (
+                    F(k) + ((F('grossTotal')/old_totals['grossTotal']) * x)
+                )
+                new_totals[k] = new_totals[k] + x
+            self.invoiceitem_set.update(**update_dict)
 
-        if (
-            self.grossTotal != new_totals.get('grossTotal') or
-            self.total != new_totals.get('total') or
-            self.adjustments != new_totals.get('adjustments') or
-            self.taxes != new_totals.get('taxes')
-        ):
-            self.grossTotal = new_totals.get('grossTotal')
-            self.total = new_totals.get('total')
-            self.adjustments = new_totals.get('adjustments')
-            self.taxes = new_totals.get('taxes')
-            changed = True
+        changed_invoice = False
 
-        if not allocateFees and self.fees != new_totals.get('fees'):
-            self.fees = new_totals.get('fees')
-            changed = True
+        for k in item_keys:
+            if getattr(self,k) != new_totals[k]:
+                setattr(self, k, new_totals[k])
+                changed_invoice = True
+
+        if not allocateFees and self.fees != new_totals['fees']:
+            self.fees = new_totals['fees']
+            changed_invoice = True
         elif allocateFees:
             self.allocateFees()
 
-        if changed and save:
+        if changed_invoice and save:
             self.save()
 
     def allocateFees(self, epsilon=0.01):
@@ -2727,46 +2713,34 @@ class Invoice(EmailRecipientMixin, models.Model):
         total price net of adjustments as a proportion of the overall
         invoice's total price
         '''
-        items = list(self.invoiceitem_set.all())
+
+        item_keys = ['grossTotal', 'total', 'adjustments', 'taxes']
+        items = self.invoiceitem_set.all()
+        totals = items.aggregate(**{
+            k: Coalesce(Sum(k), 0) for k in item_keys
+        })
 
         # Check that totals and adjusments match.  If they do not, raise an error.
-        if abs(self.total - sum([x.total for x in items])) > epsilon:
-            msg = _('Invoice item totals do not match invoice total.  Unable to allocate fees.')
-            logger.error(str(msg))
-            raise ValidationError(msg)
-        if abs(self.adjustments - sum([x.adjustments for x in items])) > epsilon:
-            msg = _(
-                'Invoice item adjustments do not match invoice adjustments.  ' +
-                'Unable to allocate fees.'
-            )
-            logger.error(str(msg))
-            raise ValidationError(msg)
+        for k in item_keys:
+            if abs(totals[k] - getattr(self, k)) > epsilon:
+                msg = _('Invoice item {key} does not match invoice {key}.  Unable to allocate fees.'.format(key=k))
+                logger.error(str(msg))
+                raise ValidationError(msg)
 
-        for item in items:
-            saveFlag = False
-
-            if self.total - self.adjustments > 0:
-                item.fees = (
-                    self.fees * (
-                        (item.total - item.adjustments) / (self.total - self.adjustments)
-                    )
-                )
-                saveFlag = True
-
+        update = None
+        if self.total - self.adjustments > 0:
+            update = self.fees * (F('total') - F('adjustments'))/(self.total - self.adjustments)
+        elif self.total - self.adjustments == 0 and self.total > 0:
             # In the case of full refunds, allocate fees according to the
             # initial total price of the item only.
-            elif self.total - self.adjustments == 0 and self.total > 0:
-                item.fees = self.fees * (item.total / self.total)
-                saveFlag = True
-
+            update = self.fees * F('total')/self.total
+        elif self.fees:
             # In the unexpected event of fees with no total, just divide
             # the fees equally among the items.
-            elif self.fees:
-                item.fees = self.fees * (1 / len(items))
-                saveFlag = True
+            update = self.fees * (1 / items.count())
 
-            if saveFlag:
-                item.save()
+        if update:
+            items.update(fees=update)
 
     def sendNotification(self, **kwargs):
 
@@ -2797,6 +2771,42 @@ class Invoice(EmailRecipientMixin, models.Model):
             **kwargs
         )
         logger.debug('Invoice notification sent.')
+
+    @classmethod
+    def create_from_item(cls, amount, item_description, **kwargs):
+        '''
+        Creates an Invoice as well as a single associated InvoiceItem
+        with the passed description (for things like gift certificates)
+        '''
+        submissionUser = kwargs.pop('submissionUser', None)
+        collectedByUser = kwargs.pop('collectedByUser', None)
+        calculate_taxes = kwargs.pop('calculate_taxes', False)
+        grossTotal = kwargs.pop('grossTotal', None)
+        status = kwargs.pop('status', cls.PaymentStatus.preliminary)
+
+        new_invoice = cls(
+            grossTotal=grossTotal or amount,
+            total=amount,
+            submissionUser=submissionUser,
+            collectedByUser=collectedByUser,
+            buyerPaysSalesTax=getConstant('registration__buyerPaysSalesTax'),
+            status=status,
+            data=kwargs,
+        )
+
+        if calculate_taxes:
+            new_invoice.calculateTaxes()
+
+        new_invoice.save()
+
+        InvoiceItem.objects.create(
+            invoice=new_invoice,
+            grossTotal=grossTotal or amount,
+            total=amount,
+            taxes=new_invoice.taxes,
+            description=item_description,
+        )
+        return new_invoice
 
     class Meta:
         ordering = ('-modifiedDate',)
@@ -2858,6 +2868,15 @@ class InvoiceItem(models.Model):
         else:
             return self.description or _('Other items')
     name.fget.short_description = _('Name')
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.invoice.updateTotals()
+
+    def delete(self, *args, **kwargs):
+        invoice = self.invoice
+        super().delete(*args, **kwargs)
+        invoice.updateTotals()
 
     def __str__(self):
         return '%s: #%s' % (self.name, self.id)
@@ -2937,19 +2956,19 @@ class Registration(EmailRecipientMixin, models.Model):
     def seriesPrice(self):
         return self.eventregistration_set.filter(
             Q(event__series__isnull=False)
-        ).aggregate(Sum('price')).get('price__sum')
+        ).aggregate(Sum('price')).get('price__sum') or 0
     seriesPrice.fget.short_description = _('Price of class series')
 
     @property
     def publicEventPrice(self):
         return self.eventregistration_set.filter(
             Q(event__publicevent__isnull=False)
-        ).aggregate(Sum('price')).get('price__sum')
+        ).aggregate(Sum('price')).get('price__sum') or 0
     publicEventPrice.fget.short_description = _('Price of public events')
 
     @property
     def totalPrice(self):
-        return self.eventregistration_set.aggregate(Sum('price')).get('price__sum')
+        return self.eventregistration_set.aggregate(Sum('price')).get('price__sum') or 0
     totalPrice.fget.short_description = _('Total price before discounts')
 
     # This alias just makes it easier to register properties in other apps.
@@ -3067,16 +3086,6 @@ class Registration(EmailRecipientMixin, models.Model):
     refundFlag.fget.short_description = _('Transaction was partially refunded')
 
     @property
-    def email(self):
-        '''
-        This exists so that the Invoice views can always find an email for either
-        registrations or temporary registrations without requiring separate logic
-        for each class.
-        '''
-        return getattr(self.customer, 'email', None)
-    email.fget.short_description = _('Email address')
-
-    @property
     def url(self):
         if self.id:
             return reverse('admin:core_registration_change', args=[self.id, ])
@@ -3164,14 +3173,14 @@ class Registration(EmailRecipientMixin, models.Model):
         status = kwargs.pop('status', None)
         expirationDate = kwargs.pop('expirationDate', None)
 
-        if not self.invoice:
+        if not getattr(self, 'invoice', None):
 
             invoice_kwargs = {
                 'firstName': kwargs.pop('firstName', None) or self.firstName,
                 'lastName': kwargs.pop('lastName', None) or self.lastName,
                 'email': kwargs.pop('email', None) or self.email,
                 'grossTotal': self.totalPrice,
-                'total': self.priceWithDiscount,
+                'total': self.priceWithDiscount or 0,
                 'submissionUser': submissionUser,
                 'collectedByUser': collectedByUser,
                 'buyerPaysSalesTax': getConstant('registration__buyerPaysSalesTax'),
@@ -3241,18 +3250,18 @@ class Registration(EmailRecipientMixin, models.Model):
         items on the invoice associated with this registration.
         '''
 
-        if not self.invoice:
+        if not getattr(self, 'invoice', None):
             return {}
         return self.invoice.invoiceitem_set.exclude(
             id__in=self.eventregistration_set.values_list(
                 'invoiceItem', flat=True
             )
         ).aggregate(
-            grossTotal=Sum('grossTotal'),
-            total=Sum('total'),
-            adjustments=Sum('adjustments'),
-            taxes=Sum('taxes'),
-            fees=Sum('fees'),
+            grossTotal=Coalesce(Sum('grossTotal'), 0),
+            total=Coalesce(Sum('total'), 0),
+            adjustments=Coalesce(Sum('adjustments'), 0),
+            taxes=Coalesce(Sum('taxes'), 0),
+            fees=Coalesce(Sum('fees'), 0),
         )
 
     def finalize(self, **kwargs):
@@ -3275,8 +3284,7 @@ class Registration(EmailRecipientMixin, models.Model):
                 first_name=self.firstName, last_name=self.lastName,
                 email=self.email, defaults={'phone': self.phone}
             )
-        else:
-            customer = None
+            self.customer = customer
 
         self.expirationDate = None
         self.final = True
@@ -3375,9 +3383,7 @@ class Registration(EmailRecipientMixin, models.Model):
         )
 
 
-class EventRegistration(
-    EmailRecipientMixin, models.Model
-):
+class EventRegistration(EmailRecipientMixin, models.Model):
     '''
     An EventRegistration is associated with a Registration and records
     a registration for a single event.
@@ -3394,6 +3400,10 @@ class EventRegistration(
     )
 
     event = models.ForeignKey(Event, verbose_name=_('Event'), on_delete=models.CASCADE)
+    occurrences = models.ManyToManyField(
+        EventOccurrence, blank=True,
+        verbose_name=_('Applicable event occurrences (for drop-ins only)')
+    )
 
     price = models.FloatField(
         _('Price before discounts'), default=0, validators=[MinValueValidator(0)]
@@ -3521,12 +3531,12 @@ class EventRegistration(
             raise ValidationError(
                 _('Invalid passed invoice.')
             )
-        elif self.invoiceItem and self.invoiceItem.invoice != invoice:
+        elif getattr(self, 'invoiceItem', None) and getattr(self.invoiceItem, 'invoice', None) != invoice:
             raise ValidationError(
                 _('Existing invoice item not associated with passed invoice.')
             )
 
-        if not self.invoiceItem:
+        if not getattr(self, 'invoiceItem', None):
             item_kwargs = {
                 'invoice': invoice,
                 'grossTotal': self.price,

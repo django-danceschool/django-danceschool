@@ -1029,7 +1029,7 @@ class RevenueItem(models.Model):
     # With the invoice system in the core app, Revenue Items need only link with Invoice Items
     invoiceItem = models.OneToOneField(
         InvoiceItem, null=True, blank=True, verbose_name=_('Associated invoice item'),
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
     )
 
     event = models.ForeignKey(
