@@ -226,7 +226,7 @@ class EventRegistrationInline(admin.StackedInline):
     model = EventRegistration
     extra = 0
     fields = ['event', 'role', 'cancelled', 'dropIn', 'occurrences', 'price', 'netPrice']
-    add_readonly_fields = []
+    add_readonly_fields = ['netPrice',]
     readonly_fields = ['event', 'price', 'netPrice', 'dropIn', 'occurrences']
 
     def has_add_permission(self, request, obj=None):
