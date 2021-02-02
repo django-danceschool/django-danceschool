@@ -19,7 +19,7 @@ from base64 import b64decode
 import binascii
 from urllib.parse import unquote
 
-from danceschool.core.models import Registration, Invoice
+from danceschool.core.models import Invoice
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 
 from .models import SquarePaymentRecord
@@ -42,7 +42,6 @@ def processSquarePayment(request):
 
     nonce_id = request.POST.get('nonce')
     invoice_id = request.POST.get('invoice_id')
-    tr_id = request.POST.get('reg_id')
     amount = request.POST.get('amount')
     submissionUserId = request.POST.get('user_id')
     transactionType = request.POST.get('transaction_type')
@@ -78,24 +77,19 @@ def processSquarePayment(request):
             logger.warning('Invalid user passed, submissionUser will not be recorded.')
 
     try:
-        # Invoice transactions are usually payment on an existing invoice.
+        # Invoice transactions are usually payment on an existing invoice,
+        # including registrations.
         if invoice_id:
             this_invoice = Invoice.objects.get(id=invoice_id)
+            if this_invoice.status == Invoice.PaymentStatus.preliminary:
+                this_invoice.expirationDate = timezone.now() + timedelta(
+                    minutes=getConstant('registration__sessionExpiryMinutes')
+                )
+            this_invoice.status = Invoice.PaymentStatus.unpaid
             this_description = _('Invoice Payment: %s' % this_invoice.id)
             if not amount:
                 amount = this_invoice.outstandingBalance
-        # This is typical of payment at the time of registration
-        elif tr_id:
-            tr = Registration.objects.get(id=int(tr_id))
-            tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-            this_invoice = tr.link_invoice(
-                status=Invoice.PaymentStatus.unpaid,
-                submissionUser=submissionUser
-            )
-            tr.save()
-            this_description = _('Registration Payment: #%s' % tr_id)
-            if not amount:
-                amount = this_invoice.outstandingBalance
+            this_invoice.save()
         # All other transactions require both a transaction type and an amount to be specified
         elif not transactionType or not amount:
             logger.error('Insufficient information passed to createSquarePayment view.')
@@ -124,8 +118,8 @@ def processSquarePayment(request):
             )
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error(
-            'Invalid registration information passed to createSquarePayment ' +
-            'view: (%s, %s, %s)' % (invoice_id, tr_id, amount)
+            'Invalid invoice/amount information passed to createSquarePayment ' +
+            'view: (%s, %s, %s)' % (invoice_id, amount)
         )
         messages.error(
             request,
@@ -133,9 +127,9 @@ def processSquarePayment(request):
                 '<p>{}</p><ul><li>{}</li></ul>',
                 str(_('ERROR: Error with Square checkout transaction attempt.')),
                 str(_(
-                    'Invalid registration information passed to ' +
+                    'Invalid invoice/amount information passed to ' +
                     'createSquarePayment view: (%s, %s, %s)' % (
-                        invoice_id, tr_id, amount
+                        invoice_id, amount
                     )
                 ))
             )
@@ -382,6 +376,13 @@ def processPointOfSalePayment(request):
             this_invoice = Invoice.objects.get(id=int(metadata.get('invoice')))
             this_description = _('Invoice Payment: %s' % this_invoice.id)
 
+            if this_invoice.status == Invoice.PaymentStatus.preliminary:
+                this_invoice.expirationDate = timezone.now() + timedelta(
+                    minutes=getConstant('registration__sessionExpiryMinutes')
+                )
+            this_invoice.status = Invoice.PaymentStatus.unpaid
+            this_invoice.save()
+
         except (ValueError, TypeError, ObjectDoesNotExist):
             logger.error('Invalid invoice ID passed: %s' % metadata.get('invoice'))
             messages.error(
@@ -389,25 +390,6 @@ def processPointOfSalePayment(request):
                 str(_('ERROR: Invalid invoice ID passed')) + ': %s' % metadata.get('invoice')
             )
             return HttpResponseRedirect(sourceUrl)
-    elif 'registration' in metadata.keys():
-        try:
-            tr_id = int(metadata.get('registration'))
-            tr = Registration.objects.get(id=tr_id)
-        except (ValueError, TypeError, ObjectDoesNotExist):
-            logger.error('Invalid registration ID passed: %s' % metadata.get('registration'))
-            messages.error(
-                request,
-                str(_('ERROR: Invalid registration ID passed')) + ': %s' % metadata.get('registration')
-            )
-            return HttpResponseRedirect(sourceUrl)
-
-        tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        this_invoice = tr.link_invoice(
-            status=Invoice.PaymentStatus.unpaid,
-            submissionUser=submissionUser
-        )
-        tr.save()
-        this_description = _('Registration Payment: #%s' % tr_id)
     else:
         # Gift certificates automatically get a nicer invoice description
         if transactionType == 'Gift Certificate':

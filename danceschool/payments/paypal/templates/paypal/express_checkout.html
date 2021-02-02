@@ -25,9 +25,7 @@
                     {% if user.is_authenticated %}
                     user_id: {{ user.id }},
                     {% endif %}
-                    {% if registration %}
-                    reg_id: {{ registration.id }},
-                    {% elif invoice %}
+                    {% if invoice %}
                     invoice_id: '{{ invoice.id }}',
                     {% endif %}
                 }).then(function(data) {

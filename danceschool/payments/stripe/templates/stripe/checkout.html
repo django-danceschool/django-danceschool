@@ -10,9 +10,6 @@
 {% if invoice %}
   <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
   <input type="hidden" name="stripeAmount" value="{{ invoice.outstandingBalance }}">
-{% elif registration %}
-  <input type="hidden" name="reg_id" value="{{ registration.id }}">
-  <input type="hidden" name="stripeAmount" value="{{ registration.priceWithDiscountAndTaxes }}">
 {% endif %}
 
 <script
@@ -25,10 +22,9 @@
   {% if invoice %}
       data-amount="{% widthratio invoice.outstandingBalance 1 100 %}"
       data-description="{% trans "Invoice #" %}{{ invoice.id }}"
-  {% elif registration %}
-      data-amount="{% widthratio registration.priceWithDiscountAndTaxes 1 100 %}"
-      data-description="{% trans "Registration #" %}{{ registration.id}}"
-      data-email="{{ registration.email }}"
+      {% if invoice.email %}
+      data-email="{{ invoice.email }}"
+      {% endif %}
   {% endif %}
 </script>
 </form>

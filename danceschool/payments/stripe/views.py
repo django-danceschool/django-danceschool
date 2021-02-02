@@ -6,7 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
-from danceschool.core.models import Invoice, Registration
+from danceschool.core.models import Invoice
 
 from .models import StripeCharge
 
@@ -28,7 +28,6 @@ def handle_stripe_checkout(request):
     submissionUserId = request.POST.get('submissionUser')
     amount = request.POST.get('stripeAmount')
     invoice_id = request.POST.get('invoice_id')
-    tr_id = request.POST.get('reg_id')
     transactionType = request.POST.get('transaction_type')
     taxable = request.POST.get('taxable', False)
     addSessionInfo = request.POST.get('addSessionInfo', False)
@@ -63,24 +62,19 @@ def handle_stripe_checkout(request):
         return HttpResponseBadRequest()
 
     try:
-        # Invoice transactions are usually payment on an existing invoice.
+        # Invoice transactions are usually payment on an existing invoice,
+        # including registrations.
         if invoice_id:
             this_invoice = Invoice.objects.get(id=invoice_id)
+            if this_invoice.status == Invoice.PaymentStatus.preliminary:
+                this_invoice.expirationDate = timezone.now() + timedelta(
+                    minutes=getConstant('registration__sessionExpiryMinutes')
+                )
+            this_invoice.status = Invoice.PaymentStatus.unpaid
             this_description = _('Invoice Payment: %s' % this_invoice.id)
             if not amount:
                 amount = this_invoice.outstandingBalance
-        # This is typical of payment at the time of registration
-        elif tr_id:
-            tr = Registration.objects.get(id=int(tr_id))
-            tr.expirationDate = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-            this_invoice = tr.link_invoice(
-                status=Invoice.PaymentStatus.unpaid,
-                submissionUser=submissionUser,
-            )
-            tr.save()
-            this_description = _('Registration Payment: #%s' % tr_id)
-            if not amount:
-                amount = this_invoice.outstandingBalance
+            this_invoice.save()
         # All other transactions require both a transaction type and an amount to be specified
         elif not transactionType or not amount:
             logger.error('Insufficient information passed to createPaypalPayment view.')
@@ -101,9 +95,9 @@ def handle_stripe_checkout(request):
             )
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error(
-            'Invalid registration information passed to ' +
-            'handle_stripe_checkout view: (%s, %s, %s)' % (
-                invoice_id, tr_id, amount
+            'Invalid invoice/amount information passed to ' +
+            'handle_stripe_checkout view: (%s, %s)' % (
+                invoice_id, amount
             )
         )
         logger.error(e)

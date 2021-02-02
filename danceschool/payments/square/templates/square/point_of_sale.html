@@ -41,17 +41,17 @@ $(document).ready(function(){
       return "unknown";
   }
 
-  var amount = "{% if invoice %}{% widthratio invoice.outstandingBalance 1 100 %}{% elif registration %}{% widthratio registration.priceWithDiscountAndTaxes 1 100 %}{% else %}{% widthratio defaultAmount 1 100 %}{% endif %}"
+  var amount = "{% if invoice %}{% widthratio invoice.outstandingBalance 1 100 %}{% else %}{% widthratio defaultAmount 1 100 %}{% endif %}"
 
   var metadata = {
     {% if user.is_authenticated %}
       userId: "{{ user.id }}",
     {% endif %}
-    {% if registration %}
-      registration: "{{ registration.id }}",
-      customerEmail: "{{ registration.email }}",
-    {% elif invoice %}
+    {% if invoice %}
       invoice: "{{ invoice.id }}",
+      {% if invoice.email %}
+      customerEmail: "{{ invoice.email }}",
+      {% endif %}
     {% endif %}
     
     sourceUrl: "{{ request.get_full_path }}",
