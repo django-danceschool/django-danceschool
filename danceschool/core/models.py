@@ -1209,7 +1209,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         excludes = Q()
 
         if includeTemporaryRegs:
-            excludes = Q(final=False) & Q(registration__expirationDate__lte=timezone.now())
+            excludes = Q(registration__final=False) & Q(registration__invoice__expirationDate__lte=timezone.now())
         else:
             filters = filters & Q(final=True)
         return self.eventregistration_set.filter(filters).exclude(excludes).count()
@@ -1227,7 +1227,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         excludes = Q()
 
         if includeTemporaryRegs:
-            excludes = Q(registration__final=False) & Q(registration__expirationDate__lte=timezone.now())
+            excludes = Q(registration__final=False) & Q(registration__invoice__expirationDate__lte=timezone.now())
             if isinstance(dateTime, datetime):
                 excludes = Q(excludes) | (Q(registration__final=False) & Q(registration__dateTime__gte=dateTime))
         else:
@@ -1264,7 +1264,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         excludes = Q()
 
         if includeTemporaryRegs:
-            excludes = Q(registration__final=False) & Q(registration__expirationDate__lte=timezone.now())
+            excludes = Q(registration__final=False) & Q(registration__invoice__expirationDate__lte=timezone.now())
         else:
             filters = filters & Q(registration__final=True)
         return self.eventregistration_set.filter(filters).exclude(excludes).count()
@@ -2937,16 +2937,6 @@ class Registration(EmailRecipientMixin, models.Model):
     # use is not discarded.
     data = JSONField(_('Additional data'), default={}, blank=True)
 
-    expirationDate = models.DateTimeField(
-        _('Expiration date'),
-        help_text=_(
-            'When a customer attempts to begin the registration process, the system looks for ' +
-            'temporary registrations that are still in progress (with a future expiration date) ' +
-            'to determine if there is space for them to register.'
-        ),
-        null=True, blank=True
-    )
-
     @property
     def fullName(self):
         return ' '.join([self.firstName or '', self.lastName or '']).strip()
@@ -3172,6 +3162,8 @@ class Registration(EmailRecipientMixin, models.Model):
         collectedByUser = kwargs.pop('collectedByUser', None)
         status = kwargs.pop('status', None)
         expirationDate = kwargs.pop('expirationDate', None)
+        default_expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+
 
         if not getattr(self, 'invoice', None):
 
@@ -3193,7 +3185,7 @@ class Registration(EmailRecipientMixin, models.Model):
             ):
                 invoice_kwargs.update({
                     'status': Invoice.PaymentStatus.preliminary,
-                    'expirationDate': expirationDate or self.expirationDate,
+                    'expirationDate': expirationDate or default_expiry
                 })
             elif not status:
                 invoice_kwargs.update({
@@ -3286,7 +3278,6 @@ class Registration(EmailRecipientMixin, models.Model):
             )
             self.customer = customer
 
-        self.expirationDate = None
         self.final = True
         self.save()
         logger.debug('Finalized registration {}'.format(self.id))

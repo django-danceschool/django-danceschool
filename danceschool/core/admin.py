@@ -459,11 +459,11 @@ class RegistrationAdmin(admin.ModelAdmin):
     ]
     ordering = ('-final', '-dateTime', )
     fields = (
-        'final', 'email', 'phone', 'customer_link', 'invoice_link',
+        ('final', 'invoice_expiry'), 'email', 'phone', 'customer_link', 'invoice_link',
         'priceWithDiscount', 'student', 'dateTime', 'comments',
-        'howHeardAboutUs', 'submissionUser', 'expirationDate',
+        'howHeardAboutUs', 'submissionUser',
     )
-    readonly_fields = ('customer_link', 'invoice_link')
+    readonly_fields = ('customer_link', 'invoice_link', 'invoice_expiry')
 
     def customer_link(self, obj):
         change_url = reverse('admin:core_customer_change', args=(obj.customer.id, ))
@@ -476,6 +476,10 @@ class RegistrationAdmin(admin.ModelAdmin):
         return mark_safe('<a href="%s">%s</a>' % (change_url, obj.invoice))
     invoice_link.allow_tags = True
     invoice_link.short_description = _("Invoice")
+
+    def invoice_expiry(self, obj):
+        return obj.invoice.expirationDate
+    invoice_expiry.short_description = _("Expiration Date")
 
     def save_formset(self, request, form, formset, change):
         instances = formset.save(commit=False)

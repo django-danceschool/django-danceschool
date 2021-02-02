@@ -506,13 +506,13 @@ class RegistrationSessionExpiryMinutes(IntegerPreference):
 
 
 @global_preferences_registry.register
-class DeleteExpiredTemporaryRegistrations(BooleanPreference):
+class DeleteExpiredInvoices(BooleanPreference):
     section = registration
-    name = 'deleteExpiredTemporaryRegistrations'
-    verbose_name = _('Automatically delete expired temporary registration and session data')
+    name = 'deleteExpiredInvoices'
+    verbose_name = _('Automatically delete expired preliminary invoice and session data')
     help_text = _(
         'If this box is checked, then an hourly script will automatically ' +
-        'expired temporary registration and session data.  Disabling this ' +
+        'expired preliminary invoices and session data.  Disabling this ' +
         'feature is only recommended for testing.'
     )
     default = True

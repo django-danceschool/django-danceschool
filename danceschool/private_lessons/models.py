@@ -318,7 +318,10 @@ class InstructorAvailabilitySlot(models.Model):
                 self.status == self.SlotStatus.available or (
                     self.status == self.SlotStatus.tentative and
                     getattr(
-                        getattr(self.eventRegistration, 'registration', None),
+                        getattr(
+                            getattr(self.eventRegistration, 'invoiceItem', None),
+                            'invoice', None
+                        ),
                         'expirationDate',
                         timezone.now()
                     ) <= timezone.now()

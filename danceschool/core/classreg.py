@@ -161,9 +161,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         reg = Registration(
             submissionUser=submissionUser, dateTime=timezone.now(),
-            payAtDoor=non_event_listing.pop('payAtDoor', False),
-            expirationDate=expiry,
-            final=False
+            payAtDoor=non_event_listing.pop('payAtDoor', False), final=False
         )
 
         # Anything passed by this form that is not an Event field (any extra fields) are
@@ -233,7 +231,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # If we got this far with no issues, then save
         reg.priceWithDiscount = grossPrice
-        invoice = reg.link_invoice()
+        invoice = reg.link_invoice(expirationDate=expiry)
         reg.save()
 
         for er in self.event_registrations:
@@ -466,10 +464,9 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             if post_data.get(key, None):
                 setattr(reg, key, post_data[key])
 
-        # Update expiration date for this registration (will also be updated in)
+        # Update expiration date for this invoice (will also be updated in)
         # session data.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        reg.expirationDate = expiry
 
         if regSession.get('marketing_id'):
             reg.data.update({'marketing_id': regSession.pop('marketing_id', None)})
@@ -673,7 +670,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # existing associated EventRegistrations that were not passed
         # in via POST.
         reg.priceWithDiscount = grossPrice
-        invoice = reg.link_invoice()
+        invoice = reg.link_invoice(expirationDate=expiry)
         reg.save()
         reg.eventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
 
@@ -1185,7 +1182,6 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
             # Update the expiration date for this registration, and pass in the data from
             # this form.
-            reg.expirationDate = expiry
             reg.firstName = form.cleaned_data.pop('firstName')
             reg.lastName = form.cleaned_data.pop('lastName')
             reg.email = form.cleaned_data.pop('email')

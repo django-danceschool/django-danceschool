@@ -392,8 +392,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(finalReg.netPrice, 0)
         self.assertTrue(finalReg.final)
 
-        # Check that the registration no longer has an expiration date
-        self.assertIsNone(finalReg.expirationDate)
+        # Check that the invoice no longer has an expiration date
         self.assertIsNone(invoice.expirationDate)
 
         # Check that the RegistrationDiscount associated with this registration

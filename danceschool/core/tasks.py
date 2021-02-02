@@ -35,21 +35,21 @@ def updateSeriesRegistrationStatus():
 
 
 @db_periodic_task(crontab(minute='*/60'))
-def clearExpiredTemporaryRegistrations():
+def clearExpiredInvoices():
     '''
-    Every hour, look for temporary Registrations that have expired and delete them.
+    Every hour, look for unfinished invoices that have expired and delete them.
     To ensure that there are no issues that arise from slight differences between
-    session expiration dates and temporary Registration expiration dates, only
+    session expiration dates and invoice expiration dates, only
     delete instances that have been expired for one minute.
     '''
-    from .models import Registration
+    from .models import Invoice
 
     if not getConstant('general__enableCronTasks'):
         return
 
-    if getConstant('registration__deleteExpiredTemporaryRegistrations'):
-        Registration.objects.filter(
-            final=False,
+    if getConstant('registration__deleteExpiredInvoices'):
+        Invoice.objects.filter(
+            status=Invoice.PaymentStatus.preliminary,
             expirationDate__lte=timezone.now() - timedelta(minutes=1)
         ).delete()
         call_command('clearsessions')

@@ -9,18 +9,14 @@ from danceschool.core.constants import getConstant
 
 
 class Command(BaseCommand):
-    help = 'Clear expired temporary registration, invoice and session data'
+    help = 'Clear expired preliminary invoice and session data'
 
     def handle(self, *args, **options):
 
-        if getConstant('registration__deleteExpiredTemporaryRegistrations'):
+        if getConstant('registration__deleteExpiredInvoices'):
             self.stdout.write('Clearing expired data.')
             Invoice.objects.filter(
                 status=Invoice.PaymentStatus.preliminary,
-                expirationDate__lte=timezone.now() - timedelta(minutes=1)
-            ).delete()
-            Registration.objects.filter(
-                final=False,
                 expirationDate__lte=timezone.now() - timedelta(minutes=1)
             ).delete()
             call_command('clearsessions')

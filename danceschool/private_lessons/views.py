@@ -192,7 +192,7 @@ class BookPrivateLessonView(FormView):
             Q(status=InstructorAvailabilitySlot.SlotStatus.available) |
             (
                 Q(status=InstructorAvailabilitySlot.SlotStatus.tentative) &
-                ~Q(eventRegistration__registration__expirationDate__gte=timezone.now())
+                ~Q(eventRegistration__invoiceItem__invoice__expirationDate__gte=timezone.now())
             )
         )
 
@@ -206,7 +206,7 @@ class BookPrivateLessonView(FormView):
 
         if existingEvents.filter(
             Q(eventregistration__isnull=False) |
-            Q(eventregistration__registration__expirationDate__gte=timezone.now())
+            Q(eventregistration__invoiceItem__invoice__expirationDate__gte=timezone.now())
         ).exists():
             form.add_error(
                 None,
@@ -278,7 +278,6 @@ class BookPrivateLessonView(FormView):
             reg = Registration(
                 submissionUser=submissionUser, dateTime=timezone.now(),
                 payAtDoor=payAtDoor,
-                expirationDate=expiry,
                 final=False,
             )
 
@@ -292,7 +291,7 @@ class BookPrivateLessonView(FormView):
 
             # Now we are ready to save and proceed.
             reg.priceWithDiscount = tr.price
-            invoice = reg.link_invoice()
+            invoice = reg.link_invoice(expirationDate=expiry)
             reg.save()
             tr.registration = reg
             tr.save(invoice=invoice)
