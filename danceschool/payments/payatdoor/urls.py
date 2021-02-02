@@ -1,8 +1,8 @@
 from django.urls import path
 
-from .views import handle_payatdoor, handle_willpayatdoor
+from .views import PayAtDoorView, WillPayAtDoorView
 
 urlpatterns = [
-    path('submit/', handle_willpayatdoor, name='doorWillPayHandler'),
-    path('process/', handle_payatdoor, name='doorPaymentHandler'),
+    path('submit/', WillPayAtDoorView.as_view(), name='doorWillPayHandler'),
+    path('process/', PayAtDoorView.as_view(), name='doorPaymentHandler'),
 ]

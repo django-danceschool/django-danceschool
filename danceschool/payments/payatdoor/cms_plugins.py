@@ -31,12 +31,11 @@ class WillPayAtDoorFormPlugin(CMSPluginBase):
         return context
 
     def get_cart_form(self, context, instance, *args, **kwargs):
-        registration = getattr(context.get('registration', None), 'id', None)
         invoice = getattr(context.get('invoice', None), 'id', None)
         user = getattr(context.get('user', None), 'id', None)
 
         return WillPayAtDoorForm(
-            user=user, invoice=invoice, registration=registration, instance=instance.id
+            user=user, invoice=invoice, instance=instance.id
         )
 
 
@@ -73,14 +72,12 @@ class PayAtDoorFormPlugin(CMSPluginBase):
         return context
 
     def get_cart_form(self, context, instance, *args, **kwargs):
-        registration = getattr(context.get('registration', None), 'id', '')
         invoice = str(getattr(context.get('invoice', None), 'id', ''))
         user = getattr(context.get('user', None), 'id', '')
         initialAmount = context.get('netPrice', 0)
 
         return DoorPaymentForm(
-            user=user, invoice=invoice, registration=registration,
-            initialAmount=round(initialAmount, 2)
+            user=user, invoice=invoice, initialAmount=round(initialAmount, 2)
         )
 
 

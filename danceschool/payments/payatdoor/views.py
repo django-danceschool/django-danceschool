@@ -1,66 +1,62 @@
-from django.http import JsonResponse, HttpResponseRedirect, HttpResponseBadRequest
-from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.urls import reverse
-from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
-from django.utils import timezone
+from django.views.generic import FormView
 
-from danceschool.core.constants import getConstant
-from danceschool.core.models import Invoice, CashPaymentRecord
+from danceschool.core.models import CashPaymentRecord, Invoice
 from danceschool.core.helpers import getReturnPage
 
 from .forms import WillPayAtDoorForm, DoorPaymentForm
-from .models import PayAtDoorFormModel
 
 import logging
-from datetime import timedelta
 
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
 
 
-def handle_willpayatdoor(request):
-    logger.info('Received request for future payment at the door.')
-    form = WillPayAtDoorForm(request.POST)
+class WillPayAtDoorView(FormView):
+    form_class=WillPayAtDoorForm
 
-    if form.is_valid():
-        tr = form.cleaned_data.get('registration')
+    def post(self, request, *args, **kwargs):
+        logger.info('Received request for at-the-door payment.')
+        self.request = request
+        return super().post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        invoice = form.cleaned_data.get('invoice')
         instance = form.cleaned_data.get('instance')
-        invoice = tr.link_invoice(
-            status=Invoice.PaymentStatus.unpaid,
-            submissionUser=form.cleaned_data.get('submissionUser'),
-        )
-        tr.finalize()
+
+        invoice.status = Invoice.PaymentStatus.unpaid
+        invoice.save()
+
+        if getattr(invoice, 'registration', None):
+            invoice.registration.finalize()
         if instance:
             return HttpResponseRedirect(instance.successPage.get_absolute_url())
-    return HttpResponseBadRequest()
+
+    def form_invalid(self, form):
+        return HttpResponseBadRequest(str(form.errors))
 
 
-def handle_payatdoor(request):
+class PayAtDoorView(FormView):
+    form_class = DoorPaymentForm
 
-    logger.info('Received request for At-the-door payment.')
-    form = DoorPaymentForm(request.POST)
+    def post(self, request, *args, **kwargs):
+        logger.info('Received request for at-the-door payment.')
+        self.request = request
+        return super().post(request, *args, **kwargs)
 
-    if form.is_valid():
-        tr = form.cleaned_data.get('registration')
+    def form_valid(self, form):
         invoice = form.cleaned_data.get('invoice')
         amountPaid = form.cleaned_data.get('amountPaid')
         subUser = form.cleaned_data.get('submissionUser')
-        event = form.cleaned_data.get('event')
-        sourcePage = form.cleaned_data.get('sourcePage')
         paymentMethod = form.cleaned_data.get('paymentMethod')
         payerEmail = form.cleaned_data.get('payerEmail')
         receivedBy = form.cleaned_data.get('receivedBy')
 
-        if not tr and not invoice:
-            return HttpResponseBadRequest()
-
         if not invoice:
-            invoice = tr.link_invoice(
-                status=Invoice.PaymentStatus.unpaid,
-                submissionUser=subUser,
-            )
+            return HttpResponseBadRequest("No invoice")
 
         this_cash_payment = CashPaymentRecord.objects.create(
             invoice=invoice, amount=amountPaid,
@@ -78,9 +74,11 @@ def handle_payatdoor(request):
 
         # Send users back to the invoice to confirm the successful payment.
         # If none is specified, then return to the registration page.
-        returnPage = getReturnPage(request.session.get('SITE_HISTORY', {}))
+        returnPage = getReturnPage(self.request.session.get('SITE_HISTORY', {}))
         if returnPage.get('url'):
             return HttpResponseRedirect(returnPage['url'])
         return HttpResponseRedirect(reverse('registration'))
 
-    return HttpResponseBadRequest()
+    def form_invalid(self, form):
+        logger.error('Invalid request for at-the-door payment.')
+        return HttpResponseBadRequest(str(form.errors))
