@@ -18,7 +18,7 @@ from .managers import MerchOrderManager
 
 def get_defaultSalesTaxRate():
     ''' Callable for default used by MerchItem class '''
-    return getConstant('registration___merchSalesTaxRate')
+    return getConstant('registration__merchSalesTaxRate')
 
 
 class MerchItemCategory(models.Model):
