@@ -17,7 +17,7 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Add the cart-specific context to this form '''
-        context = super(SquareCheckoutFormPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         context.update({
             'allow_amount_entry': False,
@@ -31,7 +31,7 @@ class SquareGiftCertificateFormPlugin(SquareCheckoutFormPlugin):
     name = _('Square Gift Certificate Form')
 
     def render(self, context, instance, placeholder):
-        context = super(SquareGiftCertificateFormPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         context.update({
             'allow_amount_entry': True,
@@ -49,7 +49,7 @@ class SquarePointOfSalePlugin(CMSPluginBase):
     module = 'Square'
 
     def render(self, context, instance, placeholder):
-        context = super(SquarePointOfSalePlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         context.update({
             'squareApplicationId': getattr(settings, 'SQUARE_APPLICATION_ID', ''),

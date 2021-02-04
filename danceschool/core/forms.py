@@ -192,7 +192,7 @@ class CheckboxSeriesChoiceField(forms.MultipleChoiceField):
         # additional field features (e.g. roles, drop-ins, etc.).
         self.event = kwargs.pop('event', None)
         self.features = kwargs.pop('features', {})
-        super(CheckboxSeriesChoiceField, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def valid_value(self, value):
         '''
@@ -229,7 +229,7 @@ class ClassChoiceForm(forms.Form):
         self.permitted_event_keys = kwargs.pop('permittedEventKeys', ['role', ])
 
         # Initialize a default (empty) form to fill
-        super(ClassChoiceForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Allow users with appropriate permissions to process door registrations.
         if user and user.has_perm('core.accept_door_payments'):
@@ -343,7 +343,7 @@ class ClassChoiceForm(forms.Form):
 
     def clean(self):
         ''' Check that the registration is not empty. '''
-        cleaned_data = super(ClassChoiceForm, self).clean()
+        cleaned_data = super().clean()
         hasContent = False
 
         payAtDoor = cleaned_data.get('payAtDoor', False)
@@ -457,7 +457,7 @@ class RegistrationContactForm(forms.Form):
         user = getattr(self._request, 'user', None)
         session = getattr(self._request, 'session', {}).get(REG_VALIDATION_STR, {})
 
-        super(RegistrationContactForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._session = session
 
         # Setting use_custom_control to False to avoid issues with
@@ -501,7 +501,7 @@ class RegistrationContactForm(forms.Form):
         but also no messages on the request that need to be shown.
         '''
 
-        valid = super(RegistrationContactForm, self).is_valid()
+        valid = super().is_valid()
         msgs = messages.get_messages(self._request)
 
         # We only want validation messages to show up once, so pop messages that have already show up
@@ -521,7 +521,7 @@ class RegistrationContactForm(forms.Form):
         return valid
 
     def clean(self):
-        super(RegistrationContactForm, self).clean()
+        super().clean()
         first = self.cleaned_data.get('firstName')
         last = self.cleaned_data.get('lastName')
         email = self.cleaned_data.get('email')
@@ -658,7 +658,7 @@ class CreateInvoiceForm(forms.Form):
             'invoicePayerEmail': payerEmail,
         })
 
-        super(CreateInvoiceForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def clean_submissionUser(self):
         invoiceSent = self.data.get('invoiceSent') or None
@@ -797,7 +797,7 @@ class DoorAmountForm(forms.Form):
             'receivedBy': subUser,
         })
 
-        super(DoorAmountForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def clean_submissionUser(self):
         paid = self.data.get('paid') or None
@@ -877,7 +877,7 @@ class EventAutocompleteForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
 
-        super(EventAutocompleteForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -897,7 +897,7 @@ class RefundForm(forms.ModelForm):
         fields = []
 
     def __init__(self, *args, **kwargs):
-        super(RefundForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         this_invoice = kwargs.pop('instance', None)
 
@@ -1029,7 +1029,7 @@ class EmailContactForm(forms.Form):
         recentseries = kwargs.pop('recentseries', [])
         customers = kwargs.pop('customers', [])
 
-        super(EmailContactForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         if customers:
             self.fields['customers'] = forms.MultipleChoiceField(
@@ -1058,7 +1058,7 @@ class EmailContactForm(forms.Form):
     def clean(self):
         # Custom cleaning ensures email is only sent to one of
         # a series, a month, or a set of customers
-        super(EmailContactForm, self).clean()
+        super().clean()
 
         sendToSet = self.cleaned_data.get('sendToSet')
         customers = self.cleaned_data.get('customers')
@@ -1096,7 +1096,7 @@ class SeriesTeacherChoiceField(forms.ModelChoiceField):
 
     def to_python(self, value):
         try:
-            value = super(SeriesTeacherChoiceField, self).to_python(value)
+            value = super().to_python(value)
         except (ValueError, ValidationError):
             key = self.to_field_name or 'pk'
             value = SeriesTeacher.objects.filter(**{key: value})
@@ -1174,7 +1174,7 @@ class SubstituteReportingForm(forms.ModelForm):
                 'submissionUser': user,
             })
 
-        super(SubstituteReportingForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['event'] = forms.ModelChoiceField(queryset=Series.objects.order_by('-startTime'))
         self.fields['staffMember'] = forms.ModelChoiceField(queryset=StaffMember.objects.filter(
                 instructor__isnull=False,
@@ -1198,7 +1198,7 @@ class SubstituteReportingForm(forms.ModelForm):
         same class and class teacher.  It also prevents an individual from
         substituting for a class in which they are a teacher.
         '''
-        super(SubstituteReportingForm, self).clean()
+        super().clean()
 
         occurrences = self.cleaned_data.get('occurrences', [])
         staffMember = self.cleaned_data.get('staffMember')
@@ -1257,7 +1257,7 @@ class SubstituteReportingForm(forms.ModelForm):
             record.save()
             return record
         else:
-            return super(SubstituteReportingForm, self).save()
+            return super().save()
 
     class Meta:
         model = SubstituteTeacher
@@ -1271,7 +1271,7 @@ class StaffMemberBioChangeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         # Initialize a default form to fill
-        super(StaffMemberBioChangeForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # If the individual is an instructor, then add the availableForPrivates field
         if getattr(self.instance, 'instructor', None):
@@ -1295,7 +1295,7 @@ class StaffMemberBioChangeForm(forms.ModelForm):
                 'availableForPrivates', self.instance.instructor.availableForPrivates
             )
             self.instance.instructor.save(update_fields=['availableForPrivates', ])
-        super(StaffMemberBioChangeForm, self).save(commit=True)
+        super().save(commit=True)
 
     class Meta:
         model = StaffMember
@@ -1341,7 +1341,7 @@ class InvoiceNotificationForm(forms.Form):
         invoices = kwargs.pop('invoices', Invoice.objects.none())
 
         # Initialize a default (empty) form to fill
-        super(InvoiceNotificationForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         for invoice in invoices:
             self.fields['invoice_%s' % invoice.id] = forms.BooleanField(

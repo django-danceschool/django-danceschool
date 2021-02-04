@@ -316,7 +316,7 @@ class DiscountCombo(models.Model):
             self.percentDiscount = None
             self.percentUniversallyApplied = False
 
-        super(DiscountCombo, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

@@ -197,4 +197,4 @@ class TransactionPartyAutoComplete(autocomplete.Select2QuerySetView):
                     name=text, staffMember=None, user=None, location=None
                 )[0]
         else:
-            return super(TransactionPartyAutoComplete, self).create_object(text)
+            return super().create_object(text)

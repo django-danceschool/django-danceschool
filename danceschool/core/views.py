@@ -78,7 +78,7 @@ class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, Form
         )
 
     def get_context_data(self, **kwargs):
-        context = super(EventRegistrationSelectView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         queryset = self.get_queryset()
         context.update({'queryset': queryset, 'object_list': queryset, 'event_list': queryset})
         return context
@@ -131,7 +131,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'extras': extras_dict,
         }
         context.update(kwargs)
-        return super(EventRegistrationSummaryView, self).get_context_data(**context)
+        return super().get_context_data(**context)
 
 
 class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
@@ -300,7 +300,7 @@ class SubmissionRedirectView(SiteHistoryMixin, TemplateView):
         as specified in the site settings.
         '''
 
-        context = super(SubmissionRedirectView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         redirect_url = unquote(self.request.GET.get('redirect_url', ''))
         if not redirect_url:
@@ -349,7 +349,7 @@ class ViewInvoiceView(AccessMixin, FinancialContextMixin, SiteHistoryMixin, Deta
         return self.handle_no_permission()
 
     def get_context_data(self, **kwargs):
-        context = super(ViewInvoiceView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'invoice': self.object,
             'payments': self.get_payments(),
@@ -417,16 +417,16 @@ class InvoiceNotificationView(FinancialContextMixin, AdminSuccessURLMixin,
         self.toNotify = toNotify
         self.cannotNotify = cannotNotify
 
-        return super(InvoiceNotificationView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
         ''' Pass the set of invoices to the form for creation '''
-        kwargs = super(InvoiceNotificationView, self).get_form_kwargs()
+        kwargs = super().get_form_kwargs()
         kwargs['invoices'] = self.toNotify
         return kwargs
 
     def get_context_data(self, **kwargs):
-        context = super(InvoiceNotificationView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'toNotify': self.toNotify,
             'cannotNotify': self.cannotNotify,
@@ -458,10 +458,10 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
         if request.GET.get('confirmed', '').lower() == 'true' and self.payments:
             return self.process_refund()
-        return super(RefundConfirmationView, self).get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context = super(RefundConfirmationView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         total_refund_amount = self.form_data['total_refund_amount']
         initial_refund_amount = self.form_data['initial_refund_amount']
@@ -606,7 +606,7 @@ class RefundProcessingView(FinancialContextMixin, PermissionRequiredMixin, Staff
     model = Invoice
 
     def get_context_data(self, **kwargs):
-        context = super(RefundProcessingView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'invoice': self.object,
             'payments': self.get_payments(),
@@ -648,7 +648,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             return HttpResponseRedirect(reverse('emailStudents'))
         if request.GET.get('confirmed', '').lower() == 'true':
             return self.send_email()
-        return super(EmailConfirmationView, self).get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
     def send_email(self):
         subject = self.form_data.pop('subject')
@@ -729,7 +729,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
-        context = super(EmailConfirmationView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update(self.form_data)
 
         month = self.form_data['month']
@@ -794,7 +794,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
             except ValueError:
                 return HttpResponseBadRequest(_('Invalid customer ids passed'))
 
-        return super(SendEmailView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self, **kwargs):
         '''
@@ -831,7 +831,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
         allEvents = Event.objects.filter(startTime__gte=cutoff).order_by('-startTime')
         recentSeries = [('', 'None')] + [(x.id, '%s %s: %s' % (month_name[x.month], x.year, x.name)) for x in allEvents]
 
-        kwargs = super(SendEmailView, self).get_form_kwargs(**kwargs)
+        kwargs = super().get_form_kwargs(**kwargs)
         kwargs.update({
             "months": months,
             "recentseries": recentSeries,
@@ -844,7 +844,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
         If the user already submitted the form and decided to return from the
         confirmation page, then re-populate the form
         '''
-        initial = super(SendEmailView, self).get_initial()
+        initial = super().get_initial()
 
         form_data = self.request.session.get(EMAIL_VALIDATION_STR, {}).get('form_data', {})
         if form_data:
@@ -852,7 +852,7 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
         return initial
 
     def get_context_data(self, **kwargs):
-        context = super(SendEmailView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Email Students'),
@@ -930,7 +930,7 @@ class AccountProfileView(LoginRequiredMixin, DetailView):
                     item[1].pop('customer', None)
                     context.update(item[1])
 
-        return super(AccountProfileView, self).get_context_data(**context)
+        return super().get_context_data(**context)
 
 
 class OtherAccountProfileView(PermissionRequiredMixin, AccountProfileView):
@@ -1064,7 +1064,7 @@ class IndividualClassView(ReferralInfoMixin, FinancialContextMixin, TemplateView
                 reverse_core_series_change = reverse('admin:core_series_change', args=([this_series.id, ]))
                 request.toolbar.add_button(this_title, reverse_core_series_change, side=RIGHT)
 
-        return super(IndividualClassView, self).get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
 
 class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView):
@@ -1110,7 +1110,7 @@ class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView
                 reverse_core_publicevent_change = reverse('admin:core_publicevent_change', args=([this_event.id, ]))
                 request.toolbar.add_button(this_title, reverse_core_publicevent_change, side=RIGHT)
 
-        return super(IndividualEventView, self).get(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
 
 #####################################
@@ -1143,10 +1143,10 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
         except ValueError:
             return HttpResponseBadRequest(_('Invalid ids passed'))
 
-        return super(RepeatEventsView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context = super(RepeatEventsView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'events': self.queryset,
         })
@@ -1232,7 +1232,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
                 # updated properly.
                 event.save()
 
-            return super(RepeatEventsView, self).form_valid(form)
+            return super().form_valid(form)
 
 
 ############################################################
@@ -1250,7 +1250,7 @@ class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, Use
     success_message = _('Substitute teaching reported successfully.')
 
     def get_context_data(self, **kwargs):
-        context = super(SubstituteReportingView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Report Substitute Teaching'),
@@ -1276,7 +1276,7 @@ class StaffMemberBioChangeView(AdminSuccessURLMixin, StaffMemberObjectMixin, Per
     success_message = _('Staff member information updated successfully.')
 
     def get_context_data(self, **kwargs):
-        context = super(StaffMemberBioChangeView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Update Contact Information'),
@@ -1303,7 +1303,7 @@ class StaffDirectoryView(PermissionRequiredMixin, ListView):
     ])
 
     def get_context_data(self, **kwargs):
-        context = super(StaffDirectoryView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         staff = context.get('staffmember_list', StaffMember.objects.none())
 

@@ -50,7 +50,7 @@ class GiftCertificateCustomizeView(FormView):
         if i.unpaid or i.amountPaid != self.amount:
             return HttpResponseBadRequest(_('Passed invoice is not paid.'))
 
-        return super(GiftCertificateCustomizeView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         '''
@@ -142,7 +142,7 @@ class GiftCertificatePDFView(PDFTemplateView):
     template_name = 'vouchers/pdf/giftcertificate_template.html'
 
     def get_context_data(self, **kwargs):
-        context = super(GiftCertificatePDFView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         template = getConstant('vouchers__giftCertPDFTemplate')
 

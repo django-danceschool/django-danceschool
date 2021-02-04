@@ -27,7 +27,7 @@ class StaffMemberListPlugin(PluginTemplateMixin, CMSPluginBase):
     module = _('Staff')
 
     def render(self, context, instance, placeholder):
-        context = super(StaffMemberListPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         listing = StaffMember.objects.all()
 
@@ -79,7 +79,7 @@ class LocationListPlugin(PluginTemplateMixin, CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Allows this plugin to use templates designed for a list of locations. '''
-        context = super(LocationListPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
         context['location_list'] = Location.objects.filter(status=Location.StatusChoices.active)
         return context
 
@@ -93,7 +93,7 @@ class LocationPlugin(PluginTemplateMixin, CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Allows this plugin to use templates designed for a list of locations. '''
-        context = super(LocationPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
         context['location_list'] = [instance.location, ]
         return context
 
@@ -130,7 +130,7 @@ class EventListPlugin(PluginTemplateMixin, CMSPluginBase):
     )
 
     def render(self, context, instance, placeholder):
-        context = super(EventListPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         # Ensure that the CSRF protection cookie is set for all lists of events.
         # Useful for things like buttons that go directly into the registration process.
@@ -209,7 +209,7 @@ class CreateInvoicePlugin(CMSPluginBase):
     module = _('Payments')
 
     def render(self, context, instance, placeholder):
-        context = super(CreateInvoicePlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         registration = getattr(context.get('registration', None), 'id', None)
         user = getattr(context.get('user', None), 'id', None)

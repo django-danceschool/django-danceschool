@@ -51,7 +51,7 @@ class SlotBookingForm(forms.Form):
         user = kwargs.pop('user', None)
 
         # Initialize the default form
-        super(SlotBookingForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Allow users with appropriate permissions to process door registrations.
         if user and user.has_perm('core.accept_door_payments'):
@@ -114,7 +114,7 @@ class SlotCreationForm(forms.Form):
         and only allow rooms associated with the chosen location.
         '''
 
-        super(SlotCreationForm, self).clean()
+        super().clean()
 
         startDate = self.cleaned_data.get('startDate')
         endDate = self.cleaned_data.get('endDate')
@@ -198,7 +198,7 @@ class PrivateLessonStudentInfoForm(forms.Form):
         user = getattr(self._request, 'user', None)
         payAtDoor = kwargs.pop('payAtDoor', False)
 
-        super(PrivateLessonStudentInfoForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.helper = FormHelper()
         self.helper.form_method = 'post'

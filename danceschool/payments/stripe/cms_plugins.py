@@ -17,7 +17,7 @@ class StripeGiftCertificateFormPlugin(CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Create a UUID and check if a voucher with that ID exists before rendering '''
-        context = super(StripeGiftCertificateFormPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         context.update({
             'stripe_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
@@ -37,7 +37,7 @@ class StripePaymentFormPlugin(CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Add the cart-specific context to this form '''
-        context = super(StripePaymentFormPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         context.update({
             'stripe_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),

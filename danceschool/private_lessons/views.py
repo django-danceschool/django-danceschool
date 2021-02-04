@@ -34,11 +34,11 @@ class InstructorAvailabilityView(TemplateView):
             (thisStaffMember and thisUser and thisUser.has_perm('private_lessons.edit_own_availability')) or
             (thisUser and thisUser.has_perm('private_lessons.edit_others_availability'))
         ):
-            return super(InstructorAvailabilityView, self).get(request, *args, **kwargs)
+            return super().get(request, *args, **kwargs)
         raise Http404()
 
     def get_context_data(self, **kwargs):
-        context = super(InstructorAvailabilityView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context.update({
             'instructor': getattr(getattr(self.request, 'user'), 'staffmember'),
@@ -131,7 +131,7 @@ class BookPrivateLessonView(FormView):
     form_class = SlotBookingForm
 
     def get_context_data(self, **kwargs):
-        context = super(BookPrivateLessonView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'instructor_list': Instructor.objects.filter(
                 availableForPrivates=True, instructorprivatelessondetails__isnull=False
@@ -144,7 +144,7 @@ class BookPrivateLessonView(FormView):
         '''
         Pass the current user to the form to render the payAtDoor field if applicable.
         '''
-        kwargs = super(BookPrivateLessonView, self).get_form_kwargs(**kwargs)
+        kwargs = super().get_form_kwargs(**kwargs)
         kwargs['user'] = self.request.user if hasattr(self.request, 'user') else None
         return kwargs
 
@@ -342,10 +342,10 @@ class PrivateLessonStudentInfoView(FormView):
             return HttpResponseRedirect(reverse('bookPrivateLesson'))
 
         self.payAtDoor = lessonSession.get('payAtDoor', False)
-        return super(PrivateLessonStudentInfoView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context = super(PrivateLessonStudentInfoView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'lesson': self.lesson,
             'teachers': [x.staffMember.fullName for x in self.lesson.eventstaffmember_set.all()],
@@ -354,7 +354,7 @@ class PrivateLessonStudentInfoView(FormView):
 
     def get_form_kwargs(self, **kwargs):
         ''' Pass along the request data to the form '''
-        kwargs = super(PrivateLessonStudentInfoView, self).get_form_kwargs(**kwargs)
+        kwargs = super().get_form_kwargs(**kwargs)
         kwargs['request'] = self.request
         kwargs['payAtDoor'] = self.payAtDoor
         return kwargs

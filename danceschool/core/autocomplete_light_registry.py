@@ -159,4 +159,4 @@ class StaffMemberAutoComplete(autocomplete.Select2QuerySetView):
             lastName = ' '.join(text.split(' ')[1:])
             return self.get_queryset().create(**{'firstName': firstName, 'lastName': lastName})
         else:
-            return super(StaffMemberAutoComplete, self).create_object(text)
+            return super().create_object(text)

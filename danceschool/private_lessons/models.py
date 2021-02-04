@@ -183,7 +183,7 @@ class PrivateLessonEvent(Event):
         ''' Set registration status to hidden if it is not specified otherwise '''
         if not self.status:
             self.status == Event.RegStatus.hidden
-        super(PrivateLessonEvent, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return str(self.name)

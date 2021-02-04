@@ -38,7 +38,7 @@ class PrivateLessonCustomerInline(admin.StackedInline):
 
 class PrivateLessonTeacherInlineForm(ModelForm):
     def __init__(self, *args, **kwargs):
-        super(PrivateLessonTeacherInlineForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.fields['staffMember'].label = _('Instructor')
         self.fields['category'].initial = getConstant('privateLessons__eventStaffCategoryPrivateLesson').id

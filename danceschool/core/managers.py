@@ -37,7 +37,7 @@ class SeriesTeacherManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(SeriesTeacherManager, self).get_queryset().filter(
+        return super().get_queryset().filter(
             category=getConstant('general__eventStaffCategoryInstructor')
         )
 
@@ -46,7 +46,7 @@ class SeriesTeacherManager(models.Manager):
             'category': getConstant('general__eventStaffCategoryInstructor').id,
             'occurrences': kwargs.get('event').eventoccurrence_set.all(),
         })
-        return super(SeriesTeacherManager, self).create(**kwargs)
+        return super().create(**kwargs)
 
 
 class SubstituteTeacherManager(models.Manager):
@@ -56,14 +56,14 @@ class SubstituteTeacherManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(SubstituteTeacherManager, self).get_queryset().filter(
+        return super().get_queryset().filter(
             category=getConstant('general__eventStaffCategorySubstitute')
         )
 
     def create(self, **kwargs):
         kwargs.update({
             'category': getConstant('general__eventStaffCategorySubstitute').id})
-        return super(SubstituteTeacherManager, self).create(**kwargs)
+        return super().create(**kwargs)
 
 
 class EventDJManager(models.Manager):
@@ -73,7 +73,7 @@ class EventDJManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(EventDJManager, self).get_queryset().filter(
+        return super().get_queryset().filter(
             category=getConstant('general__eventStaffCategoryDJ')
         )
 
@@ -81,7 +81,7 @@ class EventDJManager(models.Manager):
         kwargs.update({
             'category': getConstant('general__eventStaffCategoryDJ').id,
         })
-        return super(EventDJManager, self).create(**kwargs)
+        return super().create(**kwargs)
 
 
 class SeriesStaffManager(models.Manager):
@@ -90,7 +90,7 @@ class SeriesStaffManager(models.Manager):
     '''
 
     def get_queryset(self):
-        return super(SeriesStaffManager, self).get_queryset().exclude(
+        return super().get_queryset().exclude(
             category__in=[
                 getConstant('general__eventStaffCategoryInstructor'),
                 getConstant('general__eventStaffCategorySubstitute'),

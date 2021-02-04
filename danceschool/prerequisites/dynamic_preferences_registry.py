@@ -38,7 +38,7 @@ class RequirementErrorMessage(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -56,6 +56,6 @@ class RequirementWarningMessage(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs

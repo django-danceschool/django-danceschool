@@ -1104,10 +1104,10 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         # so that passed voucher_ids are cleared.
         request.session.modified = True
 
-        return super(StudentInfoView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
-        context_data = super(StudentInfoView, self).get_context_data(**kwargs)
+        context_data = super().get_context_data(**kwargs)
         reg = self.registration
 
         initial_price = sum([x.price for x in reg.eventregistration_set.all()])
@@ -1154,7 +1154,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
     def get_form_kwargs(self, **kwargs):
         ''' Pass along the request data to the form '''
-        kwargs = super(StudentInfoView, self).get_form_kwargs(**kwargs)
+        kwargs = super().get_form_kwargs(**kwargs)
         kwargs['request'] = self.request
         kwargs['registration'] = self.registration
         kwargs['invoice'] = self.invoice

@@ -122,7 +122,7 @@ class ExpenseItemAdminChangelistForm(ExpenseItemAdminForm):
     ''' Make the payTo field optional. '''
 
     def __init__(self, *args, **kwargs):
-        super(ExpenseItemAdminChangelistForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['payTo'].required = False
 
 
@@ -186,7 +186,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
 
     # for inherited eventLink() method
     def eventLink(self, obj):
-        return super(ExpenseItemAdmin, self).eventLink(obj)
+        return super().eventLink(obj)
     eventLink.allow_tags = True
     eventLink.short_description = _('Related Links')
 
@@ -566,7 +566,7 @@ class GenericRepeatedExpenseAdminForm(ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
-        super(GenericRepeatedExpenseAdminForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         updatedChoices = RepeatedExpenseRule.RateRuleChoices.choices
         index = [x[0] for x in updatedChoices].index('D')

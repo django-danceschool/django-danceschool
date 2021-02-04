@@ -98,7 +98,7 @@ class DanceRole(models.Model):
         if not self.pluralName:
             self.pluralName = self.name + 's'
 
-        super(self.__class__, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -690,7 +690,7 @@ class EventSession(models.Model):
             self.startTime = events.order_by('startTime').first().startTime
             self.endTime = events.order_by('endTime').last().endTime
 
-        super(EventSession, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -1029,7 +1029,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Event, self).get_email_context(**kwargs)
+        context = super().get_email_context(**kwargs)
         context.update({
             'id': self.id,
             'name': self.__str__(),
@@ -1851,7 +1851,7 @@ class Series(Event):
             raise ValidationError(_(
                 'If drop-ins are allowed then drop-in price must be specified by the Pricing Tier.'
             ))
-        super(Series, self).clean()
+        super().clean()
 
     def __str__(self):
         if self.month and self.year and self.classDescription:
@@ -2270,7 +2270,7 @@ class Customer(EmailRecipientMixin, models.Model):
 
     def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Customer, self).get_email_context(**kwargs)
+        context = super().get_email_context(**kwargs)
         context.update({
             'first_name': self.first_name,
             'last_name': self.last_name,
@@ -2479,7 +2479,7 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
-        context = super(Invoice, self).get_email_context(**kwargs)
+        context = super().get_email_context(**kwargs)
         context.update({
             'id': self.id,
             'url': '%s?v=%s' % (self.url, self.validationString),
@@ -3762,7 +3762,7 @@ class EmailTemplate(models.Model):
         else:
             self.html_content = None
 
-        super(EmailTemplate, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

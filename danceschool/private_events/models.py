@@ -91,7 +91,7 @@ class PrivateEvent(Event):
         ''' Set registration status to hidden if it is not specified otherwise '''
         if not self.status:
             self.status == Event.RegStatus.hidden
-        super(PrivateEvent, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('Private event/calendar item')
@@ -123,7 +123,7 @@ class EventReminder(models.Model):
             self.event = self.eventOccurrence.event
         if self.eventOccurrence.event != self.event:
             raise ValidationError(_('Event and EventOccurrence must match!'))
-        super(EventReminder, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return _(

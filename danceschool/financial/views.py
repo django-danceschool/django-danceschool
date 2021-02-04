@@ -48,7 +48,7 @@ class ExpenseReportingView(
     success_message = _('Expense item successfully submitted.')
 
     def get_context_data(self, **kwargs):
-        context = super(ExpenseReportingView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Report Expenses'),
@@ -66,7 +66,7 @@ class RevenueReportingView(
     success_message = _('Revenue item successfully submitted.')
 
     def get_context_data(self, **kwargs):
-        context = super(RevenueReportingView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         context.update({
             'form_title': _('Report Revenues'),
@@ -174,12 +174,12 @@ class StaffMemberPaymentsView(StaffMemberObjectMixin, PermissionRequiredMixin, D
     def dispatch(self, request, *args, **kwargs):
         if 'as_csv' in kwargs:
             self.as_csv = True
-        return super(StaffMemberPaymentsView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def render_to_response(self, context, **response_kwargs):
         if self.as_csv:
             return self.render_to_csv(context)
-        return super(StaffMemberPaymentsView, self).render_to_response(context, **response_kwargs)
+        return super().render_to_response(context, **response_kwargs)
 
     def render_to_csv(self, context):
         staff_member = context['staff_member']
@@ -767,7 +767,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'netProfit': context['totalRevenues'] - context['totalExpenses'],
         })
 
-        return super(self.__class__, self).get_context_data(**context)
+        return super().get_context_data(**context)
 
 
 class CompensationActionView(
@@ -798,16 +798,16 @@ class CompensationActionView(
         except ValueError:
             return HttpResponseBadRequest(_('Invalid ids passed'))
 
-        return super(CompensationActionView, self).dispatch(request, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self, **kwargs):
         ''' pass the list of staff members along to the form '''
-        kwargs = super(CompensationActionView, self).get_form_kwargs(**kwargs)
+        kwargs = super().get_form_kwargs(**kwargs)
         kwargs['staffmembers'] = self.queryset
         return kwargs
 
     def get_context_data(self, **kwargs):
-        context = super(CompensationActionView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context.update({
             'staffmembers': self.queryset,
             'rateRuleValues': RepeatedExpenseRule.RateRuleChoices.values,
@@ -833,7 +833,7 @@ class CompensationRuleUpdateView(CompensationActionView):
                 defaults=form.cleaned_data,
             )
 
-        return super(CompensationRuleUpdateView, self).form_valid(form)
+        return super().form_valid(form)
 
 
 class CompensationRuleResetView(CompensationActionView):
@@ -870,7 +870,7 @@ class CompensationRuleResetView(CompensationActionView):
                         defaults=this_default,
                     )
 
-        return super(CompensationRuleResetView, self).form_valid(form)
+        return super().form_valid(form)
 
 
 class ExpenseRuleGenerationView(AdminSuccessURLMixin, PermissionRequiredMixin, FormView):
@@ -879,7 +879,7 @@ class ExpenseRuleGenerationView(AdminSuccessURLMixin, PermissionRequiredMixin, F
     permission_required = 'financial.can_generate_repeated_expenses'
 
     def get_context_data(self, **kwargs):
-        context = super(ExpenseRuleGenerationView, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
 
         fields = getattr(context.get('form', {}), 'fields', OrderedDict())
 

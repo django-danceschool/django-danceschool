@@ -144,7 +144,7 @@ class TransactionParty(models.Model):
             elif self.location:
                 self.name = self.location.name
 
-        super(TransactionParty, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         if self.name:
@@ -685,7 +685,7 @@ class GenericRepeatedExpense(RepeatedExpenseRule):
                 'Either a start date or an "up to __ days in the past" limit is required ' +
                 'for repeated expense rules that are not associated with a venue or a staff member.'
             ))
-        super(GenericRepeatedExpense, self).clean()
+        super().clean()
 
     def generateExpenses(self, request=None, datetimeTuple=None):
         from .helpers import createGenericExpenseItems
@@ -905,7 +905,7 @@ class ExpenseItem(models.Model):
         if self.hours and self.wageRate and not self.total:
             self.total = self.hours * self.wageRate
 
-        super(ExpenseItem, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         self.__approved = self.approved
         self.__paid = self.paid
         self.__approvalDate = self.approvalDate
@@ -939,7 +939,7 @@ class ExpenseItem(models.Model):
         Permit easy checking to determine if the object
         already exists and has changed on saving
         '''
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__approved = self.approved
         self.__paid = self.paid
         self.__approvalDate = self.approvalDate
@@ -1142,7 +1142,7 @@ class RevenueItem(models.Model):
         if self.total is None and self.grossTotal:
             self.total = self.grossTotal
 
-        super(RevenueItem, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
         self.__received = self.received
         self.__receivedDate = self.receivedDate
 
@@ -1174,7 +1174,7 @@ class RevenueItem(models.Model):
         Permit easy checking to determine if the object
         already exists and has changed on saving
         '''
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__received = self.received
         self.__receivedDate = self.receivedDate
 

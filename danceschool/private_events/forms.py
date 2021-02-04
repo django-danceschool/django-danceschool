@@ -62,7 +62,7 @@ class AddPrivateEventForm(forms.ModelForm):
                 'submissionUser': user.id,
             })
 
-        super(AddPrivateEventForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.fields['submissionUser'].widget = forms.HiddenInput()
         self.fields['status'].widget = forms.HiddenInput()
         self.fields['status'].initial = Event.RegStatus.hidden
@@ -87,7 +87,7 @@ class AddPrivateEventForm(forms.ModelForm):
         )
 
     def clean(self):
-        super(AddPrivateEventForm, self).clean()
+        super().clean()
         visibleTo = self.cleaned_data.get('visibleTo')
         submissionUser = self.cleaned_data.get('submissionUser')
 
@@ -149,7 +149,7 @@ class AddEventOccurrenceForm(forms.ModelForm):
 class OccurrenceFormSetHelper(FormHelper):
 
     def __init__(self, *args, **kwargs):
-        super(OccurrenceFormSetHelper, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.form_tag = False  # Our template must explicitly include the <form tag>
         self.layout = Layout(
@@ -180,7 +180,7 @@ class EventOccurrenceCustomFormSet(forms.BaseInlineFormSet):
     ''' Formset for occurrences added via the Private Events form '''
 
     def add_fields(self, form, index):
-        super(EventOccurrenceCustomFormSet, self).add_fields(form, index)
+        super().add_fields(form, index)
         form.fields['startTime'] = forms.SplitDateTimeField(
             label=_("Start Time"), input_time_formats=['%I:%M%p', '%-I:%M%p'],
             widget=widgets.SplitDateTimeWidget
@@ -258,7 +258,7 @@ class EventOccurrenceCustomFormSet(forms.BaseInlineFormSet):
         sendReminderWhich = self[0].cleaned_data['sendReminderWhich']
 
         # Save this actual occurrence first
-        this_occurrence = super(EventOccurrenceCustomFormSet, self).save()
+        this_occurrence = super().save()
 
         # Create a reminder for this occurrence if applicable
         if sendReminderTo in ['all', 'me', 'users', 'group']:

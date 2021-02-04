@@ -87,7 +87,7 @@ class EventStaffMemberInlineForm(ModelForm):
 class SeriesTeacherInlineForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
-        super(SeriesTeacherInlineForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.fields['staffMember'].label = _('Instructor')
         self.fields['category'].initial = getConstant('general__eventStaffCategoryInstructor').id
@@ -133,7 +133,7 @@ class SeriesTeacherInline(admin.StackedInline):
 class SubstituteTeacherInlineForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
-        super(SubstituteTeacherInlineForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.fields['staffMember'].label = _('Instructor')
         self.fields['replacedStaffMember'].required = True
@@ -168,7 +168,7 @@ class SubstituteTeacherInline(admin.StackedInline):
     extra = 0
 
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
-        field = super(SubstituteTeacherInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
 
         if db_field.name == 'replacedStaffMember':
             if request._obj_ is not None:
@@ -179,7 +179,7 @@ class SubstituteTeacherInline(admin.StackedInline):
         return field
 
     def formfield_for_manytomany(self, db_field, request=None, **kwargs):
-        field = super(SubstituteTeacherInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
 
         if db_field.name == 'occurrences':
             if request._obj_ is not None:
@@ -202,7 +202,7 @@ class EventStaffMemberInline(admin.TabularInline):
     form = EventStaffMemberInlineForm
 
     def formfield_for_manytomany(self, db_field, request=None, **kwargs):
-        field = super(EventStaffMemberInline, self).formfield_for_foreignkey(db_field, request, **kwargs)
+        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
 
         if db_field.name == 'occurrences':
             if request._obj_ is not None:
@@ -394,13 +394,13 @@ class InvoiceAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         if not change:
             obj.submissionUser = request.user
-        super(InvoiceAdmin, self).save_model(request, obj, form, change)
+        super().save_model(request, obj, form, change)
 
     def get_fieldsets(self, request, obj=None):
         if not obj:
             return self.add_fieldsets
         else:
-            return super(InvoiceAdmin, self).get_fieldsets(request, obj)
+            return super().get_fieldsets(request, obj)
 
     fieldsets = (
         (None, {
@@ -601,12 +601,12 @@ class CustomerGroupAdminForm(ModelForm):
     )
 
     def __init__(self, *args, **kwargs):
-        super(CustomerGroupAdminForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.initial['customers'] = self.instance.customer_set.values_list('pk', flat=True)
 
     def save(self, *args, **kwargs):
-        instance = super(CustomerGroupAdminForm, self).save(*args, **kwargs)
+        instance = super().save(*args, **kwargs)
         if instance.pk:
             instance.customer_set.clear()
             instance.customer_set.add(*self.cleaned_data['customers'])
@@ -714,7 +714,7 @@ class LocationAdmin(admin.ModelAdmin):
             })
 
         # Otherwise just use the standard ModelAdmin method
-        return super(LocationAdmin, self).response_add(request, obj, post_url_continue)
+        return super().response_add(request, obj, post_url_continue)
 
     def response_change(self, request, obj):
         '''
@@ -749,7 +749,7 @@ class LocationAdmin(admin.ModelAdmin):
             return SimpleTemplateResponse('core/admin/location_popup_response.html', {
                 'popup_response_data': popup_response_data,
             })
-        return super(LocationAdmin, self).response_change(request, obj)
+        return super().response_change(request, obj)
 
 
 @admin.register(PricingTier)
@@ -882,7 +882,7 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
 class SeriesAdminForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
-        super(SeriesAdminForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         # Series have registration enabled by default
         self.fields['status'].initial = Event.RegStatus.enabled
@@ -1014,7 +1014,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     def get_form(self, request, obj=None, **kwargs):
         # just save obj reference for future processing in Inline
         request._obj_ = obj
-        form = super(SeriesAdmin, self).get_form(request, obj, **kwargs)
+        form = super().get_form(request, obj, **kwargs)
         form.admin_site = self.admin_site
         return form
 
@@ -1026,7 +1026,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 class PublicEventAdminForm(ModelForm):
 
     def __init__(self, *args, **kwargs):
-        super(PublicEventAdminForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.fields['status'].initial = Event.RegStatus.disabled
 
@@ -1107,7 +1107,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     def get_form(self, request, obj=None, **kwargs):
         # just save obj reference for future processing in Inline
         request._obj_ = obj
-        return super(PublicEventAdmin, self).get_form(request, obj, **kwargs)
+        return super().get_form(request, obj, **kwargs)
 
     def save_model(self, request, obj, form, change):
         obj.submissionUser = request.user

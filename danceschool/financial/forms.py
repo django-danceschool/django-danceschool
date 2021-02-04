@@ -116,7 +116,7 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
                 )[0].id,
             })
 
-        super(ExpenseReportingForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.helper = FormHelper()
 
@@ -216,7 +216,7 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
     def clean(self):
         # Custom cleaning ensures that user, hours, and total
         # are not reported where not necessary.
-        super(ExpenseReportingForm, self).clean()
+        super().clean()
 
         payBy = self.cleaned_data.get('payBy')
         hours = self.cleaned_data.get('hours')
@@ -275,7 +275,7 @@ class InvoiceItemChoiceField(forms.ModelChoiceField):
 
     def to_python(self, value):
         try:
-            value = super(InvoiceItemChoiceField, self).to_python(value)
+            value = super().to_python(value)
         except (ValueError, ValidationError):
             key = self.to_field_name or 'pk'
             value = InvoiceItem.objects.filter(**{key: value})
@@ -340,7 +340,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
             kwargs.update(initial={
                 'submissionUser': user.id
             })
-        super(RevenueReportingForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.helper = FormHelper()
 
@@ -493,7 +493,7 @@ class CompensationRuleResetForm(forms.Form):
         staffmembers = kwargs.pop('staffmembers', StaffMember.objects.none())
 
         # Initialize a default (empty) form to fill
-        super(CompensationRuleResetForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         for cat in EventStaffCategory.objects.order_by('name'):
             this_label = cat.name
@@ -538,7 +538,7 @@ class ExpenseRuleGenerationForm(forms.Form):
     def __init__(self, *args, **kwargs):
 
         # Initialize a default form to fill by rule
-        super(ExpenseRuleGenerationForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         for rule in RepeatedExpenseRule.objects.filter(disabled=False).order_by('id'):
             prefix = 'genericrule'

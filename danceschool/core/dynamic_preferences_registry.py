@@ -77,7 +77,7 @@ class DefaultAdminSuccessPage(IntegerPreference):
 
     def __init__(self, *args, **kwargs):
         ''' Changes the default serializer '''
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.serializer = PageModelSerializer
 
 
@@ -179,7 +179,7 @@ class BusinessPhone(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -201,7 +201,7 @@ class BusinessAddress(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -215,7 +215,7 @@ class BusinessAddressLineTwo(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -228,7 +228,7 @@ class BusinessCity(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -241,7 +241,7 @@ class BusinessState(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -254,7 +254,7 @@ class BusinessZip(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -539,7 +539,7 @@ class DefaultEmailsFrom(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -553,7 +553,7 @@ class DefaultEmailsName(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -574,7 +574,7 @@ class ErrorEmailsFrom(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 
@@ -587,7 +587,7 @@ class ErrorEmailsTo(StringPreference):
     default = ''
 
     def get_field_kwargs(self):
-        field_kwargs = super(self.__class__, self).get_field_kwargs()
+        field_kwargs = super().get_field_kwargs()
         field_kwargs['required'] = False
         return field_kwargs
 

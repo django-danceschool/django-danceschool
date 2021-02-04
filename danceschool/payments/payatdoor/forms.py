@@ -96,7 +96,7 @@ class WillPayAtDoorForm(forms.Form):
             """),
         )
 
-        super(WillPayAtDoorForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
 
 class DoorPaymentForm(CashPaymentMixin, forms.Form):
@@ -163,10 +163,10 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
             'amountPaid': initialAmount
         })
 
-        super(DoorPaymentForm, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def clean_submissionUser(self):
-        user = super(DoorPaymentForm, self).clean_submissionUser()
+        user = super().clean_submissionUser()
 
         if not user.has_perm('core.accept_door_payments'):
             raise ValidationError(_('Invalid user submitted door payment.'))

@@ -161,7 +161,7 @@ class FinancialContextMixin(object):
             'businessName': getConstant('contact__businessName'),
         }
         context.update(kwargs)
-        return super(FinancialContextMixin, self).get_context_data(**context)
+        return super().get_context_data(**context)
 
 
 class StaffMemberObjectMixin(object):
@@ -276,13 +276,13 @@ class PluginTemplateMixin(object):
         ''' Permits setting of the template in the plugin instance configuration '''
         if instance and instance.template:
             self.render_template = instance.template
-        return super(PluginTemplateMixin, self).render(context, instance, placeholder)
+        return super().render(context, instance, placeholder)
 
     def templateChoiceFormFactory(self, request, choices):
         class PluginTemplateChoiceForm(ModelForm):
 
             def __init__(self, *args, **kwargs):
-                super(PluginTemplateChoiceForm, self).__init__(*args, **kwargs)
+                super().__init__(*args, **kwargs)
 
                 # Handle passed parameters
                 self.request = request
@@ -314,7 +314,7 @@ class PluginTemplateMixin(object):
 
     def get_form(self, request, obj=None, **kwargs):
         kwargs['form'] = self.templateChoiceFormFactory(request, self.get_template_choices())
-        return super(PluginTemplateMixin, self).get_form(request, obj, **kwargs)
+        return super().get_form(request, obj, **kwargs)
 
     def get_template_choices(self):
         # If templates are explicitly specified, use those

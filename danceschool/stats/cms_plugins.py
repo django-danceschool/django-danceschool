@@ -22,7 +22,7 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
 
     def render(self, context, instance, placeholder):
         ''' Allows this plugin to use templates designed for a list of locations. '''
-        context = super(StatsGraphPlugin, self).render(context, instance, placeholder)
+        context = super().render(context, instance, placeholder)
 
         # Javascript makes it difficult to calculate date/time differences, so instead
         # pass the most useful ones to the template context in a dictionary.  These are used
