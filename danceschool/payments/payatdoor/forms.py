@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.urls import reverse
 from django.db.models import Q
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from dal import autocomplete
 from crispy_forms.helper import FormHelper

@@ -1,6 +1,6 @@
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Value, CharField
 from django.db.models.query import QuerySet
 from django.db.models.functions import Concat

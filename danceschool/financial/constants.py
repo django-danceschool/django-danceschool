@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 # This is the list of possible bases.  Revenues are booked by receipt
 # and are not approved, so paymentDate and approvalDate are actually

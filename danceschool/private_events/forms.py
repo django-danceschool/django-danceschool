@@ -2,7 +2,7 @@ from django import forms
 from django.forms import inlineformset_factory, widgets
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
 
 from datetime import datetime, timedelta

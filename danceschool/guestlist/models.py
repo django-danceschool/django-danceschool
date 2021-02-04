@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, Value, Case, When, F
 from django.db.models.functions import Concat
-from django.utils.translation import ugettext_lazy as _, ugettext
+from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 
 from cms.models.pluginmodel import CMSPlugin
@@ -195,17 +195,17 @@ class GuestList(models.Model):
         that was used to add the guest to the list.
         '''
         if isinstance(guest, GuestListName):
-            return guest.notes or ugettext('Manually Added')
+            return guest.notes or gettext('Manually Added')
         elif isinstance(guest, Registration):
-            return ugettext('Registered')
+            return gettext('Registered')
         elif isinstance(guest, StaffMember):
             if event:
                 staff_for = guest.eventstaffmember_set.filter(event=event).first()
                 if staff_for:
-                    return ugettext(
+                    return gettext(
                         'Event Staff: {category}'.format(category=staff_for.category.name)
                     )
-            return ugettext('Other Staff')
+            return gettext('Other Staff')
 
     def getListForEvent(self, event=None, filters=Q(), includeRegistrants=True):
         '''
@@ -216,7 +216,7 @@ class GuestList(models.Model):
             guestListId=Value(self.id, output_field=models.IntegerField()),
             guestType=Case(
                 When(notes__isnull=False, then=F('notes')),
-                default=Value(ugettext('Manually Added')),
+                default=Value(gettext('Manually Added')),
                 output_field=models.CharField()
             ),
         ).filter(filters).values(
@@ -235,7 +235,7 @@ class GuestList(models.Model):
                         Value('Event Staff: '), 'eventstaffmember__category__name'
                     )
                 ),
-                default=Value(ugettext('Other Staff')),
+                default=Value(gettext('Other Staff')),
                 output_field=models.CharField()
             ),
         ).distinct().values(

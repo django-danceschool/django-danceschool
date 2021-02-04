@@ -1,4 +1,4 @@
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.middleware.csrf import get_token
 from django.contrib.admin import TabularInline

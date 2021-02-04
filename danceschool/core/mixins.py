@@ -8,7 +8,7 @@ from django.db.models import (
 from django.db.models.functions import ExtractWeekDay
 from django.forms import ModelForm, ChoiceField, Media
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.template.loader import get_template, render_to_string
 from django.template import Template, Context
 from django.template.exceptions import TemplateDoesNotExist

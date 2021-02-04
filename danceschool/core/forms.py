@@ -3,10 +3,10 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import Q
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.forms.widgets import CheckboxSelectMultiple, CheckboxInput, mark_safe, Select
 from django.utils.html import conditional_escape, format_html
-from django.utils.translation import ugettext_lazy as _, ugettext
+from django.utils.translation import gettext_lazy as _, gettext
 
 from itertools import chain
 from crispy_forms.helper import FormHelper
@@ -39,7 +39,7 @@ class LocationWithDataWidget(Select):
     def render_option(self, selected_choices, option_value, option_label):
         if option_value is None:
             option_value = ''
-        option_value = force_text(option_value)
+        option_value = force_str(option_value)
         if option_value in selected_choices:
             selected_html = mark_safe(' selected="selected"')
             if not self.allow_multiple_selected:
@@ -67,7 +67,7 @@ class LocationWithDataWidget(Select):
                            option_value,
                            mark_safe(selected_html),
                            extra_value_data,
-                           force_text(option_label))
+                           force_str(option_label))
 
 
 class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
@@ -100,7 +100,7 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
         ]
 
         # Normalize to strings
-        str_values = set([force_text(v, encoding='utf-8') for v in value])
+        str_values = set([force_str(v, encoding='utf-8') for v in value])
 
         if regular_choices:
             output.append(u'<ul class="list-unstyled">')
@@ -120,9 +120,9 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
                 else:
                     label_for = ''
                 cb = CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
-                option_value = force_text(option_value, encoding='utf-8')
+                option_value = force_str(option_value, encoding='utf-8')
                 rendered_cb = cb.render(name, option_value)
-                option_label = conditional_escape(force_text(option_label, encoding='utf=8'))
+                option_label = conditional_escape(force_str(option_label, encoding='utf=8'))
                 output.append(u'<li><label%s>%s %s</label></li>' % (
                     label_for, rendered_cb, option_label
                 ))
@@ -165,9 +165,9 @@ class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
                 else:
                     label_for = ''
                 cb = CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
-                option_value = force_text(option_value, encoding='utf=8')
+                option_value = force_str(option_value, encoding='utf=8')
                 rendered_cb = cb.render(name, option_value)
-                option_label = conditional_escape(force_text(option_label, encoding='utf=8'))
+                option_label = conditional_escape(force_str(option_label, encoding='utf=8'))
                 output.append(u'<li><label%s>%s %s</label></li>' % (label_for, rendered_cb, option_label))
             if submit_button_flag:
                 output.append(
@@ -592,7 +592,7 @@ class RegistrationContactForm(forms.Form):
 
         if already_registered_list:
             error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in already_registered_list])
-            raise ValidationError(ugettext(mark_safe(
+            raise ValidationError(gettext(mark_safe(
                 'You are already registered for:\n<ul>\n%s\n</ul>' % error_list +
                 '\nIf you are registering another person, please enter their name.'
             )))
@@ -1145,9 +1145,9 @@ class SeriesClassesChoiceField(forms.ModelMultipleChoiceField):
                     params={'pk': pk},
                 )
         qs = EventOccurrence.objects.filter(**{'%s__in' % key: value})
-        pks = set(force_text(getattr(o, key)) for o in qs)
+        pks = set(force_str(getattr(o, key)) for o in qs)
         for val in value:
-            if force_text(val) not in pks:
+            if force_str(val) not in pks:
                 raise ValidationError(
                     self.error_messages['invalid_choice'],
                     code='invalid_choice',

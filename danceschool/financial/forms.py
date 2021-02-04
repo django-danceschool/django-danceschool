@@ -5,10 +5,10 @@ from django.core.validators import ValidationError
 from django.urls import reverse
 from django.db.models import Q
 from django.forms.widgets import Select
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
-from django.utils.translation import ugettext_lazy as _, ugettext
+from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 
 from crispy_forms.helper import FormHelper
@@ -46,7 +46,7 @@ class ExpenseCategoryWidget(Select):
     def render_option(self, selected_choices, option_value, option_label):
         if option_value is None:
             option_value = ''
-        option_value = force_text(option_value)
+        option_value = force_str(option_value)
         if option_value in selected_choices:
             selected_html = mark_safe(' selected="selected"')
             if not self.allow_multiple_selected:
@@ -66,7 +66,7 @@ class ExpenseCategoryWidget(Select):
                            option_value,
                            selected_html,
                            extra_value_data,
-                           force_text(option_label))
+                           force_str(option_label))
 
 
 class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
@@ -499,9 +499,9 @@ class CompensationRuleResetForm(forms.Form):
             this_label = cat.name
             this_help_text = ''
             if not getattr(cat, 'defaultwage', None):
-                this_help_text += ugettext('No default compensation specified. ')
+                this_help_text += gettext('No default compensation specified. ')
             if staffmembers:
-                this_help_text += ugettext('{count} selected members with rules specified.').format(
+                this_help_text += gettext('{count} selected members with rules specified.').format(
                     count=staffmembers.filter(expenserules__category=cat).count(),
                 )
 

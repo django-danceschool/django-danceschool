@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.views.generic import FormView, RedirectView, TemplateView, View
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 

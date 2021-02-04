@@ -1,5 +1,5 @@
 from django import forms
-from django.utils.translation import ugettext, ugettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from django.db.models import F, Q, Value, CharField
 from django.apps import apps
 
@@ -22,12 +22,12 @@ class CustomerGuestAutocompleteForm(forms.Form):
 
         queryset = Customer.objects.annotate(
             firstName=F('first_name'), lastName=F('last_name'),
-            guestType=Value(ugettext('Customer'), output_field=CharField())
+            guestType=Value(gettext('Customer'), output_field=CharField())
         ).values('firstName', 'lastName', 'guestType').order_by()
 
         queryset = queryset.union(
             StaffMember.objects.annotate(
-                guestType=Value(ugettext('Customer'), output_field=CharField())
+                guestType=Value(gettext('Customer'), output_field=CharField())
             ).values('firstName', 'lastName', 'guestType').order_by()
         )
 
@@ -36,7 +36,7 @@ class CustomerGuestAutocompleteForm(forms.Form):
 
             queryset = queryset.union(
                 GuestListName.objects.annotate(
-                    guestType=Value(ugettext('Customer'), output_field=CharField())
+                    guestType=Value(gettext('Customer'), output_field=CharField())
                 ).values('firstName', 'lastName', 'guestType').order_by()
             )
 

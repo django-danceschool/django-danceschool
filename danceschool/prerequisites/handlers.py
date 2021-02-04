@@ -1,7 +1,7 @@
 from django.dispatch import receiver
 from django.contrib import messages
 from django.core.exceptions import ValidationError
-from django.utils.translation import ugettext
+from django.utils.translation import gettext
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
@@ -60,7 +60,7 @@ def checkRequirements(sender, **kwargs):
     if requirement_errors:
         raise ValidationError(format_html(
             '<p>{}</p> <ul>{}</ul> <p>{}</p>',
-            ugettext(
+            gettext(
                 'Unfortunately, you do not meet the following ' +
                 'requirements/prerequisites for the items you have chosen:\n'
             ),
@@ -71,7 +71,7 @@ def checkRequirements(sender, **kwargs):
     if requirement_warnings:
         messages.warning(request, format_html(
             '<p>{}</p> <ul>{}</ul> <p>{}</p>',
-            mark_safe(ugettext(
+            mark_safe(gettext(
                 '<strong>Please Note:</strong> It appears that you do not ' +
                 'meet the following requirements/prerequisites for the items ' +
                 'you have chosen:\n'

@@ -3,7 +3,7 @@ from django.db.models import Sum, Count, Q
 from django.db.models.functions import TruncDate, TruncMonth
 from django.http import HttpResponse
 from django.utils import timezone
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from datetime import datetime, timedelta

@@ -2,7 +2,7 @@ from django.db.models import Count, Avg, Sum, IntegerField, Case, When, Q, Min, 
 from django.db.models.functions import TruncDate
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import HttpResponse, JsonResponse
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from django.utils import timezone
 
 from dateutil.relativedelta import relativedelta

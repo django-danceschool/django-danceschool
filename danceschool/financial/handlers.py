@@ -2,7 +2,7 @@ from django.dispatch import receiver
 from django.db.models import Q, Value, CharField, F
 from django.db.models.query import QuerySet
 from django.db.models.signals import post_save, m2m_changed
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
 
 import sys

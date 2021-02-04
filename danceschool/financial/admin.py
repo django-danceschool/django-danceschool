@@ -5,11 +5,11 @@ from django.urls import reverse
 from django.db.models import Q
 from django.utils.html import format_html
 from django.forms import ModelForm, ModelChoiceField
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.http import HttpResponseRedirect
 
 from dal import autocomplete
-from daterange_filter.filter import DateRangeFilter
+from rangefilter.filter import DateRangeFilter
 from polymorphic.admin import (
     PolymorphicParentModelAdmin, PolymorphicChildModelAdmin,
     PolymorphicChildModelFilter

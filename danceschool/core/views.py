@@ -10,7 +10,7 @@ from django.views.generic import (
     RedirectView
 )
 from django.db.models import Min, Q, Count
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.contrib import messages

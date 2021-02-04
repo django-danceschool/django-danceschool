@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Q, Sum, F
 from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.apps import apps
 from django.utils import timezone
 

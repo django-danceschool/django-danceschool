@@ -3,7 +3,7 @@ This file defines a variety of preferences that must be set in the DB,
 but can be changed dynamically.
 '''
 
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 from dynamic_preferences.types import BooleanPreference, StringPreference, Section
 from dynamic_preferences.registries import global_preferences_registry

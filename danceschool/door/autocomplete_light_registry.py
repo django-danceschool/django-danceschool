@@ -1,5 +1,5 @@
 from django.db.models import Q, F, Value, CharField, Case, When, IntegerField
-from django.utils.translation import ugettext
+from django.utils.translation import gettext
 from django.utils.html import format_html
 from django.apps import apps
 
@@ -65,7 +65,7 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
             firstName=F('first_name'), lastName=F('last_name'),
             modelType=Value('Customer', output_field=CharField()),
             guestListId=Value(None, output_field=IntegerField()),
-            guestType=Value(ugettext('Customer'), output_field=CharField()),
+            guestType=Value(gettext('Customer'), output_field=CharField()),
         ).filter(name_filters).filter(customer_filters).values(
             'id', 'modelType', 'guestListId', 'firstName', 'lastName',
             'guestType',

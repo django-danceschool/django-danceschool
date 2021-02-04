@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _, ugettext
+from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django.contrib.messages.views import SuccessMessageMixin
 from django.forms.models import model_to_dict
@@ -957,7 +957,7 @@ class ExpenseRuleGenerationView(AdminSuccessURLMixin, PermissionRequiredMixin, F
                 'created': createRevenueItemsForRegistrations()
             }, ]
 
-        success_message = ugettext(
+        success_message = gettext(
             'Successfully created {count} financial items.'.format(
                 count=sum([x.get('created', 0) or 0 for x in response_items])
             )

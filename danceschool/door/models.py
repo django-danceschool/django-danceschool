@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models.query import QuerySet
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from calendar import day_name

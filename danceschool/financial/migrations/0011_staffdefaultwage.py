@@ -24,7 +24,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Default staff wage',
                 'verbose_name_plural': 'Default staff wages',
                 'ordering': ('category__name',),
-                'manager_inheritance_from_future': True,
             },
             bases=('financial.repeatedexpenserule',),
         ),

@@ -1,7 +1,7 @@
 from django.template import Template, Context
 from django.views.generic import FormView
 from django.test import RequestFactory
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, HttpResponseRedirect

@@ -382,7 +382,6 @@ class Migration(migrations.Migration):
             options={
                 'permissions': (('update_instructor_bio', "Can update instructors' bio information"), ('view_own_instructor_stats', "Can view one's own statistics (if an instructor)"), ('view_other_instructor_stats', "Can view other instructors' statistics"), ('view_own_instructor_finances', "Can view one's own financial/payment data (if an instructor)"), ('view_other_instructor_finances', "Can view other instructors' financial/payment data")),
             },
-            bases=('core.staffmember',),
         ),
         migrations.CreateModel(
             name='PublicEvent',

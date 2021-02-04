@@ -8,8 +8,7 @@ from django.dispatch import receiver
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.utils.translation import ugettext
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _, gettext
 from django.db.models import Q
 
 # Local Application Specific Imports
@@ -98,7 +97,7 @@ def checkBanlist(sender, **kwargs):
 
         sendEmail(subject, message, send_from, to=[notify])
 
-    message = ugettext('There appears to be an issue with this registration. '
+    message = gettext('There appears to be an issue with this registration. '
                        'Please contact %s to proceed with the registration process. '
                        'You may reference the error code %s.' % (respondTo, flagCode))
 
