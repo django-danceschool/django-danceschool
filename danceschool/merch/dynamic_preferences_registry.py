@@ -24,15 +24,3 @@ class SalesTaxRate(FloatPreference):
         'This can be overridden for each individual merchandise item.'
     )
     default = 0.0
-
-
-@global_preferences_registry.register
-class BuyerPaysSalesTax(BooleanPreference):
-    section = registration
-    name = 'merchBuyerPaysSalesTax'
-    verbose_name = _('Buyer pays sales tax (added to total price) for merchandise')
-    help_text = _(
-        'If unchecked, then the buyer will not be charged sales tax directly, ' +
-        'but the amount of tax collected by the business will be reported.'
-    )
-    default = True

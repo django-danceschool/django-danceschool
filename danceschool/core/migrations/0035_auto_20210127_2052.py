@@ -87,7 +87,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='invoice',
             name='status',
-            field=models.CharField(choices=[('0', 'Preliminary'), ('U', 'Unpaid'), ('A', 'Authorized using payment processor'), ('P', 'Paid'), ('N', 'Cash payment recorded'), ('R', 'Refunded in full'), ('C', 'Cancelled'), ('X', 'Rejected in processing'), ('E', 'Error in processing')], default='0', max_length=1, verbose_name='Payment status'),
+            field=models.CharField(choices=[('0', 'Preliminary'), ('U', 'Unpaid'), ('A', 'Authorized using payment processor'), ('P', 'Paid'), ('N', 'Processed but no payment collected'), ('R', 'Refunded in full'), ('C', 'Cancelled'), ('X', 'Rejected in processing'), ('E', 'Error in processing')], default='0', max_length=1, verbose_name='Payment status'),
         ),
         migrations.DeleteModel(
             name='TemporaryEventRegistration',

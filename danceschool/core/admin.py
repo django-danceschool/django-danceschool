@@ -396,17 +396,6 @@ class InvoiceAdmin(admin.ModelAdmin):
             obj.submissionUser = request.user
         super(InvoiceAdmin, self).save_model(request, obj, form, change)
 
-    def save_related(self, request, form, formsets, change):
-        '''
-        Update the Invoice object after saving so that the invoice lines
-        match the invoice item lines.
-        '''
-        super(InvoiceAdmin, self).save_related(request, form, formsets, change)
-        invoice = form.instance
-        for attr in ['grossTotal', 'total', 'adjustments', 'taxes', 'fees']:
-            setattr(invoice, attr, sum([getattr(x, attr) for x in invoice.invoiceitem_set.all()]))
-        invoice.save()
-
     def get_fieldsets(self, request, obj=None):
         if not obj:
             return self.add_fieldsets
@@ -888,20 +877,6 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
         return mark_safe('<a href="%s">%s</a>' % (address, address))
     uuidLink.short_description = _('Direct Registration Link')
     uuidLink.allow_tags = True
-
-    # This is needed so that when an event is created, the year and month
-    # are properly set right away.
-    def save_related(self, request, form, formsets, change):
-        obj = form.instance
-        super(EventChildAdmin, self).save_related(request, form, formsets, change)
-
-        if obj.eventoccurrence_set.all():
-            obj.year = obj.getYearAndMonth()[0]
-            obj.month = obj.getYearAndMonth()[1]
-            obj.startTime = obj.eventoccurrence_set.order_by('startTime').first().startTime
-            obj.endTime = obj.eventoccurrence_set.order_by('endTime').last().endTime
-            obj.duration = sum([x.duration for x in obj.eventoccurrence_set.all() if not x.cancelled])
-            obj.save()
 
 
 class SeriesAdminForm(ModelForm):

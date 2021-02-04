@@ -1,9 +1,13 @@
 from django.utils.translation import ugettext_lazy as _
+from django.dispatch import receiver
+from django.core.exceptions import ObjectDoesNotExist
 
 from collections import Counter
 import logging
 
-from danceschool.core.signals import process_cart_items, invoice_finalized
+from danceschool.core.signals import (
+    process_cart_items, invoice_finalized, invoice_cancelled
+)
 from danceschool.core.models import Invoice
 
 from .models import MerchItemVariant, MerchOrder, MerchOrderItem
@@ -123,10 +127,9 @@ def processFinalizedInvoice(sender, **kwargs):
     updated in order to indicate that they are ready to be fulfilled.
     '''
     invoice = kwargs.pop('invoice', None)
-
     
     if not invoice or not isinstance(invoice, Invoice):
-        logger.error('invoice_finalized signal fired without passing a valid invoice.')        
+        logger.error('invoice_finalized signal fired without passing a valid invoice.')
         return
 
     order = getattr(invoice, 'merchOrder', None)
@@ -135,7 +138,39 @@ def processFinalizedInvoice(sender, **kwargs):
         logger.debug('Invoice {} does not have an associated merchandise order'.format(invoice.id))
         return
 
-    order.submitOrder(
-        submissionUser=kwargs.pop('submissionUser', None),
-        collectedByUser=kwargs.pop('collectedByUser', None),
-    )
+    if order.status in [order.OrderStatus.cancelled, order.OrderStatus.fullRefund]:
+        logger.warning(
+            (
+                'Invoice {} is being finalized but the associated merch order ' +
+                'has been cancelled/refunded.'
+            ).format(invoice.id)
+        )
+    elif order.status == order.OrderStatus.unsubmitted:
+        order.status = order.OrderStatus.submitted
+        order.save()
+
+
+@receiver(invoice_cancelled)
+def processCancelledInvoice(sender, **kwargs):
+    '''
+    When an invoice is finalized because a payment has been made, any
+    order items associated with that invoice may need to have their status
+    updated in order to indicate that they are ready to be fulfilled.
+    '''
+    invoice = kwargs.pop('invoice', None)
+    
+    if not invoice or not isinstance(invoice, Invoice):
+        logger.error('invoice_finalized signal fired without passing a valid invoice.')
+        return
+
+    order = getattr(invoice, 'merchOrder', None)
+
+    if not order:
+        logger.debug('Invoice {} does not have an associated merchandise order'.format(invoice.id))
+        return
+
+    if invoice.status == invoice.PaymentStatus.cancelled:
+        order.status = order.OrderStatus.cancelled
+    elif invoice.status == invoice.PaymentStatus.fullRefund:
+        order.status = order.OrderStatus.fullRefund
+    order.save()

@@ -32,11 +32,15 @@ from cms.models.pluginmodel import CMSPlugin
 
 from .constants import getConstant
 from .signals import (
-    post_registration, invoice_finalized
+    post_registration, invoice_finalized, invoice_cancelled
 )
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
 from .utils.timezone import ensure_localtime
+from .managers import (
+    InvoiceManager, SeriesTeacherManager, SubstituteTeacherManager,
+    EventDJManager, SeriesStaffManager
+)
 
 
 # Define logger for this file
@@ -1343,6 +1347,40 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         return self.url
 
+    def updateTimes(self, saveMethod=False):
+        '''
+        Called on model save as well as after an occurrence is saved or deleted.
+        Check and update the startTime, endTime, and duration of the event based
+        on its occcurrences.
+        '''
+        changed = False
+        occurrences = self.eventoccurrence_set.all()
+
+        if occurrences:
+            new_year, new_month = self.getYearAndMonth()
+            new_startTime = occurrences.order_by('startTime').first().startTime
+            new_endTime = occurrences.order_by('endTime').last().endTime
+            new_duration  = sum([
+                x.duration for x in occurrences.filter(cancelled=False)
+            ])
+
+            if (
+                ((self.year is None) | (self.year != new_year)) |
+                ((self.month is None) | (self.month != new_month)) |
+                ((self.startTime is None) | (self.startTime != new_startTime)) |
+                ((self.endTime is None) | (self.endTime != new_endTime)) |
+                ((self.duration is None) | (self.duration != new_duration))
+            ):
+                self.year = new_year
+                self.month = new_month
+                self.startTime = new_startTime
+                self.endTime = new_endTime
+                self.duration = new_duration
+                changed = True
+
+        if changed and not saveMethod:
+            self.save()
+
     def updateRegistrationStatus(self, saveMethod=False):
         '''
         If called via cron job or otherwise, then update the registrationOpen
@@ -1449,15 +1487,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             logger.debug('Avoiding duplicate call to update registration status; ready to save.')
         else:
             logger.debug('About to check registration status and update if needed.')
-
-            if self.eventoccurrence_set.all():
-                self.year = self.getYearAndMonth()[0]
-                self.month = self.getYearAndMonth()[1]
-                self.startTime = self.eventoccurrence_set.order_by('startTime').first().startTime
-                self.endTime = self.eventoccurrence_set.order_by('endTime').last().endTime
-                self.duration = sum([
-                    x.duration for x in self.eventoccurrence_set.all() if not x.cancelled
-                ])
+            self.updateTimes(saveMethod=True)
 
             if self.room and not self.location:
                 self.location = self.room.location
@@ -1473,7 +1503,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             logger.debug(
                 'Finished checking status and ready for super call. Value is %s' % self.registrationOpen
             )
-        super(Event, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
         # Update start time and end time for associated event session.
         if self.session:
@@ -1572,6 +1602,15 @@ class EventOccurrence(models.Model):
             startTime=textStrings[0], endTime=textStrings[1]
         ))
     timeDescription.fget.short_description = _('Occurs')
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.event.updateTimes()
+
+    def delete(self, *args, **kwargs):
+        event = self.event
+        super().delete(*args, **kwargs)
+        event.updateTimes()
 
     def __str__(self):
         return '%s: %s' % (self.event.name, self.timeDescription)
@@ -1836,25 +1875,6 @@ class Series(Event):
         verbose_name_plural = _('Class series')
 
 
-class SeriesTeacherManager(models.Manager):
-    '''
-    Limits SeriesTeacher queries to only staff reported as teachers, and ensures that
-    these individuals are reported as teachers when created.
-    '''
-
-    def get_queryset(self):
-        return super(SeriesTeacherManager, self).get_queryset().filter(
-            category=getConstant('general__eventStaffCategoryInstructor')
-        )
-
-    def create(self, **kwargs):
-        kwargs.update({
-            'category': getConstant('general__eventStaffCategoryInstructor').id,
-            'occurrences': kwargs.get('event').eventoccurrence_set.all(),
-        })
-        return super(SeriesTeacherManager, self).create(**kwargs)
-
-
 class SeriesTeacher(EventStaffMember):
     '''
     A proxy model that provides staff member properties specific to
@@ -1880,23 +1900,6 @@ class SeriesTeacher(EventStaffMember):
         proxy = True
         verbose_name = _('Series instructor')
         verbose_name_plural = _('Series instructors')
-
-
-class SubstituteTeacherManager(models.Manager):
-    '''
-    Limits SeriesTeacher queries to only staff reported as teachers, and ensures that
-    these individuals are reported as teachers when created.
-    '''
-
-    def get_queryset(self):
-        return super(SubstituteTeacherManager, self).get_queryset().filter(
-            category=getConstant('general__eventStaffCategorySubstitute')
-        )
-
-    def create(self, **kwargs):
-        kwargs.update({
-            'category': getConstant('general__eventStaffCategorySubstitute').id})
-        return super(SubstituteTeacherManager, self).create(**kwargs)
 
 
 class SubstituteTeacher(EventStaffMember):
@@ -1937,24 +1940,6 @@ class SubstituteTeacher(EventStaffMember):
         verbose_name_plural = _('Substitute instructors')
 
 
-class EventDJManager(models.Manager):
-    '''
-    Limits Dj queries to only staff reported as DJs, and ensures that
-    these individuals are reported as DJs when created.
-    '''
-
-    def get_queryset(self):
-        return super(EventDJManager, self).get_queryset().filter(
-            category=getConstant('general__eventStaffCategoryDJ')
-        )
-
-    def create(self, **kwargs):
-        kwargs.update({
-            'category': getConstant('general__eventStaffCategoryDJ').id,
-        })
-        return super(EventDJManager, self).create(**kwargs)
-
-
 class EventDJ(EventStaffMember):
     '''
     A proxy model that provides staff member properties specific to
@@ -1978,20 +1963,6 @@ class EventDJ(EventStaffMember):
         proxy = True
         verbose_name = _('Event DJ')
         verbose_name_plural = _('Event DJs')
-
-
-class SeriesStaffManager(models.Manager):
-    '''
-    Limits SeriesStaff queries to exclude SeriesTeachers and SubstituteTeachers
-    '''
-
-    def get_queryset(self):
-        return super(SeriesStaffManager, self).get_queryset().exclude(
-            category__in=[
-                getConstant('general__eventStaffCategoryInstructor'),
-                getConstant('general__eventStaffCategorySubstitute'),
-            ],
-        )
 
 
 class SeriesStaffMember(EventStaffMember):
@@ -2341,7 +2312,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         unpaid = ChoiceItem('U', _('Unpaid'))
         authorized = ChoiceItem('A', _('Authorized using payment processor'))
         paid = ChoiceItem('P', _('Paid'))
-        needsCollection = ChoiceItem('N', _('Cash payment recorded'))
+        needsCollection = ChoiceItem('N', _('Processed but no payment collected'))
         fullRefund = ChoiceItem('R', _('Refunded in full'))
         cancelled = ChoiceItem('C', _('Cancelled'))
         rejected = ChoiceItem('X', _('Rejected in processing'))
@@ -2411,6 +2382,10 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     # Additional information (record of specific transactions) can go in here
     data = JSONField(_('Additional data'), blank=True, default={})
+
+    # This custom manager prevents deletion of Invoices that are not preliminary,
+    # even using queryset methods.
+    objects = InvoiceManager()
 
     @property
     def itemsEditable(self):
@@ -2572,28 +2547,10 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         return new_item
 
-    def calculateTaxes(self):
-        '''
-        Updates the tax field to reflect the amount of taxes depending on
-        the local rate as well as whether the buyer or seller pays sales tax.
-        '''
-
-        tax_rate = (getConstant('registration__salesTaxRate') or 0) / 100
-
-        if tax_rate > 0:
-            if self.buyerPaysSalesTax:
-                # If the buyer pays taxes, then taxes are just added as a fraction of the price
-                self.taxes = self.total * tax_rate
-            else:
-                # If the seller pays sales taxes, then adjusted_total will be their net revenue,
-                # and under this calculation adjusted_total + taxes = the price charged
-                adjusted_total = self.total / (1 + tax_rate)
-                self.taxes = adjusted_total * tax_rate
-
     def processPayment(
         self, amount, fees, paidOnline=True, methodName=None, methodTxn=None,
         submissionUser=None, collectedByUser=None, forceFinalize=False,
-        status=None, notify=None, epsilon=0.01
+        notify=None, epsilon=0.01
     ):
         '''
         When a payment processor makes a successful payment against an invoice, it can call this method
@@ -2630,23 +2587,16 @@ class Invoice(EmailRecipientMixin, models.Model):
         if collectedByUser and not self.collectedByUser:
             self.collectedByUser = collectedByUser
 
-        # if this completed the payment, then finalize the registration and mark
+        # if this completed the payment, then mark
         # the invoice as Paid unless told to do otherwise.
         if forceFinalize or abs(self.outstandingBalance) < epsilon:
-            self.status = status or self.PaymentStatus.paid
+            self.status = self.PaymentStatus.paid
 
             if getattr(self, 'registration', None):
                 self.registration = self.registration.finalize(dateTime=paymentTime)
-            else:
-                self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
+            
+            self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
             self.save()
-
-            invoice_finalized.send(
-                sender=Invoice,
-                invoice=self,
-                submissionUser=submissionUser,
-                collectedByUser=collectedByUser,
-            )
 
         else:
             # The payment wasn't completed so don't finalize, but do send a notification recording the payment.
@@ -2756,7 +2706,12 @@ class Invoice(EmailRecipientMixin, models.Model):
             logger.info('Cannot send notification email because no recipient has been specified.')
             return
 
-        template = getConstant('email__invoiceTemplate')
+        registration = getattr(self, 'registration', None)
+
+        if registration and getattr(registration, 'final', False):
+            template = getConstant('email__registrationSuccessTemplate')
+        else:
+            template = getConstant('email__invoiceTemplate')
 
         self.email_recipient(
             subject=template.subject,
@@ -2772,6 +2727,67 @@ class Invoice(EmailRecipientMixin, models.Model):
         )
         logger.debug('Invoice notification sent.')
 
+    def __init__(self, *args, **kwargs):
+        ''' Keep track of initial status in memory to detect status changes. '''
+        super().__init__(*args, **kwargs)
+        self.__initial_status = self.status
+
+    def save(self, *args, **kwargs):
+        '''
+        If the invoice has been cancelled or finalized, then fire the signals
+        that will keep associated registrations or merch orders in sync with
+        this status.
+        '''
+
+        restrictStatus = kwargs.pop('restrictStatus', True)
+        sendSignals = kwargs.pop('sendSignals', True)
+
+        # Do not permit the status of paid invoices to be changed except to
+        # process refunds or indicate that collection is needed.
+        if (
+            restrictStatus and
+            self.__initial_status == self.PaymentStatus.paid and
+            self.status not in [
+                self.PaymentStatus.paid, self.PaymentStatus.fullRefund,
+                self.PaymentStatus.needsCollection
+            ]
+        ):
+            self.status = self.__initial_status
+
+        super().save(*args, **kwargs)
+
+        if (
+            sendSignals and
+            self.status in [self.PaymentStatus.cancelled, self.PaymentStatus.fullRefund] and
+            self.status != self.__initial_status
+        ):
+            invoice_cancelled.send(
+                sender=Invoice,
+                invoice=self,
+            )
+        if (
+            sendSignals and
+            self.status in [self.PaymentStatus.paid, self.PaymentStatus.needsCollection] and
+            self.status != self.__initial_status
+        ):
+            invoice_finalized.send(
+                sender=Invoice,
+                invoice=self,
+            )
+        self.__initial_status = self.status
+
+    def delete(self, *args, **kwargs):
+        '''
+        Only allow deletions of invoices that are preliminary.  Paid invoices
+        are ignored.  All other invoices are cancelled.
+        '''
+        if self.status == self.PaymentStatus.preliminary:
+            super().delete(*args, **kwargs)
+        elif self.status != self.PaymentStatus.paid:
+            self.status = self.PaymentStatus.cancelled
+            self.save()
+
+
     @classmethod
     def create_from_item(cls, amount, item_description, **kwargs):
         '''
@@ -2783,6 +2799,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         calculate_taxes = kwargs.pop('calculate_taxes', False)
         grossTotal = kwargs.pop('grossTotal', None)
         status = kwargs.pop('status', cls.PaymentStatus.preliminary)
+        tax_rate = kwargs.pop('tax_rate', None) or getConstant('registration__salesTaxRate')
 
         new_invoice = cls(
             grossTotal=grossTotal or amount,
@@ -2793,19 +2810,18 @@ class Invoice(EmailRecipientMixin, models.Model):
             status=status,
             data=kwargs,
         )
-
-        if calculate_taxes:
-            new_invoice.calculateTaxes()
-
         new_invoice.save()
 
-        InvoiceItem.objects.create(
+        item = InvoiceItem(
             invoice=new_invoice,
             grossTotal=grossTotal or amount,
             total=amount,
-            taxes=new_invoice.taxes,
             description=item_description,
         )
+        if calculate_taxes:
+            item.calculateTaxes(tax_rate=tax_rate)
+        item.save()
+
         return new_invoice
 
     class Meta:
@@ -2869,14 +2885,38 @@ class InvoiceItem(models.Model):
             return self.description or _('Other items')
     name.fget.short_description = _('Name')
 
+    def calculateTaxes(self, tax_rate=None):
+        '''
+        Updates the tax field to reflect the amount of taxes depending on
+        the local rate as well as whether the buyer or seller pays sales tax on
+        this invoice.
+        '''
+
+        if tax_rate is None:
+            tax_rate = (getConstant('registration__salesTaxRate') or 0) / 100
+
+        if tax_rate > 0:
+            if self.invoice.buyerPaysSalesTax:
+                # If the buyer pays taxes, then taxes are just added as a fraction of the price
+                self.taxes = self.total * tax_rate
+            else:
+                # If the seller pays sales taxes, then adjusted_total will be their net revenue,
+                # and under this calculation adjusted_total + taxes = the price charged
+                adjusted_total = self.total / (1 + tax_rate)
+                self.taxes = adjusted_total * tax_rate
+
     def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        self.invoice.updateTotals()
+        restrictStatus = kwargs.pop('restrictStatus', True)
+        if self.invoice.itemsEditable or not restrictStatus:
+            super().save(*args, **kwargs)
+            self.invoice.updateTotals()
 
     def delete(self, *args, **kwargs):
+        restrictStatus = kwargs.pop('restrictStatus', True)
         invoice = self.invoice
-        super().delete(*args, **kwargs)
-        invoice.updateTotals()
+        if self.invoice.itemsEditable or not restrictStatus:
+            super().delete(*args, **kwargs)
+            invoice.updateTotals()
 
     def __str__(self):
         return '%s: #%s' % (self.name, self.id)
@@ -3173,6 +3213,7 @@ class Registration(EmailRecipientMixin, models.Model):
                 'email': kwargs.pop('email', None) or self.email,
                 'grossTotal': self.totalPrice,
                 'total': self.priceWithDiscount or 0,
+                'taxes': kwargs.pop('taxes', 0),
                 'submissionUser': submissionUser,
                 'collectedByUser': collectedByUser,
                 'buyerPaysSalesTax': getConstant('registration__buyerPaysSalesTax'),
@@ -3193,7 +3234,6 @@ class Registration(EmailRecipientMixin, models.Model):
                 })
 
             new_invoice = Invoice(**invoice_kwargs)
-            new_invoice.calculateTaxes()
             new_invoice.save()
             self.invoice = new_invoice
         elif update:
@@ -3266,9 +3306,6 @@ class Registration(EmailRecipientMixin, models.Model):
 
         dateTime = kwargs.pop('dateTime', timezone.now())
 
-        # If sendEmail is passed as False, then we won't send an email
-        sendEmail = kwargs.pop('sendEmail', True)
-
         # Customer is no longer required for Registrations, but we will create
         # one if we have the information needed for it (name and email).
         if (not self.customer) and self.firstName and self.lastName and self.email:
@@ -3288,24 +3325,6 @@ class Registration(EmailRecipientMixin, models.Model):
             sender=Registration,
             registration=self
         )
-
-        # Send the email if there is a customer to send it to.
-        if sendEmail and self.customer:
-            if getConstant('email__disableSiteEmails'):
-                logger.info('Sending of confirmation emails is disabled.')
-            else:
-                logger.info('Sending confirmation email.')
-                template = getConstant('email__registrationSuccessTemplate')
-
-                self.email_recipient(
-                    subject=template.subject,
-                    content=template.content,
-                    html_content=template.html_content,
-                    send_html=template.send_html,
-                    from_address=template.defaultFromAddress,
-                    from_name=template.defaultFromName,
-                    cc=template.defaultCC,
-                )
 
         # Return the finalized registration
         return self
@@ -3512,41 +3531,39 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
         return self.eventcheckin_set.filter(filters).exists()
 
-    def link_invoice_item(self, invoice):
+    def link_invoice_item(self):
         '''
         If an invoice item does not already exist for this event registration,
         then create one.  Return the linked invoice item.
         '''
 
+        invoice = getattr(self.registration, 'invoice', None)
+
         if not isinstance(invoice, Invoice):
-            raise ValidationError(
-                _('Invalid passed invoice.')
-            )
-        elif getattr(self, 'invoiceItem', None) and getattr(self.invoiceItem, 'invoice', None) != invoice:
+            raise ValidationError(_(
+                'Cannot link invoice item for event registration: ' + 
+                'No associated registration, or registration has no invoice.'
+            ))
+        elif (
+            getattr(self, 'invoiceItem', None) and
+            getattr(self.invoiceItem, 'invoice', None) != invoice
+        ):
             raise ValidationError(
                 _('Existing invoice item not associated with passed invoice.')
             )
 
         if not getattr(self, 'invoiceItem', None):
-            item_kwargs = {
-                'invoice': invoice,
-                'grossTotal': self.price,
-            }
+            new_item = InvoiceItem(
+                invoice=invoice, grossTotal=self.price, total=self.price,
+                fees=0
+            )
 
-            if invoice.grossTotal > 0:
-                item_kwargs.update({
-                    'total': self.price * (invoice.total / invoice.grossTotal),
-                    'taxes': invoice.taxes * (self.price / invoice.grossTotal),
-                    'fees': invoice.fees * (self.price / invoice.grossTotal),
-                })
-            else:
-                item_kwargs.update({
-                    'total': self.price,
-                    'taxes': invoice.taxes,
-                    'fees': invoice.fees,
-                })
+            # If there are no items but already fees, apply those
+            # fees to this item.
+            if invoice.grossTotal == 0 and invoice.fees:
+                new_item.fees = invoice.fees
 
-            new_item = InvoiceItem(**item_kwargs)
+            new_item.calculateTaxes()
             new_item.save()
             self.invoiceItem = new_item
 
@@ -3557,19 +3574,27 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         Before saving, create an invoice item for this registration if one does
         not already exist.
         '''
-
-        invoice = kwargs.pop(
-            'invoice', getattr(self.registration, 'invoice', None)
-        )
-
-        if not invoice:
-            raise ValidationError(_(
-                'Cannot create invoice item for event registration: ' +
-                'no invoice has been specified.'
-            ))
-
-        self.invoiceItem = self.link_invoice_item(invoice=invoice)
+        self.invoiceItem = self.link_invoice_item()
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        '''
+        Only allow EventRegistrations to be deleted if the Registration is not
+        final and the invoice allows items to be edited.  If so, then also
+        delete the associated InvoiceItem to this EventRegistration.  Otherwise,
+        set the status to cancelled, but do not delete.
+        '''
+        if (
+            getattr(self.registration, 'final', False) or not
+            self.invoiceItem.invoice.itemsEditable
+        ):
+            self.cancelled = True
+            self.save()
+        else:
+            invoiceItem = self.invoiceItem
+            super().delete(*args, **kwargs)
+            if invoiceItem:
+                invoiceItem.delete()
 
     def __str__(self):
         return str(self.customer) + " " + str(self.event)

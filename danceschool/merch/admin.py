@@ -85,8 +85,7 @@ class MerchItemAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description')
 
     fields = [
-        'name', 'description', 'defaultPrice',
-        ('salesTaxRate', 'buyerPaysSalesTax'),
+        'name', 'description', 'defaultPrice', 'salesTaxRate',
         'photo', 'disabled', 'creationDate'
         ]
 
@@ -96,8 +95,31 @@ class MerchItemAdmin(admin.ModelAdmin):
 class MerchOrderItemInline(admin.TabularInline):
     model = MerchOrderItem
     extra = 1
+
     readonly_fields = ('invoiceItem',)
+    submitted_readonly_fields = ('item', 'quantity', 'invoiceItem')
     fields = ('item', 'quantity', 'invoiceItem')
+
+    def has_add_permission(self, request, obj=None):
+        '''
+        MerchOrderItems can only be added when an order is unsubmitted.
+        '''
+        if obj and not obj.order.itemsEditable:
+            return False
+        return True
+
+    def has_delete_permission(self, request, obj=None):
+        '''
+        MerchOrderItems can only be deleted when an order is unsubmitted.
+        '''
+        if obj and not obj.order.itemsEditable:
+            return False
+        return True
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj and not obj.order.itemsEditable:
+            return self.submitted_readonly_fields
+        return self.readonly_fields
 
     
 @admin.register(MerchOrder)

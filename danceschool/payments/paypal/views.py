@@ -118,7 +118,7 @@ def createPaypalPayment(request):
 
     for item in this_invoice.invoiceitem_set.all():
 
-        if not getConstant('registration__buyerPaysSalesTax'):
+        if not this_invoice.buyerPaysSalesTax:
             this_item_price = item.grossTotal - item.taxes
         else:
             this_item_price = item.grossTotal
