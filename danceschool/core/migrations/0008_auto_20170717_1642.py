@@ -10,7 +10,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 import djangocms_text_ckeditor.fields
 import filer.fields.image
-import jsonfield.fields
 import uuid
 
 
@@ -131,7 +130,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='data',
-            field=jsonfield.fields.JSONField(default={}, verbose_name='Additional data'),
+            field=models.JSONField(default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='customer',
@@ -351,7 +350,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eventregistration',
             name='data',
-            field=jsonfield.fields.JSONField(default={}, verbose_name='Additional data'),
+            field=models.JSONField(default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='eventregistration',
@@ -421,7 +420,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='invoice',
             name='data',
-            field=jsonfield.fields.JSONField(default={}, verbose_name='Additional data'),
+            field=models.JSONField(default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='invoice',
@@ -526,7 +525,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='registration',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, null=True, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, null=True, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='registration',
@@ -631,7 +630,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='temporaryeventregistration',
             name='data',
-            field=jsonfield.fields.JSONField(default={}, verbose_name='Additional data'),
+            field=models.JSONField(default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='temporaryeventregistration',
@@ -661,7 +660,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='temporaryregistration',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, null=True, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, null=True, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='temporaryregistration',

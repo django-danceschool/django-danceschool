@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 from django.db import migrations, models
 import django.db.models.deletion
 import filer.fields.image
-import jsonfield.fields
 
 
 class Migration(migrations.Migration):
@@ -24,7 +23,7 @@ class Migration(migrations.Migration):
                 ('dateTime', models.DateTimeField(auto_now_add=True, verbose_name='Date and time')),
                 ('ipAddress', models.GenericIPAddressField(blank=True, null=True, verbose_name='IP address')),
                 ('flagCode', models.CharField(help_text='Search for this code for easier reference.', max_length=8, verbose_name='Flag code')),
-                ('data', jsonfield.fields.JSONField(default={}, verbose_name='Session and form data')),
+                ('data', models.JSONField(default=dict, verbose_name='Session and form data')),
             ],
             options={
                 'verbose_name_plural': 'Records of bans being flagged',

@@ -9,7 +9,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 import djangocms_text_ckeditor.fields
 import filer.fields.image
-import jsonfield.fields
 import multiselectfield.db.fields
 import uuid
 
@@ -48,7 +47,7 @@ class Migration(migrations.Migration):
                 ('last_name', models.CharField(max_length=30, verbose_name='last name')),
                 ('email', models.EmailField(max_length=254, verbose_name='email address')),
                 ('phone', models.CharField(blank=True, max_length=20, null=True, verbose_name='telephone')),
-                ('data', jsonfield.fields.JSONField(default={})),
+                ('data', models.JSONField(default=dict)),
                 ('user', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
             options={
@@ -174,7 +173,7 @@ class Migration(migrations.Migration):
                 ('checkedIn', models.BooleanField(default=False, help_text='Check to mark the individual as checked in.', verbose_name='Checked In')),
                 ('dropIn', models.BooleanField(default=False, help_text='If true, this is a drop-in registration.', verbose_name='Drop-in registration')),
                 ('cancelled', models.BooleanField(default=False, help_text='Mark as cancelled so that this registration is not counted in student/attendee counts.')),
-                ('data', jsonfield.fields.JSONField(default={})),
+                ('data', models.JSONField(default=dict)),
                 ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Customer')),
             ],
         ),
@@ -305,7 +304,7 @@ class Migration(migrations.Migration):
                 ('amountPaid', models.FloatField(default=0, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Net Amount Paid')),
                 ('dateTime', models.DateTimeField(blank=True, null=True, verbose_name='Date & Time')),
                 ('invoiceNumber', models.CharField(blank=True, max_length=80, null=True, verbose_name='Invoice Number')),
-                ('data', jsonfield.fields.JSONField(blank=True, null=True)),
+                ('data', models.JSONField(blank=True, null=True)),
                 ('collectedByUser', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='collectedregistrations', to=settings.AUTH_USER_MODEL, verbose_name='Collected by user')),
                 ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Customer')),
                 ('submissionUser', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='submittedregistrations', to=settings.AUTH_USER_MODEL, verbose_name='registered by user')),
@@ -348,7 +347,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('price', models.FloatField(validators=[django.core.validators.MinValueValidator(0)])),
                 ('dropIn', models.BooleanField(default=False, help_text='If true, this is a drop-in registration.', verbose_name='Drop-in registration')),
-                ('data', jsonfield.fields.JSONField(default={})),
+                ('data', models.JSONField(default=dict)),
             ],
         ),
         migrations.CreateModel(
@@ -365,7 +364,7 @@ class Migration(migrations.Migration):
                 ('comments', models.TextField(default='')),
                 ('dateTime', models.DateTimeField(blank=True, null=True)),
                 ('priceWithDiscount', models.FloatField(null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='price net of discounts')),
-                ('data', jsonfield.fields.JSONField(blank=True, null=True)),
+                ('data', models.JSONField(blank=True, null=True)),
                 ('submissionUser', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='submittedtemporaryregistrations', to=settings.AUTH_USER_MODEL, verbose_name='registered by user')),
             ],
             options={

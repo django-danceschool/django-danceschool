@@ -3,7 +3,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import jsonfield.fields
 
 
 class Migration(migrations.Migration):
@@ -16,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='invoice',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
         migrations.AddField(
             model_name='invoice',
@@ -36,26 +35,26 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='customer',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='eventregistration',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='registration',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='temporaryeventregistration',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
         migrations.AlterField(
             model_name='temporaryregistration',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
     ]

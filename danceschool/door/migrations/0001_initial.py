@@ -3,7 +3,6 @@
 import cms.models.fields
 from django.db import migrations, models
 import django.db.models.deletion
-import jsonfield.fields
 
 
 class Migration(migrations.Migration):
@@ -72,7 +71,7 @@ class Migration(migrations.Migration):
                 ('requireFullRegistration', models.BooleanField(blank=True, default=True, help_text='If checked, then the user will be sent to the second page of the registration process to provide name and email. Particular payment methods or plugins may also require the full registration process and can override this option.', verbose_name='Require full registration')),
                 ('soldOutRule', models.CharField(choices=[('D', 'Display with label'), ('A', 'Move to additional choice drop-down'), ('H', 'Hide sold out choices')], default='D', max_length=1, verbose_name='Rule for sold out choices')),
                 ('voucherId', models.CharField(blank=True, max_length=100, null=True, verbose_name='Voucher Code (for registration with a voucher only)')),
-                ('data', jsonfield.fields.JSONField(blank=True, default={}, help_text='This may be used for passing specific information about this event registration for statistical or other custom purposes.', verbose_name='Additional data passed with registration')),
+                ('data', models.JSONField(blank=True, default=dict, help_text='This may be used for passing specific information about this event registration for statistical or other custom purposes.', verbose_name='Additional data passed with registration')),
                 ('order', models.PositiveSmallIntegerField(default=0)),
                 ('eventPlugin', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='door.DoorRegisterEventPluginModel', verbose_name='Plugin')),
             ],

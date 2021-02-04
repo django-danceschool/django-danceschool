@@ -3,7 +3,6 @@
 from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
-import jsonfield.fields
 
 
 class Migration(migrations.Migration):
@@ -17,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventstaffmember',
             name='data',
-            field=jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data'),
+            field=models.JSONField(blank=True, default=dict, verbose_name='Additional data'),
         ),
         migrations.CreateModel(
             name='EventCheckIn',
@@ -27,7 +26,7 @@ class Migration(migrations.Migration):
                 ('firstName', models.CharField(max_length=100, null=True, verbose_name='First name')),
                 ('lastName', models.CharField(max_length=100, null=True, verbose_name='Last name')),
                 ('cancelled', models.BooleanField(blank=True, default=False, null=True, verbose_name='Check-in cancelled')),
-                ('data', jsonfield.fields.JSONField(blank=True, default={}, verbose_name='Additional data')),
+                ('data', models.JSONField(blank=True, default=dict, verbose_name='Additional data')),
                 ('creationDate', models.DateTimeField(auto_now_add=True, verbose_name='Creation date')),
                 ('modifiedDate', models.DateTimeField(auto_now=True, verbose_name='Last modified')),
                 ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Event', verbose_name='Event')),

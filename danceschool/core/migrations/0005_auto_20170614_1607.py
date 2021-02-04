@@ -8,7 +8,6 @@ from django.conf import settings
 import django.core.validators
 from django.db import migrations, models
 import django.db.models.deletion
-import jsonfield.fields
 import uuid
 
 
@@ -36,7 +35,7 @@ class Migration(migrations.Migration):
                 ('fees', models.FloatField(default=0, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Processing fees')),
                 ('amountPaid', models.FloatField(default=0, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Net Amount Paid')),
                 ('comments', models.TextField(blank=True, null=True, verbose_name='Comments')),
-                ('data', jsonfield.fields.JSONField(default={})),
+                ('data', models.JSONField(default=dict)),
                 ('collectedByUser', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='collectedinvoices', to=settings.AUTH_USER_MODEL, verbose_name='Collected by user')),
             ],
             options={
