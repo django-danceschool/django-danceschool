@@ -24,7 +24,6 @@ from djchoices import DjangoChoices, ChoiceItem
 from math import ceil
 from itertools import accumulate
 import logging
-from jsonfield import JSONField
 import string
 import random
 
@@ -852,9 +851,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         _('Duration in hours'), null=True, blank=True, validators=[MinValueValidator(0)]
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this customer
-    # in a JSONfield, but to remain database agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'), default={}, blank=True)
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     @property
     def localStartTime(self):
@@ -1667,10 +1664,7 @@ class EventStaffMember(models.Model):
         null=True, blank=True, validators=[MinValueValidator(0)]
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this
-    # event staff record in a JSONfield, but to remain database-agnostic we are
-    # using django-jsonfield.
-    data = JSONField(_('Additional data'), default={}, blank=True)
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     # For keeping track of who submitted and when.
     submissionUser = models.ForeignKey(
@@ -2159,9 +2153,7 @@ class Customer(EmailRecipientMixin, models.Model):
         )
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this customer
-    # in a JSONfield, but to remain database agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'), default={}, blank=True)
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     @property
     def fullName(self):
@@ -2381,7 +2373,7 @@ class Invoice(EmailRecipientMixin, models.Model):
     comments = models.TextField(_('Comments'), null=True, blank=True)
 
     # Additional information (record of specific transactions) can go in here
-    data = JSONField(_('Additional data'), blank=True, default={})
+    data = models.JSONField(_('Additional data'), blank=True, default=dict)
 
     # This custom manager prevents deletion of Invoices that are not preliminary,
     # even using queryset methods.
@@ -2967,15 +2959,13 @@ class Registration(EmailRecipientMixin, models.Model):
         on_delete=models.SET_NULL
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this registration
-    # in a JSONfield, but to remain database-agnostic we are using django-jsonfield.  This allows
-    # hooked in registration-related procedures to hang on to miscellaneous data
-    # for the duration of the registration process without having to create models in another app.
-    # By default (and for security reasons), the registration system ignores any
-    # passed data that it does not expect, so you will need to hook into the
-    # registration system to ensure that any extra information that you want to
-    # use is not discarded.
-    data = JSONField(_('Additional data'), default={}, blank=True)
+    # This field allows hooked in registration-related procedures to hang on to
+    # miscellaneous data for the duration of the registration process without
+    # having to create models in another app.  By default (and for security
+    # reasons), the registration system ignores any passed data that it does not
+    # expect, so you will need to hook into the registration system to ensure
+    # that any extra information that you want to use is not discarded.
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     @property
     def fullName(self):
@@ -3440,9 +3430,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         )
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this registration
-    # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(_('Additional data'), default={}, blank=True)
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     @property
     def netPrice(self):
@@ -3642,10 +3630,7 @@ class EventCheckIn(models.Model):
         _('Check-in cancelled'), default=False, null=True, blank=True,
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this
-    # check-in in a JSONfield, but to remain database-agnostic we are using
-    # django-jsonfield.
-    data = JSONField(_('Additional data'), default={}, blank=True)
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     creationDate = models.DateTimeField(
         _('Creation date'), auto_now_add=True

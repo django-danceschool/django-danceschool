@@ -5,7 +5,6 @@ from django.utils import timezone
 
 from calendar import day_name
 import logging
-from jsonfield import JSONField
 import json
 from datetime import datetime, timedelta
 
@@ -490,10 +489,8 @@ class DoorRegisterEventPluginChoice(models.Model):
         max_length=100, null=True, blank=True
     )
 
-    # PostgreSQL can store arbitrary additional information associated with this registration
-    # in a JSONfield, but to remain database-agnostic we are using django-jsonfield
-    data = JSONField(
-        _('Additional data passed with registration'), default={}, blank=True,
+    data = models.JSONField(
+        _('Additional data passed with registration'), default=dict, blank=True,
         help_text=_(
             'This may be used for passing specific information about this ' +
             'event registration for statistical or other custom purposes.'

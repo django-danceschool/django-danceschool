@@ -2,7 +2,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from filer.fields.image import FilerImageField
-from jsonfield import JSONField
 
 
 class BannedPerson(models.Model):
@@ -75,7 +74,7 @@ class BanFlaggedRecord(models.Model):
     dateTime = models.DateTimeField(_('Date and time'), auto_now_add=True)
     ipAddress = models.GenericIPAddressField(_('IP address'), null=True, blank=True)
     flagCode = models.CharField(_('Flag code'), max_length=8, help_text=_('Search for this code for easier reference.'))
-    data = JSONField(_('Session and form data'), default={})
+    data = models.JSONField(_('Session and form data'), default=dict)
 
     def __str__(self):
         return str(_('%s: %s at %s' % (self.person.fullName, self.dateTime, self.ipAddress)))
