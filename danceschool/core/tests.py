@@ -218,8 +218,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice())
-        self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
+        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Try to sign up without agreeing to the policies, and ensure that it fails
         post_data = {
@@ -238,8 +238,8 @@ class RegistrationTest(DefaultSchoolTestCase):
 
         # Since there are no discounts or vouchers applied, check that the net price
         # and gross price match
-        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
-        self.assertEqual(response.context_data.get('netPrice'), response.context_data.get('totalPrice'))
+        self.assertEqual(response.context_data.get('invoice').grossTotal, s.getBasePrice())
+        self.assertEqual(response.context_data.get('grossTotal'), response.context_data.get('total'))
         self.assertEqual(response.context_data.get('is_free'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
 

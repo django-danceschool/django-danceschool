@@ -54,8 +54,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice())
-        self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
+        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Continue to the summary page
@@ -154,12 +153,12 @@ class VouchersTest(DefaultSchoolTestCase):
         )
 
         response = self.register_to_check_voucher(v.voucherId, s)
+        invoice = response.context_data.get('invoice')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
-        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(
-            response.context_data.get('netPrice'),
-            response.context_data.get('totalPrice') - v.maxAmountPerUse
+            invoice.total, invoice.grossTotal - v.maxAmountPerUse
         )
         self.assertEqual(response.context_data.get('is_free'), False)
         self.assertEqual(response.context_data.get('total_voucher_amount'), v.maxAmountPerUse)
@@ -180,12 +179,12 @@ class VouchersTest(DefaultSchoolTestCase):
         v = self.create_voucher()
 
         response = self.register_to_check_voucher(v.voucherId, s)
+        invoice = response.context_data.get('invoice')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
-        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(
-            response.context_data.get('netPrice'),
-            response.context_data.get('totalPrice') - v.originalAmount
+            invoice.total, invoice.grossTotal - v.originalAmount
         )
         self.assertEqual(response.context_data.get('is_free'), False)
         self.assertEqual(response.context_data.get('total_voucher_amount'), v.originalAmount)
@@ -210,25 +209,22 @@ class VouchersTest(DefaultSchoolTestCase):
         )
 
         response = self.register_to_check_voucher(v.voucherId, s)
+        invoice = response.context_data.get('invoice')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
-        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
-        self.assertEqual(response.context_data.get('netPrice'), 0)
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.total, 0)
         self.assertEqual(response.context_data.get('is_free'), True)
         self.assertEqual(response.context_data.get('total_voucher_amount'), s.getBasePrice())
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
         reg = response.context_data.get('registration')
-        invoice = response.context_data.get('invoice')
         tvu = v.voucheruse_set.filter(registration=reg)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
         self.assertTrue(tvu.first().applied)
         self.assertEqual(tvu.first().amount, s.getBasePrice())
         self.assertTrue(reg)
         self.assertTrue(reg.final)
-        self.assertEqual(reg.netPrice, 0)
-        self.assertEqual(reg.totalPrice, s.getBasePrice())
         self.assertEqual(reg.invoice, invoice)
         self.assertTrue(invoice.status == Invoice.PaymentStatus.paid)
         self.assertEqual(invoice.outstandingBalance, 0)
-        self.assertEqual(invoice.total, 0)

@@ -903,8 +903,8 @@ class RefundForm(forms.ModelForm):
 
         for item in this_invoice.invoiceitem_set.all():
             initial = False
-            if item.finalEventRegistration:
-                initial = item.finalEventRegistration.cancelled
+            if getattr(item, 'eventRegistration', None):
+                initial = item.eventRegistration.cancelled
             item_max = item.total + item.taxes if this_invoice.buyerPaysSalesTax else item.total
 
             self.fields["item_cancelled_%s" % item.id] = forms.BooleanField(

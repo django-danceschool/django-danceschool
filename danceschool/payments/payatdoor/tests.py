@@ -76,8 +76,8 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(tr.payAtDoor, True)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice(payAtDoor=True))
-        self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice(payAtDoor=True))
+        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Sign up for the series
         post_data = {
@@ -86,13 +86,16 @@ class PayAtDoorTest(DefaultSchoolTestCase):
             'email': 'test@customer.com',
             'agreeToPolicies': True,
         }
-        response = self.client.post(reverse('getStudentInfo'), post_data, follow=True)
+        response = self.register_to_check_discount(s)
+        invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
 
         # Since there are no discounts or vouchers applied, check that the net price
         # and gross price match.
-        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice(payAtDoor=True))
-        self.assertEqual(response.context_data.get('netPrice'), response.context_data.get('totalPrice'))
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(
+            invoice.total, invoice.grossTotal
+        )
         self.assertEqual(response.context_data.get('is_free'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
 
@@ -107,7 +110,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
             'submissionUser': self.superuser.id,
             'registration': registration.id,
             'invoice': str(invoice.id),
-            'amountPaid': response.context_data.get('netPrice'),
+            'amountPaid': invoice.total,
             'paymentMethod': ATTHEDOOR_PAYMENTMETHOD_CHOICES[0][0],
             'payerEmail': self.superuser.email,
             'receivedBy': self.superuser.id,
@@ -184,8 +187,8 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.eventregistration_set.get(event__id=s.id).price, s.getBasePrice())
-        self.assertEqual(response.context_data.get('subtotal'), s.getBasePrice())
+        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Sign up for the series
         post_data = {
@@ -194,13 +197,16 @@ class PayAtDoorTest(DefaultSchoolTestCase):
             'email': 'test@customer.com',
             'agreeToPolicies': True,
         }
-        response = self.client.post(reverse('getStudentInfo'), post_data, follow=True)
+        response = self.register_to_check_discount(s)
+        invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
 
         # Since there are no discounts or vouchers applied, check that the net price
         # and gross price match.
-        self.assertEqual(response.context_data.get('totalPrice'), s.getBasePrice())
-        self.assertEqual(response.context_data.get('netPrice'), response.context_data.get('totalPrice'))
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(
+            invoice.total, invoice.grossTotal
+        )
         self.assertEqual(response.context_data.get('is_free'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
 

@@ -235,17 +235,17 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
 
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
-            'id', 'dropIn', 'price', 'netPrice', 'refundFlag', 'warningFlag',
+            'id', 'dropIn', 'refundFlag', 'warningFlag',
             'checkedIn',
             ('event', ['id', 'name', 'url', 'getNextOccurrenceForDate']),
             ('registration', [
-                'id', 'priceWithDiscount', 'student', 'refundFlag', 'totalPrice',
-                'fullName', 'discounted', 'url',
+                'id', 'student', 'refundFlag',
+                'fullName', 'grossTotal', 'total', 'discounted', 'url',
                 ('customer', ['id', 'fullName', 'email', 'numClassSeries']),
-                ('invoice', ['id', 'adjustments', 'outstandingBalance', 'statusLabel', 'url']),
+                ('invoice', ['id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees', 'outstandingBalance', 'statusLabel', 'url']),
             ]),
             ('invoiceItem', [
-                'id', 'adjustments', 'revenueMismatch', 'revenueNotYetReceived',
+                'id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees', 'revenueMismatch', 'revenueNotYetReceived',
                 'revenueReceived', 'revenueReported'
             ]),
             ('role', ['id', 'name']),
@@ -587,10 +587,14 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
             add_taxes = this_item.taxes if self.invoice.buyerPaysSalesTax else 0
 
-            # If the refund is a complete refund, then cancel the EventRegistration entirely.
-            if abs(this_item.total + add_taxes + this_item.adjustments) < 0.01 and this_item.finalEventRegistration:
-                this_item.finalEventRegistration.cancelled = True
-                this_item.finalEventRegistration.save()
+            # If the refund is a complete refund and is associated with a registration,
+            # then cancel the EventRegistration entirely.
+            if (
+                abs(this_item.total + add_taxes + this_item.adjustments) < 0.01 and
+                getattr(this_item,'eventRegistration', None)
+            ):
+                this_item.eventRegistration.cancelled = True
+                this_item.eventRegistration.save()
 
         # Ensure that all fees are allocated appropriately
         self.invoice.allocateFees()

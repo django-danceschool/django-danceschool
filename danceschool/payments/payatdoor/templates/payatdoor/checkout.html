@@ -9,11 +9,11 @@
             {% blocktrans %}
             You have reported a {{ paymentMethod }} payment in the amount of:
             {% endblocktrans %}
-            <strong>{{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</strong>.
+            <strong>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:"-2" }}</strong>.
           </p>
           <p>
             <button class="btn btn-primary" id="submit-quick">
-              {% trans "Record Payment" %}: {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}
+              {% trans "Record Payment" %}: {{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:"-2" }}
             </button>
           </p>
         </div>
@@ -34,7 +34,7 @@
       payAtDoor: "{{ payAtDoor }}",
       autoSubmit: "{{ autoSubmit }}",
       paymentMethod: "{{ paymentMethod }}",
-      netPrice: "{{ netPrice|floatformat:'-2' }}"
+      outstandingBalance: "{{ invoice.outstandingBalance|floatformat:'-2' }}"
     }
 
     $(document).ready(function() {
@@ -46,7 +46,7 @@
             $('.door-payment-section').not('#payatdoor-payment-form-card').addClass('d-none');
             $('#payatdoor-payment-form').addClass('d-none');
             $('#payatdoor-auto-submit-message').removeClass('d-none');
-            $("#id_amountPaid").val(regParams.netPrice);
+            $("#id_amountPaid").val(regParams.outstandingBalance);
             $("#id_paymentMethod").val(regParams.paymentMethod);
 
             $('#submit-quick').click(function() {

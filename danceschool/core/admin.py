@@ -225,9 +225,12 @@ class SeriesStaffMemberInline(EventStaffMemberInline):
 class EventRegistrationInline(admin.StackedInline):
     model = EventRegistration
     extra = 0
-    fields = ['event', 'role', 'cancelled', 'dropIn', 'occurrences', 'price', 'netPrice']
-    add_readonly_fields = ['netPrice',]
-    readonly_fields = ['event', 'price', 'netPrice', 'dropIn', 'occurrences']
+    fields = [
+        'event', 'role', 'cancelled', 'dropIn', 'occurrences',
+        'item_grossTotal', 'item_total'
+    ]
+    add_readonly_fields = ['item_grossTotal', 'item_total',]
+    readonly_fields = ['event', 'item_grossTotal', 'item_total', 'dropIn', 'occurrences']
 
     def has_add_permission(self, request, obj=None):
         '''
@@ -250,6 +253,14 @@ class EventRegistrationInline(admin.StackedInline):
         if not obj:
             return self.add_readonly_fields
         return self.readonly_fields
+
+    def item_grossTotal(self, obj):
+        return getattr(obj.invoiceItem, 'grossTotal', None)
+    item_grossTotal.short_description = _('Total before discounts')
+
+    def item_total(self, obj):
+        return getattr(obj.invoiceItem, 'total', None)
+    item_total.short_description = _('Total billed amount')
 
 
 class EventOccurrenceInlineForm(ModelForm):
@@ -440,7 +451,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 @admin.register(Registration)
 class RegistrationAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
-    list_display = ['final', 'customer', 'dateTime', 'priceWithDiscount', 'student']
+    list_display = ['final', 'customer', 'dateTime', 'total', 'student']
     list_filter = ['final', 'dateTime', 'student', 'invoice__paidOnline']
     search_fields = [
         '=customer__first_name', '=customer__last_name',
@@ -449,10 +460,10 @@ class RegistrationAdmin(admin.ModelAdmin):
     ordering = ('-final', '-dateTime', )
     fields = (
         ('final', 'invoice_expiry'), 'email', 'phone', 'customer_link', 'invoice_link',
-        'priceWithDiscount', 'student', 'dateTime', 'comments',
+        'total', 'student', 'dateTime', 'comments',
         'howHeardAboutUs', 'submissionUser',
     )
-    readonly_fields = ('customer_link', 'invoice_link', 'invoice_expiry')
+    readonly_fields = ('total', 'customer_link', 'invoice_link', 'invoice_expiry')
 
     def customer_link(self, obj):
         change_url = reverse('admin:core_customer_change', args=(obj.customer.id, ))

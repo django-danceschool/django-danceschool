@@ -3,7 +3,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.sites.models import Site
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Q, Sum, F
+from django.db.models import Q, Sum, F, Case, When, Value
 from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
@@ -2380,6 +2380,11 @@ class Invoice(EmailRecipientMixin, models.Model):
     objects = InvoiceManager()
 
     @property
+    def fullName(self):
+        return ' '.join([self.firstName or '', self.lastName or '']).strip()
+    fullName.fget.short_description = _('Name')
+
+    @property
     def itemsEditable(self):
         ''' Only allow invoices to be edited if their status permits it. '''
         return (self.status in [
@@ -2437,6 +2442,17 @@ class Invoice(EmailRecipientMixin, models.Model):
     def discountPercentage(self):
         return 1 - (self.total / self.grossTotal)
     discountPercentage.fget.short_description = _('Discount percentage')
+
+    @property
+    def itemTotalMismatch(self):
+        item_totals = self.invoiceitem_set.aggregate(
+            grossTotal=Coalesce(Sum('grossTotal'), 0),
+            total=Coalesce(Sum('total'), 0),
+        )
+        return (
+            self.grossTotal != item_totals.get('grossTotal') or
+            self.total != item_totals.get('total')
+        )
 
     @property
     def statusLabel(self):
@@ -2940,9 +2956,6 @@ class Registration(EmailRecipientMixin, models.Model):
     student = models.BooleanField(_('Eligible for student discount'), default=False)
     payAtDoor = models.BooleanField(_('At-the-door registration'), default=False)
 
-    priceWithDiscount = models.FloatField(
-        verbose_name=_('Price net of discounts'), validators=[MinValueValidator(0)]
-    )
     comments = models.TextField(_('Comments'), default='', blank=True, null=True)
 
     invoice = models.OneToOneField(
@@ -2973,77 +2986,90 @@ class Registration(EmailRecipientMixin, models.Model):
     fullName.fget.short_description = _('Name')
 
     @property
-    def seriesPrice(self):
-        return self.eventregistration_set.filter(
-            Q(event__series__isnull=False)
-        ).aggregate(Sum('price')).get('price__sum') or 0
-    seriesPrice.fget.short_description = _('Price of class series')
-
-    @property
-    def publicEventPrice(self):
-        return self.eventregistration_set.filter(
-            Q(event__publicevent__isnull=False)
-        ).aggregate(Sum('price')).get('price__sum') or 0
-    publicEventPrice.fget.short_description = _('Price of public events')
-
-    @property
-    def totalPrice(self):
-        return self.eventregistration_set.aggregate(Sum('price')).get('price__sum') or 0
-    totalPrice.fget.short_description = _('Total price before discounts')
-
-    # This alias just makes it easier to register properties in other apps.
-    @property
-    def netPrice(self):
-        return self.priceWithDiscount
-    netPrice.fget.short_description = _('Net price')
-
-    # For now, revenue is allocated proportionately between series and events
-    # as a percentage of the discounted total amount paid.  Ideally, revenue would
-    # be allocated by applying discounts proportionately only to the items for which
-    # they apply.  However, this has not been implemented.
-    @property
-    def seriesNetPrice(self):
-        if self.totalPrice == 0:
-            return 0
-        return self.priceWithDiscount * (self.seriesPrice / self.totalPrice)
-    seriesNetPrice.fget.short_description = _('Net price of class series')
-
-    @property
-    def eventNetPrice(self):
-        if self.totalPrice == 0:
-            return 0
-        return self.priceWithDiscount * (self.publicEventPrice / self.totalPrice)
-    eventNetPrice.fget.short_description = _('Net price of public events')
-
-    @property
-    def addTaxes(self):
+    def invoiceDetails(self):
         '''
-        If the buyer is expected to pay sales tax, this can be used in the
-        registration process to show a line item of what the taxes are.
+        Return aggregates that split out totals associated with this
+        registration as well as other non-registration items
         '''
-        if getConstant('registration__buyerPaysSalesTax'):
-            return self.priceWithDiscount * (getConstant('registration__salesTaxRate') or 0) / 100
-        else:
-            return 0
 
-    @property
-    def priceWithDiscountAndTaxes(self):
-        '''
-        Some payment processors don't separate out taxes as a line item, so this
-        method ensures that individuals are charged the appropriate amount depending
-        on whether or no we expect them to pay any taxes on their purchase.
-        '''
-        return self.priceWithDiscount + self.addTaxes
-
-    @property
-    def totalDiscount(self):
-        return self.totalPrice - self.priceWithDiscount
-    totalDiscount.fget.short_description = _('Total discounts')
+        return self.invoice.invoiceitem_set.annotate(
+            from_reg=Case(
+                When(eventRegistration__registration__id=self.id, then=Value(True)),
+                default=Value(False), output_field=models.FloatField()
+            ),
+        ).aggregate(
+            reg_grossTotal=Coalesce(Sum(F('grossTotal')*F('from_reg')), 0),
+            reg_total=Coalesce(Sum(F('total')*F('from_reg')), 0),
+            reg_adjustments=Coalesce(Sum(F('adjustments')*F('from_reg')), 0),
+            reg_taxes=Coalesce(Sum(F('taxes')*F('from_reg')), 0),
+            reg_fees=Coalesce(Sum(F('fees')*F('from_reg')), 0),
+            other_grossTotal=Coalesce(Sum(F('grossTotal')*(1 - F('from_reg'))), 0),
+            other_total=Coalesce(Sum(F('total')*(1 - F('from_reg'))), 0),
+            other_adjustments=Coalesce(Sum(F('adjustments')*(1 - F('from_reg'))), 0),
+            other_taxes=Coalesce(Sum(F('taxes')*(1 - F('from_reg'))), 0),
+            other_fees=Coalesce(Sum(F('fees')*(1 - F('from_reg'))), 0),
+            grossTotal=Coalesce(Sum(F('grossTotal')), 0),
+            total=Coalesce(Sum(F('total')), 0),
+            adjustments=Coalesce(Sum(F('adjustments')), 0),
+            taxes=Coalesce(Sum(F('taxes')), 0),
+            fees=Coalesce(Sum(F('fees')), 0),
+        )
 
     @property
     def discounted(self):
-        return (self.totalPrice != self.priceWithDiscount)
+        details = self.invoiceDetails
+        return details['reg_grossTotal'] != details['reg_total']
     discounted.fget.short_description = _('Is discounted')
+
+    @property
+    def grossTotal(self):
+        '''
+        Return just the portion of the invoice grossTotal associated with this
+        registration.
+        '''
+        details = self.invoiceDetails
+        return details['reg_grossTotal']
+    grossTotal.fget.short_description = _('Total before discounts')
+
+    @property
+    def total(self):
+        '''
+        Return just the portion of the invoice total associated with this
+        registration.
+        '''
+        details = self.invoiceDetails
+        return details['reg_total']
+    total.fget.short_description = _('Total billed amount')
+
+    @property
+    def adjustments(self):
+        '''
+        Return just the portion of the invoice adjustments associated with this
+        registration.
+        '''
+        details = self.invoiceDetails
+        return details['reg_adjustments']
+    adjustments.fget.short_description = _('Refunds/adjustments')
+
+    @property
+    def taxes(self):
+        '''
+        Return just the portion of the invoice adjustments associated with this
+        registration.
+        '''
+        details = self.invoiceDetails
+        return details['reg_adjustments']
+    taxes.fget.short_description = _('Taxes')
+
+    @property
+    def fees(self):
+        '''
+        Return just the portion of the invoice fees associated with this
+        registration.
+        '''
+        details = self.invoiceDetails
+        return details['reg_fees']
+    fees.fget.short_description = _('Processing fees')
 
     @property
     def firstStartTime(self):
@@ -3081,6 +3107,7 @@ class Registration(EmailRecipientMixin, models.Model):
         '''
         if not hasattr(self, 'invoice'):
             return True
+
         if apps.is_installed('danceschool.financial'):
             '''
             If the financial app is installed, then we can also check additional
@@ -3089,8 +3116,8 @@ class Registration(EmailRecipientMixin, models.Model):
             if self.invoice.revenueNotYetReceived != 0 or self.invoice.revenueMismatch:
                 return True
         return (
-            self.priceWithDiscount != self.invoice.total or
-            self.invoice.unpaid or self.invoice.outstandingBalance != 0
+            self.invoice.itemTotalMismatch or self.invoice.unpaid or
+            self.invoice.outstandingBalance != 0
         )
     warningFlag.fget.short_description = _('Issue with event registration')
 
@@ -3128,32 +3155,6 @@ class Registration(EmailRecipientMixin, models.Model):
             return occurrences[numClasses].endTime
         else:
             return occurrences.last().startTime
-
-    def getSeriesPriceForMonth(self, dateOfInterest):
-        ''' get all series associated with this registration '''
-        return sum([
-            x.price for x in
-            self.eventregistration_set.filter(
-                series__year=dateOfInterest.year, series__month=dateOfInterest.month
-            ).filter(Q(event__series__isnull=False))
-        ])
-
-    def getEventPriceForMonth(self, dateOfInterest):
-        # get all series associated with this registration
-        return sum([
-            x.price for x in
-            self.eventregistration_set.filter(
-                series__year=dateOfInterest.year, series__month=dateOfInterest.month
-            ).filter(Q(event__publicevent__isnull=False))
-        ])
-
-    def getPriceForMonth(self, dateOfInterest):
-        return sum([
-            x.price for x in
-            self.eventregistration_set.filter(
-                series__year=dateOfInterest.year, series__month=dateOfInterest.month
-            )
-        ])
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -3201,8 +3202,8 @@ class Registration(EmailRecipientMixin, models.Model):
                 'firstName': kwargs.pop('firstName', None) or self.firstName,
                 'lastName': kwargs.pop('lastName', None) or self.lastName,
                 'email': kwargs.pop('email', None) or self.email,
-                'grossTotal': self.totalPrice,
-                'total': self.priceWithDiscount or 0,
+                'grossTotal': kwargs.pop('grossTotal', 0),
+                'total': kwargs.pop('total', 0),
                 'taxes': kwargs.pop('taxes', 0),
                 'submissionUser': submissionUser,
                 'collectedByUser': collectedByUser,
@@ -3229,7 +3230,7 @@ class Registration(EmailRecipientMixin, models.Model):
         elif update:
             needs_update = False
 
-            other_details = self.getOtherInvoiceDetails()
+            invoice_details = self.invoiceDetails
 
             if (
                 self.invoice.firstName != (self.firstName or kwargs.get('firstName', None)) or
@@ -3244,11 +3245,19 @@ class Registration(EmailRecipientMixin, models.Model):
                 self.invoice.status = status
                 needs_update = True
             if (
-                self.invoice.grossTotal != self.totalPrice + other_details.get('grossTotal',0) or
-                self.invoice.total != self.priceWithDiscount + other_details.get('total', 0)
+                kwargs.get('grossTotal', None) and kwargs.get('total', None) and (
+                    self.invoice.grossTotal != (
+                        kwargs.get('grossTotal') +
+                        invoice_details.get('other_grossTotal',0)
+                    ) or
+                    self.invoice.total != (
+                        kwargs.get('total') +
+                        invoice_details.get('other_total', 0)
+                    )
+                )
             ):
-                self.invoice.grossTotal = self.totalPrice + other_details.get('grossTotal', 0)
-                self.invoice.total = self.priceWithDiscount + other_details.get('total', 0)
+                self.invoice.grossTotal = kwargs.get('grossTotal') + invoice_details.get('other_grossTotal', 0)
+                self.invoice.total = kwargs.get('total') + invoice_details.get('other_total', 0)
                 needs_update = True
 
             if (
@@ -3265,26 +3274,6 @@ class Registration(EmailRecipientMixin, models.Model):
                 self.invoice.save()
 
         return self.invoice
-
-    def getOtherInvoiceDetails(self):
-        '''
-        Return a dictionary with details on the sum of totals for non-registration
-        items on the invoice associated with this registration.
-        '''
-
-        if not getattr(self, 'invoice', None):
-            return {}
-        return self.invoice.invoiceitem_set.exclude(
-            id__in=self.eventregistration_set.values_list(
-                'invoiceItem', flat=True
-            )
-        ).aggregate(
-            grossTotal=Coalesce(Sum('grossTotal'), 0),
-            total=Coalesce(Sum('total'), 0),
-            adjustments=Coalesce(Sum('adjustments'), 0),
-            taxes=Coalesce(Sum('taxes'), 0),
-            fees=Coalesce(Sum('fees'), 0),
-        )
 
     def finalize(self, **kwargs):
         '''
@@ -3405,10 +3394,6 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         verbose_name=_('Applicable event occurrences (for drop-ins only)')
     )
 
-    price = models.FloatField(
-        _('Price before discounts'), default=0, validators=[MinValueValidator(0)]
-    )
-
     customer = models.ForeignKey(
         Customer, verbose_name=_('Customer'), null=True, on_delete=models.SET_NULL
     )
@@ -3433,15 +3418,11 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     @property
-    def netPrice(self):
-        if self.registration.totalPrice == 0:
-            return 0
-        return self.price * (self.registration.netPrice / self.registration.totalPrice)
-    netPrice.fget.short_description = _('Net price')
-
-    @property
     def discounted(self):
-        return (self.price != self.netPrice)
+        return (
+            getattr(self.invoiceItem, 'grossTotal', 0) !=
+            getattr(self.invoiceItem, 'total', 0)
+        )
     discounted.fget.short_description = _('Is discounted')
 
     @property
@@ -3462,7 +3443,6 @@ class EventRegistration(EmailRecipientMixin, models.Model):
             if self.invoiceitem.revenueNotYetReceived != 0 or self.invoiceitem.revenueMismatch:
                 return True
         return (
-            self.price != self.invoiceitem.grossTotal or
             self.invoiceitem.invoice.unpaid or self.invoiceitem.invoice.outstandingBalance != 0
         )
     warningFlag.fget.short_description = _('Issue with event registration')
@@ -3519,7 +3499,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
         return self.eventcheckin_set.filter(filters).exists()
 
-    def link_invoice_item(self):
+    def link_invoice_item(self, **kwargs):
         '''
         If an invoice item does not already exist for this event registration,
         then create one.  Return the linked invoice item.
@@ -3540,10 +3520,17 @@ class EventRegistration(EmailRecipientMixin, models.Model):
                 _('Existing invoice item not associated with passed invoice.')
             )
 
+        grossTotal = kwargs.pop('grossTotal', None)
+        total = kwargs.pop('total', None)
+        
+        if grossTotal is None:
+            grossTotal = self.event.getBasePrice(**kwargs)
+        if total is None:
+            total = grossTotal
+
         if not getattr(self, 'invoiceItem', None):
             new_item = InvoiceItem(
-                invoice=invoice, grossTotal=self.price, total=self.price,
-                fees=0
+                invoice=invoice, fees=0, grossTotal=grossTotal, total=total,
             )
 
             # If there are no items but already fees, apply those
@@ -3560,9 +3547,17 @@ class EventRegistration(EmailRecipientMixin, models.Model):
     def save(self, *args, **kwargs):
         '''
         Before saving, create an invoice item for this registration if one does
-        not already exist.
+        not already exist.  To avoid duplicate calls to link_invoice_item(),
+        eligible kwargs used by that method can be passed as save method kwargs.
         '''
-        self.invoiceItem = self.link_invoice_item()
+        link_kwargs = {
+            'grossTotal': kwargs.pop('grossTotal', None),
+            'total': kwargs.pop('total', None),
+            'payAtDoor': kwargs.pop('payAtDoor', False),
+            'dropIns': kwargs.pop('dropIns', 0),
+        }
+
+        self.invoiceItem = self.link_invoice_item(**link_kwargs)
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):

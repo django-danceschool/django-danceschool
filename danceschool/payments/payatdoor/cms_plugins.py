@@ -74,7 +74,7 @@ class PayAtDoorFormPlugin(CMSPluginBase):
     def get_cart_form(self, context, instance, *args, **kwargs):
         invoice = str(getattr(context.get('invoice', None), 'id', ''))
         user = getattr(context.get('user', None), 'id', '')
-        initialAmount = context.get('netPrice', 0)
+        initialAmount = getattr(context.get('invoice', None), 'outstandingBalance', 0)
 
         return DoorPaymentForm(
             user=user, invoice=invoice, initialAmount=round(initialAmount, 2)

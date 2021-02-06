@@ -4,11 +4,9 @@
 {% block content %}
 
 <h3 class="my-4">{% trans "Invoice #" %}{{ invoice.id }}
-{% if registration %}
-	{% blocktrans with name=registration.fullName %}
+{% blocktrans with name=invoice.fullName %}
 	for {{ name }}
-	{% endblocktrans %}
-{% endif %}
+{% endblocktrans %}
 </h3>
 
 {% getReturnPage as returnPage %}
@@ -22,7 +20,6 @@
 	<dt>{% trans "Net Amount Paid" %}:</dt><dd>{{ invoice.amountPaid }}</dd>
 	<dt>{% trans "Price with Discounts" %}:</dt><dd>{{ invoice.total }}</dd>
 	<dt>{% trans "Paid Online" %}:</dt><dd>{{ invoice.paidOnline|yesno }}</dd>
-	{% if registration %}<dt>{% trans "Student" %}:</dt><dd>{{ registration.student|yesno }}</dd>{% endif %}
 </dl>
 
 {% if payments %}
@@ -49,7 +46,7 @@
 </div>
 
 {% if invoice.revenueNotYetReceived %}
-	<div class="alert alert-danger" role="alert">{% trans "Revenue has been recorded for this registration that has not yet been marked as received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below." %}</div>
+	<div class="alert alert-danger" role="alert">{% trans "Revenue has been recorded for this invoice that has not yet been marked as received.  In determining any refund amount, please account for revenue that has not yet been received.  Items with revenue not yet marked as received are highlighted below." %}</div>
 {% endif %}
 {% if invoice.unpaid %}
 	<div class="alert alert-danger" role="alert">{% trans "This invoice is not yet marked as paid.  In determining any refund amount, please account for revenue that has not yet been received." %}</div>
@@ -107,12 +104,14 @@
 			<td>{{ item.id }}</td>
 			<td>{{ item.name }}</td>
 			<td>
-				{% for occ in item.finalEventRegistration.event.eventoccurrence_set.all %}
-					{{ occ.startTime|date:"M. jS" }}{% if not forloop.last %}, {% endif %}
-				{% endfor %}
+				{% if item.eventRegistration %}
+					{% for occ in item.eventRegistration.event.eventoccurrence_set.all %}
+						{{ occ.startTime|date:"M. jS" }}{% if not forloop.last %}, {% endif %}
+					{% endfor %}
+				{% endif %}
 			</td>
-			<td id="item_price_{{ item.id }}">{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
-			<td id="item_netPrice_{{ item.id }}">{{ currencySymbol }}{{ item.total|floatformat:2 }}</td>
+			<td id="item_grossTotal_{{ item.id }}">{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
+			<td id="item_total_{{ item.id }}">{{ currencySymbol }}{{ item.total|floatformat:2 }}</td>
 			{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
 				<td id="item_taxes_{{ item.id }}">{{ currencySymbol }}{{ item.taxes|floatformat:2 }}</td>
 			{% endif %}
@@ -163,12 +162,12 @@
 			if (this.checked) {
 				var thisType = this.id.split("_")[1];
 				var thisId = this.id.split("_")[3];
-				var netPrice = parseFloat($("#" + thisType + "_netPrice_" + thisId).html().replace("{{ currencySymbol }}",""));
+				var total = parseFloat($("#" + thisType + "_total_" + thisId).html().replace("{{ currencySymbol }}",""));
 				{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
 					var taxes = parseFloat($("#" + thisType + "_taxes_" + thisId).html().replace("{{ currencySymbol }}",""));
-					var refundable = netPrice + taxes;
+					var refundable = total + taxes;
 				{% else %}
-					var refundable = netPrice;
+					var refundable = total;
 				{% endif %}
 
 				$("#id_" + thisType + "_refundamount_" + thisId).val(refundable.toFixed(2));
@@ -192,13 +191,13 @@
 				var thisType = n.id.split("_")[1];
 				var thisId = n.id.split("_")[3];
 				var thisRefund = parseFloat($("#id_" + thisType + "_refundamount_" + thisId).val());
-				var netPrice = parseFloat($("#" + thisType + "_netPrice_" + thisId).html().replace("$",""));
+				var total = parseFloat($("#" + thisType + "_total_" + thisId).html().replace("$",""));
 
 				{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
 					var taxes = parseFloat($("#" + thisType + "_taxes_" + thisId).html().replace("{{ currencySymbol }}",""));
-					var refundable = netPrice + taxes;
+					var refundable = total + taxes;
 				{% else %}
-					var refundable = netPrice;
+					var refundable = total;
 				{% endif %}
 
 				if (thisRefund != refundable) {

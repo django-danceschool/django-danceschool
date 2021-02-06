@@ -16,39 +16,48 @@
 	{% block summary %}
 
 	    <h2>
-	    	{% blocktrans with name=registration.firstName|default_if_none:"Friend" %}
+	    	{% blocktrans with name=invoice.firstName|default_if_none:"Friend" %}
 	    	Hi {{ name }}!
 	    	{% endblocktrans %}
 	    </h2>
 	    
-	    <p>{% trans "You are about to register for the following" %}:</p>
+	    <p>{% trans "You have selected the following" %}:</p>
 
 	    <table class="table classregsummary">
 		    <tr>
-		        <th>{% trans "Class/Event Name" %}</th>
+		        <th>{% trans "Description" %}</th>
 		        <th>{% trans "Date(s)" %}</th>
 		        <th>{% trans "Time" %}</th>
 		        <th>{% trans "Role" %}</th>
 		        <th>{% trans "Price" %}</th>
 		    </tr>
 
-		    {% for item in registration.eventregistration_set.all %}
+		    {% for item in invoice.invoiceitem_set.all %}
 		    <tr>
-		        <td>{% if item.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.event.name }}</td>
-		        <td>
-		        {% if item.event.eventoccurrence_set.count == 4 and not item.event.series.special %}
-		        	{% blocktrans with weekday=item.event.startTime|date:"l" month=item.event.month|readable_month startTime=item.event.startTime|date:"F jS" %}
-		        	{{ weekday }}s in {{ month }}, starting {{ startTime }}
-		        	{% endblocktrans %}
-		        {% else %}
-		        	{% for occ in item.event.eventoccurrence_set.all reversed %}
-		        		{{ occ.startTime|date:"D. F jS" }}{% if not forloop.last %}, {% endif %}
-		        	{% endfor %}
-		        {% endif %}
-		        </td>
-		        <td>{{ item.event.startTime|date:"P" }}</td>
-		        <td>{{ item.role.name|default:"N/A" }}</td>
-				<td>{{ currencySymbol }}{{ item.price|floatformat:"-2" }}</td>
+				{% with item.eventRegistration as er %}
+				{% if er %}
+					<td>{% if er.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ er.event.name }}</td>
+			        <td>
+					{% if er.event.eventoccurrence_set.count == 4 and not er.event.series.special %}
+						{% blocktrans with weekday=er.event.startTime|date:"l" month=er.event.month|readable_month startTime=er.event.startTime|date:"F jS" %}
+						{{ weekday }}s in {{ month }}, starting {{ startTime }}
+						{% endblocktrans %}
+					{% else %}
+						{% for occ in er.event.eventoccurrence_set.all reversed %}
+							{{ occ.startTime|date:"D. F jS" }}{% if not forloop.last %}, {% endif %}
+						{% endfor %}
+					{% endif %}
+					</td>
+					<td>{{ er.event.startTime|date:"P" }}</td>
+					<td>{{ er.role.name|default:"N/A" }}</td>
+				{% else %}
+					<td>{{ item.description }}</td>
+					<td></td>
+					<td></td>
+					<td></td>
+				{% endif %}
+				{% endwith %}
+				<td>{{ currencySymbol }}{{ item.grossTotal|floatformat:"-2" }}</td>
 		    </tr>
 		    {% endfor %}
 	    </table>
@@ -76,12 +85,20 @@
 			{% endif %}
 
 			{# Add taxes if they are not included in the published price #}
-			{% if taxes %}
-				<strong>{% trans "Subtotal" %}:</strong> {{ currencySymbol }}{{ subtotal|floatformat:"-2" }}<br>			
-				<strong>{% trans "Taxes" %}:</strong> {{ currencySymbol }}{{ taxes|floatformat:"-2" }}<br>
+			{% if invoice.adjustments or invoice.amountPaid or invoice.taxes and invoice.buyerPaysSalesTax %}
+				<strong>{% trans "Subtotal" %}:</strong> {{ currencySymbol }}{{ invoice.total|floatformat:"-2" }}<br>			
+			{% endif  %}
+			{% if invoice.adjustments %}
+				<strong>{% trans "Adjustments" %}:</strong> {{ currencySymbol }}{{ invoice.adjustments|floatformat:"-2" }}<br>
+			{% endif %}
+			{% if invoice.taxes %}
+				<strong>{% trans "Taxes" %}:</strong> {{ currencySymbol }}{{ invoice.taxes|floatformat:"-2" }}<br>
+			{% endif %}
+			{% if invoice.amountPaid %}
+				<strong>{% trans "Previous Payments" %}:</strong> -&nbsp;{{ currencySymbol }}{{ invoice.amountPaid|floatformat:"-2" }}<br>
 			{% endif %}
 
-	        <div style="font-size: 1.2em;"><strong><em>{% trans "Total" %}:</em></strong> {{ currencySymbol }}{{ netPrice|floatformat:"-2" }}</div>
+	        <div style="font-size: 1.2em;"><strong><em>{% trans "Total" %}:</em></strong> {{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:"-2" }}</div>
 	    </p>
 
 	{% endblock %}

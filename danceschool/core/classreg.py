@@ -174,7 +174,6 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         # Reset the list of event registrations (if it's not empty) and build it
         # from the form submission data.
         self.event_registrations = []
-        grossPrice = 0
 
         for key, value_list in event_listing.items():
             this_event = associated_events.get(id=key)
@@ -215,29 +214,30 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
                 logger.debug('Creating temporary event registration for: %s' % key)
                 if len(dropInList) > 0:
+                    this_price = this_event.getBasePrice(dropIns=len(dropInList))
                     tr = EventRegistration(
                         event=this_event, dropIn=True,
-                        price=this_event.getBasePrice(dropIns=len(dropInList)),
                         occurrences=dropInList,
                     )
                 else:
+                    this_price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
                     tr = EventRegistration(
-                        event=this_event, price=this_event.getBasePrice(payAtDoor=reg.payAtDoor), role_id=this_role_id
+                        event=this_event, role_id=this_role_id
                     )
                 # If it's possible to store additional data and such data exist, then store them.
                 tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
+                tr.data['__price'] = this_price
                 self.event_registrations.append(tr)
-                grossPrice += tr.price
 
         # If we got this far with no issues, then save
-        reg.priceWithDiscount = grossPrice
         invoice = reg.link_invoice(expirationDate=expiry)
         reg.save()
 
         for er in self.event_registrations:
             # Saving the event registration automatically creates an InvoiceItem.
             er.registration = reg
-            er.save()
+            this_price = er.data.pop('__price')
+            er.save(grossTotal=this_price, total=this_price)
 
         # Put these in a property in case the get_success_url() method needs them.
         self.registration = reg
@@ -626,11 +626,11 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             # Update the contents of the event registration.
             if dropIn:
                 this_eventreg.dropIn = True
-                this_eventreg.price = price = this_event.getBasePrice(dropIns=1)
+                this_eventreg.data['__price'] = this_event.getBasePrice(dropIns=1)
                 this_eventreg.occurrences = None
             else:
                 this_eventreg.dropIn = False
-                this_eventreg.price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
+                this_eventreg.data['__price'] = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
                 this_eventreg.role = DanceRole.objects.filter(id=this_role).first()
 
             # Sometimes requireFull is passed as a string and sometimes as boolean,
@@ -645,10 +645,13 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             if e.get('data', False):
                 if isinstance(e['data'], dict):
+                    e['data'].pop('__price', None)
                     this_eventreg.data.update(e['data'])
                 else:
                     try:
-                        this_eventreg.data.update(json.loads(e['data']))
+                        new_data = json.loads(e['data'])
+                        new_data.pop('__price', None)
+                        this_eventreg.data.update(new_data)
                     except json.decoder.JSONDecodeError:
                         errors.append({
                             'code': 'invalid_json',
@@ -656,7 +659,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                         })
 
             self.event_registrations.append(this_eventreg)
-            grossPrice += this_eventreg.price
+            grossPrice += this_eventreg.data['__price']
 
         # We now have a registration, but before going further, return failure
         # if any errors have arisen.
@@ -669,15 +672,18 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # If we got this far with no issues, then save everything.  Delete any
         # existing associated EventRegistrations that were not passed
         # in via POST.
-        reg.priceWithDiscount = grossPrice
         invoice = reg.link_invoice(expirationDate=expiry)
         reg.save()
         reg.eventregistration_set.filter(id__in=unmatched_eventreg_ids).delete()
 
         for er in self.event_registrations:
             # Saving the event registration automatically creates an InvoiceItem.
+            # We pop the price information out of data before saving and pass it
+            # to the save method so that the linked invoice item has the right
+            # price information.
             er.registration = reg
-            er.save()
+            this_price = er.data.pop('__price', None)
+            er.save(grossTotal=this_price, total=this_price)
 
         # Put this in a property in case the get_success_url() method needs it.
         self.registration = reg
@@ -695,7 +701,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     'event': x.event.id, 'name': x.event.name,
                     'eventreg': x.id,
                     'dropIn': x.dropIn, 'roleId': getattr(x.role, 'id', None),
-                    'roleName': getattr(x.role, 'name', None), 'price': x.price,
+                    'roleName': getattr(x.role, 'name', None),
+                    'price': x.data.get('__price', None),
                     'requireFull': x.data.get('requireFull', True),
                     'paymentMethod': x.data.get('paymentMethod', None),
                     'autoSubmit': x.data.get('autoSubmit', None),
@@ -903,11 +910,15 @@ class RegistrationSummaryView(
         reg = kwargs.get('reg')
         invoice = kwargs.get('invoice')
 
-        initial_price = invoice.grossTotal
+        discount_codes = None
+        total_discount_amount = 0
+        discounted_total = invoice.total
+        addons = []
 
         if reg:
+            initial_reg_price = reg.invoiceDetails['reg_grossTotal']
             discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
-                reg, initial_price
+                reg, initial_reg_price
             )
             addons = self.getAddons(reg)
 
@@ -918,10 +929,6 @@ class RegistrationSummaryView(
                     discount_amount=discount.discount_amount,
                     registration=reg,
                 )
-        else:
-            total_discount_amount = 0
-            discounted_total = initial_price
-            addons = []
 
         # The return value to this signal should contain any adjustments that
         # need to be made to the price (e.g. from vouchers if the voucher app
@@ -939,10 +946,6 @@ class RegistrationSummaryView(
         for response in adjustment_responses:
             adjustment_list += response[1][0]
             adjustment_amount += response[1][1]
-
-        if reg:
-            reg.priceWithDiscount = discounted_total - adjustment_amount
-            reg.save()
 
         # The updateTotals method allocates the total adjustment across the
         # invoice items.
@@ -1033,10 +1036,6 @@ class RegistrationSummaryView(
             ),
             'registration': reg,
             'invoice': invoice,
-            "totalPrice": invoice.grossTotal,
-            'subtotal': invoice.total,
-            'taxes': getattr(reg, 'addTaxes', False),
-            "netPrice": getattr(reg, 'priceWithDiscountAndTaxes', invoice.total),
             "addonItems": addons,
             "discount_codes": discount_codes,
             "discount_code_amount": discount_amount,
@@ -1044,7 +1043,7 @@ class RegistrationSummaryView(
             "total_voucher_amount": total_voucher_amount,
             "total_discount_amount": discount_amount + total_voucher_amount,
             "currencyCode": getConstant('general__currencyCode'),
-            'payAtDoor': getattr(reg, 'payAtDoor', True),
+            'payAtDoor': getattr(reg, 'payAtDoor', False),
             'is_complete': isComplete,
             'is_free': isFree,
         })
@@ -1110,35 +1109,39 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         context_data = super().get_context_data(**kwargs)
         reg = self.registration
 
-        initial_price = sum([x.price for x in reg.eventregistration_set.all()])
-
-        discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
-            reg, initial_price
-        )
-        addons = self.getAddons(reg)
-
         context_data.update({
-            'reg': reg,
             'invoice': self.invoice,
-            'payAtDoor': reg.payAtDoor,
             'currencySymbol': getConstant('general__currencySymbol'),
-            'subtotal': initial_price,
-            'addonItems': addons,
-            'discount_codes': discount_codes,
-            'discount_code_amount': total_discount_amount,
-            'discounted_subtotal': discounted_total,
         })
 
-        # Get a voucher ID to check from the current contents of the form
-        voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
+        if reg:
+            initial_reg_price = reg.invoiceDetails['reg_grossTotal']
 
-        if voucherId:
-            context_data.update(
-                self.getVoucher(voucherId, reg, discounted_total)
+            discount_codes, total_discount_amount, discounted_total = self.getDiscounts(
+                reg, initial_reg_price
             )
+            addons = self.getAddons(reg)
+
+            context_data.update({
+                'reg': reg,
+                'payAtDoor': reg.payAtDoor,
+                'currencySymbol': getConstant('general__currencySymbol'),
+                'addonItems': addons,
+                'discount_codes': discount_codes,
+                'discount_code_amount': total_discount_amount,
+            })
+
+            # Get a voucher ID to check from the current contents of the form
+            voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
+
+            if voucherId:
+                context_data.update(
+                    self.getVoucher(voucherId, reg, discounted_total)
+                )
 
         if (
-            reg.payAtDoor or self.request.user.is_authenticated or not
+            getattr(reg,'payAtDoor', None) or
+            self.request.user.is_authenticated or not
             getConstant('registration__allowAjaxSignin')
         ):
             context_data['show_ajax_form'] = False

@@ -281,20 +281,22 @@ class BookPrivateLessonView(FormView):
                 final=False,
             )
 
+            price = lesson.getBasePrice(payAtDoor=payAtDoor) * affectedSlots.count()
+
             tr = EventRegistration(
                 event=lesson, role=role,
-                price=lesson.getBasePrice(payAtDoor=payAtDoor) * affectedSlots.count()
             )
 
             # Any remaining form data goes into the JSONfield.
             reg.data = form.cleaned_data or {}
 
             # Now we are ready to save and proceed.
-            reg.priceWithDiscount = tr.price
-            invoice = reg.link_invoice(expirationDate=expiry)
+            invoice = reg.link_invoice(
+                expirationDate=expiry, grossTotal=price, total=price
+            )
             reg.save()
             tr.registration = reg
-            tr.save(invoice=invoice)
+            tr.save(grossTotal=price, total=price)
 
             affectedSlots.update(
                 lessonEvent=lesson,
