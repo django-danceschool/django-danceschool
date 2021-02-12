@@ -28,7 +28,6 @@ setup(
         'django-allauth>=0.31.0',
         'django-autocomplete-light>=3.5.1',
         'django-braces>=1.8.1',
-        'django-choices>=1.5.0',
         'django-ckeditor>=5.4.0',
         'django-ckeditor-filebrowser-filer>=0.3.0',
         'django-cms>=3.8.0',

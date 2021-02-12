@@ -2,7 +2,6 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 
-from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
 from collections import namedtuple
 
@@ -83,11 +82,11 @@ class DiscountCategory(models.Model):
 class DiscountCombo(models.Model):
 
     # Choices of Discount Types
-    class DiscountType(DjangoChoices):
-        flatPrice = ChoiceItem('F', _('Exact Specified Price'))
-        dollarDiscount = ChoiceItem('D', _('Dollar Discount from Regular Price'))
-        percentDiscount = ChoiceItem('P', _('Percentage Discount from Regular Price'))
-        addOn = ChoiceItem('A', _('Free Add-on Item (Can be combined with other discounts)'))
+    class DiscountType(models.TextChoices):
+        flatPrice = ('F', _('Exact Specified Price'))
+        dollarDiscount = ('D', _('Dollar Discount from Regular Price'))
+        percentDiscount = ('P', _('Percentage Discount from Regular Price'))
+        addOn = ('A', _('Free Add-on Item (Can be combined with other discounts)'))
 
     # An applied discount may not apply to all items in a customer's
     # cart, so an instance of this class keeps track of the code
@@ -275,7 +274,7 @@ class DiscountCombo(models.Model):
         Rather than embedding logic re: door pricing,
         other code can call this method.
         '''
-        if self.discountType is not DiscountCombo.DiscountType.flatPrice:
+        if self.discountType != DiscountCombo.DiscountType.flatPrice:
             return None
         if payAtDoor:
             return self.doorPrice

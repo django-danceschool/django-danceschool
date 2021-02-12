@@ -64,7 +64,7 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
 
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertIn(s, response.context['regOpenSeries'])
+        self.assertIn(s, response.context_data.get('regOpenSeries'))
 
         # Sign up for the series, and check that we proceed to the student information page.
         # Because of the way that roles are encoded on this form, we just grab the value to pass

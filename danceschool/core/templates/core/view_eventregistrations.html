@@ -107,7 +107,7 @@
 				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ details.adjustments|floatformat:2 }}
 				{% endif %}
 				{% if reg.registration.invoice.outstandingBalance != 0 %}<br />
-				<strong>{% trans "Invoice Status" %}:</strong> {{ reg.registration.invoice.statusLabel }}<br />
+				<strong>{% trans "Invoice Status" %}:</strong> {{ reg.registration.invoice.get_status_display }}<br />
 				<strong>{% trans "Outstanding Balance" %}:</strong> {{ reg.registration.invoice.outstandingBalance|floatformat:2 }}<br />
 				{% endif %}
 			{% else %}

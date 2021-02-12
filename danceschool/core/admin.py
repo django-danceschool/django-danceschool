@@ -853,7 +853,9 @@ class StaffMemberAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
     )
 
     def instructor_status(self, obj):
-        return getattr(getattr(obj, 'instructor'), 'statusLabel')
+        instructor = getattr(obj, 'instructor', None)
+        if instructor:
+            return instructor.get_status_display()
     instructor_status.short_description = _('Instructor status')
 
     def instructor_availableForPrivates(self, obj):

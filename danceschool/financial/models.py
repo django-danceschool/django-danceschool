@@ -9,7 +9,6 @@ from polymorphic.models import PolymorphicModel
 from filer.fields.file import FilerFileField
 from filer.models import Folder
 import math
-from djchoices import DjangoChoices, ChoiceItem
 from calendar import day_name
 from datetime import time, timedelta
 from dateutil.relativedelta import relativedelta
@@ -179,15 +178,15 @@ class RepeatedExpenseRule(PolymorphicModel):
     and instructors, as well as generic repeated expenses.
     '''
 
-    class RateRuleChoices(DjangoChoices):
-        hourly = ChoiceItem('H', _('Per hour'))
-        daily = ChoiceItem('D', _('Per day of scheduled events'))
-        weekly = ChoiceItem('W', _('Per week'))
-        monthly = ChoiceItem('M', _('Per month'))
+    class RateRuleChoices(models.TextChoices):
+        hourly = ('H', _('Per hour'))
+        daily = ('D', _('Per day of scheduled events'))
+        weekly = ('W', _('Per week'))
+        monthly = ('M', _('Per month'))
 
-    class MilestoneChoices(DjangoChoices):
-        start = ChoiceItem('S', _('First occurrence starts'))
-        end = ChoiceItem('E', _('Last occurrence ends'))
+    class MilestoneChoices(models.TextChoices):
+        start = ('S', _('First occurrence starts'))
+        end = ('E', _('Last occurrence ends'))
 
     rentalRate = models.FloatField(
         _('Expense Rate'), validators=[MinValueValidator(0)], help_text=_('In default currency')
@@ -476,7 +475,7 @@ class RepeatedExpenseRule(PolymorphicModel):
         ''' This should be overridden for child classes '''
         return '%s %s' % (
             self.rentalRate,
-            self.RateRuleChoices.values.get(self.applyRateRule, self.applyRateRule)
+            self.get_applyRateRule_display(),
         )
     ruleName.fget.short_description = _('Rule name')
 

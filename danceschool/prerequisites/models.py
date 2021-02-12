@@ -3,8 +3,6 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
-from djchoices import DjangoChoices, ChoiceItem
-
 from danceschool.core.models import (
     Customer, ClassDescription, DanceTypeLevel, DanceRole,
     Registration, EventRegistration
@@ -19,15 +17,15 @@ class Requirement(models.Model):
     can be met is for a Customer to have explicitly met the requirement
     through a CustomerRequirement object.
     '''
-    class BooleanChoice(DjangoChoices):
-        booleanAnd = ChoiceItem('&', _('Must meet all requirement items'))
-        booleanOr = ChoiceItem('|', _('Must meet one or more requirement items'))
-        booleanNot = ChoiceItem('!', _('Must not meet any requirement items'))
+    class BooleanChoice(models.TextChoices):
+        booleanAnd = ('&', _('Must meet all requirement items'))
+        booleanOr = ('|', _('Must meet one or more requirement items'))
+        booleanNot = ('!', _('Must not meet any requirement items'))
 
-    class EnforcementChoice(DjangoChoices):
-        none = ChoiceItem('N', _('Enforcement disabled'))
-        warning = ChoiceItem('W', _('Allow registration with warning'))
-        error = ChoiceItem('E', _('Raise error and do not allow registration'))
+    class EnforcementChoice(models.TextChoices):
+        none = ('N', _('Enforcement disabled'))
+        warning = ('W', _('Allow registration with warning'))
+        error = ('E', _('Raise error and do not allow registration'))
 
     name = models.CharField(
         _('Requirement name/description'), max_length=300,
@@ -219,12 +217,12 @@ class RequirementItem(models.Model):
         on_delete=models.CASCADE
     )
 
-    class ConcurrencyRule(DjangoChoices):
-        prohibited = ChoiceItem('P', _('Must have previously taken'))
-        allowOneOverlapClass = ChoiceItem('1', _('May register/begin with one class remaining'))
-        allowTwoOverlapClasses = ChoiceItem('1', _('May register/begin with two classes remaining'))
-        allowed = ChoiceItem('A', _('Concurrent registration allowed'))
-        required = ChoiceItem('R', _('Concurrent registration required'))
+    class ConcurrencyRule(models.TextChoices):
+        prohibited = ('P', _('Must have previously taken'))
+        allowOneOverlapClass = ('1', _('May register/begin with one class remaining'))
+        allowTwoOverlapClasses = ('2', _('May register/begin with two classes remaining'))
+        allowed = ('A', _('Concurrent registration allowed'))
+        required = ('R', _('Concurrent registration required'))
 
     quantity = models.PositiveSmallIntegerField(_('Quantity'), default=1)
     requiredLevel = models.ForeignKey(

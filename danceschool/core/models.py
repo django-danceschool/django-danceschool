@@ -20,7 +20,6 @@ from filer.fields.image import FilerImageField
 from colorful.fields import RGBColorField
 from multiselectfield import MultiSelectField
 from calendar import month_name, day_name
-from djchoices import DjangoChoices, ChoiceItem
 from math import ceil
 from itertools import accumulate
 import logging
@@ -294,14 +293,14 @@ class Instructor(models.Model):
     '''
     These go on the instructors page.
     '''
-    class InstructorStatus(DjangoChoices):
-        roster = ChoiceItem('R', _('Regular Instructor'))
-        assistant = ChoiceItem('A', _('Assistant Instructor'))
-        training = ChoiceItem('T', _('Instructor-in-training'))
-        guest = ChoiceItem('G', _('Guest Instructor'))
-        retiredGuest = ChoiceItem('Z', _('Former Guest Instructor'))
-        retired = ChoiceItem('X', _('Former/Retired Instructor'))
-        hidden = ChoiceItem('H', _('Publicly Hidden'))
+    class InstructorStatus(models.TextChoices):
+        roster = ('R', _('Regular Instructor'))
+        assistant = ('A', _('Assistant Instructor'))
+        training = ('T', _('Instructor-in-training'))
+        guest = ('G', _('Guest Instructor'))
+        retiredGuest = ('Z', _('Former Guest Instructor'))
+        retired = ('X', _('Former/Retired Instructor'))
+        hidden = ('H', _('Publicly Hidden'))
 
     staffMember = models.OneToOneField(
         StaffMember, verbose_name=_('Staff member'), on_delete=models.CASCADE,
@@ -352,11 +351,6 @@ class Instructor(models.Model):
             self.activeUpcoming
         )
     retired.fget.short_description = _('Is upcoming guest')
-
-    @property
-    def statusLabel(self):
-        return self.InstructorStatus.values.get(self.status, '')
-    statusLabel.fget.short_description = _('Status')
 
     @property
     def fullName(self):
@@ -462,10 +456,10 @@ class Location(models.Model):
     '''
     Events are held at locations.
     '''
-    class StatusChoices(DjangoChoices):
-        active = ChoiceItem('A', _('Active Location'))
-        former = ChoiceItem('F', _('Former Location'))
-        specialEvents = ChoiceItem('S', _('Special Event Location (not shown by default)'))
+    class StatusChoices(models.TextChoices):
+        active = ('A', _('Active Location'))
+        former = ('F', _('Former Location'))
+        specialEvents = ('S', _('Special Event Location (not shown by default)'))
 
     name = models.CharField(
         _('Name'), max_length=80, unique=True,
@@ -520,11 +514,6 @@ class Location(models.Model):
         Allows for easy viewing of location-specific calendar feeds.
         '''
         return reverse('jsonCalendarLocationFeed', args=(self.id,))
-
-    @property
-    def statusLabel(self):
-        return self.StatusChoices.values.get(self.status, '')
-    statusLabel.fget.short_description = _('Status')
 
     def __str__(self):
         return self.name
@@ -774,19 +763,19 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     '''
     All public and private events, including class series, inherit off of this model.
     '''
-    class RegStatus(DjangoChoices):
-        disabled = ChoiceItem('D', _('Registration disabled'))
-        enabled = ChoiceItem('O', _('Registration enabled'))
-        heldClosed = ChoiceItem('K', _('Registration held closed (override default behavior)'))
-        heldOpen = ChoiceItem('H', _('Registration held open (override default)'))
-        linkOnly = ChoiceItem('L', _(
+    class RegStatus(models.TextChoices):
+        disabled = ('D', _('Registration disabled'))
+        enabled = ('O', _('Registration enabled'))
+        heldClosed = ('K', _('Registration held closed (override default behavior)'))
+        heldOpen = ('H', _('Registration held open (override default)'))
+        linkOnly = ('L', _(
             'Registration open, but hidden from registration page and calendar ' +
             '(link required to register)'
         ))
-        regHidden = ChoiceItem('C', _(
+        regHidden = ('C', _(
             'Hidden from registration page and registration closed, but visible on calendar.'
         ))
-        hidden = ChoiceItem('X', _('Event hidden and registration closed'))
+        hidden = ('X', _('Event hidden and registration closed'))
 
     status = models.CharField(
         _('Registration status'), max_length=1, choices=RegStatus.choices,
@@ -1198,11 +1187,6 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             self.RegStatus.enabled, self.RegStatus.heldOpen, self.RegStatus.heldClosed
         ]
     registrationEnabled.fget.short_description = _('Registration enabled')
-
-    @property
-    def statusLabel(self):
-        return self.RegStatus.values.get(self.status, '')
-    statusLabel.fget.short_description = _('Status')
 
     @property
     def numDropIns(self, includeTemporaryRegs=False):
@@ -2299,16 +2283,16 @@ class Customer(EmailRecipientMixin, models.Model):
 
 class Invoice(EmailRecipientMixin, models.Model):
 
-    class PaymentStatus(DjangoChoices):
-        preliminary = ChoiceItem('0', _('Preliminary'))
-        unpaid = ChoiceItem('U', _('Unpaid'))
-        authorized = ChoiceItem('A', _('Authorized using payment processor'))
-        paid = ChoiceItem('P', _('Paid'))
-        needsCollection = ChoiceItem('N', _('Processed but no payment collected'))
-        fullRefund = ChoiceItem('R', _('Refunded in full'))
-        cancelled = ChoiceItem('C', _('Cancelled'))
-        rejected = ChoiceItem('X', _('Rejected in processing'))
-        error = ChoiceItem('E', _('Error in processing'))
+    class PaymentStatus(models.TextChoices):
+        preliminary = ('0', _('Preliminary'))
+        unpaid = ('U', _('Unpaid'))
+        authorized = ('A', _('Authorized using payment processor'))
+        paid = ('P', _('Paid'))
+        needsCollection = ('N', _('Processed but no payment collected'))
+        fullRefund = ('R', _('Refunded in full'))
+        cancelled = ('C', _('Cancelled'))
+        rejected = ('X', _('Rejected in processing'))
+        error = ('E', _('Error in processing'))
 
     # The UUID field is the unique internal identifier used for this Invoice.
     # The validationString field is used only so that non-logged in users can view
@@ -2456,7 +2440,11 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     @property
     def statusLabel(self):
-        return self.PaymentStatus.values.get(self.status, '')
+        ''' 
+        This is needed so we have a property not a callable for
+        EventRegistrationJsonView
+        '''
+        return self.get_status_display()
     statusLabel.fget.short_description = _('Status')
 
     @property
@@ -2501,7 +2489,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             'url': '%s?v=%s' % (self.url, self.validationString),
             'amountPaid': self.amountPaid,
             'outstandingBalance': self.outstandingBalance,
-            'status': self.statusLabel,
+            'status': self.get_status_display(),
             'creationDate': self.creationDate,
             'modifiedDate': self.modifiedDate,
             'paidOnline': self.paidOnline,
@@ -3846,10 +3834,10 @@ class CashPaymentRecord(PaymentRecord):
     payment processor app.
     '''
 
-    class PaymentStatus(DjangoChoices):
-        needsCollection = ChoiceItem('N', _('Cash payment recorded, needs collection'))
-        collected = ChoiceItem('C', _('Cash payment collected'))
-        fullRefund = ChoiceItem('R', _('Refunded in full'))
+    class PaymentStatus(models.TextChoices):
+        needsCollection = ('N', _('Cash payment recorded, needs collection'))
+        collected = ('C', _('Cash payment collected'))
+        fullRefund = ('R', _('Refunded in full'))
 
     amount = models.FloatField(_('Amount paid'), validators=[MinValueValidator(0), ])
     payerEmail = models.EmailField(_('Payer email'), null=True, blank=True)
@@ -3901,11 +3889,11 @@ class StaffMemberListPluginModel(CMSPlugin):
     all use this model for configuration.
     '''
 
-    class OrderChoices(DjangoChoices):
-        firstName = ChoiceItem('firstName', _('First Name'))
-        lastName = ChoiceItem('lastName', _('Last Name'))
-        status = ChoiceItem('status', _('Instructor Status'))
-        random = ChoiceItem('random', _('Randomly Ordered'))
+    class OrderChoices(models.TextChoices):
+        firstName = ('firstName', _('First Name'))
+        lastName = ('lastName', _('Last Name'))
+        status = ('status', _('Instructor Status'))
+        random = ('random', _('Randomly Ordered'))
 
     statusChoices = MultiSelectField(
         verbose_name=_('Limit to Instructors with Status'),

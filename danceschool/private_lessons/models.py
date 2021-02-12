@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.urls import reverse
 
 from datetime import timedelta
-from djchoices import DjangoChoices, ChoiceItem
 
 from danceschool.core.models import (
     Instructor, Location, Room, DanceRole, Event, PricingTier,
@@ -222,11 +221,11 @@ class PrivateLessonCustomer(models.Model):
 
 class InstructorAvailabilitySlot(models.Model):
 
-    class SlotStatus(DjangoChoices):
-        available = ChoiceItem('A', _('Available'))
-        booked = ChoiceItem('B', _('Booked'))
-        tentative = ChoiceItem('T', _('Tentative Booking'))
-        unavailable = ChoiceItem('U', _('Unavailable'))
+    class SlotStatus(models.TextChoices):
+        available = ('A', _('Available'))
+        booked = ('B', _('Booked'))
+        tentative = ('T', _('Tentative Booking'))
+        unavailable = ('U', _('Unavailable'))
 
     instructor = models.ForeignKey(Instructor, verbose_name=_('Instructor'), on_delete=models.CASCADE)
     pricingTier = models.ForeignKey(

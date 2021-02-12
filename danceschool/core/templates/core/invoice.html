@@ -22,7 +22,7 @@
 	{% endif %}
 
 	<dt>{% trans "Invoice Status" %}:</dt>
-	<dd>{{ object.statusLabel }}</dd>
+	<dd>{{ object.get_status_display }}</dd>
 
 	{% if object.amountPaid %}
 		<dt>{% trans "Amount Paid" %}:</dt>

@@ -810,7 +810,7 @@ class CompensationActionView(
         context = super().get_context_data(**kwargs)
         context.update({
             'staffmembers': self.queryset,
-            'rateRuleValues': RepeatedExpenseRule.RateRuleChoices.values,
+            'rateRuleValues': dict(RepeatedExpenseRule.RateRuleChoices.choices),
         })
 
         return context

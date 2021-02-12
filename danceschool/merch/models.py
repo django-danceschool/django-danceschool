@@ -1,12 +1,10 @@
 from django.db import models
 from django.db.models import Q, F, Sum
-from django.db.models.constraints import CheckConstraint
 from django.core.validators import MinValueValidator, RegexValidator
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from filer.fields.image import FilerImageField
-from djchoices import DjangoChoices, ChoiceItem
 from cms.models.pluginmodel import CMSPlugin
 
 from danceschool.core.models import Invoice, InvoiceItem
@@ -258,13 +256,13 @@ class MerchQuantityAdjustment(models.Model):
 
 class MerchOrder(models.Model):
 
-    class OrderStatus(DjangoChoices):
-        unsubmitted = ChoiceItem('UN', _('Not yet submitted'))
-        submitted = ChoiceItem('SU', _('Submitted'))
-        approved = ChoiceItem('AP', _('Approved for fulfillment'))
-        fulfilled = ChoiceItem('F', _('Fulfilled'))
-        cancelled = ChoiceItem('C', _('Cancelled'))
-        fullRefund = ChoiceItem('R', _('Refunded in full'))
+    class OrderStatus(models.TextChoices):
+        unsubmitted = ('UN', _('Not yet submitted'))
+        submitted = ('SU', _('Submitted'))
+        approved = ('AP', _('Approved for fulfillment'))
+        fulfilled = ('F', _('Fulfilled'))
+        cancelled = ('C', _('Cancelled'))
+        fullRefund = ('R', _('Refunded in full'))
 
     status = models.CharField(
         _('Order status'), max_length=2, choices=OrderStatus.choices,
