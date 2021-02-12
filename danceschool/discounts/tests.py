@@ -76,15 +76,16 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = Registration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
         )
+        tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
 
         # Check that the student info page lists the correct item amounts and subtotal
         # with no discounts applied
-        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Continue to the summary page

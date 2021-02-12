@@ -6,7 +6,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from danceschool.core.signals import check_student_info
-from danceschool.core.models import Customer
+from danceschool.core.models import Customer, Registration
 from danceschool.core.constants import getConstant
 
 from .models import Requirement
@@ -35,7 +35,11 @@ def checkRequirements(sender, **kwargs):
     email = formData.get('email')
 
     request = kwargs.get('request', {})
+
     registration = kwargs.get('registration', None)
+    if not registration:
+        invoice = kwargs.get('invoice', None)
+        registration = Registration.objects.filter(invoice=invoice).first()
 
     customer = Customer.objects.filter(
         first_name=first,

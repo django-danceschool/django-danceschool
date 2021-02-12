@@ -20,17 +20,25 @@ $(document).ready(function() {
         return deepCopy;
     }
 
-    // Used to clear out regData as needed (expired registration, inital page load, cart cleared)
+    // Used to clear out regData as needed (expired registration, initial
+    // page load, cart cleared)
     function initializeRegData() {
         regData = {
-            payAtDoor: regParams.payAtDoor,
-            subtotal: 0,
-            total: 0,
+            id: null, // Invoice ID, if passed
+            payAtDoor: regParams.payAtDoor, // Used for registration pricing
+            grossTotal: 0, // Total before discounts or vouchers
+            total: 0, // Total after discounts and vouchers have been applied
+            taxes: 0, // Any applicable taxes
+            adjustments: 0, // Any applicable adjustments
+            outstandingBalance: 0, // The total amount to be paid
+            buyerPaysSalesTax: true, // If true, taxes are shown in the subtotal line
             itemCount: 0,
-            events: [],
-            items: [],
-            orders: {},
-        }
+            items: [], // Information on each item in the cart
+            orders: [], // Information about registrations, merch orders, etc.
+            discounts: [], // Information about discounts, if applicable
+            voucher: {}, // Information on an applied voucher, if applicable
+            addonItems: [], // List of add-on items, if applicable
+        };
     }
 
     // Initalize regData once at page load.
@@ -38,7 +46,7 @@ $(document).ready(function() {
     $('#cartTotal').text(0);
 
     function refreshCart() {
-        // First, clear the existing shopping cart and remove existing alerts.;
+        // First, clear the existing shopping cart and remove existing alerts.
         $('#cartSummary').css('display', 'none');
         $('#cartItems').text('');
         $('#subtotalLine').text('');
@@ -48,56 +56,45 @@ $(document).ready(function() {
         $('.badge-choice-counter').text('');;
         $('#cart-submit').addClass('invisible');
 
-        // Then, add the event-based items based on regData;
-        $.each(regData['events'], function() {
-            var this_name = this['name'];
-            if (this['roleName']) {
-                this_name += ': ' + this['roleName'];
+        // Then, add items based on regData
+        $.each(regData.items, function() {
+            this_data_string = 'data-choice-id="' + this.choiceId + '" ';
+            this_name = this.description;
+
+            if (this.type == "eventRegistration") {
+                if (this.roleName) {
+                    this_name += ': ' + this.roleName;
+                }
+                else if (this.dropIn === true) {
+                    this_name += ': ' + regParams.dropInString;
+                }
+                this_data_string += 'data-event="' + this.eventId +
+                    '" data-event-reg="' + this.eventRegistrationId + '"';
             }
-            else if (this['dropIn']) {
-                this_name += ': ' + regParams.dropInString;
+            else if (this.type == "merchItem") {
+                this_data_string += 'data-item-variant="' + this.itemVariantId +
+                    '" data-order-item="' + this.orderItemId + '"';
             }
-            var this_price = parseFloat(this['price']).toFixed(2);
+            var this_price = parseFloat(this.price).toFixed(2);
     
             // Add item to the shopping cart
             $('#cartItems').append(
-                '<tr data-event="' + this['event'] + '" data-event-reg="' + this['eventreg'] + '"><td>' +
+                '<tr ' + this_data_string + '><td>' +
                     this_name +
                 '</td><td>' +
                     regParams.currencySymbol + this_price +
-                '<button type="button" class="close remove-item" aria-label="Remove" data-id="' + this['event'] + '"><span aria-hidden="true">&times;</span></button></td></tr>'
+                '<button type="button" class="close remove-item" aria-label="Remove" data-id="' + this.id + '"><span aria-hidden="true">&times;</span></button></td></tr>'
             );
 
             // Update the badge for the button that was pressed for each selection.
-            if (this['doorChoiceId']) {
-                var this_badge = $("#" + this['doorChoiceId'] + " .badge-choice-counter");
-                this_badge.text((parseInt(this_badge.text()) | 0) + 1);
-            }
-        });
-
-        // Then, add any non-event-based items based on regData;
-        $.each(regData['items'], function() {
-            var this_name = this['name'];
-            var this_price = parseFloat(this['price']).toFixed(2);
-    
-            // Add item to the shopping cart
-            $('#cartItems').append(
-                '<tr data-item="' + this['variantId'] + '" data-order="' + this['order'] + '"><td>' +
-                    this_name +
-                '</td><td>' +
-                    regParams.currencySymbol + this_price +
-                '<button type="button" class="close remove-item" aria-label="Remove" data-id="' + this['event'] + '"><span aria-hidden="true">&times;</span></button></td></tr>'
-            );
-
-            // Update the badge for the button that was pressed for each selection.
-            if (this['doorChoiceId']) {
-                var this_badge = $("#" + this['doorChoiceId'] + " .badge-choice-counter");
+            if (this.choiceId) {
+                var this_badge = $("#" + this.choiceId + " .badge-choice-counter");
                 this_badge.text((parseInt(this_badge.text()) | 0) + 1);
             }
         });
 
         // Add discounts
-        $.each(regData['discounts'], function() {
+        $.each(regData.discounts, function() {
             $('#discountList').append(
                 '<tr class="discount"><td><strong>' + regParams.discountString +
                 ':</strong> ' + this.name + '</td><td> -' +
@@ -106,8 +103,8 @@ $(document).ready(function() {
         });
 
         // Add vouchers
-        if (regData.hasOwnProperty('voucher_amount') && regData.voucher_amount > 0) {
-            if (regData.hasOwnProperty('voucher')) {
+        if (regData.voucher.hasOwnProperty('amount') && regData.voucher.amount > 0) {
+            if (regData.voucher.hasOwnProperty('name')) {
                 var voucherText = regData.voucher.name + ' (' + regData.voucher.id + ')';
             }
             else {
@@ -117,28 +114,40 @@ $(document).ready(function() {
             $('#voucherList').append(
                 '<tr class="voucher"><td><strong>' + regParams.voucherString +
                 ':</strong> ' + voucherText +'</td><td> -' +
-                regParams.currencySymbol + parseFloat(regData.voucher_amount).toFixed(2) + 
+                regParams.currencySymbol + parseFloat(regData.voucher.amount).toFixed(2) + 
                 '<button type="button" class="close remove-voucher" aria-label="Remove"><span aria-hidden="true">&times;</span></button></td></tr>'
             );
         }
 
-        // Add add-ons;
-        $.each(regData['addonItems'], function() {
+        // Add add-ons
+        $.each(regData.addonItems, function() {
             $('#addonList').append(
                 '<tr class="addons"><td><strong>' + regParams.addonString + ':</strong> ' +
                 this + '</td><td></td></tr>'
             );
         });
 
-        // If there are discounts, vouchers, or add-ons, add a subtotal line
+        // If there are discounts, vouchers, or add-ons, add a subtotal line (grossTotal)
         if (
             $('#discountList').text() !== '' ||
             $('#voucherList').text() !== '' ||
-            $('#addonList').text() !== ''
+            $('#addonList').text() !== '' ||
+            regData.taxes !== 0 ||
+            regData.adjustments !== 0
         ) {
             $('#subtotalLine').append(
-                '<tr class="subtotal"><th>' + regParams.subtotalString + ':</th><th>' + regParams.currencySymbol + parseFloat(regData.subtotal).toFixed(2) + '</th></tr'
+                '<tr class="subtotal"><th>' + regParams.subtotalString + ':</th><th>' + regParams.currencySymbol + parseFloat(regData.grossTotal).toFixed(2) + '</th></tr>'
             );
+            if (regData.taxes !== 0 && regData.buyerPaysSalesTax === true) {
+                $('#subtotalLine').append(
+                    '<tr class="taxes"><td>' + regParams.taxesString + ':</td><td>' + regParams.currencySymbol + parseFloat(regData.taxes).toFixed(2) + '</td></tr>'
+                );
+            }
+            if (regData.adjustments !== 0) {
+                $('#subtotalLine').append(
+                    '<tr class="adjustments"><td>' + regParams.adjustmentsString + ':</td><td>' + regParams.currencySymbol + parseFloat(regData.adjustments).toFixed(2) + '</td></tr>'
+                );
+            }
         }
 
         var itemString = regParams.itemStringPlural;
@@ -148,7 +157,7 @@ $(document).ready(function() {
 
         $('item').text(regData.itemsCount).css('display', 'block');
         $('#cartTotal').text(parseFloat(regData.total).toFixed(2));
-        $('#cartSummary').text(regData.itemCount + ' ' + itemString + ': ' + regParams.currencySymbol + parseFloat(regData.total).toFixed(2));
+        $('#cartSummary').text(regData.itemCount + ' ' + itemString + ': ' + regParams.currencySymbol + parseFloat(regData.outstandingBalance).toFixed(2));
 
         if (regData.hasOwnProperty('addonItems') && regData.addonItems.length > 0) {
             $('#addonList').removeClass('invisible');
@@ -167,7 +176,7 @@ $(document).ready(function() {
         }
 
         // Add any alerts from invalid vouchers and unset the voucher ID.
-        if (regData.hasOwnProperty('voucher') && regData.voucher.hasOwnProperty('errors')) {            
+        if (regData.voucher.hasOwnProperty('errors')) {            
             var errorText = '<ul>';
             for (const [key, error] of Object.entries(regData.voucher.errors)) {
                 errorText += '<li>' + error.message + '</li>';
@@ -175,15 +184,15 @@ $(document).ready(function() {
             errorText += '</ul>';
             addAlert(errorText);
             
-            regData.voucherId = '';
+            regData.voucher.voucherId = '';
         }
     }
 
     function submitData(prior, redirect=false, removeAlerts=false){
 
-        // The Ajax view should only return a redirect URL if we are moving forward.;
+        // The Ajax view should only return a redirect URL if we are moving forward.
         if (redirect) {
-            regData['finalize'] = true;
+            regData.finalize = true;
         }
 
         $.ajax({
@@ -193,13 +202,13 @@ $(document).ready(function() {
             data: JSON.stringify(regData),
             success: function(response){
 
-                if(response.status == "success" && response.redirect && redirect == true) {
+                if(response.status == "success" && response.redirect && redirect === true) {
                     window.location.href = response.redirect;
                 }
                 else if(response.status == "success") {
                     regData = response.reg;
 
-                    if (removeAlerts == true) {
+                    if (removeAlerts === true) {
                         // Remove any existing alerts.
                         $('.alert').alert('close')
                     }
@@ -216,10 +225,10 @@ $(document).ready(function() {
 
                     // To ensure that server and client side remain in sync, get
                     // the existing data from the server without any submission
-                    // information other than the ID of the existing registration.
+                    // information other than the ID of the existing invoice
                     // TODO THIS IN THE MORNING
 
-                    // reset regData for expired registrations
+                    // reset regData for expired invoices
                     if (response.errors.filter(function(e){return e.code == 'expired'}).length > 0) {
                         initializeRegData();
                     }
@@ -280,51 +289,44 @@ $(document).ready(function() {
 
         // Grab the data and also add the ID of the element that was clicked.
         var this_data = $(this).data();
-        this_data['doorChoiceId'] = $(this).attr('id');
 
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);
 
         // Events can also be set to apply vouchers at the same time.
-        if (this_data['voucherId']) {
-            // If an existing voucher code exists, then we can't add a new one without removing the old one.
+        if (this_data.voucherId) {
+            // If an existing voucher code exists, then we can't add a new one
+            // without removing the old one.
             if (
-                regData.hasOwnProperty('voucherId') &&
-                regData['voucherId'] !== '' &&
-                regData['voucherId'] !== this_data['voucherId']
+                regData.voucher.hasOwnProperty('voucherId') &&
+                regData.voucher.voucherId !== '' &&
+                regData.voucher.voucherId !== this_data.voucherId
             ) {
                 addAlert(regParams.multipleVoucherString);
                 return;
             }
 
-            regData['voucherId'] = this_data['voucherId'];
-            delete this_data['voucherId'];
+            regData.voucher.voucherId = this_data.voucherId;
+            delete this_data.voucherId;
         }
 
         // The student attribute actually applies to the registration, not to
         // one particular item, so move this to the correct place in regData
-        if (this_data['student']) {
-            regData['student'] = this_data['student'];
-            delete this_data['student'];
+        if (this_data.student === true) {
+            regData.student = this_data.student;
+            delete this_data.student;
         }
 
-        // Avoid passing anything but integer values for role ID, which will happen
-        // when registration buttons have no associated role.
-        if (isNaN(parseInt(this_data['roleId']))) {
-            delete this_data['roleId'];
+        if (this_data.type == "eventRegistration") {
+            // Avoid passing anything but integer values for role ID, which will happen
+            // when registration buttons have no associated role.
+            if (isNaN(parseInt(this_data.roleId))) {
+                delete this_data.roleId;
+            }
         }
 
         // Add the data from the button to the regData and submit
-        if (this_data['event']) {
-            regData['events'].push(this_data);
-        }
-        else if (this_data['itemId'] & this_data['orderType']) {
-            if (!(this_data['orderType'] in this_data['orders'])) {
-                regData['orders'][this_data['orderType']] = null;
-            }
-            regData['items'].push(this_data);
-        }
-
+        regData['items'].push(this_data);
         submitData(prior=old_regData, redirect=false, removeAlerts=true);
 
     });
@@ -346,25 +348,16 @@ $(document).ready(function() {
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);
 
-        var this_eventreg_id = $($(this).closest('tr')).data('eventReg');
-        var this_orderitem_id = $($(this).closest('tr')).data('orderItem');
+        var this_item_id = $($(this).closest('tr')).data('choiceId');
 
-        if (this_eventreg_id) {
-            for( var i = 0; i < regData['events'].length; i++){ 
-                if ( regData['events'][i]['eventreg'] === this_eventreg_id) {
-                  regData['events'].splice(i, 1); 
+        if (this_item_id) {
+            for( var i = 0; i < regData.items.length; i++){ 
+                if ( regData.items[i]['choiceId'] === this_item_id) {
+                  regData.items.splice(i, 1); 
                   i--;
                 }
              }
         }
-        else if (this_orderitem_id) {
-            for( var i = 0; i < regData['items'].length; i++){ 
-                if ( regData['items'][i]['orderitem'] === this_orderitem_id) {
-                  regData['items'].splice(i, 1); 
-                  i--;
-                }
-             }
-        }    
         
         submitData(prior=old_regData, redirect=false);
     });
@@ -385,8 +378,8 @@ $(document).ready(function() {
 
         // If an existing voucher code exists, then we can't add a new one without removing the old one.
         if (
-            this_code !== '' && regData.hasOwnProperty('voucherId') &&
-            regData['voucherId'] !== '' && regData['voucherId'] !== this_code
+            this_code !== '' && regData.voucher.hasOwnProperty('voucherId') &&
+            regData.voucher.voucherId !== '' && regData.voucher.voucherId !== this_code
         ) {
             addAlert(regParams.multipleVoucherString);
             return;
@@ -395,9 +388,9 @@ $(document).ready(function() {
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);
 
-        regData['voucherId'] = this_code;
+        regData.voucher.voucherId = this_code;
 
-        if ($.isEmptyObject(regData['events'])) {
+        if ($.isEmptyObject(regData['items'])) {
             addAlert(regParams.emptyRegisterVoucherString, alertClass='alert-info');
         }
         else {
@@ -410,9 +403,7 @@ $(document).ready(function() {
 
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);
-
-        delete regData['voucherId'];
-        delete regData['voucher'];
+        regData.voucher = {};
         submitData(prior=old_regData, redirect=false);
     });
 

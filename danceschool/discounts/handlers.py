@@ -11,7 +11,7 @@ from danceschool.core.signals import (
     get_eventregistration_data
 )
 from danceschool.core.constants import getConstant
-from danceschool.core.models import Customer, EventRegistration
+from danceschool.core.models import Customer, EventRegistration, Registration
 from danceschool.core.classreg import RegistrationSummaryView
 
 from .helpers import getApplicableDiscountCombos
@@ -40,6 +40,10 @@ def getBestDiscount(sender, **kwargs):
     logger.debug('Signal fired to request discounts.')
 
     reg = kwargs.pop('registration', None)
+    if not reg:
+        invoice = kwargs.get('invoice', None)
+        reg = Registration.objects.filter(invoice=invoice).first()
+
     if not reg:
         logger.warning('No registration passed, discounts not applied.')
         return
@@ -186,6 +190,10 @@ def applyTemporaryDiscount(sender, **kwargs):
     logger.debug('Signal fired to apply discounts.')
 
     reg = kwargs.pop('registration', None)
+    if not reg:
+        invoice = kwargs.get('invoice', None)
+        reg = Registration.objects.filter(invoice=invoice).first()
+
     discount = kwargs.pop('discount', None)
     discountAmount = kwargs.pop('discount_amount', None)
 
@@ -211,6 +219,10 @@ def getAddonItems(sender, **kwargs):
     logger.debug('Signal fired to request free add-ons.')
 
     reg = kwargs.pop('registration', None)
+    if not reg:
+        invoice = kwargs.get('invoice', None)
+        reg = Registration.objects.filter(invoice=invoice).first()
+
     if not reg:
         logger.warning('No registration passed, addons not applied.')
         return
@@ -242,6 +254,9 @@ def applyFinalDiscount(sender, **kwargs):
     logger.debug('Signal fired to finalize application of discounts.')
 
     reg = kwargs.pop('registration', None)
+    if not reg:
+        invoice = kwargs.get('invoice', None)
+        reg = Registration.objects.filter(invoice=invoice).first()
 
     if not reg:
         logger.debug('No registration passed, discounts not applied.')

@@ -46,15 +46,16 @@ class VouchersTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = Registration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
         )
+        tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Continue to the summary page
@@ -164,7 +165,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(response.context_data.get('total_voucher_amount'), v.maxAmountPerUse)
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
-        tvu = v.voucheruse_set.filter(registration=response.context_data.get('registration'))
+        tvu = v.voucheruse_set.filter(invoice=invoice)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
         self.assertFalse(tvu.first().applied)
         self.assertEqual(tvu.first().amount, v.maxAmountPerUse)
@@ -190,7 +191,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(response.context_data.get('total_voucher_amount'), v.originalAmount)
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
-        tvu = v.voucheruse_set.filter(registration=response.context_data.get('registration'))
+        tvu = v.voucheruse_set.filter(invoice=invoice)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
         self.assertFalse(tvu.first().applied)
         self.assertEqual(tvu.first().amount, v.originalAmount)
@@ -219,7 +220,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertIn(v.name, response.context_data.get('voucher_names'))
 
         reg = response.context_data.get('registration')
-        tvu = v.voucheruse_set.filter(registration=reg)
+        tvu = v.voucheruse_set.filter(invoice=invoice)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
         self.assertTrue(tvu.first().applied)
         self.assertEqual(tvu.first().amount, s.getBasePrice())

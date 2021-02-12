@@ -28,7 +28,7 @@ from .helpers import getReturnPage
 from .signals import (
     request_discounts, apply_addons, check_voucher, process_cart_items
 )
-# from .models import Invoice, InvoiceItem, EventOccurrence
+# from .models import Registration
 
 
 # Define logger for this file
@@ -519,42 +519,8 @@ class RegistrationAdjustmentsMixin(object):
     it; that should be done in the view itself.
     '''
 
-    def getAdditionalItems(self, items_data=[], orders_data={}):
-        '''
-        Add any additional items from third-party apps, such as merchandise,
-        that may adjust the shopping cart listing or total in any step.
-        '''
-
-        subtotal = 0
-        itemCount = 0
-        items = []
-        orders = {}
-
-        items_responses = process_cart_items.send(
-            sender=RegistrationAdjustmentsMixin, items_data=items_data,
-            orders_data=orders_data, invoice=self.invoice,
-        )
-
-        items_responses = [x[1] for x in items_response if len(x) > 1 and x[1]]
-
-        # Append all signal responses if there is more than one, and tabulate
-        # an item count and subtotal.
-        for response in item_responses:
-            items += response.get('items', [])
-            subtotal += sum([x.get('price', 0) for x in items])
-            itemCount += sum([x.get('quantity', 1) for x in items])
-            orders[response.get('orderType')] = response.get('orderNumber', None)
-
-        if items:
-            return {
-                'items': items,
-                'orders': orders,
-                'subtotal': subtotal,
-                'itemCount': itemCount,
-            }
-
     def getVoucher(
-        self, voucherId, reg, subtotal, first_name=None, last_name=None, email=None
+        self, voucherId, invoice, subtotal, first_name=None, last_name=None, email=None
     ):
         '''
         This method looks for a voucher with the associated voucher ID, it checks
@@ -563,9 +529,9 @@ class RegistrationAdjustmentsMixin(object):
 
         from danceschool.core.models import Customer
 
-        first_name = first_name or reg.firstName
-        last_name = last_name or reg.lastName
-        email = email or reg.email
+        first_name = first_name or invoice.firstName
+        last_name = last_name or invoice.lastName
+        email = email or invoice.email
 
         # This will only find a customer if all three are specified.
         customer = Customer.objects.filter(
@@ -577,7 +543,7 @@ class RegistrationAdjustmentsMixin(object):
         voucher_response = check_voucher.send(
             sender=RegistrationAdjustmentsMixin, voucherId=voucherId,
             customer=customer, validateCustomer=(customer is not None),
-            registration=reg
+            invoice=invoice
         )
 
         voucher_response = [x[1] for x in voucher_response if len(x) > 1 and x[1]]
@@ -604,12 +570,19 @@ class RegistrationAdjustmentsMixin(object):
         else:
             return {}
 
-    def getDiscounts(self, reg, initial_price):
+    def getDiscounts(self, invoice, registration=None, initial_price=None):
         '''
         This method takes a registration and an initial price, and it returns
         a tuple that contains all the information needed to process any
         applicable discounts.
         '''
+
+        if not registration:
+            registration = Registration.objects.filter(invoice=invoice).first()
+        if not initial_price and registration:
+            initial_price = registration.grossTotal
+        else:
+            initial_price = invoice.grossTotal
 
         # If the discounts app is enabled, then the return value to this signal
         # will contain information on the discounts to be applied, as well as
@@ -619,7 +592,8 @@ class RegistrationAdjustmentsMixin(object):
         # 'items' and 'ineligible_total' keys.
         discount_responses = request_discounts.send(
             sender=RegistrationAdjustmentsMixin,
-            registration=reg,
+            registration=registration,
+            invoice=invoice
         )
         discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 
@@ -650,16 +624,17 @@ class RegistrationAdjustmentsMixin(object):
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
 
-        return (discount_codes, total_discount_amount, discounted_total)
+        return (discount_codes, total_discount_amount)
 
-    def getAddons(self, reg):
+    def getAddons(self, invoice, registration=None):
         '''
         Return a list of any free add-on items that should be applied.
         '''
 
         addon_responses = apply_addons.send(
             sender=RegistrationAdjustmentsMixin,
-            registration=reg
+            invoice=invoice,
+            registration=registration
         )
         addons = []
         for response in addon_responses:

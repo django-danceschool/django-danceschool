@@ -3302,6 +3302,7 @@ class Registration(EmailRecipientMixin, models.Model):
         # track of any vouchers that were applied
         post_registration.send(
             sender=Registration,
+            invoice=self.invoice,
             registration=self
         )
 

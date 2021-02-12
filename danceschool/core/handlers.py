@@ -64,7 +64,8 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
     submitted any Registrations, their Customer account is seamlessly linked when
     they do complete their first Registration.
     """
-    registration = kwargs.get('registration', None)
+    invoice = kwargs.get('invoice', None)
+    registration = Registration.objects.filter(invoice=invoice).first()
 
     if (
         not getattr(registration, 'customer', None) or

@@ -304,9 +304,8 @@ class BookPrivateLessonView(FormView):
                 eventRegistration=tr,
             )
 
-            # Load the temporary registration into session data like a regular registration
+            # Load the invoice ID into session data like a regular registration
             # and redirect to Step 2 as usual.
-            regSession["registrationId"] = reg.id
             regSession["invoiceId"] = invoice.id
             regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
             self.request.session[REG_VALIDATION_STR] = regSession

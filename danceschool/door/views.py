@@ -1,18 +1,15 @@
 from django.utils.translation import gettext_lazy as _
 from django.http import Http404
-from django.urls import reverse
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 from django.views.generic import TemplateView
 
 from braces.views import PermissionRequiredMixin
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.models import Event, Series, PublicEvent
-from danceschool.core.classreg import ClassRegistrationView
-from danceschool.core.signals import post_student_info
 from danceschool.core.mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
 )

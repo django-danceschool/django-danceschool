@@ -8,9 +8,9 @@ import random
 import string
 
 from danceschool.core.models import (
-    CustomerGroup, Customer, Registration,
+    CustomerGroup, Customer, Invoice,
     ClassDescription, DanceTypeLevel, SeriesCategory, PublicEventCategory,
-    EventSession
+    EventSession, Event
 )
 
 
@@ -171,7 +171,7 @@ class Voucher(models.Model):
     maxToUse.fget.short_description = _('Maximum amount available for next use')
 
     def validate(
-        self, customer=None, event_list=[], payAtDoor=False, raise_errors=True,
+        self, customer=None, events=None, payAtDoor=False, raise_errors=True,
         return_amount=False, validate_customer=True, validate_events=True
     ):
         '''
@@ -191,7 +191,10 @@ class Voucher(models.Model):
         errors = []
         warnings = []
 
-        if not hasattr(event_list, '__iter__'):
+        if events is None:
+            events = Event.objects.none()
+
+        if not hasattr(events, '__iter__'):
             raise ValueError(_('Invalid event list.'))
         if (type(customer) not in [Customer, type(None)]):
             raise ValueError(_('Invalid customer.'))
@@ -238,11 +241,11 @@ class Voucher(models.Model):
         if errors and raise_errors:
             raise ValidationError(errors)
 
-        # Only validate event_list contents if specified (default is True)
+        # Only validate events contents if specified (default is True)
         if validate_events:
             # every series is either in the list or there is no list
             if self.classvoucher_set.exists():
-                for s in event_list:
+                for s in events:
                     if not self.classvoucher_set.filter(
                         classDescription=s.classDescription
                     ).exists():
@@ -253,7 +256,7 @@ class Voucher(models.Model):
                             )
                         )
             if self.dancetypevoucher_set.exists():
-                for s in event_list:
+                for s in events:
                     if not self.dancetypevoucher_set.filter(
                         danceTypeLevel=s.classDescription.danceTypeLevel
                     ).exists():
@@ -264,7 +267,7 @@ class Voucher(models.Model):
                             )
                         )
             if self.seriescategoryvoucher_set.exists():
-                for s in event_list:
+                for s in events:
                     if not self.seriescategoryvoucher_set.filter(seriesCategory=s.category).exists():
                         errors.append(
                             ValidationError(
@@ -273,7 +276,7 @@ class Voucher(models.Model):
                             )
                         )
             if self.publiceventcategoryvoucher_set.exists():
-                for s in event_list:
+                for s in events:
                     if not self.publiceventcategoryvoucher_set.filter(
                         publicEventCategory=s.category
                     ).exists():
@@ -284,7 +287,7 @@ class Voucher(models.Model):
                             )
                         )
             if self.sessionvoucher_set.exists():
-                for s in event_list:
+                for s in events:
                     if not self.sessionvoucher_set.filter(session=s.session).exists():
                         errors.append(
                             ValidationError(
@@ -304,7 +307,7 @@ class Voucher(models.Model):
                 'message': _('This voucher can be only used for specific classes or events.')
             })
 
-        # Only validate event_list contents if specified (default is True)
+        # Only validate events contents if specified (default is True)
         if validate_customer:
             # customer is either in the list or there is no list
             if not self.isValidForAnyCustomer:
@@ -417,9 +420,8 @@ class VoucherUse(models.Model):
     voucher = models.ForeignKey(
         Voucher, verbose_name=_('Voucher'), on_delete=models.CASCADE,
     )
-    registration = models.ForeignKey(
-        Registration, null=True, verbose_name=_('Registration'),
-        on_delete=models.SET_NULL,
+    invoice = models.ForeignKey(
+        Invoice, verbose_name=_('Invoice'), on_delete=models.CASCADE,
     )
     amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
     notes = models.CharField(_('Notes'), max_length=100, null=True, blank=True)

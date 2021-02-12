@@ -11,6 +11,8 @@
                 {% for choice in item.primary_options %}
                     <button class="btn btn-outline-primary my-2 mx-2 add-item"
                         id="{{ choice.choiceId }}"
+                        data-choiceId="{{ choice.choiceId }}"
+                        data-type="eventRegistration"
                         data-event="{{ item.event.id }}" data-name="{{ item.event.name }}" 
                         data-price="{{ choice.price }}"
                         data-role-id="{{ choice.roleId|default_if_none:'' }}" data-role-name="{{ choice.roleName|default_if_none:'' }}"
@@ -36,7 +38,9 @@
                         <div class="dropdown-menu" aria-labelledby="additionalChoices_{{ item.event.id }}">
                             {% for choice in item.additional_options %}
                                 <a href="#" class="dropdown-item add add-item"
-                                    data-event="{{ item.event.id }}" data-name="{{ item.event.name }}"
+                                    data-choice-id="{{ choice.choiceId }}"
+                                    data-type="eventRegistration"
+                                    data-event="{{ item.event.id }}" data-description="{{ item.event.name }}"
                                     data-price="{{ choice.price }}"
                                     data-role-id="{{ choice.roleId|default_if_none:'' }}" data-role-name="{{ choice.roleName|default_if_none:'' }}"
                                     data-require-full="{{ choice.requireFullRegistration }}"

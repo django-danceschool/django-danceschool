@@ -12,7 +12,7 @@ from calendar import month_name
 import dateutil.parser
 from itertools import chain
 
-from .models import EventOccurrence, Event, Registration
+from .models import EventOccurrence, Event, Registration, Invoice
 from .constants import getConstant, REG_VALIDATION_STR
 from .utils.tests import DefaultSchoolTestCase
 
@@ -210,15 +210,16 @@ class RegistrationTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = Registration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
         )
+        tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Try to sign up without agreeing to the policies, and ensure that it fails

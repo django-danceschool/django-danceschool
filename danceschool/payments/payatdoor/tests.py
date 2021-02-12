@@ -8,7 +8,7 @@ from django.conf import settings
 from cms.api import create_page, add_plugin, publish_page
 from cms.models import StaticPlaceholder
 
-from danceschool.core.models import Registration
+from danceschool.core.models import Registration, Invoice
 from danceschool.core.constants import REG_VALIDATION_STR
 from danceschool.core.utils.tests import DefaultSchoolTestCase
 
@@ -68,15 +68,16 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = Registration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
         )
+        tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, True)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Sign up for the series
@@ -179,15 +180,16 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
-        tr = Registration.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('registrationId')
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
         )
+        tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, False)
 
         # Check that the student info page lists the correct item amounts and subtotal
-        self.assertEqual(tr.invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
         # Sign up for the series

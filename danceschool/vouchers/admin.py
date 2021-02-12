@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 from dal import autocomplete
 
-from danceschool.core.models import Customer, Registration
+from danceschool.core.models import Customer, Invoice
 from danceschool.core.admin import CustomerAdmin
 
 from .models import (
@@ -60,7 +60,7 @@ class CustomerAdminWithVouchers(CustomerAdmin):
     inlines = CustomerAdmin.inlines + [CustomerVoucherInline]
 
 
-class RegistrationVoucherInline(admin.TabularInline):
+class InvoiceVoucherInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
     readonly_fields = ['voucher', 'amount']
@@ -114,7 +114,7 @@ class ClassVoucherInline(admin.StackedInline):
 class VoucherUseInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
-    readonly_fields = ['registration', 'amount']
+    readonly_fields = ['invoice', 'amount']
     exclude = ['applied',]
 
     # Prevents adding new voucher uses without going through
@@ -230,8 +230,8 @@ class VoucherAdmin(admin.ModelAdmin):
     enableVoucher.short_description = _('Enable selected Vouchers')
 
 
-# This adds inlines to Registration without subclassing
-admin.site._registry[Registration].inlines.insert(0, RegistrationVoucherInline)
+# This adds inlines to Invoice without subclassing
+admin.site._registry[Invoice].inlines.insert(0, InvoiceVoucherInline)
 
 admin.site.register(VoucherCategory)
 admin.site.register(Voucher, VoucherAdmin)

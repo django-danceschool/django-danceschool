@@ -1,5 +1,6 @@
 from django.dispatch import receiver
 from danceschool.core.signals import post_registration
+from danceschool.core.models import Registration
 
 
 @receiver(post_registration)
@@ -11,9 +12,13 @@ def finalizePrivateLessonRegistration(sender, **kwargs):
     already receiving a notification of their registration.
     '''
 
-    finalReg = kwargs.pop('registration')
+    invoice = kwargs.get('invoice', None)
+    registration = Registration.objects.filter(invoice=invoice).first()
 
-    for er in finalReg.eventregistration_set.filter(
+    if not invoice or not registration:
+        return
+
+    for er in registration.eventregistration_set.filter(
         event__privatelessonevent__isnull=False
     ):
         er.event.finalizeBooking(eventRegistration=er, notifyStudent=False)
