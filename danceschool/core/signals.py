@@ -13,14 +13,6 @@ check_student_info = Signal(''' ['instance', 'formData', 'request', 'registratio
 # records in the vouchers app
 post_student_info = Signal(''' ['invoice', 'registration'] ''')
 
-# Fires at the point in handling an Ajax shopping cart where additional
-# (non-registration) items may be added or removed from the cart.  The POST
-# data is passed to the signal, and it should return a dictionary that can be
-# passed to the Ajax shopping cart.  Examples of potential uses include merchandise.
-# The order_type flag is a check for the handler that ensures that it is working
-# with the correct type of information.
-process_cart_items = Signal(''' ['items_data', 'orders_data', 'invoice'] ''')
-
 # Fires at the point when automatically-applied discounts may be applied to
 # a preliminary registration.  Any handler that attaches to this signal should
 # return an object that describes the discount (in the case of the discounts app,)

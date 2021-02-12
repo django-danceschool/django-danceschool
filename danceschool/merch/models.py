@@ -1,11 +1,14 @@
 from django.db import models
 from django.db.models import Q, F, Sum
+from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, RegexValidator
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from filer.fields.image import FilerImageField
 from cms.models.pluginmodel import CMSPlugin
+from datetime import timedelta
 
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant
@@ -407,7 +410,7 @@ class MerchOrder(models.Model):
         '''
         Before saving this order, ensure that an associated invoice exists.
         If an invoice already exists, then update the invoice if anything
-        requires updating.
+        requires updating.  If the status of this order is 
         '''
         link_kwargs = {
             'submissionUser': kwargs.pop('submissionUser', None),
@@ -419,6 +422,16 @@ class MerchOrder(models.Model):
 
         self.invoice = self.link_invoice(**link_kwargs)
         super().save(*args, **kwargs)
+
+        # Update the sold out status of the associated item variants if needed.
+        if (
+            self.status not in [
+                self.OrderStatus.unsubmitted, self.OrderStatus.cancelled
+            ] and self.status != self.__initial_status
+        ):
+            variants = [x.item for x in self.items]
+            for variant in variants:
+                variant.updateSoldOut()
 
     def delete(self, *args, **kwargs):
         '''
@@ -433,6 +446,11 @@ class MerchOrder(models.Model):
         ]:
             self.status = self.OrderStatus.cancelled
             self.save()
+
+    def __init__(self, *args, **kwargs):
+        ''' Keep track of initial status in memory to detect status changes. '''
+        super().__init__(*args, **kwargs)
+        self.__initial_status = self.status
 
     class Meta:
         verbose_name = _('Merchandise order')
@@ -523,6 +541,7 @@ class MerchOrderItem(models.Model):
     class Meta:
         verbose_name = _('Merchandise order item')
         verbose_name_plural = _('Merchandise order items')
+        unique_together = ('item', 'order',)
         
 
 class DoorRegisterMerchPluginModel(CMSPlugin):

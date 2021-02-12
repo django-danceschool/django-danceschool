@@ -6,9 +6,10 @@ from collections import Counter
 import logging
 
 from danceschool.core.signals import (
-    process_cart_items, invoice_finalized, invoice_cancelled
+    invoice_finalized, invoice_cancelled,
+    get_invoice_related, get_invoice_item_related
 )
-from danceschool.core.models import Invoice
+from danceschool.core.models import Invoice, InvoiceItem
 
 from .models import MerchItemVariant, MerchOrder, MerchOrderItem
 
@@ -17,106 +18,182 @@ from .models import MerchItemVariant, MerchOrder, MerchOrderItem
 logger = logging.getLogger(__name__)
 
 
-@receiver(process_cart_items)
-def processMerch(sender, **kwargs):
+@receiver(get_invoice_related, dispatch_uid='linkMerchOrder')
+def linkMerchOrder(sender, **kwargs):
     '''
-    Take the items data that comes from the door registration page (in regData).
-    Create an order if necessary, or update the existing order.  Return a
-    dictionary that will go back into regData (basically the same dictionary but
-    adding the reference to the order).
+    This method checks to see whether a MerchOrder is needed for this
+    transaction, and whether one already exists.  It returns a MerchOrder.
     '''
-    
+
+    invoice = kwargs.get('invoice')
+    post_data = kwargs.get('post_data', {})
+
+    if not isinstance(invoice, Invoice):
+        return {
+            'status': 'error',
+            'errors': [{
+                'code': 'no_invoice_passed',
+                'message': _('No invoice passed to get_invoice_related signal handler.')
+            }]
+        }
+
+    merchorder_items = [x for x in post_data.get('items', []) if x.get('type', None) == 'merchItem']
+    if not merchorder_items:
+        return {}
+
+    response = {
+        '__related_merchitemvariants': MerchItemVariant.objects.filter(
+            id__in=[x.get('merchItem') for x in merchorder_items if x.get('merchItem', None)]
+        ),
+    }
+
+    try:
+        order = MerchOrder.objects.get(invoice=invoice)
+    except ObjectDoesNotExist:
+        order = MerchOrder(invoice=invoice, status=MerchOrder.OrderStatus.unsubmitted)
+
+    if not order.itemsEditable:
+        return {
+            'status': 'error',
+            'errors': [{
+                'code': 'merchorder_not_editable',
+                'message': _('This invoice is linked to a merchandise order that is no longer editable.'),
+            }],
+        }
+
+    response.update({'__relateditem_merchorder', order})
+    return {'status': 'success', 'response': response}
+
+
+@receiver(get_invoice_item_related)
+def linkMerchOrderItems(sender, **kwargs):
+    '''
+    Link individual merchandise order items to invoice items.
+    '''
+
+    item = kwargs.get('item')
+    item_data = kwargs.get('item_data', {})
+    post_data = kwargs.get('post_data', {})
+    prior_response = kwargs.get('prior_response', {})
+
     errors = []
-    items_data = [
-        x for x in kwargs.pop('items_data', [])
-        if x.get('itemType', None) == 'merch'
-    ]
-    orders_data = kwargs.pop('orders_data', {})
+    response = {'type': 'merchItem'}
 
-    if 'merch' not in orders_data.keys() or not items_data:
-        return
-    order_number = orders_data.get('merch', None)
-
-    # Access the existing merchandise order, or create a new one.
-    if order_number:
-        try:
-            merch_order = MerchOrder.objects.get(id=order_number)
-        except [ObjectDoesNotExist, ValueError]:
-            errors.append({
-                'code': 'invalid_order_id',
-                'message': _('Invalid order ID passed.')
-            })
-    else:
-        merch_order = MerchOrder(
-            status=MerchOrder.OrderStatus.unsubmitted
-        )
-
-    variant_ids = [x.get('variantId') for x in items_data if x.get('variantId')]
-    variant_counter = Counter(variant_ids)
-    variants = MerchItemVariant.objects.filter(id__in=variant_ids)
-
-    # Check for whether individual item variants show up more than once.  If so,
-    # consolidate any items that are not already associated with a MerchOrderItem
-    # record by adding up quantities.
-    for variantId, count in variant_counter.items():
-        if variantId not in variants.values_list('id', flat=True):
-            errors.append({
-                'code': 'invalid_variant_id',
-                'message': _('Invalid variant ID passed.')
-            })
-            continue
-        if count > 1:
-            other_items = [x for x in items_data if x.get('variantId') != variantId]
-            these_items = [x for x in items_data if x.get('variantId') == variantId]
-            these_items = sorted(these_items, key = lambda i: i.get('orderItem') or 0, reverse=True)
-            these_items[0]['quantity'] = sum([x.get('quantity', 0) for x in these_items])
-            items_data = other_items + [these_items[0]]
-
-    unmatched_order_item_ids = merch_order.items.values_list('id', flat=True)
-    new_order_items = []
-    new_items_data = []
-
-    for item in items_data:
-            # The existing order item should be found if its ID is passed.
-            # Otherwise, create a new order item
-            if item.get('orderItem', None):
-                try:
-                    this_order_item = merch_order.items.get(id=item.get('orderItem'),item__id=item.get('variantId'))
-                    logger.debug('Found existing merch order item: {}'.format(this_order_item.id))
-                    this_order_item.quantity = item.get('quantity')
-                    new_order_items.append(this_order_item)
-                    unmatched_order_item_ids.remove(this_order_item.id)
-                except [ObjectDoesNotExist, ValueError]:
-                    errors.append({
-                        'code': 'invalid_order_item_id',
-                        'message': _('Invalid order item ID passed.')
-                    })
-                    continue
-            else:
-                # Check that the quantity requested of the item is not greater
-                # than the currently available quantity.
-                this_variant = MerchItemVariant.objects.get(id=item.get('variantId'))
-
-                logger.debug('Creating merch order item for merch variant: {}'.format(this_variant.sku))
-                new_order_items.append(MerchOrderItem(
-                    order=merch_order,
-                    item=this_variant,
-                    quantity=item.get('quantity', 0)
-                ))
-
-    # Update the database
-    # TODO: I think that the dictionary still needs a bunch of new fields here
-    for new_item in new_order_items:
-        new_item.save()
-        new_items_data.append({
-            'itemType': 'merch',
-            'orderItem': new_item.id,
-            'variantId': new_item.item.id,
-            'quantity': new_item.quantity,
+    if not isinstance(item, InvoiceItem):
+        errors.append({
+            'code': 'no_invoiceitem_passed',
+            'message': _('No invoice item passed to get_invoice_item_related signal handler.')
         })
-        
-    print(new_items_data)
-    return new_items_data
+
+    order = prior_response.get('__relateditem_merchorder')
+    item_variants = prior_response.get(
+        '__related_merchitemvariants',
+        MerchItemVariant.objects.none()
+    )
+
+    if not order:
+        errors.append({
+            'code': 'no_merchorder',
+            'message': _('No merchandise order passed to link order items to.'),
+        })
+
+    try:
+        this_item_variant = item_variants.get(id=item_data.get('merchItem', None))
+        response.update({
+            'merchItem': this_item_variant.id,
+            'name': this_item_variant.fullName,
+        })
+    except ObjectDoesNotExist:
+        errors.append({
+            'code': 'invalid_item_variant_id',
+            'message': _('Invalid merchandise item variant ID passed.'),
+        })
+        this_item_variant = None
+
+    if not getattr(order, 'itemsEditable', False):
+        errors.append({
+            'code': 'merchorder_not_editable',
+            'message': _('This invoice is linked to a merchandise order that is no longer editable.'),
+        })
+
+    if errors:
+        return {'status': 'failure', 'errors': errors}
+
+    # Check the other items in POST data to ensure
+    # that this is the only one for this item variant..
+    same_item_variant = [
+        x for x in post_data.get('items',[]) if
+        x.get('type') == 'merchItem' and
+        x.get('merchItem') == this_item_variant.id
+    ]
+
+    if len(same_item_variant) > 1:
+        errors.append({
+            'code': 'duplicate_item_variant',
+            'message': _(
+                (
+                    'You cannot add {variant_name} to the same ' +
+                    'order multiple times. Adjust the quantity instead.'
+                ).format(variant_name=this_item_variant.fullName)
+            )
+        })
+
+    # Since there are no errors, we can proceed to find an existing
+    # MerchOrderItem or to create a new one.
+    created_order_item = False
+
+    this_order_item = MerchOrderItem.objects.filter(invoiceItem__id=item).first()
+
+    if not this_order_item:
+        logger.debug('Creating merch order item for invoice item {}.'.format(item.id))
+        this_order_item = MerchOrderItem(
+            order=order,
+            invoiceItem=item,
+            item=this_item_variant,
+        )
+        created_order_item = True
+
+    if this_order_item.item != this_item_variant:
+        errors.append({
+            'code': 'merchandise_mismatch',
+            'message': _('Existing merchandise order item is for a different item of merchandise.'),
+        })
+    if this_order_item.order != order:
+        errors.append({
+            'code': 'order_mismatch',
+            'message': _('Existing merchandise order item is associated with a different merchandise order.'),
+        })
+
+    if errors:
+        return {'status': 'error', 'errors': errors}
+
+    # Update quantity and pricing.
+    this_order_item.quantity = item_data.get('quantity', 1)
+    response['quantity'] = this_order_item.quantity
+
+    item.grossTotal = this_order_item.grossTotal
+    item.total = item.grossTotal
+
+    if (created_order_item and this_order_item.item.soldOut):
+        errors.append({
+            'code': 'sold_out',
+            'message': _('Item "{}" is sold out.'.format(this_order_item.item))
+        })
+
+    if (created_order_item and this_order_item.item.currentInventory < this_order_item.quantity):
+        errors.append({
+            'code': 'insufficient_inventory',
+            'message': _('Item "{}" does not have {} units available.'.format(
+                this_order_item.item, this_order_item.quantity
+            ))
+        })
+
+    # Now that all checks are complete, return failure or success.
+    if errors:
+        return {'status': 'failure', 'errors': errors}
+
+    response['__relateditem_merchorderitem'] = this_order_item
+    return {'status': 'success', 'response': response}
 
 
 @receiver(invoice_finalized)

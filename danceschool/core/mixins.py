@@ -26,7 +26,7 @@ from .tasks import sendEmail
 from .registries import plugin_templates_registry
 from .helpers import getReturnPage
 from .signals import (
-    request_discounts, apply_addons, check_voucher, process_cart_items
+    request_discounts, apply_addons, check_voucher
 )
 # from .models import Registration
 
