@@ -4,7 +4,11 @@
 {% block extra_head %}
 	{# Used inline by certain admin page scripts #}
 	<script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
-
+	<script type="text/javascript">
+		// To prevent errors for Select2 JS
+		var $ = django.jQuery;
+		var jQuery = django.jQuery;
+	</script>
 	{% addtoblock "meta" %}
 		<meta name="robots" content="noindex, nofollow">
 	{% endaddtoblock %}

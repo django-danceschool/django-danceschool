@@ -24,22 +24,22 @@ class CustomerGuestAutocompleteForm(forms.Form):
             firstName=F('first_name'), lastName=F('last_name'),
             guestType=Value(gettext('Customer'), output_field=CharField())
         ).values('firstName', 'lastName', 'guestType').order_by()
-
+        '''
         queryset = queryset.union(
             StaffMember.objects.annotate(
                 guestType=Value(gettext('Customer'), output_field=CharField())
             ).values('firstName', 'lastName', 'guestType').order_by()
         )
-
+        '''
         if apps.is_installed('danceschool.guestlist'):
             GuestListName = apps.get_model('guestlist', 'GuestListName')
-
+            '''
             queryset = queryset.union(
                 GuestListName.objects.annotate(
                     guestType=Value(gettext('Customer'), output_field=CharField())
                 ).values('firstName', 'lastName', 'guestType').order_by()
             )
-
+            '''
         super().__init__(*args, **kwargs)
 
         self.fields['date'] = forms.DateField(

@@ -983,10 +983,13 @@ class OtherInstructorStatsView(InstructorStatsView):
 
     def get_object(self, queryset=None):
         if 'first_name' in self.kwargs and 'last_name' in self.kwargs:
+            first_name = re.sub('^_$','', self.kwargs['first_name'])
+            last_name = re.sub('^_$','', self.kwargs['last_name'])
+
             return get_object_or_404(
                 StaffMember.objects.filter(
-                    **{'firstName': unquote_plus(self.kwargs['first_name']).replace('_', ' '),
-                        'lastName': unquote_plus(self.kwargs['last_name']).replace('_', ' ')})
+                    **{'firstName': unquote_plus(first_name).replace('_', ' '),
+                        'lastName': unquote_plus(last_name).replace('_', ' ')})
                     )
         else:
             return None

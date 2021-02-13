@@ -223,7 +223,7 @@ class GuestList(models.Model):
             'id', 'modelType', 'guestListId', 'firstName', 'lastName',
             'guestType'
         ).order_by()
-
+        '''
         # Execute the constructed query and add the names of staff
         names = names.union(self.getStaffForEvent(event, filters).annotate(
             modelType=Value('StaffMember', output_field=models.CharField()),
@@ -256,6 +256,7 @@ class GuestList(models.Model):
                     'guestType',
                 ).order_by()
             )
+            '''
         return names.order_by('lastName', 'firstName')
 
     def __str__(self):
