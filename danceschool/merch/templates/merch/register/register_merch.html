@@ -11,6 +11,7 @@
                 {% for choice in item.options %}
                     <button class="btn btn-outline-primary my-2 mx-2 add-item"
                         id="{{ choice.choiceId }}"
+                        data-choice-id="{{ choice.choiceId }}"
                         data-item-type="merch"
                         data-item-id="{{ choice.itemId }}"
                         data-variant-id="{{ choice.variantId }}" data-name="{{ item.fullName }}"

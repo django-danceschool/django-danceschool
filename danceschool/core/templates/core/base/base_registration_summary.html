@@ -77,8 +77,11 @@
 				{% endfor %}
 				{% if discount_codes %}<br />{% endif %}
 
-				{% if voucher_names %}
-					<strong>{% trans "Vouchers Applied" %}:</strong> {{ voucher_names|join:", " }}<br /><br />
+				{% if vouchers.items %}
+					<strong>{% trans "Vouchers Applied" %}:</strong>
+					{% for v in vouchers.items %}
+						{{ v.name }}{% if not forloop.last %}, {% endif %}
+					{% endfor %}<br /><br />
 				{% endif %}
 
 				<strong>{% trans "Total Discounts Applied" %}:</strong> {{ currencySymbol }}{{ total_discount_amount|floatformat:"-2" }} <br /><br />
@@ -88,9 +91,6 @@
 			{% if invoice.adjustments or invoice.amountPaid or invoice.taxes and invoice.buyerPaysSalesTax %}
 				<strong>{% trans "Subtotal" %}:</strong> {{ currencySymbol }}{{ invoice.total|floatformat:"-2" }}<br>			
 			{% endif  %}
-			{% if invoice.adjustments %}
-				<strong>{% trans "Adjustments" %}:</strong> {{ currencySymbol }}{{ invoice.adjustments|floatformat:"-2" }}<br>
-			{% endif %}
 			{% if invoice.taxes %}
 				<strong>{% trans "Taxes" %}:</strong> {{ currencySymbol }}{{ invoice.taxes|floatformat:"-2" }}<br>
 			{% endif %}

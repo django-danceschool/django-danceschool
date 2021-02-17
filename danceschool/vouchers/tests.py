@@ -162,8 +162,8 @@ class VouchersTest(DefaultSchoolTestCase):
             invoice.total, invoice.grossTotal - v.maxAmountPerUse
         )
         self.assertEqual(response.context_data.get('is_free'), False)
-        self.assertEqual(response.context_data.get('total_voucher_amount'), v.maxAmountPerUse)
-        self.assertIn(v.name, response.context_data.get('voucher_names'))
+        self.assertEqual(response.context_data.get('vouchers',{}).get('total_pretax'), v.maxAmountPerUse)
+        self.assertIn(v.name, [x.get('name') for x in response.context_data.get('vouchers', {}).get('items', [])])
 
         tvu = v.voucheruse_set.filter(invoice=invoice)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
@@ -188,8 +188,8 @@ class VouchersTest(DefaultSchoolTestCase):
             invoice.total, invoice.grossTotal - v.originalAmount
         )
         self.assertEqual(response.context_data.get('is_free'), False)
-        self.assertEqual(response.context_data.get('total_voucher_amount'), v.originalAmount)
-        self.assertIn(v.name, response.context_data.get('voucher_names'))
+        self.assertEqual(response.context_data.get('vouchers',{}).get('total_pretax'), v.originalAmount)
+        self.assertIn(v.name, [x.get('name') for x in response.context_data.get('vouchers', {}).get('items', [])])
 
         tvu = v.voucheruse_set.filter(invoice=invoice)
         self.assertTrue(tvu.exists() and tvu.count() == 1)
@@ -216,8 +216,8 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(invoice.total, 0)
         self.assertEqual(response.context_data.get('is_free'), True)
-        self.assertEqual(response.context_data.get('total_voucher_amount'), s.getBasePrice())
-        self.assertIn(v.name, response.context_data.get('voucher_names'))
+        self.assertEqual(response.context_data.get('vouchers',{}).get('total_pretax'), s.getBasePrice())
+        self.assertIn(v.name, [x.get('name') for x in response.context_data.get('vouchers', {}).get('items', [])])
 
         reg = response.context_data.get('registration')
         tvu = v.voucheruse_set.filter(invoice=invoice)

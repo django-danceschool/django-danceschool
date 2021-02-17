@@ -1,7 +1,7 @@
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import messages
-from django.db.models import Q, Model
+from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.views.generic import FormView, RedirectView, TemplateView, View
 from django.utils.translation import gettext_lazy as _
@@ -18,7 +18,7 @@ from .models import (
     Event, Series, PublicEvent, Invoice, InvoiceItem,
     CashPaymentRecord, DanceRole, Registration, EventRegistration
 )
-from .forms import ClassChoiceForm, RegistrationContactForm, DoorAmountForm
+from .forms import ClassChoiceForm, RegistrationContactForm
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
     post_student_info, apply_discount, apply_price_adjustments,
@@ -351,20 +351,6 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             returnUrl = reverse('registrationOffline')
             return JsonResponse({'status': 'success', 'redirect': returnUrl})
 
-        # The invoice, invoice items, and JSON decoded post data are kept as
-        # attributes of the view so that they may be used in methods without
-        # needing to pass them around.
-        # self.invoice = None
-        # self.items = []
-
-        # This dictionary can hold linked items related to invoices the need to
-        # be created or saved in the transaction process, such as a Registration,
-        # EventRegistrations, MerchOrder, and MerchOrderItems.
-        # self.related = {}
-
-        # Methods may also need to check the request (e.g. identify submission users)
-        self.request = request
-
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -451,6 +437,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'submissionUser': request.user if request.user.is_authenticated else None,
                 'data': {},
                 'status': Invoice.PaymentStatus.preliminary,
+                'buyerPaysSalesTax': getConstant('registration__buyerPaysSalesTax'),
             })
             invoice = Invoice(**invoice_defaults)
 
@@ -475,11 +462,13 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             })
 
         # Update expiration date for this invoice (will also be updated in
-        # session data).
+        # session data).  Also reset all totals to 0 (will be populated by signal handlers.)
         invoice.expirationDate = (
             timezone.now() +
             timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
         )
+        for attr in ['grossTotal', 'total', 'taxes', 'adjustments', 'fees']:
+            setattr(invoice, attr, 0)
 
         if regSession.get('marketing_id'):
             self.invoice.data.update({'marketing_id': regSession.pop('marketing_id', None)})
@@ -490,7 +479,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         for x in post_data.get('items', []):
             for k in ['dropIn', 'requireFull']:
                 if isinstance(x.get(k, None), str):
-                    x[k] = ('true' in [k].lower())
+                    x[k] = ('true' in x[k].lower())
 
         # Should be a list of dictionaries describing event registrations,
         # either existing or to be created.
@@ -554,10 +543,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             if i.get('id', None):
                 try:
-                    this_item = existing_items.get(id=i['i'])
+                    this_item = existing_items.get(id=i['id'])
                     logger.debug('Found existing invoice item: {}'.format(this_item.id))
                     unmatched_item_ids.remove(this_item.id)
-                except [ObjectDoesNotExist, ValueError]:
+                except (ObjectDoesNotExist, ValueError):
                     errors.append({
                         'code': 'invalid_item_id',
                         'message': _('Invalid invoice item ID passed.')
@@ -572,13 +561,17 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'requireFull': i.get('requireFull', None),
                 'paymentMethod': i.get('paymentMethod', None),
                 'autoSubmit': i.get('autoSubmit', None),
-                'doorChoiceId': i.get('doorChoiceId', None),
+                'choiceId': i.get('choiceId', None),
                 '__item': this_item,
             }
 
+            # Reset all item totals to 0 (will be populated by the signal handler)
+            for attr in ['grossTotal', 'total', 'taxes', 'adjustments', 'fees']:
+                setattr(this_item, attr, 0)
+
             # Add key parameters from the item JSON to the Invoice item data.
             this_item.data.update({
-                'doorChoiceId': i.get('doorChoiceId', None),
+                'choiceId': i.get('choiceId', None),
                 'requireFull': i.get('requireFull', True),
             })
             if i.get('paymentMethod', None):
@@ -597,6 +590,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 this_item_response.update(signal_response.get('response',{}))
 
             signal_responses = get_invoice_item_related.send(
+                sender=AjaxClassRegistrationView,
                 item=this_item, item_data=i, post_data=post_data,
                 prior_response=response, request=request
             )
@@ -621,24 +615,29 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # If we got this far with no issues, then save the invoice and invoice
         # items.  Delete any existing associated InvoiceItems whose IDs were not
         # passed in via POST.  Also, put the identifiers for the invoice and
-        # invoice items into the response dictionary.  The linkage between the
-        # item-level response and the individual in
+        # invoice items into the response dictionary along with item level prices.
+        # The invoice total is always updated at the end, so we pass a flag that
+        # prevents it from being saved every time an item is saved.
         invoice.save()
-        response['id'] = str(invoice.id)
         for key, value in response.items():
-            if isinstance(key, str) and key.startswith('__responseitem'):
+            if isinstance(key, str) and key.startswith('__relateditem'):
                 value.save()
         for i in response.get('items', []):
             this_invoice_item = i.pop('__item', None)
             if isinstance(this_invoice_item, InvoiceItem):
-                this_invoice_item.save()
-                i['id'] = str(this_invoice_item.id)
-
+                this_invoice_item.save(updateInvoiceTotals=False)
+                i.update({
+                    'id': str(this_invoice_item.id),
+                    'grossTotal': this_invoice_item.grossTotal,
+                })
             for key, value in i.items():
-                if isinstance(key, str) and key.startswith('__responseitem'):
+                if isinstance(key, str) and key.startswith('__relateditem'):
                     value.save()
 
+        # Delete any items that are no longer in the POST data and ensure that
+        # the Invoice totals are kept in sync.
         invoice.invoiceitem_set.filter(id__in=unmatched_item_ids).delete()
+        items_queryset = invoice.updateTotals()
 
         # If a transaction is associated with event registration, then process
         # discount, addons, and vouchers
@@ -651,12 +650,15 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # Pop out keys associated with related items that are no longer needed,
         # since once the signal handlers are complete the remaining logic does
         # not use them.
-        for key in response.keys():
+        list_keys = list(response.keys())
+        for key in list_keys:
             if key.startswith('__related'):
                 response.pop(key)
+
         for i in response.get('items', []):
-            for key in i.keys():
-                if key.startwith('__related'):
+            list_keys = list(i.keys())
+            for key in list_keys:
+                if key.startswith('__related'):
                     i.pop(key)
 
         discount_codes, total_discount_amount = self.getDiscounts(
@@ -677,23 +679,55 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'total': invoice.grossTotal - total_discount_amount,
             })
 
+            # Update totals (without saving anything), so that taxes are
+            # recalculated and the invoice handler knows how much to apply.
+            if not post_data.get('finalize', False):
+                items_queryset = invoice.updateTotals(
+                    save=False, prior_queryset=items_queryset,
+                    allocateAmounts={'total': -1*total_discount_amount}
+                )
+
         addons = self.getAddons(invoice, reg)
         if addons:
             response.update({
                 'addonItems': addons,
             })
 
-        voucherId = post_data.get('voucherId', None)
+        voucherId = post_data.get('voucher', {}).get('voucherId', None)
         if voucherId:
-            response.update(
-                self.getVoucher(
-                    voucherId, invoice,
-                    invoice.grossTotal - total_discount_amount,
+            response.update({
+                'voucher': self.getVoucher(
+                    voucherId, invoice, 0,
                     post_data.get('firstName', None),
                     post_data.get('lastName', None),
                     post_data.get('email', None),
-                )
-            )
+                ),
+            })
+
+            if not post_data.get('finalize', False):
+                # Recalculate taxes, but do not save the invoice
+                # with the updates, since the voucher will only be applied later.
+                # We pass the queryset that was returned by previous calls to
+                # updateTotals(), so the update takes into account any discounts
+                # that were previously applied.
+                if response['voucher'].get('beforeTax'):
+                    allocateAmounts = {'total': -1*response['voucher'].get('voucherAmount', 0)}
+                else:
+                    allocateAmounts = {'adjustments': -1*response['voucher'].get('voucherAmount', 0)}
+                items_queryset = invoice.updateTotals(
+                    save=False, allocateAmounts=allocateAmounts,
+                    prior_queryset=items_queryset)
+
+        response.update({
+            'id': str(invoice.id),
+            'grossTotal': invoice.grossTotal,
+            'total': invoice.total,
+            'adjustments': invoice.adjustments,
+            'taxes': invoice.taxes,
+            'outstandingBalance': invoice.outstandingBalance,
+            'buyerPaysSalesTax': invoice.buyerPaysSalesTax,
+            'itemCount': len(response.get('items', []))
+        })
 
         # Format the response for return to the page that called this view 
         response_dict = {
@@ -731,8 +765,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 # Update the registration to put the voucher code in data if
                 # needed so that the Temporary Voucher Use is created before
                 # we proceed to the summary page.
-                if response.get('voucherId', None):
-                    invoice.data['gift'] = response['voucherId']
+                if response.get('voucher', {}).get('voucherId', None):
+                    invoice.data['gift'] = response['voucher']['voucherId']
                     data_changed_flag = True
 
                 if data_changed_flag:
@@ -748,11 +782,11 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     invoice.save()
                 response_dict['redirect'] = reverse('getStudentInfo')
 
-            regSession["voucher_id"] = response.get('voucherId', None)
+            regSession["voucher_id"] = response.get('voucher', {}).get('voucherId', None)
 
-        regSession["invoiceId"] = self.invoice.id.__str__()
-        regSession["invoiceExpiry"] = self.invoice.expirationDate.strftime('%Y-%m-%dT%H:%M:%S%z')
-        self.request.session[REG_VALIDATION_STR] = regSession
+        regSession["invoiceId"] = invoice.id.__str__()
+        regSession["invoiceExpiry"] = invoice.expirationDate.strftime('%Y-%m-%dT%H:%M:%S%z')
+        request.session[REG_VALIDATION_STR] = regSession
 
         return JsonResponse(response_dict)
 
@@ -827,7 +861,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             this_event = events.get(id=item_data.get('event', None))
             response.update({
                 'event': this_event.id,
-                'name': this_event.name,
+                'description': this_event.name,
             })
         except ObjectDoesNotExist:
             errors.append({
@@ -947,7 +981,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # EventRegistration or to create a new one.
         created_eventreg = False
 
-        this_eventreg = EventRegistration.objects.filter(invoiceItem__id=item).first()
+        this_eventreg = EventRegistration.objects.filter(invoiceItem=item).first()
 
         if not this_eventreg:
             logger.debug('Creating event registration for event: {}'.format(this_event.id))
@@ -984,6 +1018,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             this_eventreg.role = this_role
 
         item.total = item.grossTotal
+        item.calculateTaxes()
 
         if item_data.get('data', False):
             if isinstance(item_data['data'], dict):
@@ -1119,21 +1154,29 @@ class RegistrationSummaryView(
             sender=RegistrationSummaryView,
             invoice=invoice,
             registration=reg,
-            initial_price=invoice.grossTotal - total_discount_amount
+            prior_adjustment=-1*total_discount_amount,
         )
 
-        adjustment_list = []
-        adjustment_amount = 0
+        combined_response = {
+            'total_pretax': 0,
+            'total_posttax': 0,
+            'items': [],
+        }
 
         for response in adjustment_responses:
-            adjustment_list += response[1][0]
-            adjustment_amount += response[1][1]
+            combined_response['total_pretax'] += response[1].get('total_pretax', 0)
+            combined_response['total_posttax'] += response[1].get('total_posttax', 0)
+            combined_response['items'] += response[1].get('items', [])
 
         # The updateTotals method allocates the total adjustment across the
-        # invoice items.
-        invoice.updateTotals(allocateAmounts={
-            'total': -1*(adjustment_amount + total_discount_amount)
-        })
+        # invoice items, and also recalculates the taxes for each item.
+        invoice.updateTotals(
+            allocateAmounts={
+                'total': -1*(combined_response['total_pretax'] + total_discount_amount),
+                'adjustments': -1*(combined_response['total_posttax']),
+            },
+            save=True,
+        )
 
         # Update the session key to keep track of this registration
         regSession = request.session[REG_VALIDATION_STR]
@@ -1147,8 +1190,7 @@ class RegistrationSummaryView(
                     (x.code.name, x.code.pk, x.discount_amount) for x in discount_codes
                 ]
 
-        regSession['voucher_names'] = adjustment_list
-        regSession['total_voucher_amount'] = adjustment_amount
+        regSession['vouchers'] = combined_response
         request.session[REG_VALIDATION_STR] = regSession
 
         return super().get(request, *args, **kwargs)
@@ -1169,8 +1211,7 @@ class RegistrationSummaryView(
 
         discount_codes = regSession.get('discount_codes', None)
         discount_amount = regSession.get('total_discount_amount', 0)
-        voucher_names = regSession.get('voucher_names', [])
-        total_voucher_amount = regSession.get('total_voucher_amount', 0)
+        vouchers = regSession.get('vouchers', {})
         addons = regSession.get('addons', [])
 
         isFree = (invoice.total == 0)
@@ -1221,9 +1262,9 @@ class RegistrationSummaryView(
             "addonItems": addons,
             "discount_codes": discount_codes,
             "discount_code_amount": discount_amount,
-            "voucher_names": voucher_names,
-            "total_voucher_amount": total_voucher_amount,
-            "total_discount_amount": discount_amount + total_voucher_amount,
+            "vouchers": vouchers,
+            "total_discount_amount": discount_amount + vouchers.get('total_pretax', 0),
+            "total_adjustment_amount": vouchers.get('total_posttax', 0),
             "currencyCode": getConstant('general__currencyCode'),
             'payAtDoor': getattr(reg, 'payAtDoor', False),
             'is_complete': isComplete,
@@ -1291,6 +1332,12 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         )
         addons = self.getAddons(self.invoice, reg)
 
+        # Update totals (without saving anything), so that taxes are
+        # recalculated and the invoice handler knows how much to apply.
+        items_queryset = self.invoice.updateTotals(
+            save=False, allocateAmounts={'total': -1*total_discount_amount}
+        )
+
         context_data.update({
             'reg': reg,
             'payAtDoor': reg.payAtDoor,
@@ -1307,8 +1354,19 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             context_data.update(
                 self.getVoucher(
                     voucherId, self.invoice,
-                    self.invoice.grossTotal - total_discount_amount
+                    -1*total_discount_amount
                 )
+            )
+
+            # Recalculate taxes, but do not save the invoice
+            # with the updates, since the voucher will only be applied later.
+            if context_data['voucher'].get('beforeTax'):
+                allocateAmounts = {'total': -1*context_data['voucher'].get('voucherAmount', 0)}
+            else:
+                allocateAmounts = {'adjustments': -1*context_data['voucher'].get('voucherAmount', 0)}
+            items_queryset = self.invoice.updateTotals(
+                save=False, allocateAmounts=allocateAmounts,
+                prior_queryset=items_queryset
             )
 
         if (

@@ -3,7 +3,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.sites.models import Site
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Q, Sum, F, Case, When, Value
+from django.db.models import Q, Sum, F, Case, When, Value, Count
 from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
@@ -2518,31 +2518,6 @@ class Invoice(EmailRecipientMixin, models.Model):
         if payments:
             return payments.first().methodName
 
-    def add_item(
-        self, grossTotal=0, total=0, adjustments=0, taxes=0, fees=0,
-        save=True, updateTotals=True, allocateFees=False, **kwargs
-    ):
-        '''
-        A convenience method to quickly add an item to an invoice based on
-        passed information.  By default it saves and updates the invoice totals
-        in one step as well.
-        '''
-
-        if not self.itemsEditable:
-            return None
-
-        new_item = InvoiceItem(
-            invoice=self, grossTotal=grossTotal, total=total,
-            adjustments=adjustments, taxes=taxes, fees=fees,
-            description=kwargs.get('description', None)
-        )
-        if save:
-            new_item.save()
-        if updateTotals:
-            self.updateTotals(save=save, allocateFees=allocateFees)
-
-        return new_item
-
     def processPayment(
         self, amount, fees, paidOnline=True, methodName=None, methodTxn=None,
         submissionUser=None, collectedByUser=None, forceFinalize=False,
@@ -2574,9 +2549,8 @@ class Invoice(EmailRecipientMixin, models.Model):
         })
         self.data['paymentHistory'] = paymentHistory
 
-        self.amountPaid += amount
-        self.fees += fees
         self.paidOnline = paidOnline
+        self.amountPaid += amount
 
         if submissionUser and not self.submissionUser:
             self.submissionUser = submissionUser
@@ -2592,101 +2566,244 @@ class Invoice(EmailRecipientMixin, models.Model):
                 self.registration = self.registration.finalize(dateTime=paymentTime)
             
             self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
-            self.save()
-
         else:
             # The payment wasn't completed so don't finalize, but do send a notification recording the payment.
             if notify:
                 self.sendNotification(invoicePaid=True, thisPaymentAmount=amount, payerEmail=notify)
             else:
                 self.sendNotification(invoicePaid=True, thisPaymentAmount=amount)
+
+        if fees:
+            self.updateTotals(forceSave=True, allocateAmounts={'fees': fees,})
+        else:
             self.save()
 
-        # If there were transaction fees, then these also need to be allocated among the InvoiceItems
-        # All fees from payments are allocated proportionately.
-        self.allocateFees(epsilon=epsilon)
-
-    def updateTotals(self, save=True, allocateFees=False, allocateAmounts={}):
+    def updateTotals(
+        self, save=True, forceSave=False, allocateAmounts={},
+        allocateWeights={}, prior_queryset=None
+    ):
         '''
         This method recalculates the totals from the invoice items associated
         with the invoice.  If the totals have changed, then the invoice is
         saved.  If an allocate dictionary is passed, then adjustments to each
-        line item can also be proportionately distributed among the items based
-        on their grossTotals.
+        line item can also be proportionately distributed among the items.  And,
+        a dictionary of weights (in {id: value} form) can be passed, which
+        allows allocations to be applied to specific items in proportion.
+
+        Because of the recalculation of taxes, we have to calculate all of the
+        various line items whenever we are allocating amounts.  Unless weights
+        are specified, changes to the grossTotal or the total price are
+        allocated based on the ratio of grossTotal across invoice items. New
+        taxes are always calculated based on the new total price after any
+        changes (to ensure consistent application of tax rates).  Changes to the
+        adjustments line are then allocated based on the ratio of the
+        newTotal + newTax for each item, and changes to fees are then allocated
+        based on the updated ratio of total + tax + adjustments for each item.
+
+        When specific weights are specified, allocations must be either all
+        pre-tax or all post-tax.  This prevents issues associated with things
+        such as applying full-price after tax vouchers at the same time as
+        discounts that might affect the calculation of tax.  This method returns
+        a queryset of invoice items with annotations that indicate the outcome
+        of any allocations, and it takes as an argument the queryset that
+        resulted from a prior call to this method.  This way, even if the
+        results of an allocation are not saved, pre-tax and post-tax updates
+        can be processed by calling this method twice.  Passed weights are
+        automatically rescaled to 1.
+
+        Finally, note that this method does not check individual item totals for
+        bounds or sign.  If you pass allocation weights that are not sensible
+        for the underlying items, then allocations may happen in a way that
+        leads to negative net prices or negative processing fees.  Use caution
+        when making use of this method.
         '''
 
-        item_keys = ['grossTotal', 'total', 'adjustments', 'taxes']
-        old_totals = self.invoiceitem_set.aggregate(**{
-            k: Coalesce(Sum(k), 0) for k in item_keys + ['fees',]
-        })
-        new_totals = old_totals.copy()
+        '''
+        existing_ids = [str(x) for x in self.invoiceitem_set.values_list('id', flat=True)]
+        not_existing = [k for k in allocateWeights.keys() if k not in existing_ids]
+        if not_existing:
+            raise ValueError(_('Invalid allocation weight identifier passed. to updateTotals()'))
+        '''
+
+        item_keys = ['grossTotal', 'total', 'adjustments', 'fees']
 
         # Ignore keys other than the ones that apply to invoice items and
         # also 0 adjustment amounts
         allocateAmounts = {
             k: x for k, x in allocateAmounts.items() if abs(x) != 0 and
-            k in item_keys + ['fees',]
+            k in item_keys
         }
 
-        if allocateAmounts:
-            update_dict = {}
-            for k, x in allocateAmounts.items():
-                update_dict[k] = (
-                    F(k) + ((F('grossTotal')/old_totals['grossTotal']) * x)
-                )
-                new_totals[k] = new_totals[k] + x
-            self.invoiceitem_set.update(**update_dict)
+        # before going any further, we need to ensure that the queryset to be
+        # handled begins with the same format, which means that all the "old"
+        # values must be put into annotations to avoid name conflicts.
+        items = prior_queryset or self.invoiceitem_set.all()
+        if 'newGrossTotal' in items.query.annotations:
+            items = items.annotate(
+                oldGrossTotal=F('newGrossTotal'),
+                oldTotal=F('newTotal'),
+                oldTaxes=F('newTaxes'),
+                oldAdjustments=F('newAdjustments'),
+                oldFees=F('newFees'),
+            )
+        else:
+            items = items.annotate(
+                oldGrossTotal=F('grossTotal'),
+                oldTotal=F('total'),
+                oldTaxes=F('taxes'),
+                oldAdjustments=F('adjustments'),
+                oldFees=F('fees'),
+            )
+        
+        # Now, construct the allocation weights, which can be applied either
+        # pre-tax or post-tax, but not both.
+        if allocateWeights:
+            pretax_allocations = [x for x in allocateAmounts.keys() if x in ['grossTotal', 'total']]
+            posttax_allocations = [x for x in allocateAmounts.keys() if x in ['adjustments', 'fees']]
+
+            if pretax_allocations and posttax_allocations:
+                raise ValueError(_(
+                    'Cannot use Invoice.updateTotals() to allocate both ' +
+                    'pre-tax and post-tax amounts with allocation weights. ' +
+                    'Use the returned queryset of a pre-tax allocation to ' +
+                    'submit a separate post-tax allocation instead.'
+                ))
+
+            # Get rescaled weights, with one item for each passed ID.  Also
+            # create a binary indicator that the weight is greater than 0.
+            totalWeight = sum([x for x in allocateWeights.values()])
+            allocateWeights = {k: v / totalWeight for k,v in allocateWeights.items()}
+
+            when_weight = []
+            for k,v in allocateWeights.items():
+                when_weight.append(When(id=k, then=v))
+
+            items = items.annotate(
+                allocationWeight=Case(*when_weight, default=0, output_field=models.FloatField())
+            )
+
+        total_aggregation = {
+            k: Coalesce(Sum(k2), 0) for k,k2 in [
+                ('grossTotal', 'oldGrossTotal'), ('total', 'oldTotal'),
+                ('taxes', 'oldTaxes'), ('adjustments', 'oldAdjustments'),
+                ('fees', 'oldFees'),
+            ]
+        }
+
+        old_totals = items.aggregate(item_count=Count('id'),**total_aggregation)
+        new_totals = old_totals.copy()
+
+        for k,v in allocateAmounts.items():
+            new_totals[k] += v
+
+        # TODO: When the incoming total is 0 (e.g. discounts have previously
+        # been applied), then the tax rate cannot be calculated using this
+        # method.  Assuming zero in these cases is generally OK, since discounts
+        # are not normally unapplied.  However, we should probably pull this
+        # information from the attached models somehow (maybe a signal).
+        pretax_annotations = {
+            'buyerTax': Value(float(self.buyerPaysSalesTax), output_field=models.FloatField()),
+            'taxRate': Case(
+                When(oldTotal=0, then=0),
+                default=(
+                    F('buyerTax') * (F('oldTaxes') / F('oldTotal')) +
+                    (1 - F('buyerTax')) * ((F('oldTaxes') / F('oldTotal'))/(1 + (F('oldTaxes') / F('oldTotal'))))
+                ),
+                output_field=models.FloatField()
+            ),
+        }
+
+        # If no weights are specified, the ratio to be applied to grossTotal is
+        # based on prior values of grossTotal.  For all other fields, the ratio
+        # be applied is based on the update values of previous fields in the
+        # order of operations.
+        if allocateWeights and allocateAmounts.get('grossTotal'):
+            pretax_annotations['grossTotalRatio'] = F('allocationWeight')
+        elif old_totals['grossTotal'] == 0:
+            pretax_annotations['grossTotalRatio'] = Value(1/old_totals['item_count'], output_field=models.FloatField())
+        else:
+            pretax_annotations['grossTotalRatio'] = (F('oldGrossTotal')/old_totals['grossTotal'])
+
+        pretax_annotations['newGrossTotal'] = (
+            F('oldGrossTotal') + (F('grossTotalRatio') * allocateAmounts.get('grossTotal', 0))
+        )
+
+        if allocateWeights and allocateAmounts.get('total'):
+            pretax_annotations['totalRatio'] = F('allocationWeight')
+        elif new_totals['grossTotal'] == 0:
+            pretax_annotations['totalRatio'] = 1/old_totals['item_count']
+        else:
+            pretax_annotations['totalRatio'] = (F('newGrossTotal')/new_totals['grossTotal'])
+
+        pretax_annotations.update({
+            'newTotal': F('oldTotal') + (F('totalRatio') * allocateAmounts.get('total',0)),
+            'newTaxes': F('newTotal') * F('taxRate'),
+        })
+
+        items = items.annotate(**pretax_annotations)
+        new_totals['taxes'] = items.aggregate(Sum('newTaxes')).get('newTaxes__sum', 0)
+
+        posttax_annotations = {}
+
+        if allocateWeights and allocateAmounts.get('adjustments'):
+            posttax_annotations['adjustmentRatio'] = F('allocationWeight')
+        elif new_totals['total'] + new_totals['taxes'] == 0:
+            posttax_annotations['adjustmentRatio'] = Value(1/old_totals['item_count'], output_field=models.FloatField())
+        else:
+            posttax_annotations['adjustmentRatio'] = (
+                (F('newTotal') + F('newTaxes')) / (new_totals['total'] + new_totals['taxes'])
+            )
+
+        posttax_annotations['newAdjustments'] = F('oldAdjustments') + (
+            F('adjustmentRatio') * allocateAmounts.get('adjustments', 0)
+        )
+
+        if allocateWeights and allocateAmounts.get('fees'):
+            posttax_annotations['feesRatio'] = F('allocationWeight')
+        elif new_totals['total'] + new_totals['taxes'] + new_totals['adjustments'] == 0:
+            posttax_annotations['feesRatio'] = Value(1/old_totals['item_count'], output_field=models.FloatField())
+        else:
+            posttax_annotations['feesRatio'] = (
+                (F('newTotal') + F('newTaxes') + F('newAdjustments')) /
+                (new_totals['total'] + new_totals['taxes'] + new_totals['adjustments'])
+            )
+
+        posttax_annotations['newFees'] = F('oldFees') + (F('feesRatio') * allocateAmounts.get('fees', 0))
+
+        items = items.annotate(**posttax_annotations)
+
+        if save or forceSave:
+            updates = {
+                'grossTotal': F('newGrossTotal'),
+                'total': F('newTotal'),
+                'taxes': F('newTaxes'),
+                'adjustments': F('newAdjustments'),
+                'fees': F('newFees'),
+            }
+            items.update(**updates)
 
         changed_invoice = False
 
-        for k in item_keys:
+        # This should happen if we have allocated changes (regardless of whether
+        # we save the items), or if the Invoice items have been changed since
+        # the last time this was run.  Since this method is called on every
+        # InvoiceItem save or delete call, this keeps the Invoice in sync with
+        # the items.  However, we use the new_totals dictionary rather than
+        # a query because the items are not always saved when adjustments are
+        # made.
+        for k in item_keys + ['taxes']:
             if getattr(self,k) != new_totals[k]:
                 setattr(self, k, new_totals[k])
                 changed_invoice = True
 
-        if not allocateFees and self.fees != new_totals['fees']:
-            self.fees = new_totals['fees']
-            changed_invoice = True
-        elif allocateFees:
-            self.allocateFees()
-
-        if changed_invoice and save:
+        if (changed_invoice and save) or forceSave:
             self.save()
 
-    def allocateFees(self, epsilon=0.01):
-        '''
-        Fees are allocated across invoice items based on their discounted
-        total price net of adjustments as a proportion of the overall
-        invoice's total price
-        '''
+            # Clear the annotations from the queryset if we have saved to avoid confusion.
+            # The line items now reflect the updated values.
+            items.query.annotations.clear()
 
-        item_keys = ['grossTotal', 'total', 'adjustments', 'taxes']
-        items = self.invoiceitem_set.all()
-        totals = items.aggregate(**{
-            k: Coalesce(Sum(k), 0) for k in item_keys
-        })
-
-        # Check that totals and adjusments match.  If they do not, raise an error.
-        for k in item_keys:
-            if abs(totals[k] - getattr(self, k)) > epsilon:
-                msg = _('Invoice item {key} does not match invoice {key}.  Unable to allocate fees.'.format(key=k))
-                logger.error(str(msg))
-                raise ValidationError(msg)
-
-        update = None
-        if self.total - self.adjustments > 0:
-            update = self.fees * (F('total') - F('adjustments'))/(self.total - self.adjustments)
-        elif self.total - self.adjustments == 0 and self.total > 0:
-            # In the case of full refunds, allocate fees according to the
-            # initial total price of the item only.
-            update = self.fees * F('total')/self.total
-        elif self.fees:
-            # In the unexpected event of fees with no total, just divide
-            # the fees equally among the items.
-            update = self.fees * (1 / items.count())
-
-        if update:
-            items.update(fees=update)
+        return items
 
     def sendNotification(self, **kwargs):
 
@@ -2862,6 +2979,8 @@ class InvoiceItem(models.Model):
     taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
     fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
 
+    data = models.JSONField(_('Additional data'), blank=True, default=dict)
+
     @property
     def netRevenue(self):
         net = self.total - self.fees + self.adjustments
@@ -2903,16 +3022,20 @@ class InvoiceItem(models.Model):
 
     def save(self, *args, **kwargs):
         restrictStatus = kwargs.pop('restrictStatus', True)
+        updateTotals = kwargs.pop('updateInvoiceTotals', True)
         if self.invoice.itemsEditable or not restrictStatus:
             super().save(*args, **kwargs)
-            self.invoice.updateTotals()
+            if updateTotals:
+                self.invoice.updateTotals()
 
     def delete(self, *args, **kwargs):
         restrictStatus = kwargs.pop('restrictStatus', True)
+        updateTotals = kwargs.pop('updateInvoiceTotals', True)
         invoice = self.invoice
         if self.invoice.itemsEditable or not restrictStatus:
             super().delete(*args, **kwargs)
-            invoice.updateTotals()
+            if updateTotals:
+                invoice.updateTotals()
 
     def __str__(self):
         return '%s: #%s' % (self.name, self.id)

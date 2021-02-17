@@ -11,7 +11,7 @@
                 {% for choice in item.primary_options %}
                     <button class="btn btn-outline-primary my-2 mx-2 add-item"
                         id="{{ choice.choiceId }}"
-                        data-choiceId="{{ choice.choiceId }}"
+                        data-choice-id="{{ choice.choiceId }}"
                         data-type="eventRegistration"
                         data-event="{{ item.event.id }}" data-name="{{ item.event.name }}" 
                         data-price="{{ choice.price }}"

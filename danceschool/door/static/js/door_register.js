@@ -34,7 +34,6 @@ $(document).ready(function() {
             buyerPaysSalesTax: true, // If true, taxes are shown in the subtotal line
             itemCount: 0,
             items: [], // Information on each item in the cart
-            orders: [], // Information about registrations, merch orders, etc.
             discounts: [], // Information about discounts, if applicable
             voucher: {}, // Information on an applied voucher, if applicable
             addonItems: [], // List of add-on items, if applicable
@@ -51,8 +50,11 @@ $(document).ready(function() {
         $('#cartItems').text('');
         $('#subtotalLine').text('');
         $('#discountList').text('');
-        $('#voucherList').text('');
+        $('#preTaxVoucherList').text('');
         $('#addonList').text('');
+        $('#taxInfo').text('');
+        $('#postTaxVoucherList').text('');
+        $('#adjustmentInfo').text('');
         $('.badge-choice-counter').text('');;
         $('#cart-submit').addClass('invisible');
 
@@ -75,7 +77,7 @@ $(document).ready(function() {
                 this_data_string += 'data-item-variant="' + this.itemVariantId +
                     '" data-order-item="' + this.orderItemId + '"';
             }
-            var this_price = parseFloat(this.price).toFixed(2);
+            var this_price = parseFloat(this.grossTotal).toFixed(2);
     
             // Add item to the shopping cart
             $('#cartItems').append(
@@ -103,18 +105,25 @@ $(document).ready(function() {
         });
 
         // Add vouchers
-        if (regData.voucher.hasOwnProperty('amount') && regData.voucher.amount > 0) {
-            if (regData.voucher.hasOwnProperty('name')) {
-                var voucherText = regData.voucher.name + ' (' + regData.voucher.id + ')';
+        if (regData.voucher.hasOwnProperty('voucherAmount') && regData.voucher.voucherAmount > 0) {
+            if (regData.voucher.hasOwnProperty('voucherName')) {
+                var voucherText = regData.voucher.voucherName + ' (' + regData.voucher.voucherId + ')';
             }
             else {
                 var voucherText = '';
             }
 
-            $('#voucherList').append(
+            if(regData.voucher.beforeTax === true) {
+                var voucherTbody = '#preTaxVoucherList'
+            }
+            else {
+                var voucherTbody = '#postTaxVoucherList'
+            }
+
+            $(voucherTbody).append(
                 '<tr class="voucher"><td><strong>' + regParams.voucherString +
                 ':</strong> ' + voucherText +'</td><td> -' +
-                regParams.currencySymbol + parseFloat(regData.voucher.amount).toFixed(2) + 
+                regParams.currencySymbol + parseFloat(regData.voucher.voucherAmount).toFixed(2) + 
                 '<button type="button" class="close remove-voucher" aria-label="Remove"><span aria-hidden="true">&times;</span></button></td></tr>'
             );
         }
@@ -127,27 +136,23 @@ $(document).ready(function() {
             );
         });
 
+        if (regData.taxes !== 0 && regData.buyerPaysSalesTax === true) {
+            $('#taxInfo').append(
+                '<tr class="taxes"><td>' + regParams.taxesString + ':</td><td>' + regParams.currencySymbol + parseFloat(regData.taxes).toFixed(2) + '</td></tr>'
+            );
+        }
+
         // If there are discounts, vouchers, or add-ons, add a subtotal line (grossTotal)
         if (
             $('#discountList').text() !== '' ||
-            $('#voucherList').text() !== '' ||
+            $('#preTaxVoucherList').text() !== '' ||
             $('#addonList').text() !== '' ||
-            regData.taxes !== 0 ||
-            regData.adjustments !== 0
+            $('#postTaxVoucherList').text() !== '' ||
+            $('#taxInfo').text() !== ''
         ) {
             $('#subtotalLine').append(
                 '<tr class="subtotal"><th>' + regParams.subtotalString + ':</th><th>' + regParams.currencySymbol + parseFloat(regData.grossTotal).toFixed(2) + '</th></tr>'
             );
-            if (regData.taxes !== 0 && regData.buyerPaysSalesTax === true) {
-                $('#subtotalLine').append(
-                    '<tr class="taxes"><td>' + regParams.taxesString + ':</td><td>' + regParams.currencySymbol + parseFloat(regData.taxes).toFixed(2) + '</td></tr>'
-                );
-            }
-            if (regData.adjustments !== 0) {
-                $('#subtotalLine').append(
-                    '<tr class="adjustments"><td>' + regParams.adjustmentsString + ':</td><td>' + regParams.currencySymbol + parseFloat(regData.adjustments).toFixed(2) + '</td></tr>'
-                );
-            }
         }
 
         var itemString = regParams.itemStringPlural;
@@ -156,7 +161,7 @@ $(document).ready(function() {
         }
 
         $('item').text(regData.itemsCount).css('display', 'block');
-        $('#cartTotal').text(parseFloat(regData.total).toFixed(2));
+        $('#cartTotal').text(parseFloat(regData.outstandingBalance).toFixed(2));
         $('#cartSummary').text(regData.itemCount + ' ' + itemString + ': ' + regParams.currencySymbol + parseFloat(regData.outstandingBalance).toFixed(2));
 
         if (regData.hasOwnProperty('addonItems') && regData.addonItems.length > 0) {
@@ -206,11 +211,22 @@ $(document).ready(function() {
                     window.location.href = response.redirect;
                 }
                 else if(response.status == "success") {
-                    regData = response.reg;
+                    regData = response.invoice;
 
                     if (removeAlerts === true) {
                         // Remove any existing alerts.
                         $('.alert').alert('close')
+                    }
+
+                    // Ensure that some properties of the response are defined to avoid errors.
+                    if (!regData.hasOwnProperty('voucher')) {
+                        regData.voucher = {};
+                    }
+                    if (!regData.hasOwnProperty('discounts')) {
+                        regData.discounts = [];
+                    }
+                    if (!regData.hasOwnProperty('addonItems')) {
+                        regData.discounts = [];
                     }
 
                     refreshCart();
@@ -289,6 +305,8 @@ $(document).ready(function() {
 
         // Grab the data and also add the ID of the element that was clicked.
         var this_data = $(this).data();
+
+        console.log(this_data);
 
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);

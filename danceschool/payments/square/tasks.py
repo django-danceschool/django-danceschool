@@ -9,9 +9,7 @@ def updateSquareFees(paymentRecord):
     any Invoice or ExpenseItem associated with this transaction also remains accurate.
     '''
 
-    fees = paymentRecord.netFees
+    fees=paymentRecord.netFees
     invoice = paymentRecord.invoice
-    invoice.fees = fees
-    invoice.save()
-    invoice.allocateFees()
+    invoice.updateTotals(save=True, allocateAmounts={'fees': fees})
     return fees

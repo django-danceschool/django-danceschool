@@ -79,6 +79,15 @@ class Voucher(models.Model):
         )
     )
 
+    beforeTax = models.BooleanField(
+        _('Voucher applied before tax'), default=True,
+        help_text=_(
+            'Voucher codes that are used as discounts or promotions are ' +
+            'usually subtracted from the total price before any applicable ' +
+            'sales tax is calculated, while gift certificates are subtracted ' +
+            'from the after-tax total price.')
+    )
+
     # i.e. For Groupon and LivingSocial, these are single use
     singleUse = models.BooleanField(_('Single Use'), default=False)
 
@@ -152,7 +161,7 @@ class Voucher(models.Model):
 
     def getAmountLeft(self):
         return (
-            self.originalAmount - self.refundAmount -
+            (self.originalAmount or 0) - (self.refundAmount or 0) -
             (self.voucheruse_set.filter(applied=True).aggregate(
                 sum=Sum('amount')
             ).get('sum') or 0) +
@@ -373,6 +382,7 @@ class Voucher(models.Model):
             'name': self.name,
             'id': self.voucherId,
             'status': 'valid',
+            'beforeTax': self.beforeTax,
             'warnings': warnings,
         }
 
@@ -424,6 +434,11 @@ class VoucherUse(models.Model):
         Invoice, verbose_name=_('Invoice'), on_delete=models.CASCADE,
     )
     amount = models.FloatField(_('Amount'), validators=[MinValueValidator(0)])
+
+    beforeTax = models.BooleanField(
+        _('Voucher applied before tax'), default=True,
+    )
+
     notes = models.CharField(_('Notes'), max_length=100, null=True, blank=True)
     creationDate = models.DateTimeField(_('Date of use'), auto_now_add=True, null=True)
     applied = models.BooleanField(_('Use finalized'), default=False)

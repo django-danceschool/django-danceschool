@@ -169,7 +169,10 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
         logger.debug('No applicable vouchers found.')
         return
 
-    tvu = VoucherUse(voucher=voucher, invoice=invoice, amount=0, applied=False)
+    tvu = VoucherUse(
+        voucher=voucher, invoice=invoice, beforeTax=voucher.beforeTax,
+        amount=0, applied=False
+    )
     tvu.save()
     logger.debug('Preliminary voucher use object created.')
 
@@ -201,13 +204,16 @@ def applyReferrerVouchersTemporarily(sender, **kwargs):
         return
 
     for v in vouchers:
-        VoucherUse(voucher=v, invoice=invoice, amount=0, applied=False).save()
+        VoucherUse(
+            voucher=v, invoice=invoice, beforeTax=v.beforeTax,
+            amount=0, applied=False
+        ).save()
 
 
 @receiver(apply_price_adjustments)
 def applyTemporaryVouchers(sender, **kwargs):
     invoice = kwargs.get('invoice')
-    price = kwargs.get('initial_price')
+    prior_adjustment = kwargs.get('prior_adjustment')
 
     logger.debug('Signal fired to apply preliminary vouchers.')
 
@@ -217,35 +223,54 @@ def applyTemporaryVouchers(sender, **kwargs):
     tvus = list(invoice.voucheruse_set.filter(
         voucher__category=referral_cat,
         applied=False
-    )) + list(invoice.voucheruse_set.exclude(
+    ).order_by('-beforeTax')) + list(invoice.voucheruse_set.exclude(
         voucher__category=referral_cat,
         applied=False
-    ))
+    ).order_by('-beforeTax'))
+
+    response = {
+        'total_pretax': 0,
+        'total_posttax': 0,
+        'items': [],
+    }
 
     if not tvus:
         logger.debug('No applicable vouchers found.')
-        return ([], 0)
+        return response
 
-    voucher_names = []
-    total_voucher_amount = 0
-    remaining_price = price
+    remaining_pretax = invoice.total + prior_adjustment
+    remaining_posttax = (
+        invoice.total + prior_adjustment +
+        invoice.taxes + invoice.adjustments
+    )
 
-    while remaining_price > 0 and tvus:
+    while (remaining_pretax > 0 or remaining_posttax > 0) and tvus:
         tvu = tvus.pop()
 
         if tvu.voucher.maxAmountPerUse:
             amount = min(tvu.voucher.amountLeft, tvu.voucher.maxAmountPerUse)
         else:
             amount = tvu.voucher.amountLeft
-        amount = min(remaining_price, amount)
+
+        # The amount of the voucher that can be used depends on wh
+        if tvu.beforeTax:
+            amount = min(remaining_pretax, amount)
+            remaining_pretax -= amount
+            response['total_pretax'] += amount
+        else:
+            amount = min(remaining_posttax, amount)
+            response['total_posttax'] += amount
+
+        remaining_posttax -= amount
         tvu.amount = amount
         tvu.save()
+        response['items'].append({
+            'name': tvu.voucher.name,
+            'amount': amount,
+            'beforeTax': tvu.beforeTax,
+        })
 
-        remaining_price -= amount
-        voucher_names += [tvu.voucher.name]
-        total_voucher_amount += amount
-
-    return (voucher_names, total_voucher_amount)
+    return response
 
 
 @receiver(post_registration)

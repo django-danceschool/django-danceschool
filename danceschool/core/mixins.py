@@ -3,7 +3,7 @@ from django.contrib.sites.models import Site
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.urls import reverse
 from django.db.models import (
-    Case, When, F, Q, IntegerField, ExpressionWrapper, Sum
+    Case, When, F, Q, IntegerField, ExpressionWrapper
 )
 from django.db.models.functions import ExtractWeekDay
 from django.forms import ModelForm, ChoiceField, Media
@@ -28,7 +28,6 @@ from .helpers import getReturnPage
 from .signals import (
     request_discounts, apply_addons, check_voucher
 )
-# from .models import Registration
 
 
 # Define logger for this file
@@ -520,7 +519,7 @@ class RegistrationAdjustmentsMixin(object):
     '''
 
     def getVoucher(
-        self, voucherId, invoice, subtotal, first_name=None, last_name=None, email=None
+        self, voucherId, invoice, prior_adjustment=0, first_name=None, last_name=None, email=None
     ):
         '''
         This method looks for a voucher with the associated voucher ID, it checks
@@ -550,22 +549,27 @@ class RegistrationAdjustmentsMixin(object):
         if (len(voucher_response) > 1):
             # This shouldn't happen
             logger.error('Received multiple voucher responses from signal handler.')
+            return {}
         elif voucher_response:
+            subtotal = invoice.total + prior_adjustment
+            total = subtotal
+
             if (
                 voucher_response[0].get('status', None) == 'valid' and
                 voucher_response[0].get('available', 0) > 0
             ):
+                if voucher_response[0].get('beforeTax') is False:
+                    subtotal += invoice.taxes + invoice.adjustments
+
                 total = max(
                     0, subtotal - voucher_response[0].get('available', 0)
                 )
-            else:
-                total = subtotal
 
             return {
-                'voucher_id': voucher_response[0].get('id', None),
-                'voucher_name': voucher_response[0].get('name', None),
-                'voucher_amount': subtotal - total,
-                'discounted_subtotal': total,
+                'voucherId': voucher_response[0].get('id', None),
+                'voucherName': voucher_response[0].get('name', None),
+                'voucherAmount': subtotal - total,
+                'beforeTax': voucher_response[0].get('beforeTax')
             }
         else:
             return {}
@@ -576,6 +580,8 @@ class RegistrationAdjustmentsMixin(object):
         a tuple that contains all the information needed to process any
         applicable discounts.
         '''
+
+        from danceschool.core.models import Registration
 
         if not registration:
             registration = Registration.objects.filter(invoice=invoice).first()

@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.forms import ModelForm, ModelChoiceField, TextInput
 from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from dal import autocomplete
 
@@ -64,7 +66,7 @@ class InvoiceVoucherInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
     readonly_fields = ['voucher', 'amount']
-    exclude = ['applied',]
+    exclude = ['applied', 'beforeTax']
 
     # Prevents adding new voucher uses without going through
     # the standard registration process
@@ -114,8 +116,17 @@ class ClassVoucherInline(admin.StackedInline):
 class VoucherUseInline(admin.TabularInline):
     model = VoucherUse
     extra = 0
-    readonly_fields = ['invoice', 'amount']
-    exclude = ['applied',]
+    fields = ('viewInvoiceLink', 'creationDate', 'amount', 'notes')
+    readonly_fields = ('viewInvoiceLink', 'creationDate', 'amount')
+
+    def viewInvoiceLink(self, obj):
+        if obj.id:
+            change_url = reverse('viewInvoice', args=(obj.invoice.id, ))
+            return mark_safe(
+                '<a class="btn btn-outline-secondary" href="%s">%s</a>' % (change_url, obj.invoice.id)
+            )
+    viewInvoiceLink.allow_tags = True
+    viewInvoiceLink.short_description = _('Invoice')
 
     # Prevents adding new voucher uses without going through
     # the standard registration process.
@@ -159,19 +170,20 @@ class VoucherAdmin(admin.ModelAdmin):
     ]
     list_display = [
         'voucherId', 'name', 'category', 'amountLeft', 'maxAmountPerUse',
-        'expirationDate', 'isEnabled', 'restrictions'
+        'expirationDate', 'beforeTax', 'isEnabled', 'restrictions'
     ]
     list_filter = [
         'category', 'expirationDate', 'disabled', 'forFirstTimeCustomersOnly',
-        'forPreviousCustomersOnly', 'doorOnly'
+        'forPreviousCustomersOnly', 'doorOnly', 'beforeTax',
     ]
     search_fields = ['voucherId', 'name', 'description']
-    readonly_fields = ['refundAmount', 'creationDate']
+    add_readonly_fields = ['refundAmount', 'creationDate', 'amountLeft']
+    readonly_fields = ['originalAmount', 'refundAmount', 'creationDate', 'amountLeft']
     actions = ['enableVoucher', 'disableVoucher']
 
     fieldsets = (
         (None, {
-            'fields': (('voucherId', 'category'), 'name', 'description', ('originalAmount', 'maxAmountPerUse'), ),
+            'fields': (('voucherId', 'category'), 'name', 'description', ('originalAmount', 'amountLeft'), ('maxAmountPerUse', 'beforeTax')),
         }),
         (_('Voucher Restrictions'), {
             'fields': (
@@ -186,6 +198,11 @@ class VoucherAdmin(admin.ModelAdmin):
             'fields': ('creationDate', 'refundAmount'),
         }),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        if not obj:
+            return self.add_readonly_fields
+        return self.readonly_fields
 
     def isEnabled(self, obj):
         return obj.disabled is False

@@ -54,7 +54,7 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         )
         return (test_combo, test_component)
 
-    def register_to_check_discount(self, series):
+    def register_to_check_discount(self, series, expected_amount=None):
         '''
         This method makes it easy to determine whether discounts are working
         correctly for a single class registration
@@ -83,10 +83,11 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
 
-        # Check that the student info page lists the correct item amounts and subtotal
-        # with no discounts applied
+        # Check that the student info page lists the correct subtotal with
+        # the discount applied
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
-        self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
+        if expected_amount is not None:
+            self.assertEqual(response.context_data.get('invoice').total, expected_amount)
 
         # Continue to the summary page
         post_data = {
@@ -109,7 +110,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         test_combo, test_component = self.create_discount(active=False)
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice())
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -132,7 +133,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         )
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice())
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -151,7 +152,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         test_combo, test_component = self.create_discount()
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice())
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -173,7 +174,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         test_combo, test_component = self.create_discount(quantity=10)
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice())
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -199,7 +200,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
             startTime=timezone.now() + timedelta(days=1)
         )
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice())
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -223,7 +224,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         test_combo, test_component = self.create_discount()
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice() - 5)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -251,7 +252,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
             startTime=timezone.now() + timedelta(days=4)
         )
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice() - 5)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -275,7 +276,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         test_combo, test_component = self.create_discount(quantity=1, allWithinPointGroup=True)
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice() - 5)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -301,7 +302,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         )
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice() - 10)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -328,7 +329,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         )
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice()*0.5)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -357,7 +358,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         )
         s = self.create_series(pricingTier=self.defaultPricing)
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice())
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -383,7 +384,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
             dollarDiscount=s.getBasePrice() + 10
         )
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, 0)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
@@ -439,7 +440,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
             name='Bigger Discount'
         )
 
-        response = self.register_to_check_discount(s)
+        response = self.register_to_check_discount(s, s.getBasePrice() - 20)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())

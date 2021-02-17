@@ -14,7 +14,7 @@
 			<tbody>
 			{% for item in invoice.invoiceitem_set.all %}
 				<tr>
-					{% if item.eventRegistration %}}
+					{% if item.eventRegistration %}
 						<td>{% if item.eventRegistration.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.eventRegistration.event.name }}{% if item.eventRegistration.role %} - {{ item.eventRegistration.role.name }}{% endif %}</td>
 					{% else %}
 					<td>{{ item.description }}</td>
@@ -42,11 +42,11 @@
 				{% endfor %}
 			</tbody>
 			{% endif %}
-			{% if voucher_amount %}
+			{% if voucherAmount %}
 			<tbody>
 				<tr>
-					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher_name }} ({{ voucher_id }})</td>
-					<td>-{{ currencySymbol }}{{ voucher_amount|floatformat:2 }}</td>
+					<td><strong>{% trans "Voucher" %}:</strong> {{ voucherName }} ({{ voucherId }})</td>
+					<td>-{{ currencySymbol }}{{ voucherAmount|floatformat:2 }}</td>
 				</tr>
 			</tbody>
 			{% endif %}

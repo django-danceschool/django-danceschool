@@ -5,8 +5,8 @@ from danceschool.core.models import DanceTypeLevel, ClassDescription
 from danceschool.core.constants import getConstant
 
 from .models import (
-    Voucher, VoucherCategory, ClassVoucher, CustomerVoucher,
-    VoucherReferralDiscount, VoucherCredit, VoucherReferralDiscountUse
+    Voucher, CustomerVoucher, VoucherReferralDiscount, VoucherCredit,
+    VoucherReferralDiscountUse
 )
 
 
@@ -23,56 +23,35 @@ def generateUniqueVoucherId(prefix):
 
 
 def createReferreeVoucher(name, amountPerUse):
-    voucherId = generateUniqueVoucherId(getConstant('referrals__voucherPrefix'))
-    category = getConstant('referrals__refereeCategory')
-    originalAmount = 1e9
-    maxAmountPerUse = amountPerUse
-    singleUse = False
-    forFirstTimeCustomersOnly = True
-    expirationDate = None
-    disabled = False
 
     voucher = Voucher(
-        voucherId=voucherId, name=name,
-        category=category,
-        originalAmount=originalAmount,
-        maxAmountPerUse=maxAmountPerUse,
-        singleUse=singleUse,
-        forFirstTimeCustomersOnly=forFirstTimeCustomersOnly,
-        expirationDate=expirationDate,
-        disabled=disabled
+        voucherId=generateUniqueVoucherId(getConstant('referrals__voucherPrefix')),
+        name=name,
+        category=getConstant('referrals__refereeCategory'),
+        originalAmount=1e9,
+        maxAmountPerUse=amountPerUse,
+        singleUse=False,
+        forFirstTimeCustomersOnly=True,
+        expirationDate=None,
+        disabled=False,
+        beforeTax=True,
     )
     voucher.save()
-
-    # Find all beginner classes
-    dts = DanceTypeLevel.objects.filter(name="Beginner", danceType__name="Lindy Hop")
-    classes = ClassDescription.objects.filter(danceTypeLevel=dts.first())
-    for c in classes:
-        cv = ClassVoucher(voucher=voucher, classDescription=c)
-        cv.save()
     return voucher
 
 
 def createReferrerVoucher(customer):
-    voucherId = generateUniqueVoucherId(getConstant('referrals__voucherPrefix'))
-    category = getConstant('referrals__referrerCategory')
-    originalAmount = 0
-    maxAmountPerUse = None
-    singleUse = False
-    forFirstTimeCustomersOnly = False
-    expirationDate = None
-    disabled = False
-    name = _("Referral Bonus for %s, %s" % (customer.fullName, customer.email))
-
     voucher = Voucher(
-        voucherId=voucherId, name=name,
-        category=category,
-        originalAmount=originalAmount,
-        maxAmountPerUse=maxAmountPerUse,
-        singleUse=singleUse,
-        forFirstTimeCustomersOnly=forFirstTimeCustomersOnly,
-        expirationDate=expirationDate,
-        disabled=disabled
+        voucherId=generateUniqueVoucherId(getConstant('referrals__voucherPrefix')),
+        name=_("Referral Bonus for %s, %s" % (customer.fullName, customer.email)),
+        category=getConstant('referrals__referrerCategory'),
+        originalAmount=0,
+        maxAmountPerUse=None,
+        singleUse=False,
+        forFirstTimeCustomersOnly=False,
+        expirationDate=None,
+        disabled=False,
+        beforeTax=False,
     )
     voucher.save()
 
