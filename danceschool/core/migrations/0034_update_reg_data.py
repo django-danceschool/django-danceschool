@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db import migrations, models
+from django.db import migrations
 
 
 def update_reg_data(apps, schema_editor):
@@ -21,7 +21,7 @@ def update_reg_data(apps, schema_editor):
         this_registration = Registration.objects.using(db_alias).get(
             id=x.get('finalRegistration')
         )
-        this_registration.data.update({'0034__invoice__id': x.get('id')})
+        this_registration.data.update({'0034__invoice__id': str(x.get('id'))})
         this_registration.save()
 
     to_update_items = InvoiceItem.objects.filter(
@@ -31,7 +31,7 @@ def update_reg_data(apps, schema_editor):
         this_eventreg = EventRegistration.objects.using(db_alias).get(
             id=x.get('finalEventRegistration')
         )
-        this_eventreg.data.update({'0034__invoiceitem__id': x.get('id')})
+        this_eventreg.data.update({'0034__invoiceitem__id': str(x.get('id'))})
         this_eventreg.save()
 
 
@@ -41,8 +41,6 @@ def reverse_reg_data(apps, schema_editor):
     '''
     Registration = apps.get_model("core", "Registration")
     EventRegistration = apps.get_model("core", "EventRegistration")
-    Invoice = apps.get_model("core", "Invoice")
-    InvoiceItem = apps.get_model("core", "InvoiceItem")
     db_alias = schema_editor.connection.alias
 
     to_update = Registration.objects.using(db_alias).filter(data__isnull=False)
