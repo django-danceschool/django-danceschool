@@ -22,7 +22,7 @@ from danceschool.core.utils.timezone import ensure_localtime
 logger = logging.getLogger(__name__)
 
 
-class DoorRegister(models.Model):
+class Register(models.Model):
     '''
     An organization may require more than one at-the-door register page, depending on its needs.
     Each instance of this model provides a separate CMS placeholder for an at-the-door register.
@@ -57,11 +57,11 @@ class DoorRegister(models.Model):
         ordering = ('title',)
 
 
-class DoorRegisterPaymentMethod(models.Model):
+class RegisterPaymentMethod(models.Model):
     '''
     At the door, it is often desirable to have separate buttons for different potential
     payment methods, and different registration logic for each (e.g. cash vs. credit).
-    Each instance of the DoorRegisterEventPluginModel can optionally specify the
+    Each instance of the RegisterEventPluginModel can optionally specify the
     particular instances of this model (payment methods) that have separate buttons.
     '''
 
@@ -101,7 +101,7 @@ class DoorRegisterPaymentMethod(models.Model):
         ordering = ('name',)
 
 
-class DoorRegisterEventLimitedModel(CMSPlugin):
+class RegisterEventLimitedModel(CMSPlugin):
     '''
     This is an abstract base class for models that need to provide a limited
     set of events.
@@ -343,7 +343,7 @@ class DoorRegisterEventLimitedModel(CMSPlugin):
         abstract = True
 
 
-class DoorRegisterEventPluginModel(DoorRegisterEventLimitedModel):
+class RegisterEventPluginModel(RegisterEventLimitedModel):
     '''
     This model is typically used to configure upcoming event listings, but it can
     be customized to a variety of purposes using custom templates, etc.
@@ -370,7 +370,7 @@ class DoorRegisterEventPluginModel(DoorRegisterEventLimitedModel):
     )
 
     paymentMethods = models.ManyToManyField(
-        DoorRegisterPaymentMethod,
+        RegisterPaymentMethod,
         verbose_name=_('Payment Methods'),
         help_text=_(
             'If you would like separate buttons for individual payment methods, ' +
@@ -386,9 +386,9 @@ class DoorRegisterEventPluginModel(DoorRegisterEventLimitedModel):
         # Delete existing choice instances to avoid duplicates, then duplicate
         # choice instances from the old plugin instance.  Following Django CMS
         # documentation.
-        self.doorregistereventpluginchoice_set.all().delete()
+        self.registereventpluginchoice_set.all().delete()
 
-        for choice in oldinstance.doorregistereventpluginchoice_set.all():
+        for choice in oldinstance.registereventpluginchoice_set.all():
             choice.pk = None
             choice.eventPlugin = self
             choice.save()
@@ -418,7 +418,7 @@ class DoorRegisterEventPluginModel(DoorRegisterEventLimitedModel):
         created = not self.pk
         super().save(*args, **kwargs)
         if created:
-            DoorRegisterEventPluginChoice.objects.create(
+            RegisterEventPluginChoice.objects.create(
                 eventPlugin=self,
             )
 
@@ -431,7 +431,7 @@ class DoorRegisterEventPluginModel(DoorRegisterEventLimitedModel):
         )
 
 
-class DoorRegisterGuestSearchPluginModel(DoorRegisterEventLimitedModel):
+class RegisterGuestSearchPluginModel(RegisterEventLimitedModel):
     '''
     For checking in guests, we need to limit the set of events that they
     may be checked into.  This doesn't need anything more than general event
@@ -440,12 +440,12 @@ class DoorRegisterGuestSearchPluginModel(DoorRegisterEventLimitedModel):
     pass
 
 
-class DoorRegisterEventPluginChoice(models.Model):
+class RegisterEventPluginChoice(models.Model):
     '''
     Individual register sections may have custom rules for the types and display
     of options that they permit.  This sortable model holds rules for the type
     of additional options that are enabled within each instance of
-    DoorRegisterEventPluginModel.
+    RegisterEventPluginModel.
     '''
     OPTION_TYPE_CHOICES = [
         ('G', _('Standard registration')),
@@ -468,7 +468,7 @@ class DoorRegisterEventPluginChoice(models.Model):
     ]
 
     eventPlugin = models.ForeignKey(
-        DoorRegisterEventPluginModel,
+        RegisterEventPluginModel,
         verbose_name=_('Plugin'),
         on_delete=models.CASCADE,
     )

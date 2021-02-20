@@ -15,7 +15,7 @@ from danceschool.core.mixins import (
 )
 
 from .forms import CustomerGuestAutocompleteForm
-from .models import DoorRegister
+from .models import Register
 
 
 class RegisterView(
@@ -69,7 +69,7 @@ class RegisterView(
                 raise Http404(_('Invalid date.'))
 
         try:
-            register = DoorRegister.objects.get(slug=self.kwargs.get('slug'), enabled=True)
+            register = Register.objects.get(slug=self.kwargs.get('slug'), enabled=True)
         except ObjectDoesNotExist:
             raise Http404(_('Invalid register.'))
 

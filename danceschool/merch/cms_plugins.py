@@ -8,14 +8,14 @@ from collections import OrderedDict
 
 from danceschool.core.mixins import PluginTemplateMixin
 
-from .models import DoorRegisterMerchPluginModel, MerchItem
+from .models import RegisterMerchPluginModel, MerchItem
 
 
-class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
-    model = DoorRegisterMerchPluginModel
+class RegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
+    model = RegisterMerchPluginModel
     name = _('Register: Merchandise')
     cache = False
-    module = _('Door Register')
+    module = _('Register')
     render_template = 'merch/register/register_merch.html'
 
     fieldsets = (
@@ -149,4 +149,4 @@ class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
         return context
 
 
-plugin_pool.register_plugin(DoorRegisterMerchPlugin)
+plugin_pool.register_plugin(RegisterMerchPlugin)

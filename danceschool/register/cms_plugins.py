@@ -10,16 +10,16 @@ from collections import OrderedDict
 from adminsortable2.admin import SortableInlineAdminMixin
 
 from .models import (
-    DoorRegisterEventPluginModel, DoorRegisterEventPluginChoice,
-    DoorRegisterGuestSearchPluginModel
+    RegisterEventPluginModel, RegisterEventPluginChoice,
+    RegisterGuestSearchPluginModel
 )
 from danceschool.core.models import Event
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.utils.timezone import ensure_localtime
 
 
-class DoorRegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
-    model = DoorRegisterEventPluginChoice
+class RegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
+    model = RegisterEventPluginChoice
     min_num = 1
     extra = 1
     fields = [
@@ -30,18 +30,18 @@ class DoorRegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
     ]
 
 
-class DoorRegisterVoucherPlugin(CMSPluginBase):
+class RegisterVoucherPlugin(CMSPluginBase):
     name = _('Register: Voucher Entry')
     cache = True
-    module = _('Door Register')
+    module = _('Register')
     render_template = 'register/plugins/door_voucher.html'
 
 
-class DoorRegisterGuestSearchPlugin(CMSPluginBase):
-    model = DoorRegisterGuestSearchPluginModel
+class RegisterGuestSearchPlugin(CMSPluginBase):
+    model = RegisterGuestSearchPluginModel
     name = _('Register: Customer/Guest Search')
     cache = True
-    module = _('Door Register')
+    module = _('Register')
     render_template = 'register/plugins/door_guest_search.html'
 
     fieldsets = (
@@ -88,13 +88,13 @@ class DoorRegisterGuestSearchPlugin(CMSPluginBase):
         return context
 
 
-class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
-    model = DoorRegisterEventPluginModel
+class RegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
+    model = RegisterEventPluginModel
     name = _('Register: Events at the door')
     cache = False
-    module = _('Door Register')
+    module = _('Register')
     render_template = 'register/plugins/event_register.html'
-    inlines = [DoorRegisterEventChoiceInline, ]
+    inlines = [RegisterEventChoiceInline, ]
 
     fieldsets = (
         (None, {
@@ -164,7 +164,7 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
             primary_options = []
             additional_options = []
 
-            for choiceRule in instance.doorregistereventpluginchoice_set.all():
+            for choiceRule in instance.registereventpluginchoice_set.all():
                 new_primary_options, new_additional_options = choiceRule.addChoices(
                     event, requireFullRegistration=instance.requireFullRegistration,
                     paymentMethods=paymentMethods,
@@ -185,6 +185,6 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
         return context
 
 
-plugin_pool.register_plugin(DoorRegisterVoucherPlugin)
-plugin_pool.register_plugin(DoorRegisterGuestSearchPlugin)
-plugin_pool.register_plugin(DoorRegisterEventPlugin)
+plugin_pool.register_plugin(RegisterVoucherPlugin)
+plugin_pool.register_plugin(RegisterGuestSearchPlugin)
+plugin_pool.register_plugin(RegisterEventPlugin)

@@ -32,7 +32,7 @@ class CustomerGuestAutocompleteForm(forms.Form):
                 firstName=F('first_name'), lastName=F('last_name')
             ).values('firstName', 'lastName'),
             widget=autocomplete.ModelSelect2(
-                url='doorRegisterAutocomplete',
+                url='registerAutocomplete',
                 forward=['date'],
                 attrs={
                     # This will set the input placeholder attribute:

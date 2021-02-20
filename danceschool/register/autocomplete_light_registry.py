@@ -11,7 +11,7 @@ from danceschool.core.models import Customer, Event, EventOccurrence
 from danceschool.core.utils.timezone import ensure_localtime
 
 
-class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
+class RegisterAutoComplete(autocomplete.Select2QuerySetView):
 
     def get_result_value(self, result):
         """Return the value of a result."""

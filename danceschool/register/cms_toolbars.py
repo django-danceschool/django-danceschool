@@ -6,7 +6,7 @@ from cms.toolbar_pool import toolbar_pool
 from cms.toolbar_base import CMSToolbar
 
 from danceschool.core.utils.timezone import ensure_localtime
-from .models import DoorRegister
+from .models import Register
 
 
 @toolbar_pool.register
@@ -19,7 +19,7 @@ class RegisterToolbar(CMSToolbar):
         if self.request.user.has_perm('core.accept_door_payments'):
             today = ensure_localtime(timezone.now())
 
-            registers = DoorRegister.objects.filter(enabled=True)
+            registers = Register.objects.filter(enabled=True)
 
             for register in registers:
                 url = reverse('registerView', args=(register.slug, today.year, today.month, today.day))
@@ -33,10 +33,10 @@ class RegisterToolbar(CMSToolbar):
 
         menu.add_link_item(_('Registration Page'), url=reverse('registration'))
 
-        if self.request.user.has_perm('door.change_doorregister'):
-            menu.add_link_item(_('Manage Registers'), url=reverse('admin:register_doorregister_changelist'))
-        if self.request.user.has_perm('door.change_doorregisterpaymentmethod'):
+        if self.request.user.has_perm('door.change_register'):
+            menu.add_link_item(_('Manage Registers'), url=reverse('admin:register_register_changelist'))
+        if self.request.user.has_perm('door.change_registerpaymentmethod'):
             menu.add_link_item(
                 _('Manage Register Payment Methods'),
-                url=reverse('admin:register_doorregisterpaymentmethod_changelist')
+                url=reverse('admin:register_registerpaymentmethod_changelist')
             )

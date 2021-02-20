@@ -136,9 +136,10 @@ CMS_PLACEHOLDER_CONF = {
     None: {
         'excluded_plugins': [
             'PictureSplashTemplatePlugin',
-            'DoorRegisterVoucherPlugin',
-            'DoorRegisterGuestSearchPlugin',
-            'DoorRegisterEventPlugin'
+            'RegisterVoucherPlugin',
+            'RegisterGuestSearchPlugin',
+            'RegisterEventPlugin',
+            'RegisterMerchPlugin',
         ],
     },
     'splash_image': {

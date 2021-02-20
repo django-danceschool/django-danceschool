@@ -12,7 +12,7 @@ from datetime import timedelta
 
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant
-from danceschool.register.models import DoorRegisterPaymentMethod
+from danceschool.register.models import RegisterPaymentMethod
 
 from .managers import MerchOrderManager
 
@@ -557,7 +557,7 @@ class MerchOrderItem(models.Model):
         unique_together = ('item', 'order',)
         
 
-class DoorRegisterMerchPluginModel(CMSPlugin):
+class RegisterMerchPluginModel(CMSPlugin):
     '''
     This model holds information on a set of merchandise items that are sold
     at the door.
@@ -602,7 +602,7 @@ class DoorRegisterMerchPluginModel(CMSPlugin):
     )
 
     paymentMethods = models.ManyToManyField(
-        DoorRegisterPaymentMethod,
+        RegisterPaymentMethod,
         verbose_name=_('Payment Methods'),
         help_text=_(
             'If you would like separate buttons for individual payment methods, ' +
@@ -642,10 +642,10 @@ class DoorRegisterMerchPluginModel(CMSPlugin):
 
         for choice in oldinstance.categories.all():
             choice.pk = None
-            choice.doorregistermerchpluginmodel = self
+            choice.registermerchpluginmodel = self
             choice.save()
 
         for choice in oldinstance.paymentMethods.all():
             choice.pk = None
-            choice.doorregistermerchpluginmodel = self
+            choice.registermerchpluginmodel = self
             choice.save()
