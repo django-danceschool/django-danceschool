@@ -259,11 +259,13 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
     class Media:
         js = (
             'admin/js/admin/RelatedObjectLookups.js',
-            'jquery-ui/jquery-ui.min.js',
+            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
             'js/expense_reporting.js',
         )
         css = {
-            'all': ('jquery-ui/jquery-ui.min.css', ),
+            'all': (
+                'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+            ),
         }
 
 
@@ -463,10 +465,12 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
     class Media:
         js = (
             'js/revenue_reporting.js',
-            'jquery-ui/jquery-ui.min.js',
+            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
         )
         css = {
-            'all': ('jquery-ui/jquery-ui.min.css', ),
+            'all': (
+                'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+            ),
         }
 
 
