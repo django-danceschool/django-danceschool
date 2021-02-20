@@ -423,7 +423,7 @@ class MerchOrder(models.Model):
         '''
         Before saving this order, ensure that an associated invoice exists.
         If an invoice already exists, then update the invoice if anything
-        requires updating.  If the status of this order is 
+        requires updating.
         '''
         link_kwargs = {
             'submissionUser': kwargs.pop('submissionUser', None),

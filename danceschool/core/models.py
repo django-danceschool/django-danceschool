@@ -2980,7 +2980,7 @@ class InvoiceItem(models.Model):
         help_text=_(
             'This rate is used to update the tax line item when discounts ' +
             'or other pre-tax price adjustments are applied.  Enter as a ' +
-            'whole number (e.g. 6 for 6\%).'
+            'whole number (e.g. 6 for 6%).'
         ),
     )
     taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
@@ -4022,6 +4022,10 @@ class CashPaymentRecord(PaymentRecord):
         fullRefund = ('R', _('Refunded in full'))
 
     amount = models.FloatField(_('Amount paid'), validators=[MinValueValidator(0), ])
+    refundAmount = models.FloatField(
+        _('Amount refunded'), default=0, validators=[MinValueValidator(0), ]
+    )
+
     payerEmail = models.EmailField(_('Payer email'), null=True, blank=True)
 
     status = models.CharField(
@@ -4042,10 +4046,32 @@ class CashPaymentRecord(PaymentRecord):
 
     @property
     def netAmountPaid(self):
-        return self.amount
+        return self.amount - self.refundAmount
+
+    @property
+    def refundable(self):
+        return True
 
     def getPayerEmail(self):
         return self.payerEmail
+
+    def refund(self, amount=None):
+        '''
+        This method keeps track of the amount refunded, but it cannot enforce
+        that the cash is actually handed back.
+        '''
+
+        if not amount:
+            amount = self.netAmountPaid
+
+        self.refundAmount += amount
+        self.save()
+
+        return [{
+            'status': 'success',
+            'refundAmount': amount,
+            'fees': 0,
+        }]
 
     class Meta:
         verbose_name = _('Cash payment record')

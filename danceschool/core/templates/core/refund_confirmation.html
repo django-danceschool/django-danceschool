@@ -29,7 +29,7 @@
 			<h6 class="card-header">{% trans "Payment Details" %}</h6>
 			<div class="card-body">
 				{% for payment in payments %}
-					{{ payment.methodName }}: {{ payment.recordId }}<br />
+					{{ payment.methodName }}: #{{ payment.recordId }}<br />
 					{% if not payment.refundable %}
 						<strong>{% trans "Note" context "alert" %}:</strong> {% trans "This payment does not appear to be automatically refundable.  Please manually refund the money to this student after filling out this form." %}<br />
 					{% endif %}

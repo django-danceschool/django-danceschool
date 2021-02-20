@@ -12,8 +12,10 @@
 
 <dl>
 	<dt>{% trans "Invoice Number" %}:</dt>
-	<dd>{{ object.id }}</dd>
-
+	<dd>
+		{{ object.id }}
+		{% if "core.change_invoice" in perms %}&nbsp;<a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:core_invoice_change' object.id %}">{% trans "Edit Invoice" %}</a>{% endif %}
+	</dd>
 	{% if object.firstName or object.lastName or object.email %}
 	<dt>{% trans "Recipient" %}:</dt>
 	<dd>{% if object.firstName or object.lastName %}{{ object.firstName }} {{ object.lastName }}: {% endif %}{{ object.email|default:"unknown email" }}

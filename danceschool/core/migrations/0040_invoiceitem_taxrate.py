@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='invoiceitem',
             name='taxRate',
-            field=models.FloatField(help_text='This rate is used to update the tax line item when discounts or other pre-tax price adjustments are applied.  Enter as a whole number (e.g. 6 for 6\\%).', null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Sales tax rate'),
+            field=models.FloatField(help_text='This rate is used to update the tax line item when discounts or other pre-tax price adjustments are applied.  Enter as a whole number (e.g. 6 for 6%).', null=True, validators=[django.core.validators.MinValueValidator(0)], verbose_name='Sales tax rate'),
         ),
     ]

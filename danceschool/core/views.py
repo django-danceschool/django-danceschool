@@ -516,7 +516,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
             # This dictionary will be updated and then added to refund_data for
             # this invoice whether the refund is successful or not
             this_refund_response_data = {
-                'datetime': timezone.now(),
+                'datetime': str(ensure_localtime(timezone.now())),
                 'id': this_payment.recordId,
                 'methodName': this_payment.methodName,
                 'amount': this_refund_amount,
@@ -543,6 +543,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
                     'fees': fees,
                     'response': [dict(this_refund_response[0]), ],
                 })
+
                 remains_to_refund -= amount_refunded
 
             else:
@@ -571,6 +572,8 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
                 # Allocate whatever amount was previously successful across the
                 # items for which the refund was requested.
+                self.invoice.amountPaid -= total_applied
+
                 self.invoice.updateTotals(
                     save=True,
                     allocateAmounts={
@@ -599,13 +602,18 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         total_applied = sum([x.get('refundAmount', 0) for x in refund_data if x.get('status') == 'success'])
         total_fees = sum([x.get('fees', 0) for x in refund_data if x.get('status') == 'success'])
 
-        if abs(self.invoice.total + self.invoice.adjustments - total_applied) < 0.01:
+        self.invoice.amountPaid -= total_applied
+
+        if abs(
+            self.invoice.total + (self.invoice.taxes * self.invoice.buyerPaysSalesTax) +
+            self.invoice.adjustments - total_applied
+        ) < 0.01:
             self.invoice.status = Invoice.PaymentStatus.fullRefund
 
         # Allocate whatever amount was previously successful across the
         # items for which the refund was requested.
         items = self.invoice.updateTotals(
-            save=False,
+            save=True,
             allocateAmounts={
                 'adjustments': -1*total_applied,
                 'fees': total_fees,

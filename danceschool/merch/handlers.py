@@ -275,4 +275,4 @@ def processCancelledInvoice(sender, **kwargs):
         order.status = order.OrderStatus.cancelled
     elif invoice.status == invoice.PaymentStatus.fullRefund:
         order.status = order.OrderStatus.fullRefund
-    order.save()
+    order.save(updateInvoice=False)
