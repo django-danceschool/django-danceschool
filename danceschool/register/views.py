@@ -18,12 +18,12 @@ from .forms import CustomerGuestAutocompleteForm
 from .models import DoorRegister
 
 
-class DoorRegisterView(
+class RegisterView(
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
     PermissionRequiredMixin, TemplateView
 ):
     permission_required = 'core.accept_door_payments'
-    template_name = 'door/register.html'
+    template_name = 'register/register.html'
 
     # For Restricting to this day's register only.
     today = False
@@ -87,6 +87,6 @@ class DoorRegisterView(
 
         # Update the site session data so that registration processes know to send
         # return links to the registration page.  set_return_page() is in SiteHistoryMixin.
-        self.set_return_page('doorRegister', pageName=_('Registration'), **self.kwargs)
+        self.set_return_page('registerView', pageName=_('Registration'), **self.kwargs)
 
         return super().get_context_data(**context)

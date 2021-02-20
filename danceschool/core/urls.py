@@ -7,7 +7,9 @@ from .views import (
     IndividualClassView, IndividualEventView, StaffDirectoryView,
     EmailConfirmationView, SendEmailView, SubstituteReportingView,
     StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView,
-    RepeatEventsView, IndividualClassReferralView, IndividualEventReferralView
+    RepeatEventsView, IndividualClassReferralView, IndividualEventReferralView,
+    RefundProcessingView, RefundConfirmationView, ViewInvoiceView,
+    InvoiceNotificationView
 )
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
 from .autocomplete_light_registry import (
@@ -138,6 +140,18 @@ urlpatterns = [
         'events/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/referral/<slug:voucher_id>/',
         IndividualEventReferralView.as_view(), name='eventReferralViewSessionMonth'
     ),
+
+    # These URLs are associated with viewing individual invoices and sending notifications
+    path('invoice/view/<uuid:pk>/', ViewInvoiceView.as_view(), name='viewInvoice'),
+    path(
+        'invoice/notify/<uuid:pk>/',
+        InvoiceNotificationView.as_view(), name='sendInvoiceNotifications'
+    ),
+    path('invoice/notify/', InvoiceNotificationView.as_view(), name='sendInvoiceNotifications'),
+
+    # These URLs are for refund processing
+    path('invoice/refund/confirm/', RefundConfirmationView.as_view(), name='refundConfirmation'),
+    path('invoice/refund/<uuid:pk>/', RefundProcessingView.as_view(), name='refundProcessing'),
 
     # User profiles
     path('accounts/profile/<int:user_id>/', OtherAccountProfileView.as_view(), name='accountProfile'),

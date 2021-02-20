@@ -2,8 +2,7 @@ from django.urls import path
 
 from .views import (
     EventRegistrationSummaryView, EventRegistrationSelectView,
-    EventRegistrationJsonView, RefundProcessingView, RefundConfirmationView,
-    ViewInvoiceView, InvoiceNotificationView
+    EventRegistrationJsonView, 
 )
 from .classreg import (
     RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
@@ -52,24 +51,12 @@ urlpatterns = [
     path('summary/', RegistrationSummaryView.as_view(), name='showRegSummary'),
 
     # These are the URLs affiliated with viewing registrations and check-in
-    path('registrations/', EventRegistrationSelectView.as_view(), name='viewregistrations_selectevent'),
+    path('viewregistrations/', EventRegistrationSelectView.as_view(), name='viewregistrations_selectevent'),
     path(
-        'registrations/<int:event_id>/',
+        'viewregistrations/<int:event_id>/',
         EventRegistrationSummaryView.as_view(), name='viewregistrations'
     ),
     path('registrations/json/', EventRegistrationJsonView.as_view(), name='viewregistrations_json'),
     path('registrations/checkin/', ProcessCheckInView.as_view(), name='ajax_checkin'),
 
-
-    # These URLs are associated with viewing individual invoices and sending notifications
-    path('invoice/view/<uuid:pk>/', ViewInvoiceView.as_view(), name='viewInvoice'),
-    path(
-        'invoice/notify/<uuid:pk>/',
-        InvoiceNotificationView.as_view(), name='sendInvoiceNotifications'
-    ),
-    path('invoice/notify/', InvoiceNotificationView.as_view(), name='sendInvoiceNotifications'),
-
-    # These URLs are for refund processing
-    path('invoice/refund/confirm/', RefundConfirmationView.as_view(), name='refundConfirmation'),
-    path('invoice/refund/<uuid:pk>/', RefundProcessingView.as_view(), name='refundProcessing'),
 ]

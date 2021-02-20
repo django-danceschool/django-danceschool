@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('core', '0033_auto_20200124_1349'),
         ('cms', '0022_auto_20180620_1551'),
-        ('door', '0005_doorregistereventpluginchoice_registrationopendisplay'),
+        ('register', '0005_doorregistereventpluginchoice_registrationopendisplay'),
     ]
 
     operations = [

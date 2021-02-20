@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
                 ('eventCategories', models.ManyToManyField(blank=True, help_text='Leave blank for no restriction', to='core.PublicEventCategory', verbose_name='Limit to public event categories')),
                 ('levels', models.ManyToManyField(blank=True, help_text='Leave blank for no restriction', to='core.DanceTypeLevel', verbose_name='Limit to type and levels')),
                 ('location', models.ManyToManyField(blank=True, help_text='Leave blank for no restriction', to='core.Location', verbose_name='Limit to locations')),
-                ('paymentMethods', models.ManyToManyField(blank=True, help_text='If you would like separate buttons for individual payment methods, then select them here.  If left blank, a single button will be shown and no payment method will be specified.', to='door.DoorRegisterPaymentMethod', verbose_name='Payment Methods')),
+                ('paymentMethods', models.ManyToManyField(blank=True, help_text='If you would like separate buttons for individual payment methods, then select them here.  If left blank, a single button will be shown and no payment method will be specified.', to='register.DoorRegisterPaymentMethod', verbose_name='Payment Methods')),
                 ('seriesCategories', models.ManyToManyField(blank=True, help_text='Leave blank for no restriction', to='core.SeriesCategory', verbose_name='Limit to series categories')),
             ],
             options={
@@ -73,7 +73,7 @@ class Migration(migrations.Migration):
                 ('voucherId', models.CharField(blank=True, max_length=100, null=True, verbose_name='Voucher Code (for registration with a voucher only)')),
                 ('data', models.JSONField(blank=True, default=dict, help_text='This may be used for passing specific information about this event registration for statistical or other custom purposes.', verbose_name='Additional data passed with registration')),
                 ('order', models.PositiveSmallIntegerField(default=0)),
-                ('eventPlugin', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='door.DoorRegisterEventPluginModel', verbose_name='Plugin')),
+                ('eventPlugin', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='register.DoorRegisterEventPluginModel', verbose_name='Plugin')),
             ],
             options={
                 'ordering': ['order'],

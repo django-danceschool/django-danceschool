@@ -4,15 +4,13 @@ from django.utils import timezone
 
 from cms.toolbar_pool import toolbar_pool
 from cms.toolbar_base import CMSToolbar
-from cms.toolbar.items import LinkItem
-from cms.constants import RIGHT
 
 from danceschool.core.utils.timezone import ensure_localtime
 from .models import DoorRegister
 
 
 @toolbar_pool.register
-class DoorToolbar(CMSToolbar):
+class RegisterToolbar(CMSToolbar):
     ''' Adds links to Events for today's cash registers '''
 
     def populate(self):
@@ -24,7 +22,7 @@ class DoorToolbar(CMSToolbar):
             registers = DoorRegister.objects.filter(enabled=True)
 
             for register in registers:
-                url = reverse('doorRegister', args=(register.slug, today.year, today.month, today.day))
+                url = reverse('registerView', args=(register.slug, today.year, today.month, today.day))
                 menu.add_link_item(register.title, url=url)
 
             if registers:
@@ -36,9 +34,9 @@ class DoorToolbar(CMSToolbar):
         menu.add_link_item(_('Registration Page'), url=reverse('registration'))
 
         if self.request.user.has_perm('door.change_doorregister'):
-            menu.add_link_item(_('Manage Registers'), url=reverse('admin:door_doorregister_changelist'))
+            menu.add_link_item(_('Manage Registers'), url=reverse('admin:register_doorregister_changelist'))
         if self.request.user.has_perm('door.change_doorregisterpaymentmethod'):
             menu.add_link_item(
                 _('Manage Register Payment Methods'),
-                url=reverse('admin:door_doorregisterpaymentmethod_changelist')
+                url=reverse('admin:register_doorregisterpaymentmethod_changelist')
             )

@@ -12,7 +12,7 @@ from datetime import timedelta
 
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant
-from danceschool.door.models import DoorRegisterPaymentMethod
+from danceschool.register.models import DoorRegisterPaymentMethod
 
 from .managers import MerchOrderManager
 
@@ -630,3 +630,22 @@ class DoorRegisterMerchPluginModel(CMSPlugin):
             filters = filters & Q(item_variant__soldOut=False)
         
         return MerchItem.objects.filter(filters).distinct()
+
+    def copy_relations(self, oldinstance):
+        super().copy_relations(oldinstance)
+
+        # Delete existing choice instances to avoid duplicates, then duplicate
+        # choice instances from the old plugin instance.  Following Django CMS
+        # documentation.
+        self.categories.all().delete()
+        self.paymentMethods.all().delete()
+
+        for choice in oldinstance.categories.all():
+            choice.pk = None
+            choice.doorregistermerchpluginmodel = self
+            choice.save()
+
+        for choice in oldinstance.paymentMethods.all():
+            choice.pk = None
+            choice.doorregistermerchpluginmodel = self
+            choice.save()

@@ -1,14 +1,10 @@
 from django import forms
-from django.utils.translation import gettext, gettext_lazy as _
-from django.db.models import F, Q, Value, CharField
-from django.apps import apps
+from django.utils.translation import gettext_lazy as _
+from django.db.models import F
 
 from dal import autocomplete
-from datetime import timedelta
-from itertools import chain
 
-from danceschool.core.models import Customer, StaffMember
-from danceschool.core.utils.timezone import ensure_localtime
+from danceschool.core.models import Customer
 
 
 class CustomerGuestAutocompleteForm(forms.Form):

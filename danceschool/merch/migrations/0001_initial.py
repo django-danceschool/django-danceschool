@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.swappable_dependency(settings.FILER_IMAGE_MODEL),
         ('core', '0037_remove_registration_expirationdate'),
         ('cms', '0022_auto_20180620_1551'),
-        ('door', '0006_doorregisterguestsearchpluginmodel'),
+        ('register', '0006_doorregisterguestsearchpluginmodel'),
     ]
 
     operations = [
@@ -124,7 +124,7 @@ class Migration(migrations.Migration):
                 ('template', models.CharField(blank=True, max_length=250, null=True, verbose_name='Plugin template')),
                 ('cssClasses', models.CharField(blank=True, help_text='Classes are applied to surrounding &lt;div&gt;', max_length=250, null=True, verbose_name='Custom CSS classes')),
                 ('categories', models.ManyToManyField(blank=True, help_text='Leave blank for no restriction', to='merch.MerchItemCategory', verbose_name='Limit to merchandise categories')),
-                ('paymentMethods', models.ManyToManyField(blank=True, help_text='If you would like separate buttons for individual payment methods, then select them here.  If left blank, a single button will be shown and no payment method will be specified.', to='door.DoorRegisterPaymentMethod', verbose_name='Payment Methods')),
+                ('paymentMethods', models.ManyToManyField(blank=True, help_text='If you would like separate buttons for individual payment methods, then select them here.  If left blank, a single button will be shown and no payment method will be specified.', to='register.DoorRegisterPaymentMethod', verbose_name='Payment Methods')),
             ],
             options={
                 'abstract': False,

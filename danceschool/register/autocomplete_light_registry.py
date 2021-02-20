@@ -1,4 +1,4 @@
-from django.db.models import Q, F, Value, CharField, Case, When, IntegerField
+from django.db.models import Q, F, Value, CharField, IntegerField
 from django.utils.translation import gettext
 from django.utils.html import format_html
 from django.apps import apps

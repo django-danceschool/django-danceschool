@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('door', '0006_doorregisterguestsearchpluginmodel'),
+        ('register', '0006_doorregisterguestsearchpluginmodel'),
     ]
 
     operations = [

@@ -34,7 +34,7 @@ class DoorRegisterVoucherPlugin(CMSPluginBase):
     name = _('Register: Voucher Entry')
     cache = True
     module = _('Door Register')
-    render_template = 'door/register/door_voucher.html'
+    render_template = 'register/plugins/door_voucher.html'
 
 
 class DoorRegisterGuestSearchPlugin(CMSPluginBase):
@@ -42,7 +42,7 @@ class DoorRegisterGuestSearchPlugin(CMSPluginBase):
     name = _('Register: Customer/Guest Search')
     cache = True
     module = _('Door Register')
-    render_template = 'door/register/door_guest_search.html'
+    render_template = 'register/plugins/door_guest_search.html'
 
     fieldsets = (
         (None, {
@@ -93,7 +93,7 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
     name = _('Register: Events at the door')
     cache = False
     module = _('Door Register')
-    render_template = 'door/register/event_register.html'
+    render_template = 'register/plugins/event_register.html'
     inlines = [DoorRegisterEventChoiceInline, ]
 
     fieldsets = (

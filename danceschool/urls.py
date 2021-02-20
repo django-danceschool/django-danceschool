@@ -50,7 +50,7 @@ urlpatterns = [
 
     # The URLS associated with all built-in core functionality.
     path('', include('danceschool.core.urls')),
-    path('register/', include('danceschool.core.urls_registration')),
+    path('registration/', include('danceschool.core.urls_registration')),
 ]
 
 # If additional danceschool apps are installed, automatically add those URLs as well.
@@ -66,8 +66,8 @@ if apps.is_installed('danceschool.financial'):
 if apps.is_installed('danceschool.guestlist'):
     urlpatterns.append(path('guest-list/', include('danceschool.guestlist.urls')),)
 
-if apps.is_installed('danceschool.door'):
-    urlpatterns.append(path('door/', include('danceschool.door.urls')),)
+if apps.is_installed('danceschool.register'):
+    urlpatterns.append(path('register/', include('danceschool.register.urls')),)
 
 if apps.is_installed('danceschool.prerequisites'):
     urlpatterns.append(path('prerequisites/', include('danceschool.prerequisites.urls')),)
