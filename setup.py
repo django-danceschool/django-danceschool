@@ -26,7 +26,7 @@ setup(
         'django-admin-rangefilter>=0.6.4',
         'django-admin-sortable2>=0.7.2',
         'django-allauth>=0.31.0',
-        'django-autocomplete-light>=3.5.1',
+        'django-autocomplete-light==3.5.1',
         'django-braces>=1.8.1',
         'django-ckeditor>=5.4.0',
         'django-ckeditor-filebrowser-filer>=0.3.0',

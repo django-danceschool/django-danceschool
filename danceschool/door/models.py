@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Value, OuterRef, Subquery
 from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -13,8 +14,9 @@ from cms.models.fields import PlaceholderField
 
 from danceschool.core.models import (
     Event, SeriesCategory, PublicEventCategory, Location, DanceTypeLevel,
-    PublicEvent, Series
+    PublicEvent, Series, EventOccurrence
 )
+from danceschool.core.utils.timezone import ensure_localtime
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -122,6 +124,12 @@ class DoorRegisterEventLimitedModel(CMSPlugin):
         ('A', _('Ascending')),
         ('D', _('Descending')),
     ]
+    AUTO_CHECKIN_CHOICES = [
+        ('0', _('No automatic check-in')),
+        ('E', _('Current event occurrence (next ending time)')),
+        ('S', _('Current event occurrence (next starting time)')),
+        ('F', _('Entire event')),
+    ]    
 
     eventType = models.CharField(
         _('Limit to event type'), max_length=1, choices=EVENT_TYPE_CHOICES,
@@ -209,6 +217,11 @@ class DoorRegisterEventLimitedModel(CMSPlugin):
         blank=True
     )
 
+    autoCheckIn = models.CharField(
+        _('Automatic event/occurrence check-in when registration is complete'),
+        max_length=1, choices=AUTO_CHECKIN_CHOICES, default='E'
+    )
+
     def getEvents(self, dateTime=None, initial=None):
         '''
         Return the set of events that match the parameters specified by this
@@ -226,7 +239,16 @@ class DoorRegisterEventLimitedModel(CMSPlugin):
         elif self.eventType == 'P':
             listing = listing.instance_of(PublicEvent)
 
+        # Filters are used only to filter events.  time_filters are used to
+        # filter both events and occurrences.  occ_filters are used to filter
+        # only occurrences in the next occurrence subquery.
         filters = {}
+        time_filters = {}
+        occ_filters = {'event': OuterRef('pk')}
+
+        # Avoid potential issues with comparing offset-naive and offset-aware
+        # datetimes.
+        dateTime = ensure_localtime(dateTime)
 
         # Filter on event start and/or end times
         startKey = 'endTime__gte'
@@ -238,21 +260,34 @@ class DoorRegisterEventLimitedModel(CMSPlugin):
             endKey = 'endTime__lte'
 
         if self.startDate:
-            filters[startKey] = datetime.combine(self.startDate, datetime.min.time())
+            time_filters[startKey] = datetime.combine(self.startDate, datetime.min.time())
         elif self.daysStart is not None:
-            filters[startKey] = timezone.now() + timedelta(days=self.daysStart)
+            time_filters[startKey] = timezone.now() + timedelta(days=self.daysStart)
 
         if self.endDate:
-            filters[endKey] = datetime.combine(self.endDate, datetime.max.time())
+            time_filters[endKey] = datetime.combine(self.endDate, datetime.max.time())
         elif self.daysEnd is not None:
-            filters[endKey] = timezone.now() + timedelta(days=self.daysEnd)
+            time_filters[endKey] = timezone.now() + timedelta(days=self.daysEnd)
 
         # Filter on event occurrence time (relative to the current date, in local time)
         if self.occursWithinDays is not None and dateTime:
-            filters['eventoccurrence__endTime__gte'] = dateTime
-            filters['eventoccurrence__startTime__lte'] = dateTime + timedelta(
-                days=1 + self.occursWithinDays
-            )
+            window_start = dateTime
+            window_end = dateTime + timedelta(days=1 + self.occursWithinDays)
+
+            filters['eventoccurrence__endTime__gte'] = window_start
+            filters['eventoccurrence__startTime__lte'] = window_end
+            occ_filters['endTime__gte'] = window_start
+            occ_filters['startTime__lte'] = window_end
+
+            # If multiple occurrences fall within the window, this limits the
+            # filter on occupations further so that check-in happens on the
+            # first upcoming occurrence.  We build in a 15 minute grace period.
+            # If your event has back-to-back occurrences, you may need separate
+            # choices for each occurrence to avoid complications in tracking
+            # check-ins.
+            now = ensure_localtime(datetime.now())
+            if now >= window_start and now <= window_end:
+                occ_filters['endTime__gte'] = now - timedelta(minutes=15)
 
         # Filter on open or closed registrations
         if self.registrationOpenLimit == 'O':
@@ -280,8 +315,22 @@ class DoorRegisterEventLimitedModel(CMSPlugin):
         if self.weekday is not None:
             filters['startTime__week_day'] = (self.weekday + 2) % 7
 
+        # If automatic occurrence check-in is specified, return the ID of the
+        # next eligible occurrence for each 
+        if self.autoCheckIn == 'S':
+            occ_order_by = 'startTime'
+        else:
+            occ_order_by = 'endTime'
+
         order_by = '-startTime' if self.sortOrder == 'D' else 'startTime'
-        listing = listing.filter(**filters).order_by(order_by).distinct()[:self.limitNumber]
+        listing = listing.annotate(
+            thisOccurrence=Subquery(EventOccurrence.objects.filter(
+                **occ_filters, **time_filters,
+            ).order_by(occ_order_by).values('id')[:1])
+        ).filter(
+            **filters, **time_filters).order_by(order_by).prefetch_related(
+                'eventoccurrence_set'
+            ).distinct()[:self.limitNumber]
         return listing
 
     def copy_relations(self, oldinstance):
@@ -590,16 +639,21 @@ class DoorRegisterEventPluginChoice(models.Model):
                 # Add additional data needed for vouchers, drop-ins, students,
                 # and comped registrations
                 if self.optionType == 'D':
-                    this_choice.update(
-                        {'dropIn': True, 'price': event.pricingTier.dropinPrice}
-                    )
+                    this_choice.update({
+                        'dropIn': True, 'price': event.pricingTier.dropinPrice,
+                        'dropInOccurrence': getattr(event, 'thisOccurrence', None),
+                    })
                 if self.voucherId:
                     this_choice.update({'voucherId': self.voucherId})
                 if self.optionType == 'S':
                     this_choice.update({'student': True})
+                if self.eventPlugin.autoCheckIn in ['S', 'E']:
+                    this_choice.update({
+                        'checkInOccurrence': getattr(event, 'thisOccurrence', None)
+                    })
 
                 # Add additional data passed via the JSON field.  This is encoded as
-                # JSON since the output will be added as a data attribut by a template.
+                # JSON since the output will be added as a data attribute by a template.
                 if self.data:
                     this_choice.update({'data': json.dumps(self.data)})
 

@@ -21,6 +21,13 @@
 
     {# Javascript Includes: Jquery and bootstrap go at the top to avoid issues with included scripts #}
     <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+    {# Used inline by certain admin page scripts #}
+    <script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
+    <script type="text/javascript">
+      // To prevent errors for Select2 JS
+      var $ = django.jQuery;
+      var jQuery = django.jQuery;
+    </script>
     <script type="text/javascript" src="{% static 'popper/popper.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
 

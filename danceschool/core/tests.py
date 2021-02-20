@@ -241,7 +241,7 @@ class RegistrationTest(DefaultSchoolTestCase):
         # and gross price match
         self.assertEqual(response.context_data.get('invoice').grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('grossTotal'), response.context_data.get('total'))
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
 
 

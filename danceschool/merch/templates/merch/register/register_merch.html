@@ -12,17 +12,19 @@
                     <button class="btn btn-outline-primary my-2 mx-2 add-item"
                         id="{{ choice.choiceId }}"
                         data-choice-id="{{ choice.choiceId }}"
-                        data-item-type="merch"
+                        data-type="merchItem"
                         data-item-id="{{ choice.itemId }}"
-                        data-variant-id="{{ choice.variantId }}" data-name="{{ item.fullName }}"
+                        data-variant-id="{{ choice.variantId }}" data-description="{{ item.fullName }}"
                         data-price="{{ choice.price }}"
                         data-quantity="1"
+                        data-update-quantity="true"
                         data-require-full="{{ choice.requireFullRegistration }}"
                         {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
                         {% if choice.paymentMethod %}
                             data-payment-method="{{ choice.paymentMethod }}"
                             data-auto-submit="{{ choice.autoSubmit }}"
                         {% endif %}
+                        {% if choice.autoFulfill %}data-auto-fulfill="{{ choice.autoFulfill }}"{% endif %}
                         {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
                     >
                         {{ choice.label }} <span class="badge badge-pill badge-primary badge-choice-counter"></span>

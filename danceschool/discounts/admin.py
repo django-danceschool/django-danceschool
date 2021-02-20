@@ -51,7 +51,7 @@ class CustomerDiscountInlineForm(ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
-            'autocomplete_light/jquery.init.js',
+            'admin/js/jquery.init.js',
         )
 
 

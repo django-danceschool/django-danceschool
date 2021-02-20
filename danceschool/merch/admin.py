@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib import admin
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
+from django.urls import reverse
+
 
 from .models import (
     MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem,
@@ -104,7 +107,7 @@ class MerchOrderItemInline(admin.TabularInline):
         '''
         MerchOrderItems can only be added when an order is unsubmitted.
         '''
-        if obj and not obj.order.itemsEditable:
+        if obj and not obj.itemsEditable:
             return False
         return True
 
@@ -112,12 +115,12 @@ class MerchOrderItemInline(admin.TabularInline):
         '''
         MerchOrderItems can only be deleted when an order is unsubmitted.
         '''
-        if obj and not obj.order.itemsEditable:
+        if obj and not obj.itemsEditable:
             return False
         return True
 
     def get_readonly_fields(self, request, obj=None):
-        if obj and not obj.order.itemsEditable:
+        if obj and not obj.itemsEditable:
             return self.submitted_readonly_fields
         return self.readonly_fields
 
@@ -128,8 +131,20 @@ class MerchOrderAdmin(admin.ModelAdmin):
     list_editable = ('status',)
     search_fields = ('items__name', 'items__description',)
     readonly_fields = ('invoiceLink', 'creationDate', 'lastModified')
-    fields = ('status', 'invoiceLink', 'creationDate', 'lastModified')
     list_filter = ('status', 'creationDate', 'lastModified',)
+
+    fieldsets = (
+        (None, {
+            'fields': ('status', 'invoiceLink', 'creationDate', 'lastModified'),
+        }),
+        (_('Additional data'), {
+            'classes': ('collapse', ),
+            'fields': ('data',),
+        }),
+    )
+
+
+    inlines = (MerchOrderItemInline,)
 
     def getInvoiceId(self, obj):
         return getattr(obj.invoice, 'id', '')

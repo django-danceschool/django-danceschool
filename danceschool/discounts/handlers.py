@@ -79,7 +79,7 @@ def getBestDiscount(sender, **kwargs):
 
     ineligible_total = sum(
         [x.event.getBasePrice(payAtDoor=payAtDoor) for x in ineligible_list.exclude(dropIn=True)] +
-        [x.price for x in ineligible_list.filter(dropIn=True)]
+        [x.event.getBasePrice(dropIns=1) for x in ineligible_list.filter(dropIn=True)]
     )
 
     # Get the applicable discounts and sort them in ascending category order

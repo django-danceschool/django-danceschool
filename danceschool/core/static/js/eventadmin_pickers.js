@@ -1,10 +1,7 @@
-(function($) {
-	$(document).ready(function() {
-		makepickers();	
-	});
-	
-	$(document).on('formset:added', function(event, $row, formsetName) {
-    	if (formsetName == 'eventoccurrence_set') {
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	django.jQuery(document).on('formset:added', function(event, $row, formsetName) {
+		if (formsetName == 'eventoccurrence_set') {
 			makepickers();
 			set_new_times();
 			set_new_dates();
@@ -75,4 +72,8 @@
 		}
 	}
 
-})(django.jQuery);
+	$(document).ready(function() {
+		makepickers();	
+	});
+
+});

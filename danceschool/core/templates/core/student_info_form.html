@@ -42,18 +42,34 @@
 				{% endfor %}
 			</tbody>
 			{% endif %}
-			{% if voucherAmount %}
+			{% if voucher and voucher.beforeTax %}
 			<tbody>
 				<tr>
-					<td><strong>{% trans "Voucher" %}:</strong> {{ voucherName }} ({{ voucherId }})</td>
-					<td>-{{ currencySymbol }}{{ voucherAmount|floatformat:2 }}</td>
+					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
+					<td>-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+				</tr>
+			</tbody>
+			{% endif %}
+			{% if invoice.taxes and invoice.buyerPaysSalesTax %}
+			<tbody>
+				<tr>
+					<th><em>{% trans "Taxes" %}</em></th>
+					<th>{{ currencySymbol }}{{ invoice.taxes|floatformat:2 }}</th>
+				</tr>
+			</tbody>
+			{% endif %}
+			{% if voucher and not voucher.beforeTax %}
+			<tbody>
+				<tr>
+					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
+					<td>-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
 				</tr>
 			</tbody>
 			{% endif %}
 			<tbody>
 				<tr style="font-size: 1.2em;">
 					<th><em>{% trans "Subtotal" %}:</em></th>
-					<th>{{ currencySymbol }}{{ invoice.total|floatformat:2 }}</th>
+					<th>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:2 }}</th>
 				</tr>
 			</tbody>
 

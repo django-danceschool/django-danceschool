@@ -5,9 +5,7 @@ from django.contrib.admin import TabularInline
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
-from cms.models.pluginmodel import CMSPlugin
 
-from datetime import datetime, timedelta
 from collections import OrderedDict
 from adminsortable2.admin import SortableInlineAdminMixin
 
@@ -15,11 +13,7 @@ from .models import (
     DoorRegisterEventPluginModel, DoorRegisterEventPluginChoice,
     DoorRegisterGuestSearchPluginModel
 )
-from danceschool.core.models import (
-    StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel,
-    EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent,
-    Location
-)
+from danceschool.core.models import Event
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -147,7 +141,7 @@ class DoorRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
         listing = instance.getEvents(
             dateTime=today_start,
             initial=context.get('allEvents', Event.objects.none())
-        ) or []
+        )
 
         # Create an ordered dictionary of choices with all the information needed
         # for the page to render and Ajax processing to occur.

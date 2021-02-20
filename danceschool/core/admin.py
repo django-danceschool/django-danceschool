@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.admin.widgets import RelatedFieldWidgetWrapper
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.forms import (
     ModelForm, SplitDateTimeField, HiddenInput, RadioSelect,
     ModelMultipleChoiceField, ModelChoiceField
@@ -38,7 +39,7 @@ from .forms import LocationWithDataWidget
 
 
 def repeat_events(modeladmin, request, queryset):
-    selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+    selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
     ct = ContentType.objects.get_for_model(queryset.model)
     return HttpResponseRedirect(reverse('repeatEvents') + "?ct=%s&ids=%s" % (ct.pk, ", ".join(selected)))
 
@@ -80,7 +81,7 @@ class EventStaffMemberInlineForm(ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
-            'autocomplete_light/jquery.init.js',
+            'admin/js/jquery.init.js',
         )
 
 
@@ -277,16 +278,15 @@ class EventOccurrenceInline(admin.TabularInline):
 
     class Media:
         js = (
-            'admin/js/vendor/jquery/jquery.min.js',
-            'jquery-ui/jquery-ui.min.js',
             'moment/moment.min.js',
+            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+            'timepicker/jquery.timepicker.min.js',
             'datepair/datepair.min.js',
             'datepair/jquery.datepair.min.js',
-            'timepicker/jquery.timepicker.min.js',
             'js/eventadmin_pickers.js'
         )
         css = {
-            'all': ('timepicker/jquery.timepicker.css', 'jquery-ui/jquery-ui.min.css', )
+            'all': ('timepicker/jquery.timepicker.css', 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css')
         }
 
 
@@ -307,7 +307,7 @@ class InvoiceItemInline(admin.StackedInline):
         InvoiceItems can only be added when an invoice's status is preliminary
         or unpaid.
         '''
-        if obj and not obj.invoice.itemsEditable:
+        if obj and not obj.itemsEditable:
             return False
         return True
 
@@ -316,7 +316,7 @@ class InvoiceItemInline(admin.StackedInline):
         InvoiceItems can only be deleted when an invoice's status is preliminary
         or unpaid.
         '''
-        if obj and not obj.invoice.itemsEditable:
+        if obj and not obj.itemsEditable:
             return False
         return True
 
@@ -350,7 +350,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     def emailNotification(self, request, queryset):
         # Allows use of the email view to contact specific customers.
-        selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+        selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
         return HttpResponseRedirect(
             reverse('sendInvoiceNotifications') +
             "?invoices=%s" % (", ".join(selected))
@@ -583,7 +583,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
     def emailCustomers(self, request, queryset):
         # Allows use of the email view to contact specific customers.
-        selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+        selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
         return HttpResponseRedirect(reverse('emailStudents') + "?customers=%s" % (
             ", ".join(selected)
         ))
@@ -630,7 +630,7 @@ class CustomerGroupAdminForm(ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
-            'autocomplete_light/jquery.init.js',
+            'admin/js/jquery.init.js',
         )
 
 
@@ -642,7 +642,7 @@ class CustomerGroupAdmin(admin.ModelAdmin):
 
     def emailCustomers(self, request, queryset):
         # Allows use of the email view to contact specific customer groups.
-        selected = request.POST.getlist(admin.ACTION_CHECKBOX_NAME)
+        selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
         return HttpResponseRedirect(reverse('emailStudents') + "?customergroup=%s" % (", ".join(selected)))
     emailCustomers.short_description = _('Email selected customer groups')
 
@@ -968,7 +968,7 @@ class SeriesAdminForm(ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
-            'autocomplete_light/jquery.init.js',
+            'admin/js/jquery.init.js',
             'js/serieslocation_capacity_change.js',
             'js/location_related_objects_lookup.js',
         )

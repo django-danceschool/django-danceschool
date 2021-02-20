@@ -302,8 +302,9 @@ class PluginTemplateMixin(object):
                         css={'all': ('autocomplete_light/select2.css',)},
                         js=(
                             'admin/js/vendor/jquery/jquery.min.js',
-                            'autocomplete_light/jquery.init.js',
-                            'autocomplete_light/select2.js', 'js/select2_newtemplate.js',
+                            'admin/js/jquery.init.js',
+                            'autocomplete_light/select2.js',
+                            'js/select2_newtemplate.js',
                         )
                     )
                 return Media()

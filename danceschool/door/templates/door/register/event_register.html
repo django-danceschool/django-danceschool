@@ -15,14 +15,22 @@
                         data-type="eventRegistration"
                         data-event="{{ item.event.id }}" data-name="{{ item.event.name }}" 
                         data-price="{{ choice.price }}"
-                        data-role-id="{{ choice.roleId|default_if_none:'' }}" data-role-name="{{ choice.roleName|default_if_none:'' }}"
+                        data-role-id="{{ choice.roleId|default_if_none:'' }}"
+                        data-role-name="{{ choice.roleName|default_if_none:'' }}"
                         data-require-full="{{ choice.requireFullRegistration }}"
+                        data-check-in-type="{{ instance.autoCheckIn }}"
                         {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
-                        {% if choice.dropIn %}data-drop-in="{{ choice.dropIn }}"{% endif %}
+                        {% if choice.dropIn %}
+                            data-drop-in="{{ choice.dropIn }}"
+                            data-drop-in-occurrence="{{ choice.dropInOccurrence }}"
+                        {% endif %}
                         {% if choice.student %}data-student="{{ choice.student }}"{% endif %}
                         {% if choice.paymentMethod %}
                             data-payment-method="{{ choice.paymentMethod }}"
                             data-auto-submit="{{ choice.autoSubmit }}"
+                        {% endif %}
+                        {% if choice.checkInOccurrence %}
+                            data-check-in-occurrence="{{ choice.checkInOccurrence }}"
                         {% endif %}
                         {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
                     >
@@ -42,14 +50,22 @@
                                     data-type="eventRegistration"
                                     data-event="{{ item.event.id }}" data-description="{{ item.event.name }}"
                                     data-price="{{ choice.price }}"
-                                    data-role-id="{{ choice.roleId|default_if_none:'' }}" data-role-name="{{ choice.roleName|default_if_none:'' }}"
+                                    data-role-id="{{ choice.roleId|default_if_none:'' }}"
+                                    data-role-name="{{ choice.roleName|default_if_none:'' }}"
                                     data-require-full="{{ choice.requireFullRegistration }}"
+                                    data-check-in-type="{{ instance.autoCheckIn }}"
                                     {% if choice.voucherId %}data-voucher-id="{{ choice.voucherId }}"{% endif %}
-                                    {% if choice.dropIn %}data-drop-in="{{ choice.dropIn }}"{% endif %}
+                                    {% if choice.dropIn %}
+                                        data-drop-in="{{ choice.dropIn }}"
+                                        data-drop-in-occurrence="{{ choice.dropInOccurrence }}"
+                                        {% endif %}
                                     {% if choice.student %}data-student="{{ choice.student }}"{% endif %}
                                     {% if choice.paymentMethod %}
                                         data-payment-method="{{ choice.paymentMethod }}"
                                         data-auto-submit="{{ choice.autoSubmit }}"
+                                    {% endif %}
+                                    {% if choice.checkInOccurrence %}
+                                        data-check-in-occurrence="{{ choice.checkInOccurrence }}"
                                     {% endif %}
                                     {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
                                 >

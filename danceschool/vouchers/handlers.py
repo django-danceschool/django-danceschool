@@ -6,9 +6,9 @@ from django.db.models.query import QuerySet
 from django.db.models.functions import Concat
 
 from danceschool.core.signals import (
-    post_student_info, post_registration, apply_price_adjustments,
-    get_customer_data, check_student_info, get_eventregistration_data,
-    check_voucher
+    post_student_info, apply_price_adjustments, get_customer_data,
+    check_student_info, get_eventregistration_data, check_voucher,
+    invoice_finalized
 )
 from danceschool.core.models import (
     Customer, EventRegistration, Event, Registration
@@ -273,10 +273,10 @@ def applyTemporaryVouchers(sender, **kwargs):
     return response
 
 
-@receiver(post_registration)
+@receiver(invoice_finalized)
 def applyVoucherCodesFinal(sender, **kwargs):
     '''
-    Once a registration has been completed, vouchers are used and referrers are awarded
+    Once an invoice is finalized, vouchers are used and referrers are awarded.
     '''
     logger.debug('Signal fired to mark voucher codes as applied.')
 

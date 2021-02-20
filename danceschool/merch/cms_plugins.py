@@ -1,5 +1,6 @@
 from django.utils.translation import gettext_lazy as _
 from django.middleware.csrf import get_token
+from django.db.models import Q
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
@@ -21,7 +22,7 @@ class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
         (None, {
             'fields': (
                 'title', 'categories', 'separateVariants', 'displaySoldOut',
-                'requireFullRegistration', 'paymentMethods',
+                'requireFullRegistration', 'autoFulfill', 'paymentMethods',
             )
         }),
         (_('Display Options'), {
@@ -31,7 +32,8 @@ class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
     )
     
     def populateOptions(
-        self, instance, paymentMethods=[], requireFullRegistration=False, counter=0
+        self, instance, plugin_model_instance, paymentMethods=[],
+        counter=0
     ):
         ''' Populate the option data for each separate merchandise item. '''
         
@@ -46,18 +48,26 @@ class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
 
         choices = []
 
-        if isinstance(instance, MerchItem):
+        if isinstance(instance, MerchItem) and not plugin_model_instance.displaySoldOut:
+            choice_basis = instance.item_variant.filter(soldOut=False)
+        elif isinstance(instance, MerchItem):
             choice_basis = instance.item_variant.all()
+        elif instance.soldOut:
+            choice_basis = []
         else:
             choice_basis = [instance,]
 
-        soldOutString = '({})'.format(_('Sold out')) if instance.soldOut else ''
-
         for method in paymentMethods:
-            this_requireFull = requireFullRegistration or method['requireFullRegistration']
+            this_requireFull = (
+                plugin_model_instance.requireFullRegistration or
+                method['requireFullRegistration']
+            )
 
             for choice in choice_basis:
-                choiceId = 'merchitem_{}_{}_{}'.format(choice.item.id, choice.id, counter)
+                choiceId = 'merchitem_{}_{}_{}_{}'.format(
+                    plugin_model_instance.id, choice.item.id, choice.id, counter
+                )
+                soldOutString = '({})'.format(_('Sold out')) if choice.soldOut else ''
 
                 this_label = '{} {} {}'.format(
                     choice.fullName or '',
@@ -71,6 +81,7 @@ class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
                     'paymentMethod': method['name'],
                     'requireFullRegistration': this_requireFull,
                     'autoSubmit': method['autoSubmit'],
+                    'autoFulfill': plugin_model_instance.autoFulfill,
                     'choiceId': choiceId,
                     'itemId': choice.item.id,
                     'variantId': choice.id,
@@ -109,14 +120,23 @@ class DoorRegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
         # Each event gets its own list of choices.
         for item in listing:
             if instance.separateVariants:
-                for variant in item.item_variant.all():
-                    these_options, choice_counter = self.populateOptions(variant, paymentMethods, choice_counter) 
+
+                variant_filters = Q()
+                if not instance.displaySoldOut:
+                    variant_filters = Q(soldOut=False)
+
+                for variant in item.item_variant.filter(variant_filters):
+                    these_options, choice_counter = self.populateOptions(
+                        variant, instance, paymentMethods, counter=choice_counter
+                    ) 
                     register_choices['merchitemvariant_{}'.format(variant.id)] = {
                         'fullName': variant.fullName,
                         'options': these_options,
                     }
             else:
-                these_options, choice_counter = self.populateOptions(item, paymentMethods, choice_counter)
+                these_options, choice_counter = self.populateOptions(
+                    item, instance, paymentMethods, counter=choice_counter
+                )
                 register_choices['merchitem_{}'.format(item.id)] = {
                     'fullName': item.fullName,
                     'options': these_options,

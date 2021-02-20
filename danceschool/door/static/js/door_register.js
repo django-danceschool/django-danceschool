@@ -20,6 +20,16 @@ $(document).ready(function() {
         return deepCopy;
     }
 
+    // Used to format string to title case.
+    function toTitleCase(str) {
+        return str.replace(
+          /\w\S*/g,
+          function(txt) {
+            return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+          }
+        );
+    }
+
     // Used to clear out regData as needed (expired registration, initial
     // page load, cart cleared)
     function initializeRegData() {
@@ -74,8 +84,8 @@ $(document).ready(function() {
                     '" data-event-reg="' + this.eventRegistrationId + '"';
             }
             else if (this.type == "merchItem") {
-                this_data_string += 'data-item-variant="' + this.itemVariantId +
-                    '" data-order-item="' + this.orderItemId + '"';
+                this_data_string += 'data-item-variant="' + this.variantId +
+                    '" data-order-item="' + this.itemId + '"';
             }
             var this_price = parseFloat(this.grossTotal).toFixed(2);
     
@@ -91,7 +101,7 @@ $(document).ready(function() {
             // Update the badge for the button that was pressed for each selection.
             if (this.choiceId) {
                 var this_badge = $("#" + this.choiceId + " .badge-choice-counter");
-                this_badge.text((parseInt(this_badge.text()) | 0) + 1);
+                this_badge.text(this.quantity || (parseInt(this_badge.text() | 0) + 1));
             }
         });
 
@@ -239,11 +249,6 @@ $(document).ready(function() {
                     errorText += '</ul>';
                     addAlert(errorText);
 
-                    // To ensure that server and client side remain in sync, get
-                    // the existing data from the server without any submission
-                    // information other than the ID of the existing invoice
-                    // TODO THIS IN THE MORNING
-
                     // reset regData for expired invoices
                     if (response.errors.filter(function(e){return e.code == 'expired'}).length > 0) {
                         initializeRegData();
@@ -306,8 +311,6 @@ $(document).ready(function() {
         // Grab the data and also add the ID of the element that was clicked.
         var this_data = $(this).data();
 
-        console.log(this_data);
-
         // Copy existing regData in case there is an error
         var old_regData = deepCopyFunction(regData);
 
@@ -336,15 +339,25 @@ $(document).ready(function() {
         }
 
         if (this_data.type == "eventRegistration") {
-            // Avoid passing anything but integer values for role ID, which will happen
-            // when registration buttons have no associated role.
+            // Avoid passing anything but integer values for role ID, which will
+            // happen when registration buttons have no associated role.
             if (isNaN(parseInt(this_data.roleId))) {
                 delete this_data.roleId;
             }
         }
 
-        // Add the data from the button to the regData and submit
-        regData['items'].push(this_data);
+        var prior_choice = regData.items.findIndex(item => item.choiceId === this_data.choiceId);
+
+        if (
+            this_data.updateQuantity === true && this_data.quantity &&
+            prior_choice !== -1
+        ) {
+            regData.items[prior_choice].quantity += this_data.quantity;
+        }
+        else {
+            // Add the data from the button to the regData and submit
+            regData['items'].push(this_data);
+        }
         submitData(prior=old_regData, redirect=false, removeAlerts=true);
 
     });
@@ -451,6 +464,8 @@ $(document).ready(function() {
                 data: JSON.stringify(ajaxData),
                 success: function(response){
     
+                    console.log(response);
+
                     $('#customerInfoTable').removeClass('d-none');
 
                     $.each(response, function() {
@@ -462,13 +477,14 @@ $(document).ready(function() {
                             statusString += ' (' + regParams.outstandingBalanceString + ' ' + regParams.currencySymbol + parseFloat(this.registration.invoice.outstandingBalance).toFixed(2) + ')';
                         }
 
-                        this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id);
+                        this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id + '_' + this.occurrenceId);
                         this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id);
                         this_row.find('.customerCheckIn').attr('checked', this.checkedIn);
                         this_row.find('.customerCheckIn').attr('value', this.id);
-                        this_row.find('.customerCheckIn').data('occurrence-id', this.event.getNextOccurrenceForDate);
+                        this_row.find('.customerCheckIn').data('occurrence-id', this.occurrenceId);
                         this_row.find('.customerCheckIn').data('event-id', this.event.id);
                         this_row.find('.customerInfoEvent').text(this.event.name);
+                        this_row.find('.customerInfoTime').text(moment(this.occurrenceStartTime).format('LT'));
                         var role_text = "";
                         if (this.dropIn == true) {
                             role_text += regParams.dropInString + ' ';
@@ -477,7 +493,7 @@ $(document).ready(function() {
                             role_text += this.role.name;
                         }
                         this_row.find('.customerInfoRole').text(role_text);
-                        this_row.find('.customerInfoStudent').text(this.registration.student);
+                        this_row.find('.customerInfoStudent').text(toTitleCase(this.registration.student.toString()));
                         this_row.find('.customerInfoPaymentStatus').text(statusString);
                         this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
                         this_row.find('.customerRegistrationLink').attr('href',this.registration.url);

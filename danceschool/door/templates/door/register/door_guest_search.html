@@ -18,19 +18,25 @@
                         <label class="customerCheckInLabel"></label>
                     </td>
                     {% endif %}
-                    <td class="customerInfoEvent"></td>
+                    <td><span class="customerInfoEvent"></span><br /><small><span class="customerInfoTime"></span></small></td>
                     <td class="customerInfoRole"></td>
                     <td class="customerInfoStudent"></td>
                     <td class="customerInfoPaymentStatus"></td>
                     <td class="customerInfoLinks">
-                            <div class="btn-group">
+
+                        <div class="dropdown show">
+                            <a class="btn btn-sm btn-light dropdown-toggle customerRelatedLink" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              Related Items
+                            </a>
+                            <div class="dropdown-menu customerRelatedDropdown">
                                 {% if 'core.view_all_invoices' in perms %}
-                                    <a class="btn btn-outline-secondary btn-sm customerInvoiceLink">{% trans "Invoice" %}</a>
+                                    <a class="dropdown-item customerInvoiceLink">{% trans "Invoice" %}</a>
                                 {% endif %}
                                 {% if 'core.change_registration' in perms %}
-                                    <a class="btn btn-outline-secondary btn-sm customerRegistrationLink">{% trans "Registration" %}</a>
+                                    <a class="dropdown-item customerRegistrationLink">{% trans "Registration" %}</a>
                                 {% endif %}
                             </div>
+                          </div>
                     </td>
                 </tr>
             </table>

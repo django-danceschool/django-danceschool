@@ -5,7 +5,7 @@ from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
 from dateutil.relativedelta import relativedelta
 
-from danceschool.core.models import Series
+from danceschool.core.models import Event
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.registries import plugin_templates_registry, PluginTemplateBase
 
@@ -34,11 +34,10 @@ class StatsGraphPlugin(PluginTemplateMixin, CMSPluginBase):
         # The same for graphs that allow one to choose different years.
         recentYears = [timezone.now().year + x for x in range(-5, 1)]
 
-        series_by_year = Series.objects.order_by('year')
-
-        if series_by_year.count() > 0:
-            first_year = series_by_year.first().year
-            allYears = [x for x in range(first_year, timezone.now().year + 1)]
+        years = Event.objects.filter(year__isnull=False).order_by('year').values_list('year', flat=True).distinct()
+    
+        if years:
+            allYears = [x for x in range(years[0], timezone.now().year + 1)]
         else:
             allYears = []
 

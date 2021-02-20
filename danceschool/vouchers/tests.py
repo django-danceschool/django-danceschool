@@ -161,7 +161,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(
             invoice.total, invoice.grossTotal - v.maxAmountPerUse
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('vouchers',{}).get('total_pretax'), v.maxAmountPerUse)
         self.assertIn(v.name, [x.get('name') for x in response.context_data.get('vouchers', {}).get('items', [])])
 
@@ -187,7 +187,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(
             invoice.total, invoice.grossTotal - v.originalAmount
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('vouchers',{}).get('total_pretax'), v.originalAmount)
         self.assertIn(v.name, [x.get('name') for x in response.context_data.get('vouchers', {}).get('items', [])])
 
@@ -215,7 +215,7 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(invoice.total, 0)
-        self.assertEqual(response.context_data.get('is_free'), True)
+        self.assertEqual(response.context_data.get('zero_balance'), True)
         self.assertEqual(response.context_data.get('vouchers',{}).get('total_pretax'), s.getBasePrice())
         self.assertIn(v.name, [x.get('name') for x in response.context_data.get('vouchers', {}).get('items', [])])
 

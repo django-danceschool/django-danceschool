@@ -7,7 +7,7 @@ from dal import autocomplete
 from datetime import timedelta
 from dateutil.parser import parse
 
-from danceschool.core.models import Customer, StaffMember, Event
+from danceschool.core.models import Customer, Event, EventOccurrence
 from danceschool.core.utils.timezone import ensure_localtime
 
 
@@ -52,13 +52,22 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
 
         customer_filters = Q()
         if date:
-            today_events = Event.objects.filter(
-                eventoccurrence__endTime__gte=ensure_localtime(date),
-                eventoccurrence__startTime__lte=ensure_localtime(date) + timedelta(days=1),
-            ).distinct()
+            start = ensure_localtime(date)
+            end = ensure_localtime(date) + timedelta(days=1)
+
+            today_occs = EventOccurrence.objects.filter(
+                endTime__gte=start, startTime__lte=end
+            )
+            today_events = Event.objects.filter(eventoccurrence__in=today_occs).distinct()
+
             customer_filters = (
                 Q(registration__eventregistration__event__in=today_events) &
-                Q(registration__final=True)
+                Q(registration__final=True) & (
+                    Q(registration__eventregistration__dropIn=False) | (
+                        Q(registration__eventregistration__dropIn=True) &
+                        Q(registration__eventregistration__occurrences__in=today_occs)
+                    )
+                )
             )
 
         queryset = Customer.objects.annotate(
@@ -91,7 +100,7 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
                     publicevent__category__isnull=False
                 ).values_list('publicevent__category', flat=True))
             )
-            '''
+
             for this_list in applicable_lists:
                 for this_event in today_events:
                     queryset = queryset.union(
@@ -99,7 +108,7 @@ class DoorRegisterAutoComplete(autocomplete.Select2QuerySetView):
                             this_event, filters=name_filters, includeRegistrants=False
                         ).order_by()
                     )
-            '''
+
             # Now that all the subqueries are together, order by the common
             # lastName and firstName fields.
             queryset = queryset.values(

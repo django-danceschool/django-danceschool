@@ -1,7 +1,6 @@
 from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest, HttpResponse
 from django.shortcuts import get_object_or_404, get_list_or_404
 from django.conf import settings
-from django.core import serializers
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
 from django.core.serializers.json import DjangoJSONEncoder
@@ -9,7 +8,7 @@ from django.views.generic import (
     FormView, CreateView, UpdateView, DetailView, TemplateView, ListView,
     RedirectView
 )
-from django.db.models import Min, Q, Count
+from django.db.models import Min, Q, Count, F
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -114,7 +113,10 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
         ).select_related(
             'registration', 'event', 'customer',
             'invoiceItem', 'role', 'registration__invoice',
-        ).order_by('registration__firstName', 'registration__lastName')
+        ).order_by(
+            F('registration__lastName').asc(nulls_last=True),
+            F('registration__firstName').asc(nulls_last=True),
+        )
 
         extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
 
@@ -236,8 +238,8 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
             'id', 'dropIn', 'refundFlag', 'warningFlag',
-            'checkedIn',
-            ('event', ['id', 'name', 'url', 'getNextOccurrenceForDate']),
+            'checkedIn', 'occurrenceId', 'occurrenceStartTime',
+            ('event', ['id', 'name', 'url',]),
             ('registration', [
                 'id', 'student', 'refundFlag',
                 'fullName', 'grossTotal', 'total', 'discounted', 'url',
@@ -251,10 +253,13 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
             ('role', ['id', 'name']),
         ]
 
-        extras = get_eventregistration_data.send(sender=EventRegistrationJsonView, eventregistrations=queryset)
-        extras_dict = {x: [] for x in queryset.values_list('id', flat=True)}
-        for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]]):
-            extras_dict[k].extend(v)
+        extras_dict = {}
+
+        if queryset:
+            extras = get_eventregistration_data.send(sender=EventRegistrationJsonView, eventregistrations=queryset)
+            extras_dict = {x: [] for x in queryset.values_list('id', flat=True)}
+            for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]]):
+                extras_dict[k].extend(v)
 
         this_listing = [
             recurse_listing(
@@ -275,11 +280,16 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         if getattr(self, 'endTime', None):
             filters['event__eventoccurrence__startTime__lte'] = self.endTime
         if getattr(self, 'customer', None):
-            filters['customer'] = self.customer
+            filters['registration__customer'] = self.customer
+
+        dropInFilters = Q(dropIn=False) | (Q(dropIn=True) & Q(occurrences__id=F('occurrenceId')))
 
         registrations = EventRegistration.objects.filter(
             **filters
-        ).distinct().select_related(
+        ).annotate(
+            occurrenceId=F('event__eventoccurrence__id'),
+            occurrenceStartTime=F('event__eventoccurrence__startTime'),
+        ).filter(dropInFilters).select_related(
             'registration', 'event', 'customer',
             'invoiceItem', 'role', 'registration__invoice',
         ).order_by('registration__firstName', 'registration__lastName')

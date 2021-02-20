@@ -28,6 +28,7 @@ from .mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
     RegistrationAdjustmentsMixin, ReferralInfoMixin
 )
+from .utils.timezone import ensure_localtime
 
 
 # Define logger for this file
@@ -138,12 +139,15 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         event_types = ['event_', 'publicevent_', 'series_']
 
         try:
-            event_listing = {
-                int(key.split("_")[-1]): [
-                    {k: v for k, v in json.loads(y).items() if k in permitted_keys} for y in value
-                ]
-                for key, value in form.cleaned_data.items() if any(x in key for x in event_types) and value
-            }
+            event_listing = {}
+            for key, value in form.cleaned_data.items():
+                if any(x in key for x in event_types) and value:
+                    this_event = {}
+                    for y in value:
+                        for k,v in json.loads(y).items():
+                            if k in permitted_keys and k not in this_event:
+                                this_event[k] = v
+                    event_listing[int(key.split("_")[-1])] = this_event
             non_event_listing = {
                 key: value for key, value in form.cleaned_data.items() if
                 not any(x in key for x in event_types)
@@ -176,59 +180,80 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         # from the form submission data.
         self.event_registrations = []
 
-        for key, value_list in event_listing.items():
+        for key, value in event_listing.items():
             this_event = associated_events.get(id=key)
 
-            for value in value_list:
+            # Check if registration is still feasible based on both completed registrations
+            # and registrations that are not yet complete
+            this_role_id = value.get('role', None) if 'role' in permitted_keys else None
+            soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
 
-                # Check if registration is still feasible based on both completed registrations
-                # and registrations that are not yet complete
-                this_role_id = value.get('role', None) if 'role' in permitted_keys else None
-                soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
-
-                if soldOut:
-                    if self.request.user.has_perm('core.override_register_soldout'):
-                        # This message will be displayed on the Step 2 page by default.
-                        messages.warning(self.request, _(
-                            'Registration for \'%s\' is sold out. ' % this_event.name +
-                            'Based on your user permission level, you may proceed ' +
-                            'with registration.  However, if you do not wish to exceed ' +
-                            'the listed capacity of the event, please do not proceed.'
-                        ))
-                    else:
-                        # For users without permissions, don't allow registration for sold out things
-                        # at all.
-                        form.add_error(None, ValidationError(
-                            _(
-                                'Registration for "%s" is tentatively sold out while ' +
-                                'others complete their registration.  Please try ' +
-                                'again later.' % this_event.name
-                            ), code='invalid')
-                        )
-                        return self.form_invalid(form)
-
-                dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
-
-                # If nothing is sold out, then proceed to create Registration and
-                # EventRegistration objects for the items selected by this form.  The
-                # expiration date is set to be identical to that of the session.
-
-                logger.debug('Creating temporary event registration for: %s' % key)
-                if len(dropInList) > 0:
-                    this_price = this_event.getBasePrice(dropIns=len(dropInList))
-                    tr = EventRegistration(
-                        event=this_event, dropIn=True,
-                        occurrences=dropInList,
-                    )
+            if soldOut:
+                if self.request.user.has_perm('core.override_register_soldout'):
+                    # This message will be displayed on the Step 2 page by default.
+                    messages.warning(self.request, _(
+                        'Registration for \'%s\' is sold out. ' % this_event.name +
+                        'Based on your user permission level, you may proceed ' +
+                        'with registration.  However, if you do not wish to exceed ' +
+                        'the listed capacity of the event, please do not proceed.'
+                    ))
                 else:
-                    this_price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
-                    tr = EventRegistration(
-                        event=this_event, role_id=this_role_id
+                    # For users without permissions, don't allow registration for sold out things
+                    # at all.
+                    form.add_error(None, ValidationError(
+                        _(
+                            'Registration for "%s" is tentatively sold out while ' +
+                            'others complete their registration.  Please try ' +
+                            'again later.' % this_event.name
+                        ), code='invalid')
                     )
-                # If it's possible to store additional data and such data exist, then store them.
-                tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
-                tr.data['__price'] = this_price
-                self.event_registrations.append(tr)
+                    return self.form_invalid(form)
+
+            dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
+
+            # If nothing is sold out, then proceed to create Registration and
+            # EventRegistration objects for the items selected by this form.  The
+            # expiration date is set to be identical to that of the session.
+
+            logger.debug('Creating temporary event registration for: %s' % key)
+            if len(dropInList) > 0:
+                this_price = this_event.getBasePrice(dropIns=len(dropInList))
+                tr = EventRegistration(
+                    event=this_event, dropIn=True,
+                )
+            else:
+                this_price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
+                tr = EventRegistration(
+                    event=this_event, role_id=this_role_id
+                )
+            # If it's possible to store additional data and such data exist, then store them.
+            tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
+            if dropInList:
+                tr.data['__dropInOccurrences'] = dropInList
+
+            checkin_rule = getConstant('registration__doorCheckInRule')
+            if reg.payAtDoor and checkin_rule == 'E':
+                # Check into the full event
+                tr.data['__checkInEvent'] = True
+            elif reg.payAtDoor and checkin_rule == 'O' and dropInList:
+                # Check into the first upcoming drop-in occurrence
+                best_occ = tr.event.eventoccurrence_set.filter(
+                    id__in=dropInList,
+                    startTime__gte=ensure_localtime(timezone.now()) - timedelta(minutes=45)
+                ).first()
+                tr.data['__checkInOccurrence'] = getattr(best_occ, 'id', None)
+            elif reg.payAtDoor and checkin_rule == 'O':
+                # Check into the next upcoming occurrence (45 min. grace period)
+                tr.data['__checkInOccurrence'] = getattr(
+                    tr.event.getNextOccurrence(
+                        ensure_localtime(timezone.now()) - timedelta(minutes=45)
+                    ),
+                    'id',
+                    None
+                )
+
+            tr.data['__price'] = this_price
+            self.event_registrations.append(tr)
 
         # If we got this far with no issues, then save
         invoice = reg.link_invoice(expirationDate=expiry)
@@ -246,6 +271,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         regSession["invoiceId"] = invoice.id.__str__()
         regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+        regSession["payAtDoor"] = reg.payAtDoor
         self.request.session[REG_VALIDATION_STR] = regSession
 
         if self.returnJson:
@@ -477,7 +503,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # but are passed as strings, so handle those as well to avoid
         # unexpected behavior.
         for x in post_data.get('items', []):
-            for k in ['dropIn', 'requireFull']:
+            for k in ['dropIn', 'requireFull', 'autoSubmit', 'autoFulfill',]:
                 if isinstance(x.get(k, None), str):
                     x[k] = ('true' in x[k].lower())
 
@@ -594,6 +620,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 item=this_item, item_data=i, post_data=post_data,
                 prior_response=response, request=request
             )
+
             for s in signal_responses:
                 if isinstance(s[1], dict) and s[1].get('status', None) != 'success':
                     errors += s[1].get('errors', [])
@@ -786,6 +813,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         regSession["invoiceId"] = invoice.id.__str__()
         regSession["invoiceExpiry"] = invoice.expirationDate.strftime('%Y-%m-%dT%H:%M:%S%z')
+        regSession["payAtDoor"] = response.get('payAtDoor', False)
         request.session[REG_VALIDATION_STR] = regSession
 
         return JsonResponse(response_dict)
@@ -877,6 +905,11 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # To do this, we need to know the drop-in status of the registration as
         # well as the associated role.
         response['dropIn'] = item_data.get('dropIn', False)
+
+        # Pass back information about how automatic check-in should proceed.
+        for v in ['dropInOccurrence', 'checkInType', 'checkInOccurrence']:
+            response[v] = item_data.get(v, None)
+
         this_role = None
 
         if item_data.get('roleId', None):
@@ -1011,11 +1044,21 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             this_eventreg.dropIn = True
             item.grossTotal = this_event.getBasePrice(dropIns=1)
             this_eventreg.role = this_role
-            this_eventreg.occurrences = item_data.get('occurrences', [])
+
+            # We cannot add occurrences to the many-to-many relationship until
+            # after the event registration has been saved.  So, we add it to
+            # the EventRegistration data for now.
+            if item_data.get('dropInOccurrence'):
+                this_eventreg.data['__dropInOccurrences'] = [item_data['dropInOccurrence'],]
         else:
             this_eventreg.dropIn = False
             item.grossTotal = this_event.getBasePrice(payAtDoor=registration.payAtDoor)
             this_eventreg.role = this_role
+
+        if item_data.get('checkInType') in ['E', 'S'] and item_data.get('checkInOccurrence'):
+            this_eventreg.data['__checkInOccurrence'] = item_data['checkInOccurrence']
+        elif item_data.get('checkInType') == 'F':
+            this_eventreg.data['__checkInEvent'] = True
 
         item.total = item.grossTotal
         item.calculateTaxes()
@@ -1214,8 +1257,8 @@ class RegistrationSummaryView(
         vouchers = regSession.get('vouchers', {})
         addons = regSession.get('addons', [])
 
-        isFree = (invoice.total == 0)
-        isComplete = (isFree or regSession.get('direct_payment', False) is True)
+        zeroBalance = (invoice.outstandingBalance == 0)
+        isComplete = (zeroBalance or regSession.get('direct_payment', False) is True)
 
         if isComplete:
             # Include the submission user if the user is authenticated
@@ -1224,7 +1267,7 @@ class RegistrationSummaryView(
             else:
                 submissionUser = None
 
-            if isFree:
+            if zeroBalance:
                 invoice.processPayment(
                     amount=0, fees=0, submissionUser=submissionUser,
                     forceFinalize=True
@@ -1266,9 +1309,9 @@ class RegistrationSummaryView(
             "total_discount_amount": discount_amount + vouchers.get('total_pretax', 0),
             "total_adjustment_amount": vouchers.get('total_posttax', 0),
             "currencyCode": getConstant('general__currencyCode'),
-            'payAtDoor': getattr(reg, 'payAtDoor', False),
+            'payAtDoor': regSession.get('payAtDoor', False),
             'is_complete': isComplete,
-            'is_free': isFree,
+            'zero_balance': zeroBalance,
         })
 
         return context_data
@@ -1322,10 +1365,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         context_data = super().get_context_data(**kwargs)
         reg = self.registration
 
-        context_data.update({
-            'invoice': self.invoice,
-            'currencySymbol': getConstant('general__currencySymbol'),
-        })
+        payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
 
         discount_codes, total_discount_amount = self.getDiscounts(
             self.invoice, registration=reg
@@ -1338,25 +1378,11 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             save=False, allocateAmounts={'total': -1*total_discount_amount}
         )
 
-        context_data.update({
-            'reg': reg,
-            'payAtDoor': reg.payAtDoor,
-            'currencySymbol': getConstant('general__currencySymbol'),
-            'addonItems': addons,
-            'discount_codes': discount_codes,
-            'discount_code_amount': total_discount_amount,
-        })
-
         # Get a voucher ID to check from the current contents of the form
         voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
 
         if voucherId:
-            context_data.update(
-                self.getVoucher(
-                    voucherId, self.invoice,
-                    -1*total_discount_amount
-                )
-            )
+            context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
@@ -1370,7 +1396,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             )
 
         if (
-            getattr(reg,'payAtDoor', None) or
+            payAtDoor or
             self.request.user.is_authenticated or not
             getConstant('registration__allowAjaxSignin')
         ):
@@ -1382,6 +1408,16 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
                 'login_form': LoginForm(),
                 'signup_form': SignupForm(),
             })
+
+        context_data.update({
+            'invoice': self.invoice,
+            'currencySymbol': getConstant('general__currencySymbol'),
+            'reg': reg,
+            'payAtDoor': payAtDoor,
+            'addonItems': addons,
+            'discount_codes': discount_codes,
+            'discount_code_amount': total_discount_amount,
+        })
 
         return context_data
 

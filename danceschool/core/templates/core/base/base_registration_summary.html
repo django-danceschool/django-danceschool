@@ -104,7 +104,7 @@
 	{% endblock %}
 
 	{% block payment_info %}
-	     {% if is_complete or is_free %}
+	     {% if is_complete or zero_balance %}
 			<p>{% trans "Thanks! You're all set." %}</p>
 
 			<p><a href="{{ returnPage }}" class="btn btn-primary btn-lg">{% trans "Return" %}</a></p>

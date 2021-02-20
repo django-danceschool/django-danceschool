@@ -40,6 +40,8 @@ def checkRequirements(sender, **kwargs):
     if not registration:
         invoice = kwargs.get('invoice', None)
         registration = Registration.objects.filter(invoice=invoice).first()
+    if not registration:
+        return
 
     customer = Customer.objects.filter(
         first_name=first,

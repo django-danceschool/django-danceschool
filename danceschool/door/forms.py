@@ -20,26 +20,6 @@ class CustomerGuestAutocompleteForm(forms.Form):
     def __init__(self, *args, **kwargs):
         date = kwargs.pop('date', None)
 
-        queryset = Customer.objects.annotate(
-            firstName=F('first_name'), lastName=F('last_name'),
-            guestType=Value(gettext('Customer'), output_field=CharField())
-        ).values('firstName', 'lastName', 'guestType').order_by()
-        '''
-        queryset = queryset.union(
-            StaffMember.objects.annotate(
-                guestType=Value(gettext('Customer'), output_field=CharField())
-            ).values('firstName', 'lastName', 'guestType').order_by()
-        )
-        '''
-        if apps.is_installed('danceschool.guestlist'):
-            GuestListName = apps.get_model('guestlist', 'GuestListName')
-            '''
-            queryset = queryset.union(
-                GuestListName.objects.annotate(
-                    guestType=Value(gettext('Customer'), output_field=CharField())
-                ).values('firstName', 'lastName', 'guestType').order_by()
-            )
-            '''
         super().__init__(*args, **kwargs)
 
         self.fields['date'] = forms.DateField(
@@ -47,8 +27,14 @@ class CustomerGuestAutocompleteForm(forms.Form):
             widget=forms.HiddenInput
         )
 
+        # Note that the autocomplete works on the unioned queryset of
+        # customers, staff, and guests even though the queryset specified here
+        # is customers only.  We only specify customers here to avoid issues
+        # with filtering unioned querysets.
         self.fields['name'] = forms.ModelChoiceField(
-            queryset=queryset,
+            queryset=Customer.objects.annotate(
+                firstName=F('first_name'), lastName=F('last_name')
+            ).values('firstName', 'lastName'),
             widget=autocomplete.ModelSelect2(
                 url='doorRegisterAutocomplete',
                 forward=['date'],

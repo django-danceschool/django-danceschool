@@ -43,7 +43,7 @@ def linkMerchOrder(sender, **kwargs):
 
     response = {
         '__related_merchitemvariants': MerchItemVariant.objects.filter(
-            id__in=[x.get('merchItem') for x in merchorder_items if x.get('merchItem', None)]
+            id__in=[x.get('variantId') for x in merchorder_items if x.get('variantId', None)]
         ),
     }
 
@@ -61,7 +61,7 @@ def linkMerchOrder(sender, **kwargs):
             }],
         }
 
-    response.update({'__relateditem_merchorder', order})
+    response.update({'__relateditem_merchorder': order})
     return {'status': 'success', 'response': response}
 
 
@@ -75,6 +75,9 @@ def linkMerchOrderItems(sender, **kwargs):
     item_data = kwargs.get('item_data', {})
     post_data = kwargs.get('post_data', {})
     prior_response = kwargs.get('prior_response', {})
+
+    if not item_data.get('type', None) == 'merchItem':
+        return {}
 
     errors = []
     response = {'type': 'merchItem'}
@@ -98,10 +101,10 @@ def linkMerchOrderItems(sender, **kwargs):
         })
 
     try:
-        this_item_variant = item_variants.get(id=item_data.get('merchItem', None))
+        this_item_variant = item_variants.get(id=item_data.get('variantId', None))
         response.update({
-            'merchItem': this_item_variant.id,
-            'name': this_item_variant.fullName,
+            'variantId': this_item_variant.id,
+            'description': this_item_variant.fullName,
         })
     except ObjectDoesNotExist:
         errors.append({
@@ -124,7 +127,7 @@ def linkMerchOrderItems(sender, **kwargs):
     same_item_variant = [
         x for x in post_data.get('items',[]) if
         x.get('type') == 'merchItem' and
-        x.get('merchItem') == this_item_variant.id
+        x.get('variantId') == this_item_variant.id
     ]
 
     if len(same_item_variant) > 1:
@@ -142,7 +145,7 @@ def linkMerchOrderItems(sender, **kwargs):
     # MerchOrderItem or to create a new one.
     created_order_item = False
 
-    this_order_item = MerchOrderItem.objects.filter(invoiceItem__id=item).first()
+    this_order_item = MerchOrderItem.objects.filter(invoiceItem__id=item.id).first()
 
     if not this_order_item:
         logger.debug('Creating merch order item for invoice item {}.'.format(item.id))
@@ -168,25 +171,42 @@ def linkMerchOrderItems(sender, **kwargs):
         return {'status': 'error', 'errors': errors}
 
     # Update quantity and pricing.
+    old_quantity = this_order_item.quantity
     this_order_item.quantity = item_data.get('quantity', 1)
     response['quantity'] = this_order_item.quantity
 
     item.grossTotal = this_order_item.grossTotal
     item.total = item.grossTotal
+    item.calculateTaxes(tax_rate=this_order_item.item.item.salesTaxRate/100)
+    item.description = this_item_variant.fullName
 
     if (created_order_item and this_order_item.item.soldOut):
         errors.append({
             'code': 'sold_out',
             'message': _('Item "{}" is sold out.'.format(this_order_item.item))
         })
-
-    if (created_order_item and this_order_item.item.currentInventory < this_order_item.quantity):
+    elif (
+        (created_order_item or this_order_item.quantity != old_quantity) and
+        this_order_item.item.currentInventory < this_order_item.quantity
+    ):
         errors.append({
             'code': 'insufficient_inventory',
             'message': _('Item "{}" does not have {} units available.'.format(
                 this_order_item.item, this_order_item.quantity
             ))
         })
+
+    # Handle auto-submit behavior.  If all items have autoFufill == True then
+    # the order will be automatically marked as fulfilled when the invoice is
+    # finalized.
+    response['autoFulfill'] = item_data.get('autoFulfill', None)
+    if (
+        item_data.get('autoFulfill', False) is True and
+        order.data.get('__autoFulfill', None) in [None, True]
+    ):
+        order.data['__autoFulfill'] = True
+    else:
+        order.data['__autoFulfill'] = False
 
     # Now that all checks are complete, return failure or success.
     if errors:
@@ -223,7 +243,11 @@ def processFinalizedInvoice(sender, **kwargs):
             ).format(invoice.id)
         )
     elif order.status == order.OrderStatus.unsubmitted:
-        order.status = order.OrderStatus.submitted
+        autoFulfill = order.data.pop('__autoFulfill', False)
+        if autoFulfill:
+            order.status = order.OrderStatus.fulfilled
+        else:
+            order.status = order.OrderStatus.submitted
         order.save()
 
 

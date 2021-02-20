@@ -2485,6 +2485,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         ''' Overrides EmailRecipientMixin '''
         context = super().get_email_context(**kwargs)
         context.update({
+            'firstName': self.firstName,
+            'lastName': self.lastName,
+            'email': self.email,
             'id': self.id,
             'url': '%s?v=%s' % (self.url, self.validationString),
             'amountPaid': self.amountPaid,
@@ -2499,6 +2502,10 @@ class Invoice(EmailRecipientMixin, models.Model):
             'taxes': self.taxes,
             'fees': self.fees,
             'comments': self.comments,
+            'itemList': [
+                x.get_email_context() for x in
+                self.invoiceitem_set.all()
+            ],
         })
         return context
 
@@ -2707,11 +2714,16 @@ class Invoice(EmailRecipientMixin, models.Model):
                 When(oldTotal=0, then=0),
                 default=(
                     F('buyerTax') * (F('oldTaxes') / F('oldTotal')) +
-                    (1 - F('buyerTax')) * ((F('oldTaxes') / F('oldTotal'))/(1 + (F('oldTaxes') / F('oldTotal'))))
+                    (1 - F('buyerTax')) * (
+                        (F('oldTaxes') / F('oldTotal'))/(1 + (F('oldTaxes') / F('oldTotal')))
+                    )
                 ),
                 output_field=models.FloatField()
             ),
         }
+
+        # Used to avoid division by zero issues when constructing allocation ratios.
+        proportional = Value(1/(old_totals['item_count'] or 1), output_field=models.FloatField())
 
         # If no weights are specified, the ratio to be applied to grossTotal is
         # based on prior values of grossTotal.  For all other fields, the ratio
@@ -2720,7 +2732,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         if allocateWeights and allocateAmounts.get('grossTotal'):
             pretax_annotations['grossTotalRatio'] = F('allocationWeight')
         elif old_totals['grossTotal'] == 0:
-            pretax_annotations['grossTotalRatio'] = Value(1/old_totals['item_count'], output_field=models.FloatField())
+            pretax_annotations['grossTotalRatio'] = proportional
         else:
             pretax_annotations['grossTotalRatio'] = (F('oldGrossTotal')/old_totals['grossTotal'])
 
@@ -2731,7 +2743,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         if allocateWeights and allocateAmounts.get('total'):
             pretax_annotations['totalRatio'] = F('allocationWeight')
         elif new_totals['grossTotal'] == 0:
-            pretax_annotations['totalRatio'] = 1/old_totals['item_count']
+            pretax_annotations['totalRatio'] = proportional
         else:
             pretax_annotations['totalRatio'] = (F('newGrossTotal')/new_totals['grossTotal'])
 
@@ -2741,14 +2753,14 @@ class Invoice(EmailRecipientMixin, models.Model):
         })
 
         items = items.annotate(**pretax_annotations)
-        new_totals['taxes'] = items.aggregate(Sum('newTaxes')).get('newTaxes__sum', 0)
+        new_totals['taxes'] = items.aggregate(newTaxes__sum=Coalesce(Sum('newTaxes'), 0)).get('newTaxes__sum')
 
         posttax_annotations = {}
 
         if allocateWeights and allocateAmounts.get('adjustments'):
             posttax_annotations['adjustmentRatio'] = F('allocationWeight')
         elif new_totals['total'] + new_totals['taxes'] == 0:
-            posttax_annotations['adjustmentRatio'] = Value(1/old_totals['item_count'], output_field=models.FloatField())
+            posttax_annotations['adjustmentRatio'] = proportional
         else:
             posttax_annotations['adjustmentRatio'] = (
                 (F('newTotal') + F('newTaxes')) / (new_totals['total'] + new_totals['taxes'])
@@ -2761,7 +2773,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         if allocateWeights and allocateAmounts.get('fees'):
             posttax_annotations['feesRatio'] = F('allocationWeight')
         elif new_totals['total'] + new_totals['taxes'] + new_totals['adjustments'] == 0:
-            posttax_annotations['feesRatio'] = Value(1/old_totals['item_count'], output_field=models.FloatField())
+            posttax_annotations['feesRatio'] = proportional
         else:
             posttax_annotations['feesRatio'] = (
                 (F('newTotal') + F('newTaxes') + F('newAdjustments')) /
@@ -3020,6 +3032,26 @@ class InvoiceItem(models.Model):
                 adjusted_total = self.total / (1 + tax_rate)
                 self.taxes = adjusted_total * tax_rate
 
+    def get_email_context(self, **kwargs):
+        ''' Provides additional context for invoice items. '''
+        kwargs.update({
+            'id': self.id,
+            'description': self.description,
+            'grossTotal': self.grossTotal,
+            'total': self.total,
+            'adjustments': self.adjustments,
+            'taxes': self.taxes,
+            'fees': self.fees,
+            'eventRegistration': {},
+        })
+
+        er = getattr(self, 'eventRegistration', None)
+        if er:
+            kwargs['eventRegistration'] = er.get_email_context(
+                includeName=False, includeEvent=True
+            )
+        return kwargs
+
     def save(self, *args, **kwargs):
         restrictStatus = kwargs.pop('restrictStatus', True)
         updateTotals = kwargs.pop('updateInvoiceTotals', True)
@@ -3274,22 +3306,15 @@ class Registration(EmailRecipientMixin, models.Model):
     def get_email_context(self, **kwargs):
         ''' Overrides EmailRecipientMixin '''
         context = super().get_email_context(**kwargs)
+        context.update(self.invoice.get_email_context())
+
         context.update({
-            'first_name': self.firstName,
-            'last_name': self.lastName,
+            'registration__firstName': self.firstName,
+            'registration__lastName': self.lastName,
+            'registration__email': self.email,
             'registrationComments': self.comments,
             'registrationHowHeardAboutUs': self.howHeardAboutUs,
-            'eventList': [
-                x.get_email_context(includeName=False) for x in
-                self.eventregistration_set.all()
-            ],
         })
-
-        if hasattr(self, 'invoice') and self.invoice:
-            context.update({
-                'invoice': self.invoice.get_email_context(),
-            })
-
         return context
 
     def link_invoice(self, update=True, **kwargs):
@@ -3409,8 +3434,41 @@ class Registration(EmailRecipientMixin, models.Model):
         self.save()
         logger.debug('Finalized registration {}'.format(self.id))
 
-        # This signal can, for example, be caught by the vouchers app to keep
-        # track of any vouchers that were applied
+        # Check EventRegistration data for indicators that this person should be
+        # checked into an EventOccurrence or an Event, or that we should track
+        # them as having dropped into a specific occurrence.
+        for er in self.eventregistration_set.all():
+            checkInOccurrence = er.data.pop('__checkInOccurrence', None)
+            dropInOccurrences = er.data.pop('__dropInOccurrences', None)
+            checkInEvent = er.data.pop('__checkInEvent', None)
+
+            if isinstance(dropInOccurrences, list):
+                to_apply = EventOccurrence.objects.filter(
+                    event=er.event, id__in=dropInOccurrences
+                )
+                for this_occ in to_apply:
+                    er.occurrences.add(this_occ)
+
+            if checkInEvent or checkInOccurrence:
+                checkInType = 'O' if checkInOccurrence else 'E'
+                EventCheckIn.objects.create(
+                    event=er.event, checkInType=checkInType,
+                    occurrence=EventOccurrence.objects.filter(id=checkInOccurrence).first(),
+                    eventRegistration=er, cancelled=False,
+                    firstName=er.registration.firstName,
+                    lastName=er.registration.lastName,
+                    submissionUser=er.registration.submissionUser
+                )
+
+            if (
+                checkInOccurrence is not None or
+                dropInOccurrences is not None or
+                checkInEvent is not None
+            ):
+                er.save()    
+
+        # This signal can, for example, be caught by the discounts app to keep
+        # track of any discounts that were applied
         post_registration.send(
             sender=Registration,
             invoice=self.invoice,
@@ -3582,12 +3640,12 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         ''' Overrides EmailRecipientMixin '''
 
         includeName = kwargs.pop('includeName', True)
+        includeEvent = kwargs.pop('includeEvent', True)
         context = super().get_email_context(**kwargs)
 
         context.update({
-            'title': self.event.name,
-            'start': self.event.firstOccurrenceTime,
-            'end': self.event.lastOccurrenceTime,
+            'dropIn': self.dropIn,
+            'role': self.role.name,
         })
 
         if includeName:
@@ -3595,6 +3653,10 @@ class EventRegistration(EmailRecipientMixin, models.Model):
                 'first_name': self.registration.firstName,
                 'last_name': self.registration.lastName,
             })
+
+        if includeEvent:
+            context['event'] = self.event.get_email_context()
+
         return context
 
     def checkedIn(self, occurrence=None, date=None, checkInType='O'):

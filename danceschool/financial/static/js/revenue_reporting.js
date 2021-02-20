@@ -1,4 +1,5 @@
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) {
+
 	$('#id_invoiceItem').attr('disabled',true);
 
 	// Make received date field a datepicker

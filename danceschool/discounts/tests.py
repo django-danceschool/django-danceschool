@@ -117,7 +117,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
@@ -140,7 +140,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
@@ -159,7 +159,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
@@ -181,7 +181,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
@@ -207,7 +207,7 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
@@ -231,7 +231,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal - 5
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 5)
         self.assertFalse(response.context_data.get('addonItems'))
 
@@ -259,7 +259,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal - 5
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 5)
         self.assertFalse(response.context_data.get('addonItems'))
 
@@ -283,7 +283,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal - 5
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 5)
         self.assertFalse(response.context_data.get('addonItems'))
 
@@ -309,7 +309,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal - 10
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 10)
         self.assertFalse(response.context_data.get('addonItems'))
 
@@ -336,7 +336,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, 0.5 * invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(
             response.context_data.get('total_discount_amount'),
             0.5 * invoice.grossTotal
@@ -365,7 +365,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertTrue(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
@@ -389,7 +389,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
         self.assertEqual(invoice.total, 0)
-        self.assertEqual(response.context_data.get('is_free'), True)
+        self.assertEqual(response.context_data.get('zero_balance'), True)
         self.assertEqual(response.context_data.get('total_discount_amount'), s.getBasePrice())
         self.assertFalse(response.context_data.get('addonItems'))
 
@@ -447,7 +447,7 @@ class DiscountsTypesTest(BaseDiscountsTest):
         self.assertEqual(
             invoice.total, invoice.grossTotal - 20
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 20)
         self.assertFalse(response.context_data.get('addonItems'))
 

@@ -97,7 +97,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
 
         # Check that the option to pay at the door is available.
@@ -209,7 +209,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(
             invoice.total, invoice.grossTotal
         )
-        self.assertEqual(response.context_data.get('is_free'), False)
+        self.assertEqual(response.context_data.get('zero_balance'), False)
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
 
         # Check that the option to say you will pay at the door is available.

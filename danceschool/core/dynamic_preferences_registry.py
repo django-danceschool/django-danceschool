@@ -380,7 +380,7 @@ class ShowDescriptionRule(ChoicePreference):
         ('50', _('First 50 words')),
         ('all', _('Full description')),
     ]
-    verbose_name = _('Rule for showing class descriptions on the regisration page')
+    verbose_name = _('Rule for showing class descriptions on the registration page')
     help_text = _(
         'This option determines how much of each event\'s description is '
         'shown on the class registration page. Users can always select the ' +
@@ -452,6 +452,29 @@ class MultiRegDropInRule(ChoicePreference):
         'registrations.'
     )
     default = 'Y'
+
+
+@global_preferences_registry.register
+class DoorCheckInRule(ChoicePreference):
+    section = registration
+    name = 'doorCheckInRule'
+    choices = [
+        ('0', _('Do not check in at-the-door registrants')),
+        ('O', _('Check in to the next event occurrence')),
+        ('E', _('Check in to the full event')),
+    ]
+    verbose_name = _(
+        'Automatically check customers in for at-the-door registrations.'
+    )
+    help_text = _(
+        'This option determines whether a customer who registers for an ' +
+        'event at the door is automatically checked in to either the next ' +
+        'occurrence of that event (with a grace period for events that have ' +
+        'already begun), or for the entire event.  Typically you will want ' +
+        'this feature enabled if you are keeping track of attendance using ' +
+        'event check-ins.' 
+    )
+    default = 'O'
 
 
 @global_preferences_registry.register

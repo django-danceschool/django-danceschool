@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q, F, Sum
+from django.db.models import Q, F, Sum, Case, When, ExpressionWrapper
 from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, RegexValidator
 from django.core.exceptions import ValidationError
@@ -214,6 +214,11 @@ class MerchItemVariant(models.Model):
         if commit and changed:
             self.save()
 
+    def save(self, *args, **kwargs):
+        ''' Update the sold out status of the item variant. '''
+        self.updateSoldOut(commit=False)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return '{} ({})'.format(self.fullName, self.sku)
 
@@ -286,6 +291,8 @@ class MerchOrder(models.Model):
     creationDate = models.DateTimeField(_('Creation Date'), auto_now_add=True)
     lastModified = models.DateTimeField(_('Last Modified Date'), auto_now=True)
 
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
+
     # This custom manager prevents deletion of MerchOrders that are not
     # unsubmitted, even using queryset methods.
     objects = MerchOrderManager()
@@ -293,7 +300,13 @@ class MerchOrder(models.Model):
     @property
     def grossTotal(self):
         return self.items.annotate(
-            totalPrice=F('quantity')*F('item__price')
+            unitPrice=Case(
+                When(item__price__isnull=True, then=F('item__item__defaultPrice')),
+                default=F('item__price'), output_field=models.FloatField()
+            ),
+            totalPrice=ExpressionWrapper(
+                F('quantity')*F('unitPrice'), output_field=models.FloatField()
+            )
         ).aggregate(total=Sum('totalPrice')).get('total', 0) or 0
 
     @property
@@ -310,7 +323,7 @@ class MerchOrder(models.Model):
         if not getattr(self, 'invoice', None):
             return {}
         return self.invoice.invoiceitem_set.exclude(
-            id__in=self.merchorderitem_set.values_list(
+            id__in=self.items.values_list(
                 'invoiceItem', flat=True
             )
         ).aggregate(
@@ -429,7 +442,7 @@ class MerchOrder(models.Model):
                 self.OrderStatus.unsubmitted, self.OrderStatus.cancelled
             ] and self.status != self.__initial_status
         ):
-            variants = [x.item for x in self.items]
+            variants = [x.item for x in self.items.all()]
             for variant in variants:
                 variant.updateSoldOut()
 
@@ -485,7 +498,7 @@ class MerchOrderItem(models.Model):
 
     @property
     def grossTotal(self):
-        return self.quantity * self.item.price
+        return self.quantity * self.item.getPrice()
 
     def link_invoice_item(self, update=True, **kwargs):
         '''
@@ -510,7 +523,7 @@ class MerchOrderItem(models.Model):
         ):
             invoiceItem.grossTotal = newTotal
             invoiceItem.total = newTotal
-            invoiceItem.calculateTaxes(tax_rate=self.item.item.salesTaxRate)
+            invoiceItem.calculateTaxes(tax_rate=self.item.item.salesTaxRate/100)
             invoiceItem.save()
         elif not invoiceItem and invoice:
             new_item = InvoiceItem(
@@ -519,7 +532,7 @@ class MerchOrderItem(models.Model):
                 grossTotal=newTotal,
                 total=newTotal,
             )
-            new_item.calculateTaxes(tax_rate=self.item.item.salesTaxRate)
+            new_item.calculateTaxes(tax_rate=self.item.item.salesTaxRate/100)
             new_item.save()
             self.invoiceItem = new_item
             self.save()
@@ -575,6 +588,16 @@ class DoorRegisterMerchPluginModel(CMSPlugin):
             'If checked, then the user will be sent to the second page of the ' +
             'registration process to provide name and email. Particular payment ' +
             'methods may also require the full registration process.'
+        )
+    )
+
+    autoFulfill = models.BooleanField(
+        _('Automatically mark order as fulfilled upon payment.'),
+        default=False, help_text=_(
+            'If checked, and if all items added to this merch order also ' +
+            'this option check, then the order will automatically be marked ' + 
+            'as fulfilled when the invoice is finalized. Useful for ' +
+            'merchandise that is sold immediately at the point-of-sale.'
         )
     )
 
