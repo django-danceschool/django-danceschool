@@ -35,7 +35,7 @@ setup(
         'django-crispy-forms>=1.6.0',
         'django-dynamic-preferences>=1.8.1',
         'django-easy-pdf>=0.1.1',
-        'django-filer==1.5.0',
+        'django-filer>=1.7.0',
         'django-ical>=1.4',
         'django-imagekit>=3.3',
         'django-multiselectfield>=0.1.5',
