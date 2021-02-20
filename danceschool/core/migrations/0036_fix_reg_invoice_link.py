@@ -1,6 +1,5 @@
 from django.conf import settings
-from django.db import migrations, models
-import django.db.models.deletion
+from django.db import migrations
 
 
 def fix_reg_invoice_link(apps, schema_editor):
@@ -85,19 +84,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(fix_reg_invoice_link, reverse_reg_invoice_link),
         migrations.RunPython(set_reg_final, migrations.RunPython.noop),
-        migrations.AlterField(
-            model_name='registration',
-            name='final',
-            field=models.BooleanField(null=False, default=False, verbose_name='Registration has been finalized'),
-        ),
-        migrations.AlterField(
-            model_name='eventregistration',
-            name='invoiceItem',
-            field=models.OneToOneField(null=False, on_delete=django.db.models.deletion.CASCADE, related_name='eventRegistration', to='core.InvoiceItem', verbose_name='Invoice item'),
-        ),
-        migrations.AlterField(
-            model_name='registration',
-            name='invoice',
-            field=models.OneToOneField(null=False, on_delete=django.db.models.deletion.CASCADE, related_name='registration', to='core.Invoice', verbose_name='Invoice'),
-        ),
     ]
