@@ -12,8 +12,10 @@ def calculate_taxrate(apps, schema_editor):
     InvoiceItem = apps.get_model("core", "InvoiceItem")
     db_alias = schema_editor.connection.alias
 
-    to_update = InvoiceItem.objects.using(db_alias).filter(taxRate__isnull=True)
+    to_update = InvoiceItem.objects.using(db_alias).filter(taxRate__isnull=True).exclude(total=0)
     to_update.update(taxRate=100 * (F('taxes') / F('total')))
+    to_update = InvoiceItem.objects.using(db_alias).filter(taxRate__isnull=True)
+    to_update.update(taxRate=0)
 
 
 class Migration(migrations.Migration):
