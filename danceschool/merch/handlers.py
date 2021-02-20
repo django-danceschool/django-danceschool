@@ -177,7 +177,8 @@ def linkMerchOrderItems(sender, **kwargs):
 
     item.grossTotal = this_order_item.grossTotal
     item.total = item.grossTotal
-    item.calculateTaxes(tax_rate=this_order_item.item.item.salesTaxRate/100)
+    item.taxRate = this_order_item.item.item.salesTaxRate
+    item.calculateTaxes()
     item.description = this_item_variant.fullName
 
     if (created_order_item and this_order_item.item.soldOut):

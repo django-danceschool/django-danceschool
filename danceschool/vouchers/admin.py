@@ -170,7 +170,7 @@ class VoucherAdmin(admin.ModelAdmin):
     ]
     list_display = [
         'voucherId', 'name', 'category', 'amountLeft', 'maxAmountPerUse',
-        'expirationDate', 'beforeTax', 'isEnabled', 'restrictions'
+        'isEnabled', 'restrictions'
     ]
     list_filter = [
         'category', 'expirationDate', 'disabled', 'forFirstTimeCustomersOnly',
@@ -211,6 +211,8 @@ class VoucherAdmin(admin.ModelAdmin):
 
     def restrictions(self, obj):
         text = []
+        if not obj.beforeTax:
+            text.append(_('Applied after tax'))
         if obj.singleUse:
             text.append(_('Single use'))
         if obj.forFirstTimeCustomersOnly:
@@ -225,8 +227,10 @@ class VoucherAdmin(admin.ModelAdmin):
             text.append(_('Specific class'))
         if obj.dancetypevoucher_set.all().exists():
             text.append(_('Specific dance type/level'))
+        if obj.expirationDate:
+            text.append(_('Expires {date}'.format(date=obj.expirationDate.strftime('%x'))))
         return ', '.join([str(x) for x in text])
-    restrictions.short_description = _('Restrictions')
+    restrictions.short_description = _('Restrictions/Notes')
 
     def disableVoucher(self, request, queryset):
         rows_updated = queryset.update(disabled=True)

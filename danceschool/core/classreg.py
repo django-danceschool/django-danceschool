@@ -1061,6 +1061,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             this_eventreg.data['__checkInEvent'] = True
 
         item.total = item.grossTotal
+        item.taxRate = getConstant('registration__salesTaxRate') or 0
         item.calculateTaxes()
 
         if item_data.get('data', False):

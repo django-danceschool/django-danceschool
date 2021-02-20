@@ -523,7 +523,8 @@ class MerchOrderItem(models.Model):
         ):
             invoiceItem.grossTotal = newTotal
             invoiceItem.total = newTotal
-            invoiceItem.calculateTaxes(tax_rate=self.item.item.salesTaxRate/100)
+            invoiceItem.taxRate = self.item.item.salesTaxRate
+            invoiceItem.calculateTaxes()
             invoiceItem.save()
         elif not invoiceItem and invoice:
             new_item = InvoiceItem(
@@ -531,8 +532,9 @@ class MerchOrderItem(models.Model):
                 description=self.item.fullName,
                 grossTotal=newTotal,
                 total=newTotal,
+                taxRate=self.item.item.salesTaxRate
             )
-            new_item.calculateTaxes(tax_rate=self.item.item.salesTaxRate/100)
+            new_item.calculateTaxes()
             new_item.save()
             self.invoiceItem = new_item
             self.save()

@@ -7,7 +7,7 @@ from django.forms import (
 )
 from django.utils.safestring import mark_safe
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from django.template.response import SimpleTemplateResponse
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseRedirect
@@ -297,10 +297,10 @@ class EventOccurrenceInline(admin.TabularInline):
 class InvoiceItemInline(admin.StackedInline):
     model = InvoiceItem
     extra = 0
-    add_fields = [('description', 'grossTotal', 'total', 'taxes', 'fees', 'adjustments'), ]
-    fields = ['id', ('description', 'grossTotal', 'total', 'taxes', 'fees', 'adjustments'), ]
+    add_fields = [('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'), ]
+    fields = ['id', ('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'), ]
     add_readonly_fields = ['fees', ]
-    readonly_fields = ['id', 'grossTotal', 'total', 'taxes', 'fees']
+    readonly_fields = ['id', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees']
 
     def has_add_permission(self, request, obj=None):
         '''
@@ -335,8 +335,8 @@ class InvoiceItemInline(admin.StackedInline):
 class InvoiceAdmin(admin.ModelAdmin):
     inlines = [InvoiceItemInline, ]
     list_display = [
-        'id', 'recipientInfo', 'status', 'total', 'netRevenue',
-        'outstandingBalance', 'creationDate', 'modifiedDate', 'links'
+        'id', 'recipientInfo', 'status', 'outstandingBalance',
+        'modifiedDate', 'links'
     ]
     list_filter = ['status', 'paidOnline', 'creationDate', 'modifiedDate']
     search_fields = ['id', 'comments']
@@ -370,7 +370,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         if obj.id:
             change_url = reverse('viewInvoice', args=(obj.id, ))
             return mark_safe(
-                '<a class="btn btn-outline-secondary" href="%s">View Invoice</a>' % (change_url, )
+                '<a href="%s">%s</a>' % (change_url, gettext('View'))
             )
     viewInvoiceLink.allow_tags = True
     viewInvoiceLink.short_description = _('Invoice')
@@ -379,7 +379,7 @@ class InvoiceAdmin(admin.ModelAdmin):
         if obj.id:
             change_url = reverse('sendInvoiceNotifications', args=(obj.id, ))
             return mark_safe(
-                '<a class="btn btn-outline-secondary" href="%s">Notify Recipient</a>' % (change_url, )
+                '<a href="%s">%s</a>' % (change_url, gettext('Notify'))
             )
     notificationLink.allow_tags = True
     notificationLink.short_description = _('Invoice notification')
@@ -388,17 +388,22 @@ class InvoiceAdmin(admin.ModelAdmin):
         if getattr(obj, 'registration', None):
             change_url = reverse('admin:core_registration_change', args=(obj.registration.id, ))
             return mark_safe(
-                '<a class="btn btn-outline-secondary" href="%s">Registration</a>' % (change_url, )
+                '<a href="%s">%s</a>' % (change_url, gettext('Registration'))
             )
     registrationLink.allow_tags = True
     registrationLink.short_description = _('Registration')
 
     def links(self, obj):
-        return mark_safe(''.join([
-            self.viewInvoiceLink(obj) or '',
-            self.notificationLink(obj) or '',
-            self.registrationLink(obj) or '',
-        ]))
+        button_start = ''
+        button_end = ''
+
+        return mark_safe(
+            button_start + '<br />'.join([
+                self.viewInvoiceLink(obj) or '',
+                self.notificationLink(obj) or '',
+                self.registrationLink(obj) or '',
+            ]) + button_end
+        )
     links.allow_tags = True
     links.short_description = _('Links')
 

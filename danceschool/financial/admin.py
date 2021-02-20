@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.db.models import Q
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.forms import ModelForm, ModelChoiceField
 from django.utils.translation import gettext_lazy as _
 from django.http import HttpResponseRedirect
@@ -131,7 +132,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
     form = ExpenseItemAdminForm
 
     list_display = (
-        'category', 'expenseStartDate', 'expenseEndDate', 'description',
+        'category', 'expenseDateRange', 'description',
         'hours', 'total', 'approved', 'paid', 'reimbursement', 'payToName',
         'paymentMethod'
     )
@@ -146,8 +147,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
         'expenseRule'
     )
     readonly_fields = (
-        'eventLink', 'submissionUser', 'expenseRule',
-        'expenseStartDate', 'expenseEndDate'
+        'eventLink', 'submissionUser', 'expenseRule', 'expenseDateRange'
     )
     actions = ('approveExpense', 'unapproveExpense')
 
@@ -183,6 +183,16 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
         ''' Avoids widget issues with list_display '''
         return getattr(obj.payTo, 'name', '')
     payToName.short_description = _('Pay to')
+
+    def expenseDateRange(self, obj):
+        ''' Consolidate start and end dates to one field. '''
+        return mark_safe(''.join([
+            obj.expenseStartDate.strftime('%b. %-d, %Y %I:%M %p'),
+            ' &#8211; <br />',
+            obj.expenseEndDate.strftime('%b. %-d, %Y %I:%M %p')
+        ]))
+    expenseDateRange.allow_tags = True
+    expenseDateRange.short_description = _('Date Range')
 
     # for inherited eventLink() method
     def eventLink(self, obj):
@@ -274,8 +284,8 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
     form = RevenueItemAdminForm
 
     list_display = (
-        'description', 'category', 'grossTotal', 'total', 'adjustments',
-        'netRevenue', 'received', 'receivedDate', 'invoiceLink'
+        'description', 'category', 'netRevenue', 'received',
+        'receivedDate', 'invoiceLink'
     )
     list_editable = ('received', )
     search_fields = ('description', 'comments', 'invoiceItem__id', 'invoiceItem__invoice__id')
@@ -295,7 +305,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         (_('Basic Info'), {
             'fields': (
                 'category', 'description', 'grossTotal', 'total', 'adjustments',
-                'fees', 'netRevenue', 'paymentMethod', 'receivedFrom',
+                'taxes', 'fees', 'netRevenue', 'paymentMethod', 'receivedFrom',
                 'invoiceNumber', 'comments'
             )
         }),

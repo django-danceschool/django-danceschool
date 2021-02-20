@@ -2703,23 +2703,8 @@ class Invoice(EmailRecipientMixin, models.Model):
         for k,v in allocateAmounts.items():
             new_totals[k] += v
 
-        # TODO: When the incoming total is 0 (e.g. discounts have previously
-        # been applied), then the tax rate cannot be calculated using this
-        # method.  Assuming zero in these cases is generally OK, since discounts
-        # are not normally unapplied.  However, we should probably pull this
-        # information from the attached models somehow (maybe a signal).
         pretax_annotations = {
             'buyerTax': Value(float(self.buyerPaysSalesTax), output_field=models.FloatField()),
-            'taxRate': Case(
-                When(oldTotal=0, then=0),
-                default=(
-                    F('buyerTax') * (F('oldTaxes') / F('oldTotal')) +
-                    (1 - F('buyerTax')) * (
-                        (F('oldTaxes') / F('oldTotal'))/(1 + (F('oldTaxes') / F('oldTotal')))
-                    )
-                ),
-                output_field=models.FloatField()
-            ),
         }
 
         # Used to avoid division by zero issues when constructing allocation ratios.
@@ -2749,7 +2734,7 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         pretax_annotations.update({
             'newTotal': F('oldTotal') + (F('totalRatio') * allocateAmounts.get('total',0)),
-            'newTaxes': F('newTotal') * F('taxRate'),
+            'newTaxes': F('newTotal') * (F('taxRate') / 100),
         })
 
         items = items.annotate(**pretax_annotations)
@@ -2942,9 +2927,10 @@ class Invoice(EmailRecipientMixin, models.Model):
             grossTotal=grossTotal or amount,
             total=amount,
             description=item_description,
+            taxRate=tax_rate,
         )
         if calculate_taxes:
-            item.calculateTaxes(tax_rate=tax_rate)
+            item.calculateTaxes()
         item.save()
 
         return new_invoice
@@ -2988,7 +2974,17 @@ class InvoiceItem(models.Model):
         _('Total billed amount'), validators=[MinValueValidator(0)], default=0
     )
     adjustments = models.FloatField(_('Refunds/adjustments'), default=0)
+
+    taxRate = models.FloatField(
+        _('Sales tax rate'), validators=[MinValueValidator(0)], default=0,
+        help_text=_(
+            'This rate is used to update the tax line item when discounts ' +
+            'or other pre-tax price adjustments are applied.  Enter as a ' +
+            'whole number (e.g. 6 for 6\%).'
+        ),
+    )
     taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
+
     fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
 
     data = models.JSONField(_('Additional data'), blank=True, default=dict)
@@ -3012,25 +3008,25 @@ class InvoiceItem(models.Model):
             return self.description or _('Other items')
     name.fget.short_description = _('Name')
 
-    def calculateTaxes(self, tax_rate=None):
+    def calculateTaxes(self):
         '''
         Updates the tax field to reflect the amount of taxes depending on
         the local rate as well as whether the buyer or seller pays sales tax on
         this invoice.
         '''
 
-        if tax_rate is None:
-            tax_rate = (getConstant('registration__salesTaxRate') or 0) / 100
+        if not self.taxRate:
+            self.taxRate = (getConstant('registration__salesTaxRate') or 0)
 
-        if tax_rate > 0:
+        if self.taxRate > 0:
             if self.invoice.buyerPaysSalesTax:
                 # If the buyer pays taxes, then taxes are just added as a fraction of the price
-                self.taxes = self.total * tax_rate
+                self.taxes = self.total * (self.taxRate / 100)
             else:
                 # If the seller pays sales taxes, then adjusted_total will be their net revenue,
                 # and under this calculation adjusted_total + taxes = the price charged
-                adjusted_total = self.total / (1 + tax_rate)
-                self.taxes = adjusted_total * tax_rate
+                adjusted_total = self.total / (1 + (self.taxRate / 100))
+                self.taxes = adjusted_total * (self.taxRate / 100)
 
     def get_email_context(self, **kwargs):
         ''' Provides additional context for invoice items. '''
@@ -3705,6 +3701,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         if not getattr(self, 'invoiceItem', None):
             new_item = InvoiceItem(
                 invoice=invoice, fees=0, grossTotal=grossTotal, total=total,
+                taxRate=getConstant('registration__salesTaxRate') or 0
             )
 
             # If there are no items but already fees, apply those

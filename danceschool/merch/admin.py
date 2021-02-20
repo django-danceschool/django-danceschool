@@ -157,7 +157,9 @@ class MerchOrderAdmin(admin.ModelAdmin):
     getInvoiceTotal.short_description = _('Invoice Total')
     
     def getInvoiceStatus(self, obj):
-        return getattr(obj.invoice, 'status', None)
+        status = getattr(obj.invoice, 'get_status_display', None)
+        if status:
+            return status()
     getInvoiceStatus.admin_order_field  = 'invoice__status'
     getInvoiceStatus.short_description = _('Invoice Status')
 
