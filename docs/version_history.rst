@@ -1,6 +1,20 @@
 Version History
 ===============
 
+0.9.0 - February 20, 2021
+-------------------------
+
+- Complete overhaul of logic underlying the registration system.  Invoices are now focal to the registration process, and price information related to purchases is only stored in the Invoice and its items.
+- **New** register app allows for rapid and highly customizable registration workflows for at the door registration and automatic check-in.  (Public-facing instances of the new register app are forthcoming).
+- **New** merch app allows for the sale of merchandise at the door, including item variants and basic inventory.
+- Significantly improved attendance tracking with occurrence-level event check-ins and occurrence-level tracking of drop-ins.
+- Vouchers can now be applied either before or after sales tax is calculated, and can be used on all purchases, not just event registrations.
+- Upgraded to Django 3.1, including use of native JSONfield and TextChoices to reduce external dependencies.
+- Numerous bug fixes with regard to taxation and refunds.
+- Many miscellaneous admin and interface enhancements.
+
+**Note:** This release applies a large number of schema migrations.  It is highly recommended to backup your database before upgrading to 0.9.0.
+
 
 0.8.6 - April 22, 2019
 -------------------------
