@@ -3133,8 +3133,8 @@ class Registration(EmailRecipientMixin, models.Model):
 
         return self.invoice.invoiceitem_set.annotate(
             from_reg=Case(
-                When(eventRegistration__registration__id=self.id, then=Value(True)),
-                default=Value(False), output_field=models.FloatField()
+                When(eventRegistration__registration__id=self.id, then=Value(1)),
+                default=Value(0), output_field=models.FloatField()
             ),
         ).aggregate(
             reg_grossTotal=Coalesce(Sum(F('grossTotal')*F('from_reg')), 0),
