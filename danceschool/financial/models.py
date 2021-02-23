@@ -404,11 +404,14 @@ class RepeatedExpenseRule(PolymorphicModel):
         startTime = tree.begin()
         endTime = tree.end()
 
-        overlapping = self.expenseitem_set.filter(
-            (models.Q(periodStart__lte=endTime) & models.Q(periodStart__gte=startTime)) |
-            (models.Q(periodEnd__gte=startTime) & models.Q(periodEnd__lte=endTime)) |
-            (models.Q(periodStart__lte=startTime) & models.Q(periodEnd__gte=endTime))
-        )
+        if startTime and endTime:
+            overlapping = self.expenseitem_set.filter(
+                (models.Q(periodStart__lte=endTime) & models.Q(periodStart__gte=startTime)) |
+                (models.Q(periodEnd__gte=startTime) & models.Q(periodEnd__lte=endTime)) |
+                (models.Q(periodStart__lte=startTime) & models.Q(periodEnd__gte=endTime))
+            )
+        else:
+            overlapping = self.expenseitem_set.none()
 
         for item in overlapping:
             tree.chop(item.periodStart, item.periodEnd)
