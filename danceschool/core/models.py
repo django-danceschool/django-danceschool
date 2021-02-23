@@ -3641,7 +3641,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
         context.update({
             'dropIn': self.dropIn,
-            'role': self.role.name,
+            'role': getattr(self.role, 'name', None),
         })
 
         if includeName:
