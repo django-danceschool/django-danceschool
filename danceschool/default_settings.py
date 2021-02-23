@@ -7,7 +7,7 @@
 # All settings can then be overridden in settings.py as needed.
 
 # This import allows Huey to use a SQLite backend
-from huey.contrib.sqlitedb import SqliteHuey
+from huey import SqliteHuey
 
 import sys
 from os import path
