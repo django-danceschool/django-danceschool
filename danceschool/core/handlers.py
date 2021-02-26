@@ -1,13 +1,12 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.dispatch import receiver
-from django.db.models.signals import post_delete, post_save
 
 from allauth.account.signals import email_confirmed
 from allauth.account.models import EmailAddress
 import logging
 
 from .signals import post_registration
-from .models import Registration, InvoiceItem
+from .models import Registration, EventRegistration
 
 
 # Define logger for this file
@@ -35,12 +34,12 @@ def linkUserToMostRecentCustomer(sender, **kwargs):
     user = email_address.user
 
     if not hasattr(user, 'customer'):
-        last_reg = Registration.objects.filter(
+        last_reg = EventRegistration.objects.filter(
             customer__email=email_address.email,
             customer__user__isnull=True,
             dateTime__isnull=False,
             final=True
-        ).order_by('-dateTime').first()
+        ).order_by('-registration__dateTime').first()
 
         if last_reg:
             customer = last_reg.customer
@@ -65,41 +64,42 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
     they do complete their first Registration.
     """
     invoice = kwargs.get('invoice', None)
-    registration = Registration.objects.filter(invoice=invoice).first()
-
-    if (
-        not getattr(registration, 'customer', None) or
-        (hasattr(registration.customer, 'user') and registration.customer.user)
-    ):
+    eventregs = EventRegistration.objects.filter(
+        invoiceItem__invoice=invoice, customer__isnull=False,
+        customer__user__isnull=True
+    )
+    
+    if not eventregs:
         return
 
     logger.debug('Checking for User for Customer with no associated registration.')
 
-    customer = registration.customer
+    for er in eventregs:
+        customer = er.customer
 
-    try:
-        verified_email = EmailAddress.objects.get(
-            email=customer.email,
-            verified=True,
-            primary=True,
-            user__customer__isnull=True
-        )
+        try:
+            verified_email = EmailAddress.objects.get(
+                email=customer.email,
+                verified=True,
+                primary=True,
+                user__customer__isnull=True
+            )
 
-        logger.info("Found user %s to associate with customer %s.", verified_email.user.id, customer.id)
+            logger.info("Found user %s to associate with customer %s.", verified_email.user.id, customer.id)
 
-        customer.user = verified_email.user
-        customer.save()
+            customer.user = verified_email.user
+            customer.save()
 
-        if not customer.user.first_name and not customer.user.last_name:
-            customer.user.first_name = customer.first_name
-            customer.user.last_name = customer.last_name
-            customer.user.save()
-    except ObjectDoesNotExist:
-        logger.info("No user found to associate with customer %s.", customer.id)
-    except MultipleObjectsReturned:
-        # This should never happen, as email should be unique in the db table account_emailaddress.
-        # If it does, something's broken in the database or Django.
-        errmsg = "Something's not right with the database: more than one entry found on the database for the email %s. \
-             This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
-             The email field should be unique for each account.\n"
-        logger.exception(errmsg, customer.email)
+            if not customer.user.first_name and not customer.user.last_name:
+                customer.user.first_name = customer.first_name
+                customer.user.last_name = customer.last_name
+                customer.user.save()
+        except ObjectDoesNotExist:
+            logger.info("No user found to associate with customer %s.", customer.id)
+        except MultipleObjectsReturned:
+            # This should never happen, as email should be unique in the db table account_emailaddress.
+            # If it does, something's broken in the database or Django.
+            errmsg = "Something's not right with the database: more than one entry found on the database for the email %s. \
+                This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
+                The email field should be unique for each account.\n"
+            logger.exception(errmsg, customer.email)

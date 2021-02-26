@@ -61,11 +61,11 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             today_events = Event.objects.filter(eventoccurrence__in=today_occs).distinct()
 
             customer_filters = (
-                Q(registration__eventregistration__event__in=today_events) &
-                Q(registration__final=True) & (
-                    Q(registration__eventregistration__dropIn=False) | (
-                        Q(registration__eventregistration__dropIn=True) &
-                        Q(registration__eventregistration__occurrences__in=today_occs)
+                Q(eventregistration__event__in=today_events) &
+                Q(eventregistration__registration__final=True) & (
+                    Q(eventregistration__dropIn=False) | (
+                        Q(eventregistration__dropIn=True) &
+                        Q(eventregistration__occurrences__in=today_occs)
                     )
                 )
             )

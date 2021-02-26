@@ -332,7 +332,7 @@ def getClassCountHistogramData(cohortStart=None, cohortEnd=None):
 
     annotations = {
         'eventregistration__event__startTime__min': Min('eventregistration__event__startTime'),
-        'registrations': Sum(Case(When(Q(**when_all), then=1), output_field=IntegerField())),
+        'registrations': Sum(Case(When(Q(**when_all), then=1), default=0, output_field=IntegerField())),
     }
     for this_role in role_list:
         annotations[this_role.pluralName] = Sum(Case(
@@ -340,6 +340,7 @@ def getClassCountHistogramData(cohortStart=None, cohortEnd=None):
                 Q(Q(**when_all) & Q(eventregistration__role=this_role)),
                 then=1
             ),
+            default=0,
             output_field=IntegerField()
         ))
 
@@ -880,7 +881,7 @@ def AdvanceRegistrationDaysJSON(request):
 @staff_member_required
 def getGeneralStats(request):
     # total number of students:
-    totalStudents = Customer.objects.distinct().count()
+    totalStudents = Customer.objects.filter(eventregistration__isnull=False).distinct().count()
     numSeries = Series.objects.distinct().count()
     totalSeriesRegs = EventRegistration.objects.filter(
         dropIn=False, cancelled=False, registration__final=True

@@ -462,6 +462,12 @@ class ClassDescription(models.Model):
     lastOfferedMonth.fget.short_description = _('Last offered')
 
     def __str__(self):
+        lastOffered = self.lastOffered
+        if lastOffered:
+            return '{} ({} {})'.format(
+                self.title, _('Last offered'),
+                lastOffered.strftime('%Y-%m-%d')
+            )
         return self.title
 
     class Meta:
@@ -1031,9 +1037,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
         return [
-            x.registration.customer.email for x in self.eventregistration_set.filter(
+            x.customer.email for x in self.eventregistration_set.filter(
                 cancelled=False,
-                registration__customer__isnull=False,
+                customer__isnull=False,
             )
         ]
 
@@ -2183,14 +2189,14 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def numEventRegistrations(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, dropIn=False, cancelled=False
+            customer=self, dropIn=False, cancelled=False
         ).count()
     numEventRegistrations.fget.short_description = _('# Events/series registered')
 
     @property
     def numClassSeries(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False,
+            customer=self, event__series__isnull=False,
             dropIn=False, cancelled=False
         ).count()
     numClassSeries.fget.short_description = _('# Series registered')
@@ -2198,7 +2204,7 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def numPublicEvents(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__publicevent__isnull=False,
+            customer=self, event__publicevent__isnull=False,
             dropIn=False, cancelled=False
         ).count()
     numPublicEvents.fget.short_description = _('# Public events registered')
@@ -2206,7 +2212,7 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def numDropIns(self):
         return EventRegistration.objects.filter(
-            registration__customer=self,
+            customer=self,
             dropIn=True, cancelled=False
         ).count()
     numPublicEvents.fget.short_description = _('# Drop-ins registered')
@@ -2214,7 +2220,7 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def firstSeries(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False,
+            customer=self, event__series__isnull=False,
             dropIn=False, cancelled=False
         ).order_by('event__startTime').first().event
     firstSeries.fget.short_description = _('Customer\'s first series')
@@ -2222,7 +2228,7 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def firstSeriesDate(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False,
+            customer=self, event__series__isnull=False,
             dropIn=False, cancelled=False
         ).order_by('event__startTime').first().event.startTime
     firstSeriesDate.fget.short_description = _('Customer\'s first series date')
@@ -2230,7 +2236,7 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def lastSeries(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False,
+            customer=self, event__series__isnull=False,
             dropIn=False, cancelled=False
         ).order_by('-event__startTime').first().event
     lastSeries.fget.short_description = _('Customer\'s most recent series')
@@ -2238,7 +2244,7 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def lastSeriesDate(self):
         return EventRegistration.objects.filter(
-            registration__customer=self, event__series__isnull=False,
+            customer=self, event__series__isnull=False,
             dropIn=False, cancelled=False
         ).order_by('-event__startTime').first().event.startTime
     lastSeriesDate.fget.short_description = _('Customer\'s most recent series date')
@@ -2250,7 +2256,7 @@ class Customer(EmailRecipientMixin, models.Model):
         This can be filtered by any keyword arguments passed (e.g. year and month).
         '''
         series_set = Series.objects.filter(
-            q_filter, eventregistration__registration__customer=self, **kwargs
+            q_filter, eventregistration__customer=self, **kwargs
         )
 
         if not distinct:
@@ -2264,25 +2270,6 @@ class Customer(EmailRecipientMixin, models.Model):
             ]
         else:
             return [str(x[1]) + 'x: ' + x[0].__str__() for x in Counter(series_set).items()]
-
-    def getMultiSeriesRegistrations(self, q_filter=Q(), name_series=False, **kwargs):
-        '''
-        Use the getSeriesRegistered method above to get a list of each series the
-        person has registered for.  The return only indicates whether they are
-        registered more than once for the same series (e.g. for keeping track of
-        dance admissions for couples who register under one name).
-        '''
-        series_registered = self.getSeriesRegistered(q_filter, distinct=False, counter=False, **kwargs)
-        counter_items = Counter(series_registered).items()
-        multireg_list = [x for x in counter_items if x[1] > 1]
-
-        if name_series and multireg_list:
-            if 'year' in kwargs or 'month' in kwargs:
-                return [str(x[1]) + 'x: ' + x[0].classDescription.title for x in multireg_list]
-            else:
-                return [str(x[1]) + 'x: ' + x[0].__str__() for x in multireg_list]
-        elif multireg_list:
-            return '%sx registration' % max([x[1] for x in multireg_list])
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -3117,18 +3104,9 @@ class Registration(EmailRecipientMixin, models.Model):
 
     final = models.BooleanField(_('Registration has been finalized'), default=False)
 
-    firstName = models.CharField(_('First name'), max_length=100, null=True)
-    lastName = models.CharField(_('Last name'), max_length=100, null=True)
-    email = models.CharField(_('Email address'), max_length=200, null=True)
-    phone = models.CharField(_('Telephone'), max_length=20, null=True, blank=True)
-    customer = models.ForeignKey(
-        Customer, verbose_name=_('Customer'), null=True, on_delete=models.SET_NULL
-    )
-
     howHeardAboutUs = models.TextField(
         _('How they heard about us'), default='', blank=True, null=True
     )
-    student = models.BooleanField(_('Eligible for student discount'), default=False)
     payAtDoor = models.BooleanField(_('At-the-door registration'), default=False)
 
     comments = models.TextField(_('Comments'), default='', blank=True, null=True)
@@ -3349,7 +3327,7 @@ class Registration(EmailRecipientMixin, models.Model):
         })
         return context
 
-    def link_invoice(self, update=True, **kwargs):
+    def link_invoice(self, update=True, save=True, **kwargs):
         '''
         If an invoice does not already exist for this registration,
         then create one.  If an update is requested, then ensure that all
@@ -3367,9 +3345,9 @@ class Registration(EmailRecipientMixin, models.Model):
         if not getattr(self, 'invoice', None):
 
             invoice_kwargs = {
-                'firstName': kwargs.pop('firstName', None) or self.firstName,
-                'lastName': kwargs.pop('lastName', None) or self.lastName,
-                'email': kwargs.pop('email', None) or self.email,
+                'firstName': kwargs.pop('firstName', None),
+                'lastName': kwargs.pop('lastName', None),
+                'email': kwargs.pop('email', None),
                 'grossTotal': kwargs.pop('grossTotal', 0),
                 'total': kwargs.pop('total', 0),
                 'taxes': kwargs.pop('taxes', 0),
@@ -3400,15 +3378,11 @@ class Registration(EmailRecipientMixin, models.Model):
 
             invoice_details = self.invoiceDetails
 
-            if (
-                self.invoice.firstName != (self.firstName or kwargs.get('firstName', None)) or
-                self.invoice.lastName != (self.lastName or kwargs.get('lastName', None)) or
-                self.invoice.email != (self.email or kwargs.get('email', None))
-            ):
-                self.invoice.firstName = self.firstName or kwargs.pop('firstName', None)
-                self.invoice.lastName = self.lastName or kwargs.pop('lastName', None)
-                self.invoice.email = self.email or kwargs.pop('email', None)
-                needs_update = True
+            for key in ['firstName', 'lastName', 'email']:
+                if kwargs.get(key, None) and getattr(self.invoice, key) != kwargs.get(key):
+                    setattr(self.invoice, key, kwargs.get(key))
+                    needs_update = True
+
             if status and status != self.invoice.status:
                 self.invoice.status = status
                 needs_update = True
@@ -3438,7 +3412,7 @@ class Registration(EmailRecipientMixin, models.Model):
                 self.invoice.expirationDate = None
                 needs_update = True
 
-            if needs_update:
+            if needs_update and save:
                 self.invoice.save()
 
         return self.invoice
@@ -3452,15 +3426,6 @@ class Registration(EmailRecipientMixin, models.Model):
             return self
 
         dateTime = kwargs.pop('dateTime', timezone.now())
-
-        # Customer is no longer required for Registrations, but we will create
-        # one if we have the information needed for it (name and email).
-        if (not self.customer) and self.firstName and self.lastName and self.email:
-            customer, created = Customer.objects.update_or_create(
-                first_name=self.firstName, last_name=self.lastName,
-                email=self.email, defaults={'phone': self.phone}
-            )
-            self.customer = customer
 
         self.final = True
         self.save()
@@ -3487,8 +3452,8 @@ class Registration(EmailRecipientMixin, models.Model):
                     event=er.event, checkInType=checkInType,
                     occurrence=EventOccurrence.objects.filter(id=checkInOccurrence).first(),
                     eventRegistration=er, cancelled=False,
-                    firstName=er.registration.firstName,
-                    lastName=er.registration.lastName,
+                    firstName=getattr(er.customer, 'firstName', None),
+                    lastName=getattr(er.customer, 'lastName', None),
                     submissionUser=er.registration.submissionUser
                 )
 
@@ -3528,13 +3493,13 @@ class Registration(EmailRecipientMixin, models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        if self.dateTime and self.customer:
+        if self.dateTime and getattr(self.invoice, 'fullName', None):
             return '%s #%s: %s, %s' % (
-                _('Registration'), self.id, self.customer.fullName,
+                _('Registration'), self.id, self.invoice.fullName,
                 self.dateTime.strftime('%b. %Y')
             )
-        elif self.dateTime or self.customer:
-            x = self.dateTime or getattr(self.customer, 'fullName', None)
+        elif self.dateTime or getattr(self.invoice, 'fullName', None):
+            x = self.dateTime or getattr(self.invoice, 'fullName', '')
             return '%s #%s: %s' % (_('Registration'), self.id, x)
         else:
             return '%s #%s' % (_('Registration'), self.id)
@@ -3617,6 +3582,8 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         )
     )
 
+    student = models.BooleanField(_('Eligible for student discount'), default=False)
+
     data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
     @property
@@ -3665,7 +3632,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
-        this_email = self.registration.email
+        this_email = self.email
         return [this_email, ] if this_email else []
 
     def get_email_context(self, **kwargs):
@@ -3682,8 +3649,8 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
         if includeName:
             context.update({
-                'first_name': self.registration.firstName,
-                'last_name': self.registration.lastName,
+                'first_name': self.firstName,
+                'last_name': self.lastName,
             })
 
         if includeEvent:

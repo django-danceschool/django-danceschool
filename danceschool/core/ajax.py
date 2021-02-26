@@ -144,7 +144,7 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
 
         this_event = Event.objects.filter(id=event_id).prefetch_related(
             'eventoccurrence_set', 'eventregistration_set', 'eventcheckin_set',
-            'eventregistration_set__registration'
+            'eventregistration_set__registration', 'eventregistration_set__customer',
         ).first()
 
         if not this_event:
@@ -285,8 +285,8 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                 occurrence=this_occurrence,
                 eventRegistration=this_event.eventregistration_set.get(id=x.get('id')),
                 cancelled=x.get('cancelled', False),
-                firstName=this_event.eventregistration_set.get(id=x.get('id')).registration.firstName,
-                lastName=this_event.eventregistration_set.get(id=x.get('id')).registration.lastName,
+                firstName=getattr(this_event.eventregistration_set.get(id=x.get('id')).customer, 'firstName', None),
+                lastName=getattr(this_event.eventregistration_set.get(id=x.get('id')).customer, 'lastName', None),
                 submissionUser=submissionUser,
             ) for x in registrations
         ] + [

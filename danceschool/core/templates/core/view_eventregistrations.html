@@ -51,15 +51,14 @@
 		</td>
 		{% endif %}
 		<td>
-			{% if reg.registration.fullName != reg.registration.customer.fullName %}
-				<a href="" data-toggle="popover" title="{% trans 'Customer Name' %}" data-container="body" data-placement="top" data-content="{% trans 'Most recent reg. from this email address' %}: {{ reg.registration.customer.fullName }}">{{ reg.registration.fullName }}</a>
+			{% if reg.customer %}
+				{{ reg.customer.fullName }}
+				<br />{{ reg.customer.email }}
+			{% elif reg.registration.invoice.fullName or reg.registration.invoice.email %}
+				{{ reg.registration.invoice.fullName }}
+				{% if reg.registration.invoice.fullName %}<br />{% endif %}
+				{{ reg.registration.invoice.email }}
 			{% else %}
-				{{ reg.registration.fullName }}
-			{% endif %}
-			{% if reg.registration.email %}
-				<br />{{reg.registration.customer.email }}
-			{% endif %}
-			{% if not reg.registration.fullName and not reg.registration.email %}
 				{% trans "N/A" %}
 			{% endif %}
 		</td>
@@ -149,7 +148,7 @@
 		</td>
 		{% endwith %}
 
-		<td>{{ reg.registration.customer.numClassSeries }}</td>
+		<td>{{ reg.customer.numClassSeries }}</td>
 		<td>
 		<div class="dropdown show">
 			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

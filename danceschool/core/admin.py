@@ -228,11 +228,12 @@ class EventRegistrationInline(admin.StackedInline):
     model = EventRegistration
     extra = 0
     fields = [
-        'event', 'role', 'cancelled', 'dropIn', 'occurrences',
+        'customer', 'event', 'role', 'cancelled', 'dropIn', 'occurrences',
         'item_grossTotal', 'item_total'
     ]
     add_readonly_fields = ['item_grossTotal', 'item_total',]
-    readonly_fields = ['event', 'item_grossTotal', 'item_total', 'dropIn', 'occurrences']
+    readonly_fields = ['customer', 'event', 'item_grossTotal', 'item_total', 'dropIn', 'occurrences']
+    autocomplete_fields = ['customer', ]
 
     def has_add_permission(self, request, obj=None):
         '''
@@ -497,25 +498,25 @@ class InvoiceAdmin(admin.ModelAdmin):
 @admin.register(Registration)
 class RegistrationAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
-    list_display = ['final', 'customer', 'dateTime', 'total', 'student']
-    list_filter = ['final', 'dateTime', 'student', 'invoice__paidOnline']
+    list_display = ['invoice_name', 'final', 'dateTime', 'total',]
+    list_filter = ['final', 'dateTime', 'invoice__paidOnline']
     search_fields = [
-        '=customer__first_name', '=customer__last_name',
-        'customer__email', 'email', 'phone'
+        'invoice__firstName', 'invoice__lastName', 'invoice__email',
     ]
     ordering = ('-final', '-dateTime', )
     fields = (
-        ('final', 'invoice_expiry'), 'email', 'phone', 'customer_link', 'invoice_link',
-        'total', 'student', 'dateTime', 'comments',
+        ('final', 'invoice_expiry'), 'invoice_name', 'invoice_link',
+        'total', 'dateTime', 'comments',
         'howHeardAboutUs', 'submissionUser',
     )
-    readonly_fields = ('total', 'customer_link', 'invoice_link', 'invoice_expiry')
+    readonly_fields = ('total', 'invoice_name', 'invoice_link', 'invoice_expiry')
 
-    def customer_link(self, obj):
-        change_url = reverse('admin:core_customer_change', args=(obj.customer.id, ))
-        return mark_safe('<a href="%s">%s</a>' % (change_url, obj.customer))
-    customer_link.allow_tags = True
-    customer_link.short_description = _("Customer")
+    def invoice_name(self, obj):
+        name = getattr(obj.invoice, 'fullName', _('N/A'))
+        if getattr(obj.invoice, 'email', None):
+            name += ': %s' % obj.invoice.email
+        return name
+    invoice_name.short_description = _('Registrant Name')
 
     def invoice_link(self, obj):
         change_url = reverse('admin:core_invoice_change', args=(obj.invoice.id, ))
@@ -526,16 +527,6 @@ class RegistrationAdmin(admin.ModelAdmin):
     def invoice_expiry(self, obj):
         return obj.invoice.expirationDate
     invoice_expiry.short_description = _("Expiration Date")
-
-    def save_formset(self, request, form, formset, change):
-        instances = formset.save(commit=False)
-        for obj in formset.deleted_objects:
-            obj.delete()
-        for instance in instances:
-            if not hasattr(instance, 'customer'):
-                instance.customer = instance.registration.customer
-            instance.save()
-        formset.save_m2m()
 
 
 ######################################
@@ -562,53 +553,46 @@ class ClassDescriptionAdminForm(ModelTemplateMixin, ModelForm):
 class ClassDescriptionAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
     list_display = ['title', 'danceTypeLevel', ]
     list_filter = ('danceTypeLevel', )
-    search_fields = ('title', )
+    search_fields = ('title', 'description',)
     prepopulated_fields = {"slug": ("title", )}
     form = ClassDescriptionAdminForm
 
 
-class CustomerRegistrationInline(admin.StackedInline):
-    model = Registration
-    fields = ('registration_link', 'eventregistration_list')
-    readonly_fields = ('registration_link', 'eventregistration_list')
+class CustomerEventRegistrationInline(admin.StackedInline):
+    model = EventRegistration
+    fields = ('registration_link', 'eventregistration_details')
+    readonly_fields = ('registration_link', 'eventregistration_details')
     extra = 0
 
     def registration_link(self, obj):
-        change_url = reverse('admin:core_registration_change', args=(obj.id, ))
-        if obj.dateTime:
+        change_url = reverse('admin:core_registration_change', args=(obj.registration.id, ))
+        if obj.registration.dateTime:
             return mark_safe(
                 '%s: <a href="%s">%s</a>' % (
-                    obj.dateTime.strftime('%b. %d, %Y'), change_url, obj.__str__()
+                    obj.registration.dateTime.strftime('%b. %d, %Y'), change_url, obj.registration.__str__()
                 )
             )
         else:
-            return mark_safe('<a href="%s">%s</a>' % (change_url, obj.__str__()))
+            return mark_safe('<a href="%s">%s</a>' % (change_url, obj.registration.__str__()))
 
     registration_link.short_description = _('Registration')
     registration_link.allow_tags = True
 
-    def eventregistration_list(self, obj):
-        eregs = obj.eventregistration_set.all()
-        if not eregs:
-            return ''
-        return_string = '<ul>'
-
-        for ereg in eregs:
-            this_string = '<li>'
-            if ereg.cancelled:
-                this_string += '<em>%s</em> ' % _('CANCELLED:')
-            if ereg.dropIn:
-                this_string += '<em>%s</em> ' % _('DROP-IN:')
-            if ereg.event.month:
-                this_string += '%s %s, %s</li>' % (
-                    month_name[ereg.event.month], ereg.event.year, ereg.event.name
-                )
-            else:
-                this_string += '%s</li>' % ereg.event.name
-            return_string += this_string
-        return return_string
-    eventregistration_list.short_description = _('Event Registrations')
-    eventregistration_list.allow_tags = True
+    def eventregistration_details(self, obj):
+        return_string = ''
+        if obj.cancelled:
+            return_string += '<em>%s</em> ' % _('CANCELLED:')
+        if obj.dropIn:
+            return_string += '<em>%s</em> ' % _('DROP-IN:')
+        if obj.event.month:
+            return_string += '%s %s, %s</li>' % (
+                month_name[obj.event.month], obj.event.year, obj.event.name
+            )
+        else:
+            return_string += obj.event.name
+        return mark_safe(return_string)
+    eventregistration_details.short_description = _('Details')
+    eventregistration_details.allow_tags = True
 
     def has_add_permission(self, request, obj=None):
         '''
@@ -623,13 +607,13 @@ class CustomerRegistrationInline(admin.StackedInline):
     def get_queryset(self, request):
         ''' Only show finalized registrations. '''
         qs = super().get_queryset(request)
-        return qs.filter(final=False)
+        return qs.filter(registration__final=True)
 
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ('fullName', 'numClassSeries', 'numPublicEvents')
-    search_fields = ('=first_name', '=last_name', 'email')
+    search_fields = ('^first_name', '^last_name', 'email')
     readonly_fields = ('data', 'numClassSeries', 'numPublicEvents')
 
     fieldsets = (
@@ -653,7 +637,7 @@ class CustomerAdmin(admin.ModelAdmin):
         ))
     emailCustomers.short_description = _('Email selected customers')
 
-    inlines = [CustomerRegistrationInline, ]
+    inlines = [CustomerEventRegistrationInline, ]
     actions = ['emailCustomers']
 
 
@@ -971,28 +955,6 @@ class SeriesAdminForm(ModelForm):
         self.fields['room'].widget.can_add_related = False
         self.fields['room'].widget.can_change_related = False
 
-        self.fields['classDescription'] = ModelChoiceField(
-            queryset=ClassDescription.objects.all(),
-            widget=RelatedFieldWidgetWrapper(
-                autocomplete.ModelSelect2(
-                    url='autocompleteClassDescription',
-                    attrs={
-                        # This will set the input placeholder attribute:
-                        'data-placeholder': _('Enter an existing class series title or description'),
-                        # This will set the yourlabs.Autocomplete.minimumCharacters
-                        # options, the naming conversion is handled by jQuery
-                        'data-minimum-input-length': 2,
-                        'data-max-results': 10,
-                        'class': 'modern-style',
-                    },
-                ),
-                rel=Series._meta.get_field('classDescription').remote_field,
-                admin_site=self.admin_site,
-                can_add_related=True,
-                can_change_related=True,
-            )
-        )
-
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance', None):
             # Filter out former locations for new records
@@ -1015,18 +977,6 @@ class SeriesAdminForm(ModelForm):
         exclude = []
         widgets = {
             'location': LocationWithDataWidget,
-            'classDescription': autocomplete.ModelSelect2(
-                url='autocompleteClassDescription',
-                attrs={
-                    # This will set the input placeholder attribute:
-                    'data-placeholder': _('Enter a series title'),
-                    # This will set the yourlabs.Autocomplete.minimumCharacters
-                    # options, the naming conversion is handled by jQuery
-                    'data-minimum-input-length': 2,
-                    'data-max-results': 10,
-                    'class': 'modern-style',
-                }
-            ),
         }
 
     class Media:
@@ -1057,6 +1007,8 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         'location', 'status', 'registrationOpen', 'category',
         'session', 'pricingTier'
     )
+    search_fields = ('classDescription__title',)
+    autocomplete_fields = ['classDescription', ]
 
     def customers(self, obj):
         return obj.numRegistered

@@ -114,8 +114,8 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'registration', 'event', 'customer',
             'invoiceItem', 'role', 'registration__invoice',
         ).order_by(
-            F('registration__lastName').asc(nulls_last=True),
-            F('registration__firstName').asc(nulls_last=True),
+            F('customer__last_name').asc(nulls_last=True),
+            F('customer__first_name').asc(nulls_last=True),
         )
 
         extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
@@ -280,7 +280,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         if getattr(self, 'endTime', None):
             filters['event__eventoccurrence__startTime__lte'] = self.endTime
         if getattr(self, 'customer', None):
-            filters['registration__customer'] = self.customer
+            filters['customer'] = self.customer
 
         dropInFilters = Q(dropIn=False) | (Q(dropIn=True) & Q(occurrences__id=F('occurrenceId')))
 
@@ -934,10 +934,10 @@ class AccountProfileView(LoginRequiredMixin, DetailView):
                 'customer': user.customer,
                 'customer_verified': user.emailaddress_set.filter(email=user.customer.email, verified=True).exists(),
             })
-            context['customer_eventregs'] = EventRegistration.objects.filter(registration__customer=user.customer)
+            context['customer_eventregs'] = EventRegistration.objects.filter(customer=user.customer)
 
         context['verified_eventregs'] = EventRegistration.objects.filter(
-            registration__customer__email__in=[x.email for x in context['verified_emails']]
+            customer__email__in=[x.email for x in context['verified_emails']]
         ).exclude(
             id__in=[x.id for x in context.get('customer_eventregs', [])]
         )

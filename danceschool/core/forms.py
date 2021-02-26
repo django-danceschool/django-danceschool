@@ -491,9 +491,9 @@ class RegistrationContactForm(forms.Form):
             session.pop('total_voucher_amount', None)
 
         # Pass along whether the individual is a student if this has already
-        # been set.
-        if self._registration and self.fields.get('student', None):
-            self.fields['student'].initial = self._registration.student
+        # been set in the session data.
+        if session.get('student', None) is not None and self.fields.get('student', None):
+            self.fields['student'].initial = session.get('student')
 
     def is_valid(self):
         '''

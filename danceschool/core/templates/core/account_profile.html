@@ -212,7 +212,7 @@
 	<tbody>
 	{% for eventreg in submitted_eventregs|dictsortreversed:'event.startTime' %}
 		<tr {% if forloop.counter > 5 %}class="prior_submitted collapse"{% endif %}>
-			<td>{{ eventreg.registration.fullName }}: {{ eventreg.registration.customer.email }}</td>
+			<td>{{ eventreg.customer.fullName }}: {{ eventreg.customer.email }}</td>
 			{% with eventreg.event as event %}
 			<td>{{ event.month|readable_month }} {{ event.year }}</td>
 			<td>{{ event.name }}</td>

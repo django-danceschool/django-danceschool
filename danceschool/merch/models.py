@@ -334,7 +334,7 @@ class MerchOrder(models.Model):
             fees=Coalesce(Sum('fees'), 0),
         )
 
-    def link_invoice(self, update=True, **kwargs):
+    def link_invoice(self, update=True, save=True, **kwargs):
         '''
         If an invoice does not already exist for this order,
         then create one.  If an update is requested, then ensure that all
@@ -414,7 +414,7 @@ class MerchOrder(models.Model):
                 self.invoice.expirationDate = None
                 needs_update = True
 
-            if needs_update:
+            if needs_update and save:
                 self.invoice.save()
 
         return self.invoice

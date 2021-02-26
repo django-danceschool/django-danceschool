@@ -15,7 +15,7 @@ import json
 from braces.views import PermissionRequiredMixin
 
 from .models import (
-    Event, Series, PublicEvent, Invoice, InvoiceItem,
+    Event, Series, PublicEvent, Invoice, InvoiceItem, Customer,
     CashPaymentRecord, DanceRole, Registration, EventRegistration
 )
 from .forms import ClassChoiceForm, RegistrationContactForm
@@ -834,8 +834,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         '''
 
         # Used for specifying defaults
-        reg_nullable_keys = ['firstName', 'lastName', 'email', 'phone', 'howHeardAboutUs']
-        reg_bool_keys = ['student', 'payAtDoor']
+        reg_nullable_keys = ['howHeardAboutUs',]
+        reg_bool_keys = ['payAtDoor',]
 
         eventreg_items = [x for x in post_data.get('items', []) if x.get('type', None) == 'eventRegistration']
         if not eventreg_items:
@@ -1063,6 +1063,9 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             this_eventreg.dropIn = False
             item.grossTotal = this_event.getBasePrice(payAtDoor=registration.payAtDoor)
             this_eventreg.role = this_role
+
+        if post_data.get('student', False):
+            this_eventreg.student = post_data.get('student')
 
         if item_data.get('checkInType') in ['E', 'S'] and item_data.get('checkInOccurrence'):
             this_eventreg.data['__checkInOccurrence'] = item_data['checkInOccurrence']
@@ -1456,20 +1459,35 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
+        firstName = form.cleaned_data.pop('firstName')
+        lastName = form.cleaned_data.pop('lastName')
+        email = form.cleaned_data.pop('email')
+        phone = form.cleaned_data.pop('phone', None)
+        student = form.cleaned_data.pop('student', False)
+
+        if firstName and lastName and email:
+            customer, created = Customer.objects.update_or_create(
+                first_name=firstName, last_name=lastName,
+                email=email, defaults={'phone': phone}
+            )
+        else:
+            customer = None
+
         reg = self.registration
         if reg:
 
+            if customer:
+                reg.eventregistration_set.update(customer=customer, student=student)
+
             # Update the expiration date for this registration, and pass in the data from
             # this form.
-            reg.firstName = form.cleaned_data.pop('firstName')
-            reg.lastName = form.cleaned_data.pop('lastName')
-            reg.email = form.cleaned_data.pop('email')
-            reg.phone = form.cleaned_data.pop('phone', None)
-            reg.student = form.cleaned_data.pop('student', False)
             reg.comments = form.cleaned_data.pop('comments', None)
             reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs', None)
 
-            invoice = reg.link_invoice(expirationDate=expiry)
+            invoice = reg.link_invoice(
+                expirationDate=expiry, firstName=firstName, lastName=lastName,
+                email=email, save=False
+            )
 
             # Anything else in the form goes to the Invoice data.
             invoice.data.update(form.cleaned_data)
@@ -1481,9 +1499,9 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             if invoice.status == Invoice.PaymentStatus.preliminary:
                 invoice.expirationDate = expiry
 
-            invoice.firstName = form.cleaned_data.pop('firstName')
-            invoice.lastName = form.cleaned_data.pop('lastName')
-            invoice.email = form.cleaned_data.pop('email')
+            invoice.firstName = firstName
+            invoice.lastName = lastName
+            invoice.email = email
             invoice.data.update(form.cleaned_data)
             invoice.save()
 
