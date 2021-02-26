@@ -43,14 +43,15 @@ $(document).ready(function(){
         event.preventDefault();
         var this_data = $(this).data();
         var this_role = (typeof this_data['roleId'] === 'undefined') ? null : this_data['roleId'];
+        var this_type = (typeof this_data['eventType'] === 'undefined') ? 'event' : this_data['eventType'];
         var regData = {json: true};
 
         // Allow drop-ins or roles, but not both.
         if (this_data['dropinId']) {
-            regData['event_' + this_data['id']] = '{"dropin_' + this_data['dropinId'] + '": true}';
+            regData[this_type + '_' + this_data['id']] = '{"dropin_' + this_data['dropinId'] + '": true}';
         }
         else {
-            regData['event_' + this_data['id']] = '{"role": ' + this_role + '}';            
+            regData[this_type + '_' + this_data['id']] = '{"role": ' + this_role + '}';
         }
 
         $.ajax({

@@ -1,0 +1,25 @@
+{% extends "core/base/base_individual_class.html" %}
+{% load i18n danceschool_tags sekizai_tags static %}
+
+{% block register_link %}
+	{% if not series.soldOut and not series.registrationClosed and not series.registrationPassed %}
+		{% for role in series.availableRoles %}
+			{% soldOutForRole series role as roleSoldOut %}
+			{% if roleSoldOut %}
+				<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{{ role.pluralName }} {% trans "Sold Out!" %}</button>
+			{% else %}
+				<button data-id="{{ series.id }}" data-role-id="{{ role.id }}" data-event-type="series" class="btn btn-primary mr-2 my-2 btn-lg register-ajax">{% trans "Register:" %} {{ role.name }}</button>
+			{% endif %}
+		{% endfor %}
+	{% elif series.soldOut %}
+		<button class="btn btn-secondary btn-lg disabled">{% trans "Sold Out!" %}</button>
+	{% elif series.registrationEnabled and not series.status == series.RegStatus.linkOnly %}
+		<button class="btn btn-secondary btn-lg disabled">{% trans "Registration Closed" %}</button>
+	{% endif %}
+{% endblock %}
+
+{% block content %}
+	{{ block.super }}
+
+	{% addtoblock "js" %}<script type="text/javascript" data-registration-url="{% url 'registration' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
+{% endblock %}

@@ -4,10 +4,10 @@ from django.contrib import admin
 from .feeds import EventFeed, json_event_feed
 from .views import (
     SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView,
-    IndividualClassView, IndividualEventView, StaffDirectoryView,
+    IndividualClassView, IndividualPublicEventView, StaffDirectoryView,
     EmailConfirmationView, SendEmailView, SubstituteReportingView,
     StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView,
-    RepeatEventsView, IndividualClassReferralView, IndividualEventReferralView,
+    RepeatEventsView, IndividualClassReferralView, IndividualPublicEventReferralView,
     RefundProcessingView, RefundConfirmationView, ViewInvoiceView,
     InvoiceNotificationView
 )
@@ -77,16 +77,16 @@ urlpatterns = [
 
     # These are for individual class views and event views
     path('classes/<int:year>/<slug:month>/<slug:slug>/', IndividualClassView.as_view(), name='classView'),
-    path('events/<int:year>/<slug:month>/<slug:slug>/', IndividualEventView.as_view(), name='eventView'),
+    path('events/<int:year>/<slug:month>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventView'),
     path('classes/<slug:session_slug>/<slug:slug>/', IndividualClassView.as_view(), name='classViewSession'),
-    path('events/<slug:session_slug>/<slug:slug>/', IndividualEventView.as_view(), name='eventViewSession'),
+    path('events/<slug:session_slug>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventViewSession'),
     path(
         'classes/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/',
         IndividualClassView.as_view(), name='classViewSessionMonth'
     ),
     path(
         'events/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/',
-        IndividualEventView.as_view(), name='eventViewSessionMonth'
+        IndividualPublicEventView.as_view(), name='eventViewSessionMonth'
     ),
 
     # Pass along a marketing ID to an individual event view
@@ -96,7 +96,7 @@ urlpatterns = [
     ),
     path(
         'events/<int:year>/<slug:month>/<slug:slug>/id/<slug:marketing_id>/',
-        IndividualEventReferralView.as_view(), name='eventReferralView'
+        IndividualPublicEventReferralView.as_view(), name='eventReferralView'
     ),
     path(
         'classes/<slug:session_slug>/<slug:slug>/id/<slug:marketing_id>/',
@@ -104,7 +104,7 @@ urlpatterns = [
     ),
     path(
         'events/<slug:session_slug>/<slug:slug>/id/<slug:marketing_id>/',
-        IndividualEventReferralView.as_view(), name='eventReferralViewSession'
+        IndividualPublicEventReferralView.as_view(), name='eventReferralViewSession'
     ),
     path(
         'classes/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/id/<slug:marketing_id>/',
@@ -112,7 +112,7 @@ urlpatterns = [
     ),
     path(
         'events/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/id/<slug:marketing_id>/',
-        IndividualEventReferralView.as_view(), name='eventReferralViewSessionMonth'
+        IndividualPublicEventReferralView.as_view(), name='eventReferralViewSessionMonth'
     ),
 
     # Pass along a voucher ID to an individual event view
@@ -122,7 +122,7 @@ urlpatterns = [
     ),
     path(
         'events/<int:year>/<slug:month>/<slug:slug>/referral/<slug:voucher_id>/',
-        IndividualEventReferralView.as_view(), name='eventReferralView'
+        IndividualPublicEventReferralView.as_view(), name='eventReferralView'
     ),
     path(
         'classes/<slug:session_slug>/<slug:slug>/referral/<slug:voucher_id>/',
@@ -130,7 +130,7 @@ urlpatterns = [
     ),
     path(
         'events/<slug:session_slug>/<slug:slug>/referral/<slug:voucher_id>/',
-        IndividualEventReferralView.as_view(), name='eventReferralViewSession'
+        IndividualPublicEventReferralView.as_view(), name='eventReferralViewSession'
     ),
     path(
         'classes/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/referral/<slug:voucher_id>/',
@@ -138,7 +138,7 @@ urlpatterns = [
     ),
     path(
         'events/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/referral/<slug:voucher_id>/',
-        IndividualEventReferralView.as_view(), name='eventReferralViewSessionMonth'
+        IndividualPublicEventReferralView.as_view(), name='eventReferralViewSessionMonth'
     ),
 
     # These URLs are associated with viewing individual invoices and sending notifications

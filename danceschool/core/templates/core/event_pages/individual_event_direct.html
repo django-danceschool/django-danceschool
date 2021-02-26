@@ -1,0 +1,20 @@
+{% extends "core/base/base_individual_event.html" %}
+{% load i18n danceschool_tags sekizai_tags static %}
+
+
+{% block register_link %}
+	{% if event.registrationOpen and not event.soldOut and not event.registrationPassed %}
+		<button data-id="{{ event.id }}" data-event-type="publicevent" class="btn btn-primary btn-lg register-ajax">{% trans "Register Now" %}</button><br />
+	{% elif event.soldOut %}
+		<button class="btn btn-lg btn-secondary disabled">{% trans "Sold Out!" %}</button><br />
+	{% elif event.registrationEnabled and not event.status == event.RegStatus.linkOnly %}
+		<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{% trans "Registration Closed" %}</button>
+	{% endif %}
+{% endblock %}
+
+
+{% block content %}
+	{{ block.super }}
+
+	{% addtoblock "js" %}<script type="text/javascript" data-registration-url="{% url 'registration' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
+{% endblock %}

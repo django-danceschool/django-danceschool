@@ -23,7 +23,7 @@ import logging
 
 from .constants import getConstant, REG_VALIDATION_STR
 from .tasks import sendEmail
-from .registries import plugin_templates_registry
+from .registries import plugin_templates_registry, model_templates_registry
 from .helpers import getReturnPage
 from .signals import (
     request_discounts, apply_addons, check_voucher
@@ -333,7 +333,39 @@ class PluginTemplateMixin(object):
             ]
 
         # If just one template is specified, use that
-        if self.render_template:
+        if getattr(self, 'render_template', None):
+            return [(self.render_template, self.render_template), ]
+
+        # No choices to report
+        return []
+
+
+class ModelTemplateMixin(object):
+    '''
+    This mixin is for models with a selectable custom template for individual
+    page rendering.  It is primarily used by the Event model and its children
+    such as PublicEvent and Series for custom event page templates.  The mixin
+    is used to augment the admin classes for these model classes.
+    '''
+
+    def get_template_choices(self, model):
+        # If templates are explicitly specified, use those
+        if hasattr(self, 'template_choices') and self.template_choices:
+            return self.template_choices
+
+        # If templates are registered, use those.
+        registered = [
+            x for x in model_templates_registry.values() if
+            issubclass(model, getattr(x, 'model', None))
+        ]
+        if registered:
+            return [
+                (x.template_name, getattr(x, 'description', None) or x.template_name)
+                for x in registered
+            ]
+
+        # If just one template is specified, use that
+        if getattr(self, 'render_template', None):
             return [(self.render_template, self.render_template), ]
 
         # No choices to report

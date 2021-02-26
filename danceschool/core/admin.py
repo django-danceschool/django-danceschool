@@ -32,6 +32,7 @@ from .models import (
 )
 from .constants import getConstant
 from .forms import LocationWithDataWidget
+from .mixins import ModelTemplateMixin
 
 
 ######################################
@@ -540,12 +541,30 @@ class RegistrationAdmin(admin.ModelAdmin):
 ######################################
 # Miscellaneous Admin classes
 
+class ClassDescriptionAdminForm(ModelTemplateMixin, ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Allow the user to choose from the registered template choices.
+        self.fields['template'] = ChoiceField(
+            choices=self.get_template_choices(Series), required=True,
+            initial=getConstant('general__defaultSeriesPageTemplate')
+        )
+
+    class Meta:
+        model = ClassDescription
+        exclude = []
+
+
+
 @admin.register(ClassDescription)
 class ClassDescriptionAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
     list_display = ['title', 'danceTypeLevel', ]
     list_filter = ('danceTypeLevel', )
     search_fields = ('title', )
     prepopulated_fields = {"slug": ("title", )}
+    form = ClassDescriptionAdminForm
 
 
 class CustomerRegistrationInline(admin.StackedInline):
@@ -1059,7 +1078,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse', ),
-            'fields': ('status', 'closeAfterDays', 'capacity', ),
+            'fields': ('status', 'closeAfterDays', 'capacity',),
         }),
         (_('Additional data'), {
             'classes': ('collapse', ),
@@ -1081,7 +1100,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         obj.save()
 
 
-class PublicEventAdminForm(ModelForm):
+class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1091,6 +1110,12 @@ class PublicEventAdminForm(ModelForm):
         # Allow adding additional rooms from a popup on Location, but not a popup on Room
         self.fields['room'].widget.can_add_related = False
         self.fields['room'].widget.can_change_related = False
+
+        # Allow the user to choose from the registered template choices.
+        self.fields['template'] = ChoiceField(
+            choices=self.get_template_choices(self.Meta.model), required=True,
+            initial=getConstant('general__defaultPublicEventPageTemplate')
+        )
 
         # Impose restrictions on new records, but not on existing ones.
         if not kwargs.get('instance', None):
@@ -1152,7 +1177,10 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
             'fields': ('status', ('pricingTier', 'capacity'), ),
         }),
         (_('Description/Link'), {
-            'fields': ('descriptionField', 'shortDescriptionField', 'link', 'uuidLink', )
+            'fields': (
+                'descriptionField', 'shortDescriptionField', 'template', 
+                'link', 'uuidLink',
+            )
         }),
         (_('Additional data'), {
             'classes': ('collapse', ),

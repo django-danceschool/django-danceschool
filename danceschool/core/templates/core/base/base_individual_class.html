@@ -2,25 +2,25 @@
 {% load cms_tags danceschool_tags sekizai_tags thumbnail i18n %}
 
 {% block title %}
-	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
+	{% blocktrans with month=event_set.0.month|readable_month year=event_set.0.year title=event_set.0.classDescription.title %}
 	{{ month }} {{ year }} Class Series - {{ title }}
 	{% endblocktrans %}
 {% endblock %}
 
 {% block meta_title %}
-	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
+	{% blocktrans with month=event_set.0.month|readable_month year=event_set.0.year title=event_set.0.classDescription.title %}
 	{{ month }} {{ year }} Class Series - {{ title }}
 	{% endblocktrans %}
 {% endblock %}
 
 {% block meta_description %}
-	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title startDate=seriesset.0.startTime|date:'l, F jS' location=seriesset.0.location %}
+	{% blocktrans with month=event_set.0.month|readable_month year=event_set.0.year title=event_set.0.classDescription.title startDate=event_set.0.startTime|date:'l, F jS' location=event_set.0.location %}
 	Learn more through our {{ month }} {{ year }} class, {{ title }}. Classes begin {{ startDate }} at {{ location }}.
 	{% endblocktrans %}
 {% endblock %}
 
 {% block facebook_og_description %}
-	{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title startDate=seriesset.0.startTime|date:'l, F jS' location=seriesset.0.location %}
+	{% blocktrans with month=event_set.0.month|readable_month year=event_set.0.year title=event_set.0.classDescription.title startDate=event_set.0.startTime|date:'l, F jS' location=event_set.0.location %}
 	Learn more through our {{ month }} {{ year }} class, {{ title }}. Classes begin {{ startDate }} at {{ location }}.
 	{% endblocktrans %}
 {% endblock %}
@@ -29,12 +29,12 @@
 
 {% block content %}
 	<h1 class="my-4">
-		{% blocktrans with month=seriesset.0.month|readable_month year=seriesset.0.year title=seriesset.0.classDescription.title %}
+		{% blocktrans with month=event_set.0.month|readable_month year=event_set.0.year title=event_set.0.classDescription.title %}
 		{{ month }} {{ year }}: {{ title }}
 		{% endblocktrans %}
 	</h1>
 
-	{% for series in seriesset %}
+	{% for series in event_set %}
 	<div class="row">
 		<div class="col-md-4 order-2">
 			<div class="row mb-4">
@@ -45,13 +45,16 @@
 			{% endfor %}
 			</div>
 			<div class="row">
-			{% if not series.soldOut and not series.registrationClosed %}
-				<a class="btn btn-primary btn-lg" href="{% url 'registration' %}">{% trans "Register for this class!" %}</a>
-			{% elif series.soldOut %}
-				{% trans "Sold out!" %}
-			{% else %}
-				{% trans "Registration closed!" %}
-			{% endif %}
+
+			{% block register_link %}
+				{% if not series.soldOut and not series.registrationClosed and not series.registrationPassed %}
+					<a class="btn btn-primary btn-lg" href="{% url 'registration' %}">{% trans "Register for this class!" %}</a>
+				{% elif series.soldOut %}
+					<button class="btn btn-secondary btn-lg disabled">{% trans "Sold Out!" %}</button>
+				{% elif series.registrationEnabled and not series.status == series.RegStatus.linkOnly %}
+					<button class="btn btn-secondary btn-lg disabled">{% trans "Registration Closed" %}</button>
+				{% endif %}
+			{% endblock %}
 
 			{% if 'core.change_series' in perms or 'core.view_registration_summary' in perms %}
 				<div class="btn-group mt-4">
@@ -111,7 +114,7 @@
 		<div class="col-12">
 			<h3>{% trans "Class Description" %}</h3>
 			<div class='classDescription'>
-				<p>{% render_model seriesset.0.classDescription "description" "" "" "safe" %}</p>
+				<p>{% render_model event_set.0.classDescription "description" "" "" "safe" %}</p>
 			</div>
 		</div>
 	</div>

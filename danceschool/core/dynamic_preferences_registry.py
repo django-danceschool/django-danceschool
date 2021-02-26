@@ -5,6 +5,7 @@ but can be changed dynamically.
 
 from django.utils.translation import gettext_lazy as _
 from django.template.loader import get_template
+from django.forms import ValidationError
 
 from dynamic_preferences.types import (
     BooleanPreference, StringPreference, IntegerPreference, FloatPreference,
@@ -16,10 +17,14 @@ from cms.models import Page
 from cms.forms.fields import PageSelectFormField
 
 from .utils.serializers import PageModelSerializer
-from .models import EventStaffCategory, EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
+from .models import (
+    EventStaffCategory, EmailTemplate, PublicEvent, Series,
+    get_defaultEmailName, get_defaultEmailFrom
+)
+from .mixins import ModelTemplateMixin
+
 
 # we create some section objects to link related preferences together
-
 general = Section('general', _('General Settings'))
 contact = Section('contact', _('Contact Info'))
 registration = Section('registration', _('Registration'))
@@ -79,6 +84,47 @@ class DefaultAdminSuccessPage(IntegerPreference):
         ''' Changes the default serializer '''
         super().__init__(*args, **kwargs)
         self.serializer = PageModelSerializer
+
+
+@global_preferences_registry.register
+class DefaultSeriesPageTemplate(ModelTemplateMixin, ChoicePreference):
+    section = general
+    name = 'defaultSeriesPageTemplate'
+    verbose_name = _('Default Class Series Page Template')
+    help_text = _(
+        'Individual class series pages are rendered using this template by ' +
+        'default.  To add more options to this list, register your templates ' +
+        'with danceschool.core.registries.model_templates_registry.'
+    )
+    default = 'core/event_pages/individual_class.html'
+
+    def get_field_kwargs(self):
+        field_kwargs = super(ChoicePreference, self).get_field_kwargs()
+        field_kwargs['choices'] = self.get_template_choices(Series)
+        return field_kwargs
+
+    def get_choice_values(self):
+        return [c[0] for c in self.get_template_choices(Series)]
+
+@global_preferences_registry.register
+class DefaultPublicEventPageTemplate(ModelTemplateMixin, ChoicePreference):
+    section = general
+    name = 'defaultPublicEventPageTemplate'
+    verbose_name = _('Default Public Event Page Template')
+    help_text = _(
+        'Individual public event pages are rendered using this template by ' +
+        'default.  To add more options to this list, register your templates ' +
+        'with danceschool.core.registries.model_templates_registry.'
+    )
+    default = 'core/event_pages/individual_event.html'
+
+    def get_field_kwargs(self):
+        field_kwargs = super(ChoicePreference, self).get_field_kwargs()
+        field_kwargs['choices'] = self.get_template_choices(PublicEvent)
+        return field_kwargs
+
+    def get_choice_values(self):
+        return [c[0] for c in self.get_template_choices(PublicEvent)]
 
 
 @global_preferences_registry.register

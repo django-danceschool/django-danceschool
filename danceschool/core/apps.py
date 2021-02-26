@@ -1,7 +1,7 @@
 # Give this app a custom verbose name to avoid confusion
 from django.apps import AppConfig, apps
 from django.utils.translation import gettext_lazy as _
-from .registries import plugin_templates_registry
+from .registries import plugin_templates_registry, model_templates_registry
 
 
 class CoreAppConfig(AppConfig):
@@ -16,3 +16,4 @@ class CoreAppConfig(AppConfig):
         # installed apps to identify custom plugin templates
         app_names = [app.name for app in apps.app_configs.values()]
         plugin_templates_registry.autodiscover(app_names)
+        model_templates_registry.autodiscover(app_names)

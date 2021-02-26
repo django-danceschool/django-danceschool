@@ -12,13 +12,13 @@
           {% if event.teachers %}
             {% trans "with" %} {{ event.teachers|join:" &amp; " }}
           {% endif %}
-          at
           {% if directions_url %}
+            at 
             <a href="{{ directions_url }}#{{ event.location.name|slugify }}">
               {{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
             </a>
-          {% else %}
-            {{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
+          {% elif event.location or event.room %}
+            at {{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}
           {% endif %}
 
           <div class="card-text reg-event-dates">

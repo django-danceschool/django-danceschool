@@ -56,6 +56,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
     returnJson = False
+    includeCounts = True
+    voucherField = False
+    pluralName = True
 
     # The temporary registration and the list of event registrations is kept
     # as an attribute of the view so that it may be used in subclassed versions
@@ -108,6 +111,12 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             'openEvents': listing['openEvents'],
             'closedEvents': listing['closedEvents'],
         })
+
+        # Automatically pass along some of the optional form kwargs
+        for key in ['includeCounts', 'pluralName', 'voucherField']:
+            if isinstance(getattr(self, key, None), bool):
+                kwargs[key] = getattr(self, key, None)
+
         return kwargs
 
     def form_invalid(self, form):

@@ -70,6 +70,22 @@ def get_defaultEmailFrom():
     return getConstant('email__defaultEmailFrom')
 
 
+def get_defaultSeriesPageTemplate():
+    ''' Callable for default used by Series class '''
+    return (
+        getConstant('general__defaultSeriesPageTemplate') or
+        'core/event_pages/individual_class.html'
+    )
+
+
+def get_defaultPublicEventPageTemplate():
+    ''' Callable for default used by PublicEvent class '''
+    return (
+        getConstant('general__defaultPublicEventPageTemplate') or
+        'core/event_pages/individual_event.html'
+    )
+
+
 def get_validationString():
     return ''.join(random.choice(string.ascii_uppercase) for i in range(25))
 
@@ -398,6 +414,11 @@ class ClassDescription(models.Model):
             'This is used in the URL for the individual class pages.  ' +
             'You can override the default'
         )
+    )
+
+    template = models.CharField(
+        _('Template for automatically-generated class series page'),
+        max_length=250, default=get_defaultSeriesPageTemplate
     )
 
     oneTimeSeries = models.BooleanField(
@@ -1776,6 +1797,15 @@ class Series(Event):
     slug.fget.short_description = _('Slug')
 
     @property
+    def template(self):
+        ''' This just passes along the template from the associated ClassDescription. '''
+        return getattr(
+            getattr(self, 'classDescription', None), 'template',
+            get_defaultSeriesPageTemplate()
+        )
+    template.fget.short_description = _('Template')
+
+    @property
     def displayColor(self):
         '''
         Overrides property from Event base class.
@@ -1986,6 +2016,12 @@ class PublicEvent(Event):
         _('Short description'), null=True, blank=True,
         help_text=_('Shorter description for \"taglines\" and feeds.')
     )
+
+    template = models.CharField(
+        _('Template for automatically-generated event page'),
+        max_length=250, default=get_defaultPublicEventPageTemplate
+    )
+
     link = models.URLField(
         _('External link to event (if applicable)'), blank=True, null=True,
         help_text=_(

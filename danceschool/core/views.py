@@ -1,5 +1,5 @@
 from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest, HttpResponse
-from django.shortcuts import get_object_or_404, get_list_or_404
+from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
@@ -8,7 +8,7 @@ from django.views.generic import (
     FormView, CreateView, UpdateView, DetailView, TemplateView, ListView,
     RedirectView
 )
-from django.db.models import Min, Q, Count, F
+from django.db.models import Min, Q, Count, F, Case, When, BooleanField
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -31,12 +31,12 @@ import logging
 import json
 
 from .models import (
-    Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
+    ClassDescription, Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
     StaffMember, Instructor, Invoice, Customer, EventCheckIn
 )
 from .forms import (
     SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
-    RepeatEventForm, InvoiceNotificationForm, CreateInvoiceForm, EventAutocompleteForm
+    RepeatEventForm, InvoiceNotificationForm, EventAutocompleteForm
 )
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import (
@@ -1053,7 +1053,7 @@ class IndividualClassReferralView(ReferralInfoMixin, RedirectView):
             return reverse('classView', kwargs=kwargs)
 
 
-class IndividualEventReferralView(ReferralInfoMixin, RedirectView):
+class IndividualPublicEventReferralView(ReferralInfoMixin, RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
         if (
@@ -1070,10 +1070,11 @@ class IndividualEventReferralView(ReferralInfoMixin, RedirectView):
             return reverse('eventView', kwargs=kwargs)
 
 
-class IndividualClassView(ReferralInfoMixin, FinancialContextMixin, TemplateView):
-    template_name = 'core/individual_class.html'
+class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView):
+    model_class = Event
+    template_name = 'core/event_pages/individual_event.html'
 
-    def get(self, request, *args, **kwargs):
+    def dispatch(self, request, *args, **kwargs):
         # These are passed via the URL
         year = self.kwargs.get('year')
         month = self.kwargs.get('month')
@@ -1086,73 +1087,89 @@ class IndividualClassView(ReferralInfoMixin, FinancialContextMixin, TemplateView
             except ValueError:
                 raise Http404(_('Invalid month.'))
 
+        model_class = getattr(self, 'model_class', Event)
+
         filters = ~Q(status=Event.RegStatus.hidden) \
-            & ~Q(status=Event.RegStatus.linkOnly) \
-            & Q(classDescription__slug=slug)
+            & ~Q(status=Event.RegStatus.linkOnly)
+        if model_class == Series:
+            filters = filters & Q(classDescription__slug=slug)
+        elif model_class == PublicEvent:
+            filters = filters & Q(slug=slug)
+
         if year and month:
             filters = filters & Q(year=year or None) & Q(month=month_number or None)
         if session_slug:
             filters = filters & Q(session__slug=session_slug)
 
-        seriesset = get_list_or_404(Series, filters)
+        passedCase = Q(endTime__lt=timezone.now())
+        if getConstant('registration__displayLimitDays') or 0 > 0:
+            passedCase = passedCase | Q(
+                startTime__gte=timezone.now() + timedelta(
+                    days=getConstant('registration__displayLimitDays')
+                )
+            )
+
+        self.event_set = model_class.objects.filter(
+            filters
+        ).annotate(
+            registrationPassed=Case(
+                When(passedCase, then=True), default=False,
+                output_field=BooleanField()
+            )
+        )
+
+        if not self.event_set:
+            raise Http404(_('No events found.'))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_template_names(self):
+        templates = [x.template for x in self.event_set if getattr(x, 'template', None)]
+        if templates:
+            return [templates[0],]
+        else:
+            return super().get_template_names()
+
+    def get(self, request, *args, **kwargs):
 
         # This will pass through to the context data by default
-        kwargs.update({'seriesset': seriesset})
+        kwargs.update({'event_set': self.event_set})
 
-        # For each Series in the set, add a button to the toolbar to edit the Series details
-        if hasattr(request, 'user') and request.user.has_perm('core.change_series'):
-            for this_series in seriesset:
-                this_title = _('Edit Class Details')
-                if len(seriesset) > 1:
-                    this_title += ' (#%s)' % this_series.id
-                reverse_core_series_change = reverse('admin:core_series_change', args=([this_series.id, ]))
-                request.toolbar.add_button(this_title, reverse_core_series_change, side=RIGHT)
+        model_lower = getattr(self, 'model_class', Event).__name__.lower()
+        app_name = getattr(self, 'app_name', 'core')
+
+        # For each Event in the set, add a button to the toolbar to edit the Event details
+        if (
+            hasattr(request, 'user') and
+            request.user.has_perm('%s.change_%s' % (app_name, model_lower))
+        ):
+            for this_event in self.event_set:
+                this_title = _('Edit Event Details')
+                if len(self.event_set) > 1:
+                    this_title += ' (#%s)' % this_event.id
+                change_link = reverse(
+                    'admin:%s_%s_change' % (app_name, model_lower),
+                    args=([this_event.id, ])
+                )
+                request.toolbar.add_button(this_title, change_link, side=RIGHT)
 
         return super().get(request, *args, **kwargs)
 
 
-class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView):
-    template_name = 'core/individual_event.html'
+class IndividualClassView(IndividualEventView):
+    model_class = Series
+    template_name = 'core/event_pages/individual_class.html'
+
+
+class IndividualPublicEventView(IndividualEventView):
+    model_class = PublicEvent
+    template_name = 'core/event_pages/individual_event.html'
 
     def get(self, request, *args, **kwargs):
-        # These are passed via the URL
-        year = self.kwargs.get('year', timezone.now().year)
-        month = self.kwargs.get('month', 0)
-        session_slug = self.kwargs.get('session_slug')
-        slug = self.kwargs.get('slug', '')
-
-        if month:
-            try:
-                month_number = list(month_name).index(month or 0)
-            except ValueError:
-                raise Http404(_('Invalid month.'))
-
-        filters = ~Q(status=Event.RegStatus.hidden) \
-            & ~Q(status=Event.RegStatus.linkOnly) \
-            & Q(slug=slug)
-        if year and month:
-            filters = filters & Q(year=year or None) & Q(month=month_number or None)
-        if session_slug:
-            filters = filters & Q(session__slug=session_slug)
-
-        eventset = get_list_or_404(PublicEvent, filters)
-
         # If an alternative link is given by one or more of these events, then redirect to that.
-        overrideLinks = [x.link for x in eventset if x.link]
+        overrideLinks = [x.link for x in self.event_set if getattr(x, 'link', None)]
         if overrideLinks:
             return HttpResponseRedirect(overrideLinks[0])
-
-        # This will pass through to the context data by default
-        kwargs.update({'eventset': eventset})
-
-        # For each Event in the set, add a button to the toolbar to edit the Event details
-        if hasattr(request, 'user') and request.user.has_perm('core.change_publicevent'):
-            for this_event in eventset:
-                this_title = _('Edit Event Details')
-                if len(eventset) > 1:
-                    this_title += ' (#%s)' % this_event.id
-                reverse_core_publicevent_change = reverse('admin:core_publicevent_change', args=([this_event.id, ]))
-                request.toolbar.add_button(this_title, reverse_core_publicevent_change, side=RIGHT)
 
         return super().get(request, *args, **kwargs)
 

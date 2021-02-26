@@ -269,7 +269,7 @@ class ClassChoiceForm(forms.Form):
             for role in roles:
                 this_label_text = role.pluralName if usePluralName else role.name
                 if includeCounts:
-                    this_label_text += '(%s %s)' % (
+                    this_label_text += ' (%s %s)' % (
                         event.numRegisteredForRole(role), str(_('registered'))
                     )
                 this_label = {
