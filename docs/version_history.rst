@@ -1,6 +1,15 @@
 Version History
 ===============
 
+0.9.1 - February 25, 2021
+-------------------------
+
+- **New**: Ability to select a custom templates for the individual event/class series page.  Your app can add additional template options by registering them with ``danceschool.core.registries.model_templates_registry``.
+- Added optional event and series page templates with register buttons that use Javascript to proceed directly into the registration process rather than requiring the user to select the event on the register page.
+- Cleanup of event and series page default template.
+- Miscellaneous bug fixes.
+
+
 0.9.0 - February 20, 2021
 -------------------------
 
