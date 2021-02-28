@@ -229,7 +229,8 @@ class DiscountCombo(models.Model):
             this_price = applicable_price \
                 + sum([
                     x[0].event.getBasePrice(payAtDoor=payAtDoor) * x[1] if
-                    x[1] != 1 else x[0].price for x in tieredTuples
+                    x[1] != 1 else x[0].event.getBasePrice(payAtDoor=payAtDoor)
+                    for x in tieredTuples
                 ])
 
             # Flat prices are allocated equally across all events
