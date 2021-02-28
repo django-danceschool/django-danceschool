@@ -152,7 +152,7 @@ class DiscountCombo(models.Model):
             'Leave blank for no restriction.'
         ),
     )
-    firstXRegistered = models.PositiveSmallIntegerField(
+    firstXRegistered = models.SmallIntegerField(
         _('Only for first __ registrants'),
         null=True, blank=True,
         help_text=_(
@@ -160,7 +160,8 @@ class DiscountCombo(models.Model):
             'than this many individuals registered (including registrations in progress). '
             'Only one discount per category can be applied, so if you define tiered discounts '
             'in the same category, only the best available discount will be used.'
-        )
+        ),
+        validators=[MinValueValidator(1),]
     )
 
     discountType = models.CharField(
