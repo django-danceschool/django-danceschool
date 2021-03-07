@@ -63,6 +63,13 @@
               {% endif %}
             {% endblock %}
 
+            {% if regOpenEvents or regOpenSeries %}
+                <input class="btn btn-success btn-lg float-right position-sticky sticky-top"
+                       style="top: 0.5em"
+                       type="submit"
+                       value="{% trans 'Register now' %} &raquo;" />
+            {% endif %}
+
             <div id="classes">
               <div id="validation">
                 {{ form.non_field_errors }}
@@ -122,16 +129,6 @@
                   {% include "core/registration/event_group.html" with group_header='Ongoing Series (Registration Closed)' group_section='Class Series' group=regClosedSeries %}
                 {% endif %}
               {% endblock %}
-
-              {% if regOpenEvents or regOpenSeries %}
-                <div class="row">
-                  <div class="col-md-3 ml-auto p-4">
-                    <input class="btn btn-success btn-lg float-right"
-                           type="submit"
-                           value="{% trans 'Register now' %} &raquo;" />
-                  </div>
-                </div>
-              {% endif %}
 
             </div>
           </form>
