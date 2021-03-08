@@ -88,14 +88,6 @@
                 {% endfor %}
               {% endblock %}
 
-              {# List of Class Series with Open Registration #}
-              {% block reg_open_series %}
-                {% if regOpenSeries %}
-                  {% include "core/registration/event_group.html" with group_header='Register Now: Upcoming Class Series' group_section='Class Series' group=regOpenSeries %}
-                {% endif %}
-
-              {% endblock %}
-
               {# List of Category-separated Public Events #}
               {% block category_separate_events %}
                 {% regroup categorySeparateEvents by category as category_separated_list %}
@@ -107,6 +99,14 @@
                     {% include "core/registration/event_category__default.html" %}
                   {% endif %}
                 {% endfor %}
+              {% endblock %}
+
+              {# List of Class Series with Open Registration #}
+              {% block reg_open_series %}
+                {% if regOpenSeries %}
+                  {% include "core/registration/event_group.html" with group_header='Register Now: Upcoming Class Series' group_section='Class Series' group=regOpenSeries %}
+                {% endif %}
+
               {% endblock %}
 
               {# List of Upcoming Public Events with Open Registration #}
