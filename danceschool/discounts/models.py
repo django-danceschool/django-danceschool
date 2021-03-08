@@ -163,6 +163,15 @@ class DiscountCombo(models.Model):
         ),
         validators=[MinValueValidator(1),]
     )
+    customerMatchRequired = models.BooleanField(
+        _('Registration names must match invoice'), default=False,
+        help_text=_(
+            'If checked, then this discount will only be applied once the '
+            'name associated with each registration on the invoice can be '
+            'verified, and only if the subset of registrations with the same '
+            'name can qualify for the discount.'
+        )
+    )
 
     discountType = models.CharField(
         _('Discount type'), max_length=1,

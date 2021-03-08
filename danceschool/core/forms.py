@@ -1,12 +1,13 @@
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.models import Q, F, Count
 from django.utils.encoding import force_str
 from django.forms.widgets import CheckboxSelectMultiple, CheckboxInput, mark_safe, Select
 from django.utils.html import conditional_escape, format_html
 from django.utils.translation import gettext_lazy as _, gettext
+from django.template.loader import render_to_string
 
 from itertools import chain
 from crispy_forms.helper import FormHelper
@@ -25,6 +26,8 @@ from .models import (
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
 from .utils.emails import get_text_for_html
+from .utils.timezone import ensure_localtime
+
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -204,7 +207,7 @@ class CheckboxSeriesChoiceField(forms.MultipleChoiceField):
         '''
         try:
             value = json.dumps(json.loads(value))
-        except JSONDecodeError:
+        except json.JSONDecodeError:
             pass
 
         return super().valid_value(value)
@@ -385,7 +388,152 @@ class ClassChoiceForm(forms.Form):
             raise ValidationError(_('Must register for at least one class or series.'))
 
 
-class RegistrationContactForm(forms.Form):
+class RegistrationForm(forms.Form):
+    '''
+    A generic superclass that provides common methods for initialization and
+    validation of forms within the registration process such as
+    RegistrationContactForm and MultiRegCustomerNameForm.
+    '''
+
+    def __init__(self, *args, **kwargs):
+        self._request = kwargs.pop('request', None)
+        self._registration = kwargs.pop('registration', None)
+        self._invoice = kwargs.pop('invoice', None)
+        self._multireg = kwargs.pop('multiReg', False)
+        session = getattr(self._request, 'session', {}).get(REG_VALIDATION_STR, {})
+
+        super().__init__(*args, **kwargs)
+        self._session = session
+
+        # Setting use_custom_control to False to avoid issues with
+        # django-crispy-forms Bootstrap integration.
+        self.helper = FormHelper()
+        self.helper.use_custom_control = False
+        self.helper.form_method = 'post'
+        self.helper.form_tag = False  # Our template must explicitly include the <form tag>
+
+    def is_valid(self):
+        '''
+        For this form to be considered valid, there must be not only no errors,
+        but also no messages on the request that need to be shown.
+        '''
+
+        valid = super().is_valid()
+        msgs = messages.get_messages(self._request)
+
+        # We only want validation messages to show up once, so pop messages that have already show up
+        # before checking to see if any messages remain to be shown.
+        prior_messages = self._session.pop('prior_messages', [])
+        remaining_messages = []
+
+        for m in msgs:
+            m_dict = {'message': m.message, 'level': m.level, 'extra_tags': m.extra_tags}
+            if m_dict not in prior_messages:
+                remaining_messages.append(m_dict)
+
+        if remaining_messages:
+            self._session['prior_messages'] = remaining_messages
+            self._request.session.modified = True
+            return False
+        return valid
+
+    def check_customer(self, firstName, lastName, email, eventRegs=None):
+        '''
+        This method checks whether a customer has already signed up for an
+        event, and is therefore ineligble to signup
+        '''
+
+        payAtDoor = self._session.get('payAtDoor', False)
+
+        if not eventRegs:
+            eventRegs = self._registration.eventregistration_set.all()
+
+        eventRegs = eventRegs.values('event__id', 'dropIn').annotate(
+            count=Count('event__id')
+        ).order_by('event__id', 'dropIn')
+        dropInRegs = eventRegs.filter(dropIn=True)
+        seriesRegs = eventRegs.filter(dropIn=False, event__series__isnull=False)
+        publicEventRegs = eventRegs.filter(dropIn=False, event__publicevent__isnull=False)
+
+        # If the dynamic preference rules do not allow multiple registrations for
+        # the same thing, then ensure that this customer is not already registered
+        # for any of the Events in the list
+        customer = Customer.objects.filter(
+            first_name=firstName,
+            last_name=lastName,
+            email=email
+        ).first()
+
+        # Compile a list of Events for which the customer has already registered
+        # that are not eligible for multiple registrations.  The logic also allows
+        # registration for a full series after registering for a drop-in, but
+        # not the other way around.
+        already_registered_list = []
+        duplicate_name_list = []
+
+        if seriesRegs and (
+            (getConstant('registration__multiRegSeriesRule') == 'N') or
+            (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
+        ):
+            if customer:
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__dropIn=False, eventregistration__cancelled=False
+                ).filter(
+                    id__in=seriesRegs.values_list('event__id', flat=True)
+                ))
+            duplicate_name_list += list(seriesRegs.filter(count__gt=1))
+
+        if publicEventRegs and (
+            (getConstant('registration__multiRegPublicEventRule') == 'N') or
+            (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
+        ):
+            if customer:
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__dropIn=False, eventregistration__cancelled=False
+                ).filter(
+                    id__in=publicEventRegs.values_list('event__id', flat=True)
+                ))
+            duplicate_name_list += list(publicEventRegs.filter(count__gt=1))
+
+        if dropInRegs and (
+            (getConstant('registration__multiRegDropInRule') == 'N') or
+            (getConstant('registration__multiRegDropInRule') == 'D' and not payAtDoor)
+        ):
+            if customer:
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__cancelled=False
+                ).filter(
+                    id__in=dropInRegs.values_list('event__id', flat=True)
+                ))
+            duplicate_name_list += list(dropInRegs.filter(count__gt=1))
+        elif dropInRegs:
+            if customer:
+                already_registered_list += list(customer.getSeriesRegistered(
+                    eventregistration__dropIn=False, eventregistration__cancelled=False
+                ).filter(
+                    id__in=dropInRegs.values_list('event__id', flat=True)
+                ))
+            duplicate_name_list += list(dropInRegs.filter(count__gt=1))
+
+        if already_registered_list:
+            error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in already_registered_list])
+            raise ValidationError(gettext(mark_safe(
+                'You are already registered for:\n<ul>\n%s\n</ul>' % error_list +
+                '\nIf you are registering another person, please enter their name.'
+            )))
+        if duplicate_name_list:
+            # Get the actual events again in order to get the event names.
+            duplicate_name_events = Event.objects.filter(
+                id__in=[x.get('event__id') for x in duplicate_name_list]
+            )
+            error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in duplicate_name_events])
+            raise ValidationError(gettext(mark_safe(
+                'You have entered the same name repeatedly for:\n<ul>\n%s\n</ul>' % error_list +
+                '\nIf you are registering another person, please enter their name.'
+            )))
+
+
+class RegistrationContactForm(RegistrationForm):
     '''
     This is the form customers use to fill out their contact info.
     '''
@@ -401,7 +549,6 @@ class RegistrationContactForm(forms.Form):
         required=False, label=_('I am a student'),
         help_text=_('Photo ID is required at the door')
     )
-    mailList = forms.BooleanField(required=False, label=_('Add me to the mailing list'))
     agreeToPolicies = forms.BooleanField(
         required=True,
         label=_('<strong>I agree to all policies (required)</strong>'),
@@ -451,21 +598,10 @@ class RegistrationContactForm(forms.Form):
         return bottom_layout
 
     def __init__(self, *args, **kwargs):
-        self._request = kwargs.pop('request', None)
-        self._registration = kwargs.pop('registration', None)
-        self._invoice = kwargs.pop('invoice', None)
-        user = getattr(self._request, 'user', None)
-        session = getattr(self._request, 'session', {}).get(REG_VALIDATION_STR, {})
-
         super().__init__(*args, **kwargs)
-        self._session = session
 
-        # Setting use_custom_control to False to avoid issues with
-        # django-crispy-forms Bootstrap integration.
-        self.helper = FormHelper()
-        self.helper.use_custom_control = False
-        self.helper.form_method = 'post'
-        self.helper.form_tag = False  # Our template must explicitly include the <form tag>
+        user = getattr(self._request, 'user', None)
+        session = self._session
 
         # Input existing info for users who are logged in and have signed up before
         if user and hasattr(user, 'customer') and user.customer and not session.get('payAtDoor', False):
@@ -478,7 +614,7 @@ class RegistrationContactForm(forms.Form):
             self.get_top_layout(),
             self.get_mid_layout(),
             self.get_bottom_layout(),
-            Submit('submit', _('Complete Registration'))
+            Submit('submit', _('Proceed with Registration'))
         )
 
         # If a voucher ID was passed (i.e. a referral code), then populate the form
@@ -495,107 +631,23 @@ class RegistrationContactForm(forms.Form):
         if session.get('student', None) is not None and self.fields.get('student', None):
             self.fields['student'].initial = session.get('student')
 
-    def is_valid(self):
-        '''
-        For this form to be considered valid, there must be not only no errors,
-        but also no messages on the request that need to be shown.
-        '''
-
-        valid = super().is_valid()
-        msgs = messages.get_messages(self._request)
-
-        # We only want validation messages to show up once, so pop messages that have already show up
-        # before checking to see if any messages remain to be shown.
-        prior_messages = self._session.pop('prior_messages', [])
-        remaining_messages = []
-
-        for m in msgs:
-            m_dict = {'message': m.message, 'level': m.level, 'extra_tags': m.extra_tags}
-            if m_dict not in prior_messages:
-                remaining_messages.append(m_dict)
-
-        if remaining_messages:
-            self._session['prior_messages'] = remaining_messages
-            self._request.session.modified = True
-            return False
-        return valid
-
     def clean(self):
+        # If this Invoice does not include multiple event registrations, then
+        # we can go ahead and verify that they are not violating any of the
+        # rules on when someone can register for the same event using the same
+        # name.  This is done using the check_customer method.
         super().clean()
-        first = self.cleaned_data.get('firstName')
-        last = self.cleaned_data.get('lastName')
-        email = self.cleaned_data.get('email')
 
-        payAtDoor = self._session.get('payAtDoor', False)
+        eventRegs = []
 
-        # If the dynamic preference rules do not allow multiple registrations for
-        # the same thing, then ensure that this customer is not already registered
-        # for any of the Events in the list
-        customer = Customer.objects.filter(
-            first_name=first,
-            last_name=last,
-            email=email).first()
-
-        # Compile a list of Events for which the customer has already registered
-        # that are not eligible for multiple registrations.  The logic also allows
-        # registration for a full series after registering for a drop-in, but
-        # not the other way around.
-        already_registered_list = []
-
-        if customer and self._registration:
-            eventregs_all = self._registration.eventregistration_set.all()
-            event_ids_dropIn = [x.event.id for x in eventregs_all if x.dropIn is True]
-            event_ids_series = [
-                x.event.id for x in eventregs_all if
-                x.dropIn is False and x.event.polymorphic_ctype.model == 'series'
-            ]
-            event_ids_publicevent = [
-                x.event.id for x in eventregs_all if
-                x.dropIn is False and x.event.polymorphic_ctype.model == 'publicevent'
-            ]
-
-            if event_ids_series and (
-                (getConstant('registration__multiRegSeriesRule') == 'N') or
-                (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
-            ):
-                already_registered_list += list(customer.getSeriesRegistered(
-                    eventregistration__dropIn=False, eventregistration__cancelled=False
-                ).filter(
-                    id__in=event_ids_series
-                ))
-
-            if event_ids_publicevent and (
-                (getConstant('registration__multiRegPublicEventRule') == 'N') or
-                (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
-            ):
-                already_registered_list += list(customer.getSeriesRegistered(
-                    eventregistration__dropIn=False, eventregistration__cancelled=False
-                ).filter(
-                    id__in=event_ids_publicevent
-                ))
-
-            if event_ids_dropIn and (
-                (getConstant('registration__multiRegDropInRule') == 'N') or
-                (getConstant('registration__multiRegDropInRule') == 'D' and not payAtDoor)
-            ):
-                already_registered_list += list(customer.getSeriesRegistered(
-                    eventregistration__cancelled=False
-                ).filter(
-                    id__in=event_ids_dropIn
-                ))
-            elif event_ids_dropIn:
-                already_registered_list += list(customer.getSeriesRegistered(
-                    eventregistration__dropIn=False, eventregistration__cancelled=False
-                ).filter(
-                    id__in=event_ids_dropIn
-                ))
-
-        if already_registered_list:
-            error_list = '\n'.join(['<li>%s</li>' % (x.name,) for x in already_registered_list])
-            raise ValidationError(gettext(mark_safe(
-                'You are already registered for:\n<ul>\n%s\n</ul>' % error_list +
-                '\nIf you are registering another person, please enter their name.'
-            )))
+        if not self._multireg:
+            self.check_customer(
+                self.cleaned_data.get('firstName'),
+                self.cleaned_data.get('lastName'),
+                self.cleaned_data.get('email')
+            )
+            if self._registration:
+                eventRegs = self._registration.eventregistration_set.all()
 
         # Allow other handlers to add validation errors to the form.  Also, by
         # passing the request, we allow those handlers to add messages to the
@@ -603,10 +655,152 @@ class RegistrationContactForm(forms.Form):
         # they prevent the form from being considered valid.
         check_student_info.send(
             sender=RegistrationContactForm,
-            instance=self, formData=self.cleaned_data, request=self._request,
+            instance=self, data=self.cleaned_data,
+            request=self._request,
             registration=self._registration,
             invoice=self._invoice,
+            eventRegs=eventRegs,
         )
+
+        return self.cleaned_data
+
+
+class MultiRegCustomerNameForm(RegistrationForm):
+    '''
+    When a customer signs up for multiple EventRegistrations, we ensure
+    that we have the correct customer for each.  This form is dynamically
+    generated to provide the forms needed to validate customer information for
+    each EventRegistration.
+    '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Hold information needed to lay out additional name fields
+        reg_name_fields = []
+
+        initial = self._registration.eventregistration_set.select_related(
+            'customer', 'event', 'role'
+        ).annotate(
+            firstName=F('customer__first_name'),
+            lastName=F('customer__last_name'),
+            email=F('customer__email'),
+        ).order_by('event__startTime', 'event__id', 'id')
+
+        last_event_id = None
+        for er in initial:
+            first_of_event = (er.event.id != last_event_id)
+            last_event_id = er.event.id
+
+            this_event_details = er.event.get_real_instance().name
+            if er.role.name:
+                this_event_details += ' - %s' % er.role.name
+            if er.dropIn:
+                this_event_details += ' - %s' % _('Drop-in')
+
+            this_event_date = _(
+                'Begins %s' % (ensure_localtime(er.event.startTime).strftime('%a., %B %d, %Y, %I:%M %p'))
+            )
+
+            self.fields.update({
+                'er_%s_isMe' % er.id: forms.BooleanField(
+                    label=_('This is me'), required=False,
+                    initial=first_of_event
+                ),
+                'er_%s_firstName' % er.id: forms.CharField(
+                    label=False, required=True, initial=er.firstName
+                ),
+                'er_%s_lastName' % er.id: forms.CharField(
+                    label=False, required=True, initial=er.lastName
+                ),
+                'er_%s_email' % er.id: forms.EmailField(
+                    label=False, required=True, initial=er.email
+                ),
+                'er_%s_student' % er.id: forms.BooleanField(
+                    label=_('Student'), required=False, initial=er.student
+                ),
+            })
+
+            reg_name_fields.append({
+                'event_details': this_event_details,
+                'event_date': this_event_date,
+                'field_names': [
+                    ('er_%s_isMe' % er.id, ''),
+                    ('er_%s_firstName' % er.id, _('First Name')),
+                    ('er_%s_lastName' % er.id, _('Last Name')),
+                    ('er_%s_email' % er.id, _('Email')),
+                    ('er_%s_student' % er.id, ''),
+                ],
+            })       
+
+        self.helper.layout = Layout(
+            self.get_top_layout(),
+            self.get_name_layout(reg_name_fields),
+            Submit('submit', _('Complete Registration'), css_class='my-2')
+        )
+
+    def get_top_layout(self):
+        pass
+
+    def get_name_layout(self, reg_name_fields):
+        '''
+        Fields for additional names as needed when there are multiple
+        EventRegistrations for the same event.
+        '''
+        rows = [
+            Div(
+                Div(
+                    Div(
+                        HTML('<strong>%s</strong>' % er_info.pop('event_details', '')),
+                        HTML('<br /><small>%s</small>' % er_info.pop('event_date', '')),
+                        css_class='col-lg'
+                    ),
+                    *[Field(x[0], placeholder=x[1], wrapper_class='col-lg') for x in er_info.get('field_names', [])],
+                    css_class='form-row'
+                ),
+                css_class='list-group-item'
+            ) for er_info in reg_name_fields
+        ]
+
+        return Layout(
+            Div(
+                Div(*rows, css_class='list-group'),
+                css_class='card'
+            )
+        )
+
+    def clean(self):
+        super().clean()
+
+        # First, populate a list of all names for each EventRegistration,
+        # indexed by the ID of each EventRegistration.
+        names = {}
+        for er in self._registration.eventregistration_set.all():
+            names[er.id] = {
+                'firstName': self.cleaned_data.get('er_%s_firstName' % er.id),
+                'lastName': self.cleaned_data.get('er_%s_lastName' % er.id),
+                'email': self.cleaned_data.get('er_%s_email' % er.id),
+            }
+
+        for er in self._registration.eventregistration_set.all():
+            this_name_ids = [k for k,x in names.items() if x == names[er.id]]
+
+            self.check_customer(
+                eventRegs=self._registration.eventregistration_set.filter(id__in=this_name_ids),
+                **names[er.id],                    
+            )
+
+            # Allow other handlers to add validation errors to the form.  Also, by
+            # passing the request, we allow those handlers to add messages to the
+            # request, which (for this form) are treated like errors in that
+            # they prevent the form from being considered valid.
+            check_student_info.send(
+                sender=MultiRegCustomerNameForm,
+                instance=self, request=self._request,
+                data=names[er.id],
+                eventRegs=self._registration.eventregistration_set.filter(id__in=this_name_ids),
+                registration=self._registration,
+                invoice=self._invoice,
+            )
 
         return self.cleaned_data
 

@@ -2189,7 +2189,8 @@ class Customer(EmailRecipientMixin, models.Model):
     @property
     def numEventRegistrations(self):
         return EventRegistration.objects.filter(
-            customer=self, dropIn=False, cancelled=False
+            customer=self, dropIn=False, cancelled=False,
+            registration__final=True
         ).count()
     numEventRegistrations.fget.short_description = _('# Events/series registered')
 
@@ -2197,7 +2198,7 @@ class Customer(EmailRecipientMixin, models.Model):
     def numClassSeries(self):
         return EventRegistration.objects.filter(
             customer=self, event__series__isnull=False,
-            dropIn=False, cancelled=False
+            dropIn=False, cancelled=False, registration__final=True
         ).count()
     numClassSeries.fget.short_description = _('# Series registered')
 
@@ -2205,15 +2206,16 @@ class Customer(EmailRecipientMixin, models.Model):
     def numPublicEvents(self):
         return EventRegistration.objects.filter(
             customer=self, event__publicevent__isnull=False,
-            dropIn=False, cancelled=False
+            dropIn=False, cancelled=False,
+            registration__final=True
         ).count()
     numPublicEvents.fget.short_description = _('# Public events registered')
 
     @property
     def numDropIns(self):
         return EventRegistration.objects.filter(
-            customer=self,
-            dropIn=True, cancelled=False
+            customer=self, dropIn=True, cancelled=False,
+            registration__final=True
         ).count()
     numPublicEvents.fget.short_description = _('# Drop-ins registered')
 
@@ -2221,7 +2223,7 @@ class Customer(EmailRecipientMixin, models.Model):
     def firstSeries(self):
         return EventRegistration.objects.filter(
             customer=self, event__series__isnull=False,
-            dropIn=False, cancelled=False
+            dropIn=False, cancelled=False, registration__final=True
         ).order_by('event__startTime').first().event
     firstSeries.fget.short_description = _('Customer\'s first series')
 
@@ -2229,7 +2231,7 @@ class Customer(EmailRecipientMixin, models.Model):
     def firstSeriesDate(self):
         return EventRegistration.objects.filter(
             customer=self, event__series__isnull=False,
-            dropIn=False, cancelled=False
+            dropIn=False, cancelled=False, registration__final=True
         ).order_by('event__startTime').first().event.startTime
     firstSeriesDate.fget.short_description = _('Customer\'s first series date')
 
@@ -2237,7 +2239,7 @@ class Customer(EmailRecipientMixin, models.Model):
     def lastSeries(self):
         return EventRegistration.objects.filter(
             customer=self, event__series__isnull=False,
-            dropIn=False, cancelled=False
+            dropIn=False, cancelled=False, registration__final=True
         ).order_by('-event__startTime').first().event
     lastSeries.fget.short_description = _('Customer\'s most recent series')
 
@@ -2245,7 +2247,7 @@ class Customer(EmailRecipientMixin, models.Model):
     def lastSeriesDate(self):
         return EventRegistration.objects.filter(
             customer=self, event__series__isnull=False,
-            dropIn=False, cancelled=False
+            dropIn=False, cancelled=False, registration__final=True
         ).order_by('-event__startTime').first().event.startTime
     lastSeriesDate.fget.short_description = _('Customer\'s most recent series date')
 
@@ -2256,7 +2258,9 @@ class Customer(EmailRecipientMixin, models.Model):
         This can be filtered by any keyword arguments passed (e.g. year and month).
         '''
         series_set = Series.objects.filter(
-            q_filter, eventregistration__customer=self, **kwargs
+            q_filter, eventregistration__customer=self,
+            eventregistration__registration__final=True,
+            **kwargs
         )
 
         if not distinct:

@@ -1,9 +1,12 @@
 from django.dispatch import Signal
 
-# Fires during the clean process of the StudentInfoView form, allowing hooked in
-# apps to validate the form data and raise ValidationErrors or send warnings
-# (messages) to the user by adding them to the request.
-check_student_info = Signal(''' ['instance', 'formData', 'request', 'registration', 'invoice'] ''')
+# Fires during the clean process of the StudentInfoView form or the
+# MultiRegCustomerNameForm, allowing hooked in apps to validate the form data
+# and raise ValidationErrors or send warnings (messages) to the user by adding
+# them to the request.
+check_student_info = Signal(
+    ''' ['instance', 'data', 'request', 'eventRegs', 'registration', 'invoice'] '''
+)
 
 # Fires after the student info form has been validated and the temporary Registration record
 # has been updated to reflect the submitted information from this form.  Since this signal is

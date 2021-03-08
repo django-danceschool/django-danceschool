@@ -58,11 +58,6 @@ def getBestDiscount(sender, **kwargs):
     if (customer and customer.numEventRegistrations > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
-    if customer:
-        customer_filter = Q(customer=customer)
-    else:
-        customer_filter = Q()
-
     eligible_filter = (
         Q(event__series__pricingTier__isnull=False) |
         Q(event__publicevent__pricingTier__isnull=False)
@@ -80,7 +75,7 @@ def getBestDiscount(sender, **kwargs):
         )
 
     # The items for which the customer registered.
-    eventregs_list = reg.eventregistration_set.filter(customer_filter)
+    eventregs_list = reg.eventregistration_set.all()
     eligible_list = eventregs_list.filter(dropIn=False).filter(eligible_filter)
     ineligible_list = eventregs_list.filter(ineligible_filter)
 
@@ -243,12 +238,8 @@ def getAddonItems(sender, **kwargs):
     if (customer and customer.numEventRegistrations > 0) or sender != RegistrationSummaryView:
         newCustomer = False
 
-    customer_filter = Q(dropIn=False)
-    if customer:
-        customer_filter = customer_filter & Q(customer=customer)
-
     # No need to get all objects, just the ones that could qualify one for an add-on
-    cart_object_list = reg.eventregistration_set.filter(customer_filter).filter(
+    cart_object_list = reg.eventregistration_set.filter(dropIn=False).filter(
         Q(event__series__pricingTier__isnull=False) |
         Q(event__publicevent__pricingTier__isnull=False)
     )

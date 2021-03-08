@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.views.generic import FormView, RedirectView, TemplateView, View
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
@@ -18,7 +18,9 @@ from .models import (
     Event, Series, PublicEvent, Invoice, InvoiceItem, Customer,
     CashPaymentRecord, DanceRole, Registration, EventRegistration
 )
-from .forms import ClassChoiceForm, RegistrationContactForm
+from .forms import (
+    ClassChoiceForm, RegistrationContactForm, MultiRegCustomerNameForm
+)
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
     post_student_info, apply_discount, apply_price_adjustments,
@@ -621,7 +623,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     prior_response=response, request=request
                 )
                 if signal_response.get('status') != 'success':
-                    errors += signal_response.get('errors', [])
+                    # Add the errors but avoid duplicates from things like
+                    # duplicate event registrations.
+                    for error in signal_response.get('errors', []):
+                        errors.append(error) if error not in errors else errors
                 this_item_response.update(signal_response.get('response',{}))
 
             signal_responses = get_invoice_item_related.send(
@@ -963,30 +968,70 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 )
             )
         )):
-            errors.append({
-                'code': 'duplicate_event',
-                'message': _(
-                    'You cannot register more than once for event: {event_name}. '.format(
-                        event_name=this_event.name
-                    ) +
-                    'Please remove the existing item from your cart and try again.'
-                )
-            })
+            this_code = 'duplicate_event_%s' % this_event.id
+
+            if getConstant('registration__multiRegNameFormRule') == 'Y':
+
+                # Add a messages unless one already exists.
+                storage = messages.get_messages(request)
+                existing = [x for x in storage if this_code in x.extra_tags]
+                storage.used = False
+
+                if not existing:
+                    messages.info(
+                        request, gettext(
+                            'Note: You cannot register more than once under the same name ' +
+                            'for event {event_name}. '.format(event_name=this_event.name) +
+                            'Please ensure that you enter the correct names for ' +
+                            'each registration in the next step.'
+                        ),
+                        extra_tags=this_code
+                    )
+            else:
+                errors.append({
+                    'code': this_code,
+                    'message': _(
+                        'You cannot register more than once for event: {event_name}. '.format(
+                            event_name=this_event.name
+                        ) +
+                        'Please remove the existing item from your cart and try again.'
+                    )
+                })
 
         elif (
             len(same_event) > 1 and
             len([x for x in same_event if x.get('dropIn', False) != response['dropIn']]) > 0
         ):
-            errors.append({
-                'code': 'dropin_with_full',
-                'message': _(
-                    'You cannot register as both a drop-in and as a ' +
-                    'full registrant for event: {event_name}. '.format(
-                        event_name=this_event.name
-                    ) +
-                    'Please remove the existing item from your cart and try again.'
-                )
-            })
+            this_code = 'dropin_with_full_%s' % this_event.id
+
+            if getConstant('registration__multiRegNameFormRule') == 'Y':
+
+                # Add a messages unless one already exists.
+                storage = messages.get_messages(request)
+                existing = [x for x in storage if this_code in x.extra_tags]
+                storage.used = False
+
+                if not existing:
+                    messages.info(
+                        request, gettext(
+                            'Note: You cannot register as both a drop-in and as a ' +
+                            'full registrant for event {event_name}. '.format(event_name=this_event.name) +
+                            'Please ensure that you enter the correct names for ' +
+                            'each registration in the next step.'
+                        ),
+                        extra_tags=this_code
+                    )
+            else:
+                errors.append({
+                    'code': this_code,
+                    'message': _(
+                        'You cannot register as both a drop-in and as a ' +
+                        'full registrant for event: {event_name}. '.format(
+                            event_name=this_event.name
+                        ) +
+                        'Please remove the existing item from your cart and try again.'
+                    )
+                })
 
         if not (
             this_event.registrationOpen or
@@ -1330,6 +1375,152 @@ class RegistrationSummaryView(
         return context_data
 
 
+class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
+    '''
+    This page collects additional name and email information needed when there
+    are multiple EventRegistrations associated with an Invoice.  For each 
+
+    '''
+    form_class = MultiRegCustomerNameForm
+    template_name = 'core/multireg_customer_name_form.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        '''
+        Require session data to be set to proceed, otherwise go back to step 1.
+        Because they have the same expiration date, this also implies that the
+        Registration object is not yet expired.
+        '''
+        if REG_VALIDATION_STR not in request.session:
+            return HttpResponseRedirect(reverse('registration'))
+
+        try:
+            self.invoice = Invoice.objects.get(
+                id=self.request.session[REG_VALIDATION_STR].get('invoiceId')
+            )
+        except ObjectDoesNotExist:
+            messages.error(request, _('Invalid invoice identifier passed to sign-up form.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        expiry = parse_datetime(
+            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
+        )
+        if not expiry or expiry < timezone.now():
+            messages.info(request, _('Your registration session has expired. Please try again.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        self.registration = Registration.objects.filter(
+            invoice=self.invoice
+        ).prefetch_related('eventregistration_set').first()
+
+        self.multiReg = (
+            self.registration and
+            self.registration.eventregistration_set.count() > 1
+        )
+
+        if not self.registration or not self.multiReg:
+            messages.error(request, _('Invalid registration passed to additional customer name form.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        reg = self.registration
+
+        payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
+
+        discount_codes, total_discount_amount = self.getDiscounts(
+            self.invoice, registration=reg
+        )
+        addons = self.getAddons(self.invoice, reg)
+
+        # Update totals (without saving anything), so that taxes are
+        # recalculated and the invoice handler knows how much to apply.
+        items_queryset = self.invoice.updateTotals(
+            save=False, allocateAmounts={'total': -1*total_discount_amount}
+        )
+
+        # Get a voucher ID to check from the current contents of the form
+        voucherId = self.invoice.data.get('gift', None)
+
+        if voucherId:
+            context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
+
+            # Recalculate taxes, but do not save the invoice
+            # with the updates, since the voucher will only be applied later.
+            if context_data['voucher'].get('beforeTax'):
+                allocateAmounts = {'total': -1*context_data['voucher'].get('voucherAmount', 0)}
+            else:
+                allocateAmounts = {'adjustments': -1*context_data['voucher'].get('voucherAmount', 0)}
+            items_queryset = self.invoice.updateTotals(
+                save=False, allocateAmounts=allocateAmounts,
+                prior_queryset=items_queryset
+            )
+
+        context_data.update({
+            'invoice': self.invoice,
+            'currencySymbol': getConstant('general__currencySymbol'),
+            'reg': reg,
+            'payAtDoor': payAtDoor,
+            'addonItems': addons,
+            'discount_codes': discount_codes,
+            'discount_code_amount': total_discount_amount,
+        })
+
+        return context_data
+
+    def get_form_kwargs(self, **kwargs):
+        ''' Pass along the request data to the form '''
+        kwargs = super().get_form_kwargs(**kwargs)
+        kwargs['request'] = self.request
+        kwargs['registration'] = self.registration
+        kwargs['invoice'] = self.invoice
+        kwargs['multiReg'] = self.multiReg
+        return kwargs
+
+    def get_success_url(self):
+        return reverse('showRegSummary')
+
+    def form_valid(self, form):
+        '''
+        Even if this form is valid, the handlers for this form may have added messages
+        to the request.  In that case, then the page should be handled as if the form
+        were invalid.  Otherwise, update the session data with the form data and then
+        move to the next view
+        '''
+
+        # The session expires after a period of inactivity that is specified in preferences.
+        expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+        self.request.session[REG_VALIDATION_STR]["invoiceExpiry"] = \
+            expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+        self.request.session.modified = True
+
+        for er in self.registration.eventregistration_set.all():
+            firstName = form.cleaned_data.pop('er_%s_firstName' % er.id)
+            lastName = form.cleaned_data.pop('er_%s_lastName' % er.id)
+            email = form.cleaned_data.pop('er_%s_email' % er.id)
+            phone = form.cleaned_data.pop('er_%s_phone' % er.id, None)
+            student = form.cleaned_data.pop('er_%s_student' % er.id, False)
+
+            customer, created = Customer.objects.update_or_create(
+                first_name=firstName, last_name=lastName,
+                email=email, defaults={'phone': phone}
+            )
+            er.customer = customer
+            er.student = student
+            er.data.update(form.cleaned_data)
+            er.save()
+
+        # This signal allows vouchers to be applied temporarily, and it can
+        # be used for other tasks.  It is sent here because it has not been
+        # sent in the StudentInfoView if we got here.
+        post_student_info.send(
+            sender=StudentInfoView, invoice=self.invoice,
+            registration=self.registration
+        )
+        return HttpResponseRedirect(self.get_success_url())  # Redirect after POST
+
+
 class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
     '''
     This page displays a preliminary total of what is being signed up for, and it also
@@ -1366,7 +1557,20 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
-        self.registration = Registration.objects.filter(invoice=self.invoice).first()
+        self.registration = Registration.objects.filter(
+            invoice=self.invoice
+        ).prefetch_related('eventregistration_set').first()
+
+        multiRegRule = getConstant('registration__multiRegNameFormRule')
+
+        self.multiReg = (
+            self.registration and
+            self.registration.eventregistration_set.count() > 1 and
+            (
+                multiRegRule == 'Y' or
+                (multiRegRule == 'O' and not self.registration.payAtDoor)
+            )
+        )
 
         # Ensure that session data is always updated when this view is called
         # so that passed voucher_ids are cleared.
@@ -1430,6 +1634,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             'addonItems': addons,
             'discount_codes': discount_codes,
             'discount_code_amount': total_discount_amount,
+            'is_multiple_registration': self.multiReg,
         })
 
         return context_data
@@ -1440,9 +1645,12 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         kwargs['request'] = self.request
         kwargs['registration'] = self.registration
         kwargs['invoice'] = self.invoice
+        kwargs['multiReg'] = self.multiReg
         return kwargs
 
     def get_success_url(self):
+        if self.multiReg:
+            return reverse('multiRegNameInfo')
         return reverse('showRegSummary')
 
     def form_valid(self, form):
@@ -1459,30 +1667,30 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
+        # Notice that student and phone are not popped so that they go into the
+        # Invoice data.
         firstName = form.cleaned_data.pop('firstName')
         lastName = form.cleaned_data.pop('lastName')
         email = form.cleaned_data.pop('email')
-        phone = form.cleaned_data.pop('phone', None)
-        student = form.cleaned_data.pop('student', False)
-
-        if firstName and lastName and email:
-            customer, created = Customer.objects.update_or_create(
-                first_name=firstName, last_name=lastName,
-                email=email, defaults={'phone': phone}
-            )
-        else:
-            customer = None
+        phone = form.cleaned_data.get('phone', None)
+        student = form.cleaned_data.get('student', False)
 
         reg = self.registration
         if reg:
-
-            if customer:
-                reg.eventregistration_set.update(customer=customer, student=student)
 
             # Update the expiration date for this registration, and pass in the data from
             # this form.
             reg.comments = form.cleaned_data.pop('comments', None)
             reg.howHeardAboutUs = form.cleaned_data.pop('howHeardAboutUs', None)
+
+            if not self.multiReg:
+                customer, created = Customer.objects.update_or_create(
+                    first_name=firstName, last_name=lastName,
+                    email=email, defaults={'phone': phone}
+                )
+                reg.eventregistration_set.update(
+                    customer=customer, student=student
+                )
 
             invoice = reg.link_invoice(
                 expirationDate=expiry, firstName=firstName, lastName=lastName,
@@ -1506,6 +1714,10 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             invoice.save()
 
         # This signal allows vouchers to be applied temporarily, and it can
-        # be used for other tasks
-        post_student_info.send(sender=StudentInfoView, invoice=invoice, registration=reg)
+        # be used for other tasks.  We only send it here if we are not collecting
+        # additional name information in the next step.
+        if not self.multiReg:
+            post_student_info.send(
+                sender=StudentInfoView, invoice=invoice, registration=reg
+            )
         return HttpResponseRedirect(self.get_success_url())  # Redirect after POST

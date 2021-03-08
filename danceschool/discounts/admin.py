@@ -104,7 +104,7 @@ class DiscountComboAdmin(admin.ModelAdmin):
                 'name', 'category',
                 ('active', 'expirationDate'),
                 'newCustomersOnly', 'studentsOnly', 'daysInAdvanceRequired',
-                'firstXRegistered', 'discountType',
+                'firstXRegistered', 'customerMatchRequired', 'discountType',
             )
         }),
         (_('Flat-Price Discount (in default currency)'), {
@@ -131,6 +131,8 @@ class DiscountComboAdmin(admin.ModelAdmin):
             text.append(_('%s day advance registration' % obj.daysInAdvanceRequired))
         if obj.firstXRegistered:
             text.append(_('First %s to register' % obj.firstXRegistered))
+        if obj.customerMatchRequired:
+            text.append(_('Primary customer registrations only'))
         return ', '.join([str(x) for x in text])
     restrictions.short_description = _('Restrictions')
 

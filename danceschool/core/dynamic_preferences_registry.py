@@ -501,6 +501,29 @@ class MultiRegDropInRule(ChoicePreference):
 
 
 @global_preferences_registry.register
+class MultiRegNameFormRule(ChoicePreference):
+    section = registration
+    name = 'multiRegNameFormRule'
+    choices = [
+        ('Y', _('Always')),
+        ('O', _('Only registrations not at the door')),
+        ('N', _('Never')),
+    ]
+    verbose_name = _('Ask for names associated with each event registration')
+    help_text = _(
+        'When a customer submits more than one event registration at a time, ' +
+        'either for multiple events or multiple times for the same event, the ' +
+        'registration process can request that they confirm the name and ' +
+        'email associated with each individual event registration as an ' +
+        'additional step in the process. If this option is not selected, then ' +
+        'the customer information from Step 2 of the process will be assigned ' +
+        'to each event registration. A "direct" at-the-door registration that ' +
+        'skips Step 2 of the process will also skip this step.'
+    )
+    default = 'Y'
+
+
+@global_preferences_registry.register
 class DoorCheckInRule(ChoicePreference):
     section = registration
     name = 'doorCheckInRule'

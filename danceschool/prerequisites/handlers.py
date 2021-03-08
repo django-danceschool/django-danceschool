@@ -29,7 +29,7 @@ def checkRequirements(sender, **kwargs):
 
     logger.debug('Signal to check RegistrationContactForm handled by prerequisites app.')
 
-    formData = kwargs.get('formData', {})
+    formData = kwargs.get('data', {})
     first = formData.get('firstName')
     last = formData.get('lastName')
     email = formData.get('email')
@@ -43,6 +43,8 @@ def checkRequirements(sender, **kwargs):
     if not registration:
         return
 
+    eventRegs = kwargs.get('eventRegs', [])
+
     customer = Customer.objects.filter(
         first_name=first,
         last_name=last,
@@ -51,7 +53,7 @@ def checkRequirements(sender, **kwargs):
     requirement_warnings = []
     requirement_errors = []
 
-    for ter in registration.eventregistration_set.all():
+    for ter in eventRegs:
         if hasattr(ter.event, 'getRequirements'):
             for req in ter.event.getRequirements():
                 if not req.customerMeetsRequirement(

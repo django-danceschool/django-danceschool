@@ -42,7 +42,7 @@ def checkBanlist(sender, **kwargs):
 
     logger.debug('Signal to check RegistrationContactForm handled by banlist app.')
 
-    formData = kwargs.get('formData', {})
+    formData = kwargs.get('data', {})
     first = formData.get('firstName')
     last = formData.get('lastName')
     email = formData.get('email')
@@ -51,7 +51,7 @@ def checkBanlist(sender, **kwargs):
     session = getattr(request, 'session', {}).get(REG_VALIDATION_STR, {})
     registrationId = getattr(kwargs.get('registration', None), 'id', None)
     invoice = kwargs.get('invoice', None)
-    invoiceId = getattr(invoice, 'id', None)
+    invoiceId = str(getattr(invoice, 'id', ''))
 
     if not registrationId and invoice:
         registrationId = getattr(

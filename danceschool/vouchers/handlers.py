@@ -32,7 +32,7 @@ def checkVoucherField(sender, **kwargs):
     '''
     logger.debug('Signal to check RegistrationContactForm handled by vouchers app.')
 
-    formData = kwargs.get('formData', {})
+    formData = kwargs.get('data', {})
     request = kwargs.get('request', {})
     invoice = kwargs.get('invoice', None)
     registration = kwargs.get('registration', None)

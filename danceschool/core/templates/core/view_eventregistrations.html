@@ -103,7 +103,7 @@
 				<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 				<strong>{% trans "Net Price" %}:</strong>
 				{% if details.grossTotal != details.total %}
-					<a href="" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
 							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }}, 
@@ -129,7 +129,7 @@
 				{% if details.grossTotal != details.total %}
 					<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 					<strong>{% trans "Net Price" %}:</strong>
-					<a href="" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
 							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }}, 

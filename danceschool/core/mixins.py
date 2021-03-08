@@ -615,6 +615,7 @@ class RegistrationAdjustmentsMixin(object):
         '''
 
         from danceschool.core.models import Registration
+        from danceschool.core.classreg import RegistrationSummaryView
 
         if not registration:
             registration = Registration.objects.filter(invoice=invoice).first()
@@ -623,6 +624,13 @@ class RegistrationAdjustmentsMixin(object):
         else:
             initial_price = invoice.grossTotal
 
+        # The discounts app only applies first-time customer discounts in the
+        # final stage, in case the customer information changes.  So, we need
+        # to let it know if this mixin is attached to RegistrationSummaryView.
+        sender = RegistrationAdjustmentsMixin
+        if isinstance(self, RegistrationSummaryView):
+            sender = RegistrationSummaryView
+
         # If the discounts app is enabled, then the return value to this signal
         # will contain information on the discounts to be applied, as well as
         # the total price of discount-ineligible items to be added to the
@@ -630,7 +638,7 @@ class RegistrationAdjustmentsMixin(object):
         # DiscountApplication namedtuple defined in the discounts app, with
         # 'items' and 'ineligible_total' keys.
         discount_responses = request_discounts.send(
-            sender=RegistrationAdjustmentsMixin,
+            sender=sender,
             registration=registration,
             invoice=invoice
         )
