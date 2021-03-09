@@ -144,7 +144,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        permitted_keys = getattr(form, 'permitted_event_keys', ['role', ])
+        permitted_keys = getattr(form, 'permitted_event_keys', ['role',])
 
         # These are prefixes that may be used for events in the form.  Each one
         # corresponds to a polymorphic content type (PublicEvent, Series, etc.)
@@ -154,12 +154,32 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             event_listing = {}
             for key, value in form.cleaned_data.items():
                 if any(x in key for x in event_types) and value:
-                    this_event = {}
+                    # There may be more than one registration per event, but we
+                    # also want only one drop-in registration if possible, to
+                    # avoid issues with automatic event check-ins.
+                    this_event_list = []
+                    this_dropin = {}
                     for y in value:
-                        for k,v in json.loads(y).items():
-                            if k in permitted_keys and k not in this_event:
-                                this_event[k] = v
-                    event_listing[int(key.split("_")[-1])] = this_event
+                        this_value = json.loads(y)
+                        this_event_item = {}
+                        this_quantity = 1
+                        all_keys = list(this_value.keys())
+
+                        # Separate out simple drop-ins into a combined EventRegistration
+                        if len(all_keys) == 1 and all_keys[0].startswith('dropin_'):
+                            this_dropin.update(this_value)
+                        else:
+                            for k,v in this_value.items():
+                                if k == 'quantity':
+                                    this_quantity = int(v)
+                                elif k in permitted_keys and k not in this_event_item:
+                                    this_event_item[k] = v
+                        if this_event_item:
+                            for i in range(this_quantity):
+                                this_event_list.append(this_event_item)
+                    if this_dropin:
+                        this_event_list.append(this_dropin)
+                    event_listing[int(key.split("_")[-1])] = this_event_list
             non_event_listing = {
                 key: value for key, value in form.cleaned_data.items() if
                 not any(x in key for x in event_types)
@@ -192,80 +212,81 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         # from the form submission data.
         self.event_registrations = []
 
-        for key, value in event_listing.items():
+        for key, eventRegs in event_listing.items():
             this_event = associated_events.get(id=key)
 
-            # Check if registration is still feasible based on both completed registrations
-            # and registrations that are not yet complete
-            this_role_id = value.get('role', None) if 'role' in permitted_keys else None
-            soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
+            for value in eventRegs:
+                # Check if registration is still feasible based on both completed registrations
+                # and registrations that are not yet complete
+                this_role_id = value.get('role', None) if 'role' in permitted_keys else None
+                soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
 
-            if soldOut:
-                if self.request.user.has_perm('core.override_register_soldout'):
-                    # This message will be displayed on the Step 2 page by default.
-                    messages.warning(self.request, _(
-                        'Registration for \'%s\' is sold out. ' % this_event.name +
-                        'Based on your user permission level, you may proceed ' +
-                        'with registration.  However, if you do not wish to exceed ' +
-                        'the listed capacity of the event, please do not proceed.'
-                    ))
-                else:
-                    # For users without permissions, don't allow registration for sold out things
-                    # at all.
-                    form.add_error(None, ValidationError(
-                        _(
-                            'Registration for "%s" is tentatively sold out while ' +
-                            'others complete their registration.  Please try ' +
-                            'again later.' % this_event.name
-                        ), code='invalid')
+                if soldOut:
+                    if self.request.user.has_perm('core.override_register_soldout'):
+                        # This message will be displayed on the Step 2 page by default.
+                        messages.warning(self.request, _(
+                            'Registration for \'%s\' is sold out. ' % this_event.name +
+                            'Based on your user permission level, you may proceed ' +
+                            'with registration.  However, if you do not wish to exceed ' +
+                            'the listed capacity of the event, please do not proceed.'
+                        ))
+                    else:
+                        # For users without permissions, don't allow registration for sold out things
+                        # at all.
+                        form.add_error(None, ValidationError(
+                            _(
+                                'Registration for "%s" is tentatively sold out while ' +
+                                'others complete their registration.  Please try ' +
+                                'again later.' % this_event.name
+                            ), code='invalid')
+                        )
+                        return self.form_invalid(form)
+
+                dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
+
+                # If nothing is sold out, then proceed to create Registration and
+                # EventRegistration objects for the items selected by this form.  The
+                # expiration date is set to be identical to that of the session.
+
+                logger.debug('Creating temporary event registration for: %s' % key)
+                if len(dropInList) > 0:
+                    this_price = this_event.getBasePrice(dropIns=len(dropInList))
+                    tr = EventRegistration(
+                        event=this_event, dropIn=True,
                     )
-                    return self.form_invalid(form)
+                else:
+                    this_price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
+                    tr = EventRegistration(
+                        event=this_event, role_id=this_role_id
+                    )
+                # If it's possible to store additional data and such data exist, then store them.
+                tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
+                if dropInList:
+                    tr.data['__dropInOccurrences'] = dropInList
 
-            dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
+                checkin_rule = getConstant('registration__doorCheckInRule')
+                if reg.payAtDoor and checkin_rule == 'E':
+                    # Check into the full event
+                    tr.data['__checkInEvent'] = True
+                elif reg.payAtDoor and checkin_rule == 'O' and dropInList:
+                    # Check into the first upcoming drop-in occurrence
+                    best_occ = tr.event.eventoccurrence_set.filter(
+                        id__in=dropInList,
+                        startTime__gte=ensure_localtime(timezone.now()) - timedelta(minutes=45)
+                    ).first()
+                    tr.data['__checkInOccurrence'] = getattr(best_occ, 'id', None)
+                elif reg.payAtDoor and checkin_rule == 'O':
+                    # Check into the next upcoming occurrence (45 min. grace period)
+                    tr.data['__checkInOccurrence'] = getattr(
+                        tr.event.getNextOccurrence(
+                            ensure_localtime(timezone.now()) - timedelta(minutes=45)
+                        ),
+                        'id',
+                        None
+                    )
 
-            # If nothing is sold out, then proceed to create Registration and
-            # EventRegistration objects for the items selected by this form.  The
-            # expiration date is set to be identical to that of the session.
-
-            logger.debug('Creating temporary event registration for: %s' % key)
-            if len(dropInList) > 0:
-                this_price = this_event.getBasePrice(dropIns=len(dropInList))
-                tr = EventRegistration(
-                    event=this_event, dropIn=True,
-                )
-            else:
-                this_price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
-                tr = EventRegistration(
-                    event=this_event, role_id=this_role_id
-                )
-            # If it's possible to store additional data and such data exist, then store them.
-            tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
-            if dropInList:
-                tr.data['__dropInOccurrences'] = dropInList
-
-            checkin_rule = getConstant('registration__doorCheckInRule')
-            if reg.payAtDoor and checkin_rule == 'E':
-                # Check into the full event
-                tr.data['__checkInEvent'] = True
-            elif reg.payAtDoor and checkin_rule == 'O' and dropInList:
-                # Check into the first upcoming drop-in occurrence
-                best_occ = tr.event.eventoccurrence_set.filter(
-                    id__in=dropInList,
-                    startTime__gte=ensure_localtime(timezone.now()) - timedelta(minutes=45)
-                ).first()
-                tr.data['__checkInOccurrence'] = getattr(best_occ, 'id', None)
-            elif reg.payAtDoor and checkin_rule == 'O':
-                # Check into the next upcoming occurrence (45 min. grace period)
-                tr.data['__checkInOccurrence'] = getattr(
-                    tr.event.getNextOccurrence(
-                        ensure_localtime(timezone.now()) - timedelta(minutes=45)
-                    ),
-                    'id',
-                    None
-                )
-
-            tr.data['__price'] = this_price
-            self.event_registrations.append(tr)
+                tr.data['__price'] = this_price
+                self.event_registrations.append(tr)
 
         # If we got this far with no issues, then save
         invoice = reg.link_invoice(expirationDate=expiry)

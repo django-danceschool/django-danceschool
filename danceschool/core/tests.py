@@ -187,19 +187,6 @@ class RegistrationTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertTrue(response.context_data['form'].errors.get('__all__'))
 
-        # Attempt to sign up for multiple roles for the same series and ensure that it fails
-        post_data = {
-            'series_%s' % s.id: (
-                response.context_data['form'].fields['series_%s' % s.id].choices[0][0],
-                response.context_data['form'].fields['series_%s' % s.id].choices[1][0]
-            )
-        }
-        response = self.client.post(reverse('registration'), post_data, follow=True)
-        self.assertEqual(
-            response.context_data['form'].errors.get('__all__'),
-            ['Must select only one role.', ]
-        )
-
         # Sign up for the series, and check that we proceed to the student information page.
         # Because of the way that roles are encoded on this form, we just grab the value to pass
         # from the form itself.

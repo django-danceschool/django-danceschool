@@ -345,7 +345,10 @@ class ClassChoiceForm(forms.Form):
             )
 
     def clean(self):
-        ''' Check that the registration is not empty. '''
+        '''
+        Check that the registration is not empty and that restrictions on
+        duplicate choices are not being violated.
+        '''
         cleaned_data = super().clean()
         hasContent = False
 
@@ -377,10 +380,16 @@ class ClassChoiceForm(forms.Form):
                             (getConstant('registration__multiRegPublicEventRule') == 'N') or
                             (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
                         ))
+                    ) and (
+                        getConstant('registration__multiRegNameFormRule') == 'N' or
+                        (getConstant('registration__multiRegNameFormRule') == 'O' and payAtDoor)
                     )
                 ):
                     raise ValidationError(_('Must select only one role.'), code='invalid')
-                elif len(roles) >= 1 and len(dropIns) > 0:
+                elif len(roles) >= 1 and len(dropIns) > 0 and (
+                    getConstant('registration__multiRegNameFormRule') == 'N' or
+                    (getConstant('registration__multiRegNameFormRule') == 'O' and payAtDoor)
+                ):
                     raise ValidationError(_(
                         'Cannot register for drop-in classes and also for the entire series.'
                     ), code='invalid')
@@ -416,7 +425,7 @@ class PartnerRequiredForm(forms.Form):
 
         for er in initial:
             this_event_details = er.event.get_real_instance().name
-            if er.role.name:
+            if er.role:
                 this_event_details += ' - %s' % er.role.name
             if er.dropIn:
                 this_event_details += ' - %s' % _('Drop-in')
@@ -425,7 +434,9 @@ class PartnerRequiredForm(forms.Form):
                 'Begins %s' % (ensure_localtime(er.event.startTime).strftime('%a., %B %d, %Y, %I:%M %p'))
             )
 
-            other_ers = initial.filter(event=er.event, customer__isnull=False).exclude(customer=er.customer)
+            other_ers = initial.filter(
+                event=er.event, dropIn=er.dropIn, customer__isnull=False
+            ).exclude(customer=er.customer)
             field_names = []
 
             if other_ers:
@@ -855,7 +866,7 @@ class MultiRegCustomerNameForm(RegistrationForm):
             last_event_id = er.event.id
 
             this_event_details = er.event.get_real_instance().name
-            if er.role.name:
+            if er.role:
                 this_event_details += ' - %s' % er.role.name
             if er.dropIn:
                 this_event_details += ' - %s' % _('Drop-in')
