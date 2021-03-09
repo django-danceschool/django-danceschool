@@ -19,7 +19,8 @@ from .models import (
     CashPaymentRecord, DanceRole, Registration, EventRegistration
 )
 from .forms import (
-    ClassChoiceForm, RegistrationContactForm, MultiRegCustomerNameForm
+    ClassChoiceForm, RegistrationContactForm, MultiRegCustomerNameForm,
+    PartnerRequiredForm
 )
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
@@ -1197,6 +1198,9 @@ class RegistrationSummaryView(
 ):
     template_name = 'core/registration_summary.html'
 
+    # Ensures that customer-specific discounts are applied at this stage
+    customers_final = True
+
     def dispatch(self, request, *args, **kwargs):
         ''' Always check that the temporary registration has not expired '''
         regSession = self.request.session.get(REG_VALIDATION_STR, {})
@@ -1375,6 +1379,150 @@ class RegistrationSummaryView(
         return context_data
 
 
+class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
+    '''
+    When one or more events in a customer's registration have a partner
+    required, this page is used to collect partner name information for each
+    registrant to that event.
+    '''
+    form_class = PartnerRequiredForm
+    template_name = 'core/partner_required_form.html'
+
+    # Ensures that customer-specific discounts are applied at this stage
+    customers_final = True
+
+    def dispatch(self, request, *args, **kwargs):
+        '''
+        Require session data to be set to proceed, otherwise go back to step 1.
+        Because they have the same expiration date, this also implies that the
+        Registration object is not yet expired.
+        '''
+        if REG_VALIDATION_STR not in request.session:
+            return HttpResponseRedirect(reverse('registration'))
+
+        try:
+            self.invoice = Invoice.objects.get(
+                id=self.request.session[REG_VALIDATION_STR].get('invoiceId')
+            )
+        except ObjectDoesNotExist:
+            messages.error(request, _('Invalid invoice identifier passed to sign-up form.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        expiry = parse_datetime(
+            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
+        )
+        if not expiry or expiry < timezone.now():
+            messages.info(request, _('Your registration session has expired. Please try again.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        self.registration = Registration.objects.filter(
+            invoice=self.invoice
+        ).prefetch_related(
+            'eventregistration_set', 'eventregistration_set__event',
+            'eventregistration_set__customer'
+        ).first()
+
+        if not self.registration:
+            messages.error(request, _('Invalid registration passed to additional customer name form.'))
+            return HttpResponseRedirect(reverse('registration'))
+
+        self.partnerRequiredRegs = self.registration.eventregistration_set.filter(
+            event__partnerRequired=True
+        )
+
+        if not self.partnerRequiredRegs:
+            return HttpResponseRedirect(self.get_success_url())
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context_data = super().get_context_data(**kwargs)
+        reg = self.registration
+
+        payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
+
+        discount_codes, total_discount_amount = self.getDiscounts(
+            self.invoice, registration=reg
+        )
+        addons = self.getAddons(self.invoice, reg)
+
+        # Update totals (without saving anything), so that taxes are
+        # recalculated and the invoice handler knows how much to apply.
+        items_queryset = self.invoice.updateTotals(
+            save=False, allocateAmounts={'total': -1*total_discount_amount}
+        )
+
+        # Get a voucher ID to check from the current contents of the form
+        voucherId = self.invoice.data.get('gift', None)
+
+        if voucherId:
+            context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
+
+            # Recalculate taxes, but do not save the invoice
+            # with the updates, since the voucher will only be applied later.
+            if context_data['voucher'].get('beforeTax'):
+                allocateAmounts = {'total': -1*context_data['voucher'].get('voucherAmount', 0)}
+            else:
+                allocateAmounts = {'adjustments': -1*context_data['voucher'].get('voucherAmount', 0)}
+            items_queryset = self.invoice.updateTotals(
+                save=False, allocateAmounts=allocateAmounts,
+                prior_queryset=items_queryset
+            )
+
+        context_data.update({
+            'invoice': self.invoice,
+            'currencySymbol': getConstant('general__currencySymbol'),
+            'reg': reg,
+            'payAtDoor': payAtDoor,
+            'addonItems': addons,
+            'discount_codes': discount_codes,
+            'discount_code_amount': total_discount_amount,
+        })
+
+        return context_data
+
+    def get_form_kwargs(self, **kwargs):
+        ''' Pass along the request data to the form '''
+        kwargs = super().get_form_kwargs(**kwargs)
+        kwargs['partnerRequiredRegs'] = self.partnerRequiredRegs
+        return kwargs
+
+    def get_success_url(self):
+        return reverse('showRegSummary')
+
+    def form_valid(self, form):
+        '''
+        Even if this form is valid, the handlers for this form may have added messages
+        to the request.  In that case, then the page should be handled as if the form
+        were invalid.  Otherwise, update the session data with the form data and then
+        move to the next view
+        '''
+
+        # The session expires after a period of inactivity that is specified in preferences.
+        expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+        self.request.session[REG_VALIDATION_STR]["invoiceExpiry"] = \
+            expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+        self.request.session.modified = True
+
+        for er in self.partnerRequiredRegs:
+            partner_data = {
+                'firstName': form.cleaned_data.pop('er_%s_partner_firstName' % er.id),
+                'lastName': form.cleaned_data.pop('er_%s_partner_lastName' % er.id)
+            }
+
+            customerId = form.cleaned_data.pop('er_%s_partner_customerId' % er.id, None)
+            if not Customer.objects.filter(id=customerId).exists():
+                customerId = None
+
+            if customerId:
+                partner_data['customerId'] = customerId
+
+            er.data['partner'] = partner_data
+            er.save()
+
+        return HttpResponseRedirect(self.get_success_url())  # Redirect after POST
+
+
 class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
     '''
     This page collects additional name and email information needed when there
@@ -1420,6 +1568,10 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
         if not self.registration or not self.multiReg:
             messages.error(request, _('Invalid registration passed to additional customer name form.'))
             return HttpResponseRedirect(reverse('registration'))
+
+        self.partnerRequired = self.registration.eventregistration_set.filter(
+            event__partnerRequired=True
+        ).exists()
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1479,6 +1631,8 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
         return kwargs
 
     def get_success_url(self):
+        if self.partnerRequired:
+            return reverse('partnerRequiredForm')
         return reverse('showRegSummary')
 
     def form_valid(self, form):
@@ -1572,6 +1726,13 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             )
         )
 
+        self.partnerRequired = (
+            self.registration and 
+            self.registration.eventregistration_set.filter(
+                event__partnerRequired=True
+            ).exists()
+        )
+
         # Ensure that session data is always updated when this view is called
         # so that passed voucher_ids are cleared.
         request.session.modified = True
@@ -1651,6 +1812,8 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
     def get_success_url(self):
         if self.multiReg:
             return reverse('multiRegNameInfo')
+        elif self.partnerRequired:
+            return reverse('partnerRequiredForm')
         return reverse('showRegSummary')
 
     def form_valid(self, form):

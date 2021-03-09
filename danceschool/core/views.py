@@ -238,17 +238,20 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
             'id', 'dropIn', 'refundFlag', 'warningFlag',
-            'checkedIn', 'occurrenceId', 'occurrenceStartTime',
+            'checkedIn', 'occurrenceId', 'occurrenceStartTime', 'student',
+            ('customer', ['id', 'fullName', 'email', 'numClassSeries']),
             ('event', ['id', 'name', 'url',]),
             ('registration', [
-                'id', 'student', 'refundFlag',
-                'fullName', 'grossTotal', 'total', 'discounted', 'url',
-                ('customer', ['id', 'fullName', 'email', 'numClassSeries']),
-                ('invoice', ['id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees', 'outstandingBalance', 'statusLabel', 'url']),
+                'id', 'refundFlag', 'grossTotal', 'total', 'discounted', 'url',
+                ('invoice', [
+                    'id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees',
+                    'outstandingBalance', 'statusLabel', 'url'
+                ]),
             ]),
             ('invoiceItem', [
-                'id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees', 'revenueMismatch', 'revenueNotYetReceived',
-                'revenueReceived', 'revenueReported'
+                'id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees',
+                'revenueMismatch', 'revenueNotYetReceived', 'revenueReceived',
+                'revenueReported'
             ]),
             ('role', ['id', 'name']),
         ]

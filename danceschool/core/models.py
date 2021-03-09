@@ -849,6 +849,14 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     capacity = models.PositiveIntegerField(_('Event capacity'), null=True, blank=True)
 
+    partnerRequired = models.BooleanField(
+        _('Partner required'), default=False,
+        help_text=_(
+            'If checked, then customers will be prompted to enter the name of ' +
+            'their partner when registering.'
+        ),
+    )
+
     # These were formerly methods that were given a property decorator, but
     # we need to store them in the DB so that we can have individual class pages
     # without lots of overhead (we would have to pull the whole set of classes

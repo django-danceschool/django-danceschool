@@ -8,7 +8,7 @@ from .classreg import (
     RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
     ClassRegistrationReferralView, RegistrationSummaryView, StudentInfoView,
     AjaxClassRegistrationView, SingleClassRegistrationReferralView,
-    MultiRegCustomerNameView
+    MultiRegCustomerNameView, PartnerRequiredView
 )
 from .ajax import ProcessCheckInView
 
@@ -50,6 +50,7 @@ urlpatterns = [
     # These views handle the remaining steps of the registration process
     path('getinfo/', StudentInfoView.as_view(), name='getStudentInfo'),
     path('getinfo/names/', MultiRegCustomerNameView.as_view(), name='multiRegNameInfo'),
+    path('getinfo/partners/', PartnerRequiredView.as_view(), name='partnerRequiredForm'),
     path('summary/', RegistrationSummaryView.as_view(), name='showRegSummary'),
 
     # These are the URLs affiliated with viewing registrations and check-in

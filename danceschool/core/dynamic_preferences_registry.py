@@ -583,6 +583,15 @@ class AllowAjaxSignin(BooleanPreference):
     )
     default = True
 
+@global_preferences_registry.register
+class AddStudentField(BooleanPreference):
+    section = registration
+    name = 'addStudentField'
+    verbose_name = _('Include a "student" checkbox in the registration process')
+    help_text = _(
+        'If checked, then this checkbox can be used to offer student discounts.'
+    )
+    default = True
 
 @global_preferences_registry.register
 class RegistrationSessionExpiryMinutes(IntegerPreference):

@@ -1,0 +1,105 @@
+{% extends "cms/home.html" %}
+{% load crispy_forms_tags i18n sekizai_tags static %}
+
+{% block title %}{% trans "Partner Information Required" %}{% endblock %}
+
+{% block body_id %}classes{% endblock %}
+
+{% block content %}
+	{% block summary %}
+		<div class="card card-body bg-light pb-0">
+			<h5 class="card-title">{% trans "You've selected:" %}</h5>
+
+			<table class="table">
+			<tbody>
+			{% for item in invoice.invoiceitem_set.all %}
+				<tr>
+					{% if item.eventRegistration %}
+						<td>{% if item.eventRegistration.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.eventRegistration.event.name }}{% if item.eventRegistration.role %} - {{ item.eventRegistration.role.name }}{% endif %}</td>
+					{% else %}
+					<td>{{ item.description }}</td>
+					{% endif %}
+					<td>{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
+				</tr>
+			{% endfor %}
+			</tbody>
+			{% if addonItems %}
+			<tbody>
+				{% for addon in addonItems %}
+				<tr class="addons">
+					<td><strong>{% trans "Free Add-On" %}:</strong> {{ addon }}</td><td></td>
+				</tr>
+				{% endfor %}
+			</tbody>
+			{% endif %}
+			{% if discount_code_amount > 0 %}
+			<tbody>
+				{% for code in discount_codes %}
+					<tr>
+						<td><strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}</td>
+						<td>-{{ currencySymbol }}{{ code.2|floatformat:2 }}</td>
+					</tr>
+				{% endfor %}
+			</tbody>
+			{% endif %}
+			{% if voucher and voucher.beforeTax %}
+			<tbody>
+				<tr>
+					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
+					<td>-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+				</tr>
+			</tbody>
+			{% endif %}
+			{% if invoice.taxes and invoice.buyerPaysSalesTax %}
+			<tbody>
+				<tr>
+					<th><em>{% trans "Taxes" %}</em></th>
+					<th>{{ currencySymbol }}{{ invoice.taxes|floatformat:2 }}</th>
+				</tr>
+			</tbody>
+			{% endif %}
+			{% if voucher and not voucher.beforeTax %}
+			<tbody>
+				<tr>
+					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
+					<td>-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+				</tr>
+			</tbody>
+			{% endif %}
+			<tbody>
+				<tr style="font-size: 1.2em;">
+					<th><em>{% trans "Subtotal" %}:</em></th>
+					<th>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:2 }}</th>
+				</tr>
+			</tbody>
+
+			</table>
+		</div>
+	{% endblock %}
+
+	{# Display any warning or error messages associated with the previous form submission #}
+	<div id="message-alerts">
+    {% for message in messages %}
+	    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+    {% endfor %}
+    </div>
+
+
+	{% block form %}
+		<h3 class="mt-5 mb-3">{% trans "Step 3: Additional Partner Information Required" %}</h3>
+
+		<p>{% blocktrans %}
+		One or more events that you are registering for require a partner. Please
+		select or enter the name of the dance partner for each person registering.
+		{% endblocktrans %}</p>
+
+		<form action="" method="post">
+			{% csrf_token %}
+			{% crispy form %}
+		</form>
+	{% endblock %}
+
+	{% addtoblock "js" %}
+	<script src='{% static "js/partner_required_form.js" %}'></script>
+	{% endaddtoblock %}
+{% endblock %}

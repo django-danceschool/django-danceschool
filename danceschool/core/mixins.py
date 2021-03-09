@@ -551,6 +551,10 @@ class RegistrationAdjustmentsMixin(object):
     it; that should be done in the view itself.
     '''
 
+    # This should be overriden by subclasses where the customer information has
+    # been finalized so that customer-specific discounts and addons can be found.
+    customers_final = False
+
     def getVoucher(
         self, voucherId, invoice, prior_adjustment=0, first_name=None, last_name=None, email=None
     ):
@@ -615,7 +619,6 @@ class RegistrationAdjustmentsMixin(object):
         '''
 
         from danceschool.core.models import Registration
-        from danceschool.core.classreg import RegistrationSummaryView
 
         if not registration:
             registration = Registration.objects.filter(invoice=invoice).first()
@@ -628,8 +631,6 @@ class RegistrationAdjustmentsMixin(object):
         # final stage, in case the customer information changes.  So, we need
         # to let it know if this mixin is attached to RegistrationSummaryView.
         sender = RegistrationAdjustmentsMixin
-        if isinstance(self, RegistrationSummaryView):
-            sender = RegistrationSummaryView
 
         # If the discounts app is enabled, then the return value to this signal
         # will contain information on the discounts to be applied, as well as
@@ -640,7 +641,8 @@ class RegistrationAdjustmentsMixin(object):
         discount_responses = request_discounts.send(
             sender=sender,
             registration=registration,
-            invoice=invoice
+            invoice=invoice,
+            customer_final=self.customers_final
         )
         discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 
@@ -681,7 +683,8 @@ class RegistrationAdjustmentsMixin(object):
         addon_responses = apply_addons.send(
             sender=RegistrationAdjustmentsMixin,
             invoice=invoice,
-            registration=registration
+            registration=registration,
+            customer_final=self.customers_final
         )
         addons = []
         for response in addon_responses:

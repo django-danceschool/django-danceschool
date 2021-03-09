@@ -12,7 +12,6 @@ from danceschool.core.signals import (
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.models import Customer, EventRegistration, Registration
-from danceschool.core.classreg import RegistrationSummaryView
 
 from .helpers import getApplicableDiscountCombos
 from .models import DiscountCombo, RegistrationDiscount
@@ -41,6 +40,8 @@ def getBestDiscount(sender, **kwargs):
 
     reg = kwargs.pop('registration', None)
     invoice = kwargs.get('invoice', None)
+    customer_final = kwargs.pop('customer_final', False)
+
     if not reg:
         reg = Registration.objects.filter(invoice=invoice).first()
 
@@ -55,7 +56,7 @@ def getBestDiscount(sender, **kwargs):
     customer = Customer.objects.filter(
         email=invoice.email, first_name=invoice.firstName, last_name=invoice.lastName
     ).first()
-    if (customer and customer.numEventRegistrations > 0) or sender != RegistrationSummaryView:
+    if (customer and customer.numEventRegistrations > 0) or not customer_final:
         newCustomer = False
 
     eligible_filter = (
@@ -224,6 +225,8 @@ def getAddonItems(sender, **kwargs):
 
     reg = kwargs.pop('registration', None)
     invoice = kwargs.get('invoice', None)
+    customer_final = kwargs.pop('customer_final', False)
+
     if not reg:
         reg = Registration.objects.filter(invoice=invoice).first()
 
@@ -235,7 +238,7 @@ def getAddonItems(sender, **kwargs):
     customer = Customer.objects.filter(
         email=invoice.email, first_name=invoice.firstName, last_name=invoice.lastName
     ).first()
-    if (customer and customer.numEventRegistrations > 0) or sender != RegistrationSummaryView:
+    if (customer and customer.numEventRegistrations > 0) or not customer_final:
         newCustomer = False
 
     # No need to get all objects, just the ones that could qualify one for an add-on

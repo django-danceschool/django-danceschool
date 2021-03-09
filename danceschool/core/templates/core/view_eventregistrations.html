@@ -9,6 +9,7 @@
 	<dt>{% trans "Total Students" %}:</dt><dd>{{ event.numRegistered }}</dd>
 	<dt>{% trans "Location" %}:</dt><dd>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</dd>
 	<dt>{% trans "Time" %}:</dt><dd>{{ event.startTime|date:'l, h:i A' }}</dd>
+	<dt>{% trans "Partner Required" %}:</dt><dd>{{ event.partnerRequired|yesno }}</dd>
 </dl>
 
 {% if 'core.checkin_customers' in perms %}
@@ -34,6 +35,7 @@
 		{% endif %}
 		<th>{% trans "Customer" %}</th>
 		<th>{% trans "Reg. Details" %}</th>
+		{% if event.partnerRequired %}<th>{% trans "Partner" %}</th>{% endif %}
 		<th>{% trans "Event Pricing" %}</th>
 		<th>{% trans "Total Payment" %}</th>
 		<th>{% trans "All-Time Classes" %}</th>
@@ -74,6 +76,16 @@
 			{% if reg.registration.payAtDoor %}<strong>{% trans "Door registration" %}</strong><br />{% endif %}
 			{% if reg.registration.student %}<strong>{% trans "Student status" %}</strong>{% endif %}
 		</td>
+
+		{% if event.partnerRequired %}
+		<td>
+			{% if reg.data.partner %}
+				{{ reg.data.partner.firstName }} {{ reg.data.partner.lastName }}
+			{% else %}
+				{% trans "N/A" %}
+			{% endif %}
+		</td>
+		{% endif %}
 
 		<td {% if reg.warningFlag %}class="warning"{% elif reg.refundFlag %}class="info"{% endif %}>
 			{% if reg.discounted or reg.warningFlag %}

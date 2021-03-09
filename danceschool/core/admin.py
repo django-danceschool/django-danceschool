@@ -229,10 +229,10 @@ class EventRegistrationInline(admin.StackedInline):
     extra = 0
     fields = [
         'customer', 'event', 'role', 'cancelled', 'dropIn', 'occurrences',
-        'item_grossTotal', 'item_total'
+        'item_grossTotal', 'item_total', 'partner_name'
     ]
-    add_readonly_fields = ['item_grossTotal', 'item_total',]
-    readonly_fields = ['customer', 'event', 'item_grossTotal', 'item_total', 'dropIn', 'occurrences']
+    add_readonly_fields = ['item_grossTotal', 'item_total', 'partner_name']
+    readonly_fields = ['customer', 'event', 'item_grossTotal', 'item_total', 'dropIn', 'occurrences', 'partner_name']
     autocomplete_fields = ['customer', ]
 
     def has_add_permission(self, request, obj=None):
@@ -264,6 +264,24 @@ class EventRegistrationInline(admin.StackedInline):
     def item_total(self, obj):
         return getattr(obj.invoiceItem, 'total', None)
     item_total.short_description = _('Total billed amount')
+
+    def partner_name(self, obj):
+        if obj.event.partnerRequired and obj.data.get('partner', {}):
+            name = ' '.join([
+                obj.data['partner'].get('firstName',''),
+                obj.data['partner'].get('lastName',''),
+            ])
+            customerId = obj.data['partner'].get('customerId')
+
+            if customerId:
+                change_url = reverse('admin:core_customer_change', args=(customerId, ))
+                return mark_safe(
+                    '<a href="%s">%s</a>' % (change_url, name or _('N/A'))
+                )
+            return name or _('N/A')
+        return _('N/A')
+
+    partner_name.short_description = _('Partner')
 
 
 class EventOccurrenceInlineForm(ModelForm):
@@ -1025,7 +1043,8 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         (None, {
             'fields': (
                 'classDescription', ('location', 'room'), 'pricingTier',
-                ('category', 'session', 'allowDropins'), ('uuidLink', )
+                ('category', 'session'), ('partnerRequired', 'allowDropins',),
+                ('uuidLink', )
             ),
         }),
         (_('Override Display/Registration/Capacity'), {
@@ -1123,7 +1142,10 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('title', 'slug', 'category', 'session', ('location', 'room'), )
+            'fields': (
+                'title', 'slug', 'category', 'session', 'partnerRequired',
+                ('location', 'room'),
+            )
         }),
         (_('Registration/Visibility'), {
             'fields': ('status', ('pricingTier', 'capacity'), ),

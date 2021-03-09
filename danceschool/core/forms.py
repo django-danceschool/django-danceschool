@@ -388,6 +388,165 @@ class ClassChoiceForm(forms.Form):
             raise ValidationError(_('Must register for at least one class or series.'))
 
 
+class PartnerRequiredForm(forms.Form):
+    '''
+    When one or more events in a customer's registration have a partner
+    required, this page is used to collect partner name information for each
+    registrant to that event.
+    '''
+
+    def __init__(self, *args, **kwargs):
+        self._parterRequiredRegs = kwargs.pop('partnerRequiredRegs', False)
+        super().__init__(*args, **kwargs)
+
+        # Setting use_custom_control to False to avoid issues with
+        # django-crispy-forms Bootstrap integration.
+        self.helper = FormHelper()
+        self.helper.use_custom_control = False
+        self.helper.form_method = 'post'
+        self.helper.form_tag = False  # Our template must explicitly include the <form tag>
+
+        # Hold information needed to lay out additional name fields
+        reg_name_fields = []
+
+        initial = self._parterRequiredRegs.annotate(
+            firstName=F('customer__first_name'),
+            lastName=F('customer__last_name'),
+        ).order_by('event__startTime', 'event__id', 'id')
+
+        for er in initial:
+            this_event_details = er.event.get_real_instance().name
+            if er.role.name:
+                this_event_details += ' - %s' % er.role.name
+            if er.dropIn:
+                this_event_details += ' - %s' % _('Drop-in')
+
+            this_event_date = _(
+                'Begins %s' % (ensure_localtime(er.event.startTime).strftime('%a., %B %d, %Y, %I:%M %p'))
+            )
+
+            other_ers = initial.filter(event=er.event, customer__isnull=False).exclude(customer=er.customer)
+            field_names = []
+
+            if other_ers:
+                self.fields['er_%s_partner_customerId' % er.id] = forms.ChoiceField(
+                    choices = (
+                        [(x.customer.id, x.customer.fullName) for x in other_ers] +
+                        [(0, _('Other')),]
+                    ), label=_('Partner'), required=True, widget=forms.RadioSelect
+                )
+                field_names.append(('er_%s_partner_customerId' % er.id, _('Partner')))
+
+            self.fields.update({
+                'er_%s_partner_firstName' % er.id: forms.CharField(
+                    label=False, required=False,
+                ),
+                'er_%s_partner_lastName' % er.id: forms.CharField(
+                    label=False, required=False,
+                ),
+            })
+            field_names += [
+                ('er_%s_partner_firstName' % er.id, _('First Name')),
+                ('er_%s_partner_lastName' % er.id, _('Last Name')),
+            ]
+
+            reg_name_fields.append({
+                'event_details': this_event_details,
+                'event_date': this_event_date,
+                'field_names': field_names
+            })       
+
+        self.helper.layout = Layout(
+            self.get_top_layout(),
+            self.get_name_layout(reg_name_fields),
+            Submit('submit', _('Complete Registration'), css_class='my-2')
+        )
+
+    def get_top_layout(self):
+        pass
+
+    def get_name_layout(self, reg_name_fields):
+        '''
+        Fields for additional names as needed when there are multiple
+        EventRegistrations for the same event.
+        '''
+        rows = [
+            Div(
+                Div(
+                    Div(
+                        HTML('<strong>%s</strong>' % er_info.pop('event_details', '')),
+                        HTML('<br /><small>%s</small>' % er_info.pop('event_date', '')),
+                        css_class='col-lg'
+                    ),
+                    *[Field(x[0], placeholder=x[1], wrapper_class='col-lg') for x in er_info.get('field_names', [])],
+                    css_class='form-row'
+                ),
+                css_class='list-group-item'
+            ) for er_info in reg_name_fields
+        ]
+
+        return Layout(
+            Div(
+                Div(*rows, css_class='list-group'),
+                css_class='card'
+            )
+        )
+
+    def clean(self):
+        '''
+        Prevent the same partner from being listed for multiple event
+        registrations.  If a customer ID is passed, then use the name information
+        for that customer in place of whatever is in the name field.
+        '''
+
+        super().clean()
+
+        partners = {}
+        for er in self._parterRequiredRegs:
+            if not partners.get(er.event, None):
+                partners[er.event] = []
+
+            this_partner = {
+                'customerId': int(self.cleaned_data.get('er_%s_partner_customerId' % er.id, 0)),
+                'firstName': self.cleaned_data.get('er_%s_partner_firstName' % er.id),
+                'lastName': self.cleaned_data.get('er_%s_partner_lastName' % er.id),
+            }
+
+            if not this_partner['customerId'] and not this_partner['firstName']:
+                self.add_error(
+                    'er_%s_partner_firstName' % er.id,
+                    _('This field is required.')
+                )
+            if not this_partner['customerId'] and not this_partner['lastName']:
+                self.add_error(
+                    'er_%s_partner_lastName' % er.id,
+                    _('This field is required.')
+                )
+            if this_partner['customerId']:
+                this_customer = Customer.objects.filter(
+                    eventregistration__in=self._parterRequiredRegs,
+                    id=this_partner['customerId']
+                ).first()
+                if not this_customer:
+                    self.add_error(
+                        'er_%s_partner_customerId' % er.id, _('Invalid customer')
+                    )
+                else:
+                    self.cleaned_data['er_%s_partner_firstName' % er.id] = this_customer.first_name
+                    self.cleaned_data['er_%s_partner_lastName' % er.id] = this_customer.last_name
+                    this_partner['firstName'] = this_customer.first_name
+                    this_partner['lastName'] = this_customer.last_name
+
+            if this_partner in partners[er.event]:
+                self.add_error('er_%s_partner_customerId' % er.id, _(
+                    'The same person cannot be the partner for multiple ' +
+                    'registrants. Please enter another name.'
+                ))
+            else:
+                partners[er.event].append(this_partner)
+ 
+        return self.cleaned_data
+
 class RegistrationForm(forms.Form):
     '''
     A generic superclass that provides common methods for initialization and
@@ -581,8 +740,12 @@ class RegistrationContactForm(RegistrationForm):
         return top_layout
 
     def get_mid_layout(self):
+        fields = ['agreeToPolicies',]
+        if getConstant('registration__addStudentField'):
+            fields += ['student',]
+
         mid_layout = Layout(
-            Div('agreeToPolicies', 'student', css_class='card card-body bg-light my-2'),
+            Div(*fields, css_class='card card-body bg-light my-2'),
         )
         return mid_layout
 
@@ -715,21 +878,25 @@ class MultiRegCustomerNameForm(RegistrationForm):
                 'er_%s_email' % er.id: forms.EmailField(
                     label=False, required=True, initial=er.email
                 ),
-                'er_%s_student' % er.id: forms.BooleanField(
-                    label=_('Student'), required=False, initial=er.student
-                ),
             })
+
+            field_names = [
+                ('er_%s_isMe' % er.id, ''),
+                ('er_%s_firstName' % er.id, _('First Name')),
+                ('er_%s_lastName' % er.id, _('Last Name')),
+                ('er_%s_email' % er.id, _('Email')),
+            ]
+
+            if getConstant('registration__addStudentField'):
+                self.fields['er_%s_student' % er.id] = forms.BooleanField(
+                    label=_('Student'), required=False, initial=er.student
+                )
+                field_names.append(('er_%s_student' % er.id, ''))
 
             reg_name_fields.append({
                 'event_details': this_event_details,
                 'event_date': this_event_date,
-                'field_names': [
-                    ('er_%s_isMe' % er.id, ''),
-                    ('er_%s_firstName' % er.id, _('First Name')),
-                    ('er_%s_lastName' % er.id, _('Last Name')),
-                    ('er_%s_email' % er.id, _('Email')),
-                    ('er_%s_student' % er.id, ''),
-                ],
+                'field_names': field_names,
             })       
 
         self.helper.layout = Layout(
