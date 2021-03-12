@@ -35,6 +35,10 @@
             </small>
           </div>
 
+          {% if event.partnerRequired %}
+          <div class="card-text reg-partner-required">{% trans "Partner required" %}</div>
+          {% endif %}
+
           {% if event.url %}
             <small><a href="{{ event.url }}">{% trans "more info" %}</a></small>
           {% endif %}
