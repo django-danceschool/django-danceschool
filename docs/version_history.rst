@@ -1,6 +1,21 @@
 Version History
 ===============
 
+0.9.2 - March 13, 2021
+-------------------------
+
+- Customer information has been moved from the Registration to the EventRegistration level, allowing several registration improvements
+- **New**: Multiple registrations for the same event by different customers, with customer information collected for each.  If multiple event registrations, then the registration process proceeds to an additional step to ensure that you collect the correct customer information for each registration.  This additional stap can be disabled through a site preference if specific customer information is not required.
+- **New**: Events can be designated "partner required," in which case partner name information is collected during registration and reported on the "View registrations" page.
+- Registration page now has "spinner" quantity inputs by default.  Old style checkboxes can still be chosen through a site preference.
+- Registration page input widgets are now in templates and therefore easier to customize.
+- "Register now" button is now sticky at the top of the main registration page.
+- The "I am a student" checkbox on Step 2 of the registration process can now be disabled using a site preference (so no need to create a custom view for this).
+- Fixed error with flat price discounts.
+- Fixed issue where 0 could be entered on a firstXRegistered discount to effectively disable it.
+- Miscellaneous registration interface improvements.
+
+
 0.9.1 - February 25, 2021
 -------------------------
 
