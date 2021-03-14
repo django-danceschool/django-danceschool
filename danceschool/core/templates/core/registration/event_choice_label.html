@@ -1,0 +1,13 @@
+{% load danceschool_tags i18n %}
+
+{% with subwidget.attrs|get_item:"data-type" as type %}
+    {% if type == "dropIn" %}
+        {% trans "Drop-in" %}: {{ subwidget.attrs|get_item:"data-occurrence-start-time"|date:"M. jS" }}
+        {% if subwidget.attrs|get_item:"data-sold-out" %}({% trans "Sold out!" %}){% endif %}
+        {% elif type == "role" %}
+        {{ subwidget.attrs|get_item:"data-role-plural-name" }}
+        {% if subwidget.attrs|get_item:"data-sold-out" %}{% trans "Sold out!" %}{% else %}({{ subwidget.attrs|get_item:"data-num-registered" }}){% endif %}
+    {% else %}
+        {% if subwidget.attrs|get_item:"data-sold-out" %}{% trans "Sold out!" %}{% else %}{% trans "Register" %} ({{ subwidget.attrs|get_item:"data-num-registered" }}){% endif %}
+    {% endif %}
+{% endwith %}

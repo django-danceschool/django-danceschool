@@ -71,7 +71,7 @@
             {% endif %}
 
             <div id="classes">
-              <div id="validation">
+              <div id="validation" {% if form.non_field_errors %}class="alert alert-danger"{% endif %}>
                 {{ form.non_field_errors }}
               </div>
 
@@ -157,7 +157,11 @@
           });
       </script>
     {% endaddtoblock %}
+
+    {% addtoblock "js" %}
+        {{ form.media }}
+    {% endaddtoblock %}
+
+    {% endblock %}
+
   {% endblock %}
-
-
-{% endblock %}

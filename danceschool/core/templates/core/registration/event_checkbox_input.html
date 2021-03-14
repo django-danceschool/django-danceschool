@@ -1,0 +1,8 @@
+<div class="form-group row mb-2 text-right">
+    <div class="col">
+    <label for="{{ widget.attrs.id }}">
+        {% include "core/registration/event_choice_label.html" %}
+    </label>&nbsp;
+    <input type="{{ widget.type }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+    </div>
+</div>

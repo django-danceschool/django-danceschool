@@ -44,7 +44,7 @@
           {% endif %}
         </div>
       </div>
-      <div class="col-lg-9 col-md-8">
+      <div class="col-lg-8 col-md-6">
         {% if showDescriptionRule == "all" %}
           {{ event.classDescription.description }}
         {% elif showDescriptionRule != "0" %}
@@ -69,7 +69,7 @@
           {% endif %}
         </div>
       </div>
-      <div class="col-auto ml-md-auto mt-4 mt-md-0 reg-event-register">
+      <div class="col-lg-4 col-md-6 ml-md-auto mt-4 mt-md-0 reg-event-register">
         {% if event.registrationOpen %}
           {# if event registration is still open then show the registration form#}
           {% get_field_for_object event.polymorphic_ctype.model event.id form as field %}
@@ -93,7 +93,6 @@
       {% if event.soldOut %}
         <div class="col-12 reg-event-soldout">
           <h5 class="card-title">{% trans "Sold Out!" %}</h5>
-          <h6 class="card-subtitle">{% trans "Please join us for another class, or schedule a private lesson!" %}</h6>
         </div>
         {% if perms.core.override_register_closed %}
           <div class="col-auto">

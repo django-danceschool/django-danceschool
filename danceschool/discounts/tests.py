@@ -69,9 +69,9 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         # Sign up for the series, and check that we proceed to the student information page.
         # Because of the way that roles are encoded on this form, we just grab the value to pass
         # from the form itself.
-        post_data = {
-            'series_%s' % s.id: response.context_data['form'].fields['series_%s' % s.id].choices[0][0]
-        }
+        post_data = {'series_%s_%s' % (
+            s.id, response.context_data['form'].fields['series_%s' % s.id].field_choices[0].get('value')
+        ): [1,]}
 
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])

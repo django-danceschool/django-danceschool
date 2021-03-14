@@ -436,6 +436,23 @@ class ShowDescriptionRule(ChoicePreference):
 
 
 @global_preferences_registry.register
+class RegistrationWidgetType(ChoicePreference):
+    section = registration
+    name = 'widgetType'
+    choices = [
+        ('AC', _('Checkboxes')),
+        ('AQ', _('Quantity Inputs')),
+        ('SC', _('Checkboxes for Class Series, Quantity Inputs for Other Events')),
+        ('SQ', _('Quantity Inputs for Class Series, Checkboxes for Other Events')),
+    ]
+    verbose_name = _('Input field type for registration page')
+    help_text = _(
+        'This widget is diplayed for each option on the registration page'
+    )
+    default = 'AQ'
+
+
+@global_preferences_registry.register
 class MultiRegSeriesRule(ChoicePreference):
     section = registration
     name = 'multiRegSeriesRule'

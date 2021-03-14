@@ -1,13 +1,12 @@
 from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db.models import Q, F, Count
 from django.utils.encoding import force_str
-from django.forms.widgets import CheckboxSelectMultiple, CheckboxInput, mark_safe, Select
-from django.utils.html import conditional_escape, format_html
+from django.forms.widgets import mark_safe, Select
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _, gettext
-from django.template.loader import render_to_string
 
 from itertools import chain
 from crispy_forms.helper import FormHelper
@@ -73,144 +72,186 @@ class LocationWithDataWidget(Select):
                            force_str(option_label))
 
 
-class CheckboxSelectMultipleWithDisabled(CheckboxSelectMultiple):
-    """
-    Subclass of Django's checkbox select multiple widget that allows disabling checkbox-options,
-    as well as marking some options as subject to override. To disable an option, pass a dict
-    instead of a string for its label, of the form: {'label': 'option label', 'disabled': True}.
-    To make an option part of a separate "override" choice set, add a dictionary key {'override': True}
-    """
-
-    def render(self, name, value, attrs=None, choices=(), renderer=None):
-        if value is None:
-            value = []
-        has_id = attrs and 'id' in attrs
-        final_attrs = self.build_attrs(attrs, extra_attrs={'name': name})
-        output = [u'', ]
-
-        # Separate out regular choices and override-only choices
-        all_choices = list(chain(self.choices, choices))
-
-        override_choices = [
-            x for x in all_choices if
-            isinstance(x[1], dict) and
-            'override' in x[1].keys() and
-            x[1]['override']
-        ]
-
-        regular_choices = [
-            x for x in all_choices if x not in override_choices
-        ]
-
-        # Normalize to strings
-        str_values = set([force_str(v, encoding='utf-8') for v in value])
-
-        if regular_choices:
-            output.append(u'<ul class="list-unstyled">')
-
-            for i, (option_value, option_label) in enumerate(regular_choices):
-                if 'disabled' in final_attrs:
-                    del final_attrs['disabled']
-                if isinstance(option_label, dict):
-                    if dict.get(option_label, 'disabled'):
-                        final_attrs = dict(final_attrs, disabled='disabled')
-                    option_label = option_label['label']
-                # If an ID attribute was given, add a numeric index as a suffix,
-                # so that the checkboxes don't all have the same ID attribute.
-                if has_id:
-                    final_attrs = dict(final_attrs, id='%s_%s' % (attrs['id'], i))
-                    label_for = u' for="%s"' % final_attrs['id']
-                else:
-                    label_for = ''
-                cb = CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
-                option_value = force_str(option_value, encoding='utf-8')
-                rendered_cb = cb.render(name, option_value)
-                option_label = conditional_escape(force_str(option_label, encoding='utf=8'))
-                output.append(u'<li><label%s>%s %s</label></li>' % (
-                    label_for, rendered_cb, option_label
-                ))
-
-            output.append(u'</ul>')
-
-        if override_choices:
-            # Determine whether or not to add a Submit button
-            submit_button_flag = False
-
-            # Create an ID for the collapse
-            if has_id:
-                collapse_id = 'override_' + str(attrs['id'])
-            else:
-                collapse_id = 'override_' + str(int(random() * 10.0**12))
-
-            output.append(
-                u'<button class="btn btn-outline-secondary btn-sm mb-4" ' +
-                'type="button" data-toggle="collapse" ' +
-                ('data-target="#%(id)s">%(string)s</button><div class="collapse" id="%(id)s">' % {
-                    'id': collapse_id, 'string': _('Additional Choices')
-                }) +
-                '<ul class="list-unstyled">'
-            )
-
-            for i, (option_value, option_label) in enumerate(override_choices):
-                if 'disabled' in final_attrs:
-                    del final_attrs['disabled']
-                if isinstance(option_label, dict):
-                    if dict.get(option_label, 'disabled'):
-                        final_attrs = dict(final_attrs, disabled='disabled')
-                    if dict.get(option_label, 'closed'):
-                        submit_button_flag = True
-                    option_label = option_label['label']
-                # If an ID attribute was given, add a numeric index as a suffix,
-                # so that the checkboxes don't all have the same ID attribute.
-                if has_id:
-                    final_attrs = dict(final_attrs, id='%s_%s' % (attrs['id'], i))
-                    label_for = u' for="%s"' % final_attrs['id']
-                else:
-                    label_for = ''
-                cb = CheckboxInput(final_attrs, check_test=lambda value: value in str_values)
-                option_value = force_str(option_value, encoding='utf=8')
-                rendered_cb = cb.render(name, option_value)
-                option_label = conditional_escape(force_str(option_label, encoding='utf=8'))
-                output.append(u'<li><label%s>%s %s</label></li>' % (label_for, rendered_cb, option_label))
-            if submit_button_flag:
-                output.append(
-                    '<input class="btn btn-outline-primary btn-sm" type="submit" ' +
-                    'value="%s &raquo;" />' % _('Register now')
-                )
-            output.append(u'</ul></div>')
-
-        return mark_safe(u'\n'.join(output))
+class EventCheckboxInput(forms.CheckboxInput):
+    template_name = 'core/registration/event_checkbox_input.html'
 
 
-class CheckboxSeriesChoiceField(forms.MultipleChoiceField):
+class EventQuantityInput(forms.NumberInput):
+    template_name = 'core/registration/event_number_input.html'
+
+
+class EventChoiceMultiWidget(forms.MultiWidget):
     '''
-    Inherits from ChoiceField, and uses the widget above, but also
-    cleans to raise an error if a user registers as both a lead and a follow,
-    or if they register for the whole class plus a drop-in.
+    This widget handles the logic for the inclusion of the event registration
+    information as multiple separate inputs (one per role plus drop-ins)
     '''
-    widget = CheckboxSelectMultipleWithDisabled
 
-    def __init__(self, *args, **kwargs):
+    template_name = 'core/registration/event_choice_widget.html'
+
+    def __init__(self, **kwargs):
+        self.choices = kwargs.pop('choices', [])
+        field_type = kwargs.pop('field_type', forms.BooleanField)
+        self.input_type = EventCheckboxInput if field_type == forms.BooleanField else EventQuantityInput
+
+        widgets = {}
+
+        for x in self.choices:
+            attrs = x.copy()
+            value = attrs.pop('value', '')
+            capacity_override = attrs.pop('data-capacity-override', False)
+
+            if self.input_type == EventQuantityInput:
+                attrs['min'] = 0
+                attrs['max'] = attrs.get('data-capacity', 100) - attrs.get('data-num-registered', 0)
+                if capacity_override:
+                    attrs['max'] = 100
+            widgets[value] = self.input_type(attrs=attrs)
+
+        super().__init__(widgets=widgets, **kwargs)
+
+    def get_context(self, name, value, attrs):
+        ''' Separate out additional choices from baseline choices '''
+        context = super().get_context(name, value, attrs)
+        context['widget'].update({
+            'primary_subwidgets': [
+                x for x in context['widget'].get('subwidgets', []) if
+                x['attrs'].get('data-section') == 'primary'
+            ],
+            'additional_subwidgets': [
+                x for x in context['widget'].get('subwidgets', []) if
+                x['attrs'].get('data-section') == 'additional'
+            ]
+        })
+        return context
+
+    def decompress(self, value):
+        if value:
+            return [dict(value).get(x.get('value')) for x in self.choices]
+        elif self.input_type == EventQuantityInput:
+            return [0 for x in self.choices]
+        return [None for x in self.choices]
+
+
+class EventChoiceField(forms.MultiValueField):
+    '''
+    This field type handles the separate checkboxes or quantity inputs associated
+    with each suboption (role or drop-in) for each event.
+    '''
+
+    def __init__(self, **kwargs):
         # Add field attributes for the associated event, and a dictionary of
         # additional field features (e.g. roles, drop-ins, etc.).
         self.event = kwargs.pop('event', None)
-        self.features = kwargs.pop('features', {})
-        super().__init__(*args, **kwargs)
+        self.field_type = kwargs.pop('field_type', forms.BooleanField)
 
-    def valid_value(self, value):
-        '''
-        Browser-produced JSON may not have the same spacing between key and
-        value as Django-produced JSON. For views that submit this form via Ajax,
-        this can be a problem.  So, before cleaning the form, we ensure that the
-        spacing on all event ChoiceFields matches the choices provided by the
-        form itself, to prevent validation issues.
-        '''
-        try:
-            value = json.dumps(json.loads(value))
-        except json.JSONDecodeError:
-            pass
+        user = kwargs.pop('user', None)
+        regClosed = kwargs.pop('regClosed', False)
+        interval = kwargs.pop('interval', None)
 
-        return super().valid_value(value)
+        field_choices = []
+
+        occurrence_filters = {}
+        if interval:
+            occurrence_filters.update({
+                'endTime__gte': interval[0],
+                'startTime__lte': interval[1]
+            })
+
+        can_override_capacity = user and user.has_perm('core.override_register_soldout')
+
+        # Get the set of roles for registration.  If custom roles and capacities
+        # are provided, those will be used.  Or, if the DanceType of a Series
+        # provides default roles, those will be used.  Otherwise, a single role will
+        # be defined as 'Register' .
+        roles = self.event.availableRoles
+
+        # Add one choice per role
+        for role in roles:
+            this_choice = {
+                'value': 'role_%s' % role.id,
+                'data-section': 'primary',
+                'data-type': 'role',
+                'data-role-name': role.name,
+                'data-role-plural-name': role.pluralName,
+                'data-num-registered': self.event.numRegisteredForRole(role),
+                'data-capacity': self.event.capacityForRole(role),
+
+                # This is popped and therefore not sent to client
+                'data-capacity-override': can_override_capacity,
+            }
+
+            if self.event.soldOutForRole(role):
+                this_choice.update({'data-sold-out': True, 'disabled': True})
+                if can_override_capacity:
+                    this_choice.update({'disabled': False, 'data-override': True})
+                if regClosed:
+                    this_choice.update({'data-closed': True, 'data-override': True})
+            field_choices.append(this_choice)
+
+        # If no choices, then add a general Register choice
+        if not roles:
+            this_choice = {
+                'value': 'general',
+                'data-section': 'primary',
+                'data-type': 'general',
+                'data-num-registered': self.event.numRegistered,
+                'data-capacity': self.event.capacity,
+
+                # This is popped and therefore not sent to client
+                'data-capacity-override': can_override_capacity,
+            }
+            if self.event.soldOut:
+                this_choice.update({'data-sold-out': True, 'disabled': True})
+                if user and user.has_perm('core.override_register_soldout'):
+                    this_choice.update({'disabled': False, 'data-override': True})
+                if regClosed:
+                    this_choice.update({'data-closed': True, 'data-override': True})
+            field_choices.append(this_choice)
+
+        # Add drop-in choices if they are available and if this user has permission.
+        # If the user only has override permissions, add the override collapse only.
+        # Note that this works because django-polymorphic returns the subclass.
+        if isinstance(self.event, Series) and (
+            (self.event.allowDropins and user and user.has_perm('core.register_dropins')) or
+            (user and user.has_perm('core.override_register_dropins'))
+        ):
+            for occurrence in self.event.eventoccurrence_set.filter(**occurrence_filters):
+                this_choice = {
+                    'value': 'dropin_%s' % occurrence.id,
+                    'data-section': 'additional',
+                    'data-type': 'dropIn',
+                    'data-occurrence': occurrence.id,
+                    'data-occurrence-start-time': ensure_localtime(occurrence.startTime),
+                    'data-num-registered': self.event.numRegistered,
+                    'data-capacity': self.event.capacity,
+
+                    # This is popped and therefore not sent to client
+                    'data-capacity-override': can_override_capacity,
+                }
+                if (user and user.has_perm('core.override_register_dropins')):
+                    this_choice['data-override'] = True
+                field_choices.append(this_choice)
+
+        error_messages = {
+            'incomplete': _('Invalid selection for event.'),
+        }
+        fields = [self.field_type(required=False) for x in field_choices]
+        widget = EventChoiceMultiWidget(
+            choices=field_choices, field_type=self.field_type
+        )
+        self.field_choices = field_choices
+
+        super().__init__(
+            error_messages=error_messages, fields=fields,
+            require_all_fields=False, widget=widget, **kwargs
+        )
+
+    def compress(self, data_list):
+        compressed = [
+            (self.field_choices[i].get('value','register'), int(data_list[i] or 0))
+            for i in range(len(data_list))
+        ]
+        return compressed
 
 
 class ClassChoiceForm(forms.Form):
@@ -222,8 +263,6 @@ class ClassChoiceForm(forms.Form):
         openEvents = kwargs.pop('openEvents', Event.objects.none())
         closedEvents = kwargs.pop('closedEvents', Event.objects.none())
         user = kwargs.pop('user', None)
-        includeCounts = kwargs.pop('includeCounts', True)
-        usePluralName = kwargs.pop('pluralName', True)
         interval = kwargs.pop('interval', None)
         voucherField = kwargs.pop('voucherField', False)
 
@@ -249,99 +288,21 @@ class ClassChoiceForm(forms.Form):
         else:
             choice_set = openEvents
 
-        occurrence_filters = {}
-        if interval:
-            occurrence_filters.update({
-                'endTime__gte': interval[0],
-                'startTime__lte': interval[1]
-            })
+        field_type_rule = getConstant('registration__widgetType')
 
         for event in choice_set:
-            field_choices = []
-            field_features = set()
+            event_field_type = forms.IntegerField
+            if (
+                field_type_rule == 'AC' or
+                (field_type_rule == 'SC' and event.polymorphic_ctype.model == 'series') or
+                (field_type_rule == 'SQ' and event.polymorphic_ctype.model != 'series')
+            ):
+                event_field_type = forms.BooleanField
 
-            # Get the set of roles for registration.  If custom roles and capacities
-            # are provided, those will be used.  Or, if the DanceType of a Series
-            # provides default roles, those will be used.  Otherwise, a single role will
-            # be defined as 'Register' .
-            roles = event.availableRoles
-            if len(roles) > 0:
-                field_features.update(['roles'])
-
-            # Add one choice per role
-            for role in roles:
-                this_label_text = role.pluralName if usePluralName else role.name
-                if includeCounts:
-                    this_label_text += ' (%s %s)' % (
-                        event.numRegisteredForRole(role), str(_('registered'))
-                    )
-                this_label = {
-                    'label': this_label_text,
-                    'type': 'role',
-                    'roleName': role.name,
-                }
-                if event.soldOutForRole(role):
-                    this_label.update({
-                        'label': _('%s sold out!') % role.pluralName,
-                        'disabled': True,
-                    })
-                    if user.has_perm('core.override_register_soldout'):
-                        this_label['disabled'] = False
-                        this_label['override'] = True
-                    if event in closedEvents:
-                        this_label['closed'] = True
-                        this_label['override'] = True
-                field_choices.append(
-                    (json.dumps({'role': role.id, }), this_label)
-                )
-            # If no choices, then add a general Register choice
-            if not roles:
-                this_label = {
-                    'label': _('Register (%s registered)') % event.numRegistered,
-                    'type': 'general',
-                    'roleName': _('General'),
-                }
-                if event.soldOut:
-                    this_label = {'label': _('Sold out!'), 'disabled': True}
-                    if user.has_perm('core.override_register_soldout'):
-                        this_label['disabled'] = False
-                        this_label['override'] = True
-                if event in closedEvents:
-                    this_label['closed'] = True
-                    this_label['override'] = True
-                field_choices.append(
-                    (json.dumps({'role': None}), this_label)
-                )
-
-            # Add drop-in choices if they are available and if this user has permission.
-            # If the user only has override permissions, add the override collapse only.
-            # Note that this works because django-polymorphic returns the subclass.
-            if isinstance(event, Series):
-                a = (event.allowDropins and user and user.has_perm('core.register_dropins'))
-                b = (user and user.has_perm('core.override_register_dropins'))
-
-                if a or b:
-                    field_features.update(['dropin'])
-                    for occurrence in event.eventoccurrence_set.filter(**occurrence_filters):
-                        this_label = {
-                            'label': _('Drop-in: ') + occurrence.localStartTime.strftime('%B %-d'),
-                            'type': 'dropin',
-                            'roleName': _('Drop in'),
-                        }
-                        if b:
-                            this_label['override'] = True
-                        field_choices += ((
-                            json.dumps({'dropin_' + str(occurrence.id): True}),
-                            this_label
-                        ),)
-                        self.permitted_event_keys.append('dropin_' + str(occurrence.id))
-
-            self.fields[event.polymorphic_ctype.model + '_' + str(event.id)] = CheckboxSeriesChoiceField(
-                label=event.name,
-                choices=field_choices,
-                event=event,
-                features=field_features,
-                required=False,
+            self.fields[event.polymorphic_ctype.model + '_' + str(event.id)] = EventChoiceField(
+                event=event, label=event.name, required=False, user=user,
+                regClosed=(event in closedEvents), interval=interval,
+                field_type=event_field_type
             )
 
     def clean(self):
@@ -355,23 +316,21 @@ class ClassChoiceForm(forms.Form):
         payAtDoor = cleaned_data.get('payAtDoor', False)
 
         for key, value in cleaned_data.items():
-            if value and key != 'payAtDoor':
-                hasContent = True
-            if isinstance(value, list):
-                # Ignore any passed value that is not a dictionary
-                value_dict_list = [json.loads(x) for x in value if isinstance(json.loads(x), dict)]
+            if key.split('_')[0] in ['event', 'series', 'publicevent', 'privatelessonevent']:
+                reg_list = []
+                dropin_list = []
 
-                # Get the list of roles -- if more than one, then raise an error
-                roles = [y.pop('role') for y in value_dict_list if y.get('role')]
-                value_dict = {}
-                for v in value_dict_list:
-                    value_dict.update(v)
+                for v in value:
+                    if v[0].startswith('dropin_'):
+                        dropin_list += [v[0] for i in range(v[1])]
+                    else:
+                        reg_list += [v[0] for i in range(v[1])]
 
-                # Get the list of dropIns
-                dropIns = [k.replace('dropin_', '') for k in value_dict.keys() if 'dropin_' in k]
+                if reg_list or dropin_list:
+                    hasContent = True
 
                 if (
-                    len(roles) > 1 and ((
+                    len(reg_list) > 1 and ((
                         'series_' in key and (
                             (getConstant('registration__multiRegSeriesRule') == 'N') or
                             (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
@@ -386,7 +345,7 @@ class ClassChoiceForm(forms.Form):
                     )
                 ):
                     raise ValidationError(_('Must select only one role.'), code='invalid')
-                elif len(roles) >= 1 and len(dropIns) > 0 and (
+                elif len(reg_list) >= 1 and len(dropin_list) > 0 and (
                     getConstant('registration__multiRegNameFormRule') == 'N' or
                     (getConstant('registration__multiRegNameFormRule') == 'O' and payAtDoor)
                 ):
@@ -395,6 +354,9 @@ class ClassChoiceForm(forms.Form):
                     ), code='invalid')
         if not hasContent:
             raise ValidationError(_('Must register for at least one class or series.'))
+
+    class Media:
+        js = ('js/registration_number_input.js',)
 
 
 class PartnerRequiredForm(forms.Form):

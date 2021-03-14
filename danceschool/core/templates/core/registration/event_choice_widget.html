@@ -1,0 +1,20 @@
+{% load danceschool_tags i18n %}
+
+{% with id=widget.attrs.id %}
+<div {% if id %} id="{{ id }}"{% endif %} class="{{ widget.attrs.class }}">
+    {% for subwidget in widget.primary_subwidgets %}
+        {% include subwidget.template_name with widget=subwidget %}
+    {% endfor %}
+</div>
+{% if widget.additional_subwidgets %}
+    <div class="text-right my-4">
+        <button class="btn btn-outline-secondary btn-sm" type="button" data-toggle="collapse" data-target="#additional_{{ id }}" aria-expanded="false" aria-controls="additional_{{ id }}">{% trans "Additional Choices" %}</button>
+    </div>
+    <div class="collapse" id="additional_{{ id }}">
+        {% for subwidget in widget.additional_subwidgets %}
+            {% include subwidget.template_name with widget=subwidget %}
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% endwith %}

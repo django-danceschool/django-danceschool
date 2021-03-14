@@ -1,0 +1,20 @@
+<div class="form-group row mb-2">
+    <label class="col-6 col-form-label" for="{{ widget.attrs.id }}">
+        {% include "core/registration/event_choice_label.html" %}
+    </label>
+    <div class="col-6">
+        <div class="input-group input-group">
+            <span class="input-group-prepend">
+                <button type="button" class="btn btn-outline-secondary btn-number" disabled="disabled" data-type="minus" data-field="{{ widget.name }}">
+                    <span class="fa fa-minus"></span>
+                </button>
+            </span>
+            <input class="input-number form-control form-control" type="text" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %}{% include "django/forms/widgets/attrs.html" %}>
+            <span class="input-group-append">
+                <button type="button" class="btn btn-outline-secondary btn-number" data-type="plus" data-field="{{ widget.name }}">
+                    <span class="fa fa-plus"></span>
+                </button>
+            </span>
+        </div>
+    </div>
+</div>

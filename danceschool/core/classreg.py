@@ -59,9 +59,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
     form_class = ClassChoiceForm
     template_name = 'core/registration/event_registration.html'
     returnJson = False
-    includeCounts = True
     voucherField = False
-    pluralName = True
 
     # The temporary registration and the list of event registrations is kept
     # as an attribute of the view so that it may be used in subclassed versions
@@ -116,7 +114,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         })
 
         # Automatically pass along some of the optional form kwargs
-        for key in ['includeCounts', 'pluralName', 'voucherField']:
+        for key in ['voucherField', ]:
             if isinstance(getattr(self, key, None), bool):
                 kwargs[key] = getattr(self, key, None)
 
@@ -144,47 +142,44 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        permitted_keys = getattr(form, 'permitted_event_keys', ['role',])
 
         # These are prefixes that may be used for events in the form.  Each one
         # corresponds to a polymorphic content type (PublicEvent, Series, etc.)
-        event_types = ['event_', 'publicevent_', 'series_']
+        event_types = ['event', 'publicevent', 'series', 'privatelessonevent']
 
         try:
             event_listing = {}
             for key, value in form.cleaned_data.items():
-                if any(x in key for x in event_types) and value:
+                if key.split('_')[0] in event_types and value:
                     # There may be more than one registration per event, but we
                     # also want only one drop-in registration if possible, to
                     # avoid issues with automatic event check-ins.
                     this_event_list = []
-                    this_dropin = {}
-                    for y in value:
-                        this_value = json.loads(y)
-                        this_event_item = {}
-                        this_quantity = 1
-                        all_keys = list(this_value.keys())
+                    this_dropin = {'dropIn': True, 'occurrences': []}
+                    for y in [x for x in value if x[1] != 0]:
+                        this_quantity = y[1]
 
-                        # Separate out simple drop-ins into a combined EventRegistration
-                        if len(all_keys) == 1 and all_keys[0].startswith('dropin_'):
-                            this_dropin.update(this_value)
+                        if y[0].startswith('dropin_') and this_quantity == 1:
+                            this_dropin['occurrences'].append(int(y[0].split('_')[-1]))
                         else:
-                            for k,v in this_value.items():
-                                if k == 'quantity':
-                                    this_quantity = int(v)
-                                elif k in permitted_keys and k not in this_event_item:
-                                    this_event_item[k] = v
-                        if this_event_item:
+                            this_event_item = {'role': None}
+                            if y[0].startswith('role_'):
+                                this_event_item = {'role': int(y[0].split('_')[-1])}
+                            elif y[0].startswith('dropin_'):
+                                this_event_item.update({
+                                    'dropIn': True,
+                                    'occurrences': [int(y[0].split('_')[-1]),]
+                                })
                             for i in range(this_quantity):
                                 this_event_list.append(this_event_item)
-                    if this_dropin:
+                    if this_dropin.get('occurrences', []):
                         this_event_list.append(this_dropin)
                     event_listing[int(key.split("_")[-1])] = this_event_list
             non_event_listing = {
                 key: value for key, value in form.cleaned_data.items() if
-                not any(x in key for x in event_types)
+                not key.split('_')[0] in event_types
             }
-        except (ValueError, TypeError) as e:
+        except (ValueError, TypeError, IndexError) as e:
             form.add_error(None, ValidationError(_('Invalid event information passed.'), code='invalid'))
             return self.form_invalid(form)
 
@@ -218,7 +213,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             for value in eventRegs:
                 # Check if registration is still feasible based on both completed registrations
                 # and registrations that are not yet complete
-                this_role_id = value.get('role', None) if 'role' in permitted_keys else None
+                this_role_id = value.get('role', None)
                 soldOut = this_event.soldOutForRole(role=this_role_id, includeTemporaryRegs=True)
 
                 if soldOut:
@@ -242,7 +237,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                         )
                         return self.form_invalid(form)
 
-                dropInList = [int(k.split("_")[-1]) for k, v in value.items() if k.startswith('dropin_') and v is True]
+                dropInList = value.get('occurrences', []) if value.get('dropIn', False) else []
 
                 # If nothing is sold out, then proceed to create Registration and
                 # EventRegistration objects for the items selected by this form.  The
@@ -260,7 +255,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                         event=this_event, role_id=this_role_id
                     )
                 # If it's possible to store additional data and such data exist, then store them.
-                tr.data = {k: v for k, v in value.items() if k in permitted_keys and k != 'role'}
+                tr.data = {k: v for k, v in value.items() if k not in ['role', 'dropIn', 'occurrences']}
                 if dropInList:
                     tr.data['__dropInOccurrences'] = dropInList
 
