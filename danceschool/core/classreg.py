@@ -230,9 +230,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                         # at all.
                         form.add_error(None, ValidationError(
                             _(
-                                'Registration for "%s" is tentatively sold out while ' +
-                                'others complete their registration.  Please try ' +
-                                'again later.' % this_event.name
+                                'Registration for "%s" is tentatively ' % this_event.name +
+                                'sold out while others complete their registration. ' +
+                                'Please try again later.'
                             ), code='invalid')
                         )
                         return self.form_invalid(form)
