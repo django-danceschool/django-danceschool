@@ -3331,9 +3331,6 @@ class Registration(EmailRecipientMixin, models.Model):
         context.update(self.invoice.get_email_context())
 
         context.update({
-            'registration__firstName': self.firstName,
-            'registration__lastName': self.lastName,
-            'registration__email': self.email,
             'registrationComments': self.comments,
             'registrationHowHeardAboutUs': self.howHeardAboutUs,
         })
