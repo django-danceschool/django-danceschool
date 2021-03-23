@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from danceschool.core.models import (
     Instructor, Location, Room, DanceRole, Event, PricingTier,
-    EventRegistration, Customer
+    EventRegistration, Customer, StaffMember
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import EmailRecipientMixin
