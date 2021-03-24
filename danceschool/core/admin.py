@@ -1049,7 +1049,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse', ),
-            'fields': ('status', 'closeAfterDays', 'capacity',),
+            'fields': (('status', 'calendarEvent'), 'closeAfterDays', 'capacity',),
         }),
         (_('Additional data'), {
             'classes': ('collapse', ),
@@ -1157,7 +1157,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
             )
         }),
         (_('Registration/Visibility'), {
-            'fields': ('status', ('pricingTier', 'capacity'), ),
+            'fields': (('status', 'calendarEvent'), ('pricingTier', 'capacity'), ),
         }),
         (_('Description/Link'), {
             'fields': (

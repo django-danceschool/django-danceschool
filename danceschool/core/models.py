@@ -796,18 +796,20 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         heldClosed = ('K', _('Registration held closed (override default behavior)'))
         heldOpen = ('H', _('Registration held open (override default)'))
         linkOnly = ('L', _(
-            'Registration open, but hidden from registration page and calendar ' +
+            'Registration open, but hidden from registration page ' +
             '(link required to register)'
         ))
         regHidden = ('C', _(
-            'Hidden from registration page and registration closed, but visible on calendar.'
+            'Hidden from registration page, registration closed, potentially visible on calendar.'
         ))
-        hidden = ('X', _('Event hidden and registration closed'))
+        hidden = ('X', _('Event hidden, registration closed, always hidden from calendar'))
 
     status = models.CharField(
         _('Registration status'), max_length=1, choices=RegStatus.choices,
         help_text=_('Set the registration status and visibility status of this event.')
     )
+    calendarEvent = models.BooleanField(_('Visible on public calendars'), default=True)
+
     session = models.ForeignKey(
         EventSession, verbose_name=_('Session'),
         help_text=_('Optional event sessions can be used to order events for registration.'),

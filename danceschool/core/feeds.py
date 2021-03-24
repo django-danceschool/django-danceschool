@@ -90,10 +90,10 @@ class EventFeed(ICalFeed):
         ).order_by('-startTime')
 
         if not obj:
-            # Public calendar does not show hidden Events _or_ link-only registration Events
-            return [EventFeedItem(x) for x in item_set.exclude(event__status=Event.RegStatus.linkOnly)[:100]]
+            # Public calendar only shows events flagged as available on this calendar
+            return [EventFeedItem(x) for x in item_set.filter(event__calendarEvent=True)[:100]]
         else:
-            # Private calendars do show link-only registration Events
+            # Private calendars show all events regardless of the public calendar flag
             return [
                 EventFeedItem(x) for x in
                 item_set.filter(event__eventstaffmember__staffMember__feedKey=obj)[:100]
@@ -150,11 +150,11 @@ def json_event_feed(request, instructorFeedKey='', locationId=None, roomId=None)
         filters = filters & Q(event__room_id=roomId)
 
     if instructorFeedKey:
-        # Private calendars do show link-only registration Events
+        # Private calendars show all non-hidden registration Events
         filters = filters & Q(event__eventstaffmember__staffMember__feedKey=instructorFeedKey)
     else:
-        # Public calendar does not show hidden Events _or_ link-only registration Events
-        exclusions = exclusions | Q(event__status=Event.RegStatus.linkOnly)
+        # Public calendar does not show events that are not flagged to be on the public calendar
+        exclusions = exclusions | Q(event__calendarEvent=False)
 
     item_set = EventOccurrence.objects.exclude(exclusions).filter(filters).order_by('-startTime')
     eventlist = [EventFeedItem(x, timeZone=timeZone).__dict__ for x in item_set]
