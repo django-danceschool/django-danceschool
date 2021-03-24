@@ -1,5 +1,7 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
 	function checkDiscountType() {
 		var discountType = $('#id_discountType').val();
@@ -51,6 +53,4 @@ $(document).ready(function(){
 	$('#id_discountType').change(function(event){
 		checkDiscountType();
 	});
-
 });
-})(django.jQuery);

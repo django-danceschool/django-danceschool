@@ -1,5 +1,8 @@
-document.addEventListener("DOMContentLoaded", function(event) {
+document.addEventListener("DOMContentLoaded", function(e) {
 
+	// Requires jQuery
+	var $ = django.jQuery;
+	
 	$('#id_invoiceItem').attr('disabled',true);
 
 	// Make received date field a datepicker

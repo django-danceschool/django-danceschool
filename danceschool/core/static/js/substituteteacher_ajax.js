@@ -1,5 +1,8 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
+
 	$('#id_occurrences').attr('disabled',true);
 	$('#id_occurrences').parent('p').hide();
 	$('#id_replacedStaffMember').attr('disabled',true);
@@ -72,4 +75,3 @@ $(document).ready(function(){
 		});
 	});
 });
-})(django.jQuery);

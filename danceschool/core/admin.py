@@ -299,15 +299,10 @@ class EventOccurrenceInline(admin.TabularInline):
     class Media:
         js = (
             'moment/moment.min.js',
-            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
-            'timepicker/jquery.timepicker.min.js',
             'datepair/datepair.min.js',
             'datepair/jquery.datepair.min.js',
             'js/eventadmin_pickers.js'
         )
-        css = {
-            'all': ('timepicker/jquery.timepicker.css', 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css')
-        }
 
 
 ######################################
@@ -1000,10 +995,15 @@ class SeriesAdminForm(ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
+            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+            'timepicker/jquery.timepicker.min.js',
             'admin/js/jquery.init.js',
             'js/serieslocation_capacity_change.js',
             'js/location_related_objects_lookup.js',
         )
+        css = {
+            'all': ('timepicker/jquery.timepicker.css', 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css')
+        }
 
 
 @admin.register(Series)
@@ -1116,7 +1116,16 @@ class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
         }
 
     class Media:
-        js = ('js/location_related_objects_lookup.js', )
+        js = (
+            'admin/js/vendor/jquery/jquery.min.js',
+            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+            'timepicker/jquery.timepicker.min.js',
+            'admin/js/jquery.init.js',
+            'js/location_related_objects_lookup.js',
+        )
+        css = {
+            'all': ('timepicker/jquery.timepicker.css', 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css')
+        }
 
 
 @admin.register(PublicEvent)

@@ -1,4 +1,7 @@
-$(document).ready(function() {
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
     // This function makes and returns a deep copy of the existing regData.
     // It's useful for error handling.

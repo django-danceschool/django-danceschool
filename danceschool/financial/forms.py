@@ -15,6 +15,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Field, Div, Submit, HTML
 from dal import autocomplete
 import logging
+import re
 
 from danceschool.core.models import (
     InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
@@ -256,17 +257,29 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
             'category': ExpenseCategoryWidget,
         }
 
-    class Media:
-        js = (
-            'admin/js/admin/RelatedObjectLookups.js',
-            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
-            'js/expense_reporting.js',
-        )
-        css = {
-            'all': (
-                'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+    def media(self):
+        ''' Remove jQuery from widget media to avoid duplicate initialization by django-filer '''
+        media = super().media
+
+        regex = re.compile(r"^admin/.*jquery(\.min)?\.js$")
+        new_js = [x for x in media._js if not regex.search(x)]
+        new_css = media._css
+        media = forms.Media(js=new_js, css=new_css)
+
+        add_media = forms.Media(
+            js = (
+                'admin/js/admin/RelatedObjectLookups.js',
+                'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+                'js/expense_reporting.js',
             ),
-        }
+            css = {
+                'all': (
+                    'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+                ),
+            }
+        )
+        media += add_media
+        return media
 
 
 class InvoiceItemChoiceField(forms.ModelChoiceField):
@@ -429,7 +442,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         self.fields['adjustments'].required = False
 
         self.helper.layout = Layout(
-            Field('submissionUser', type="hidden", value=getattr(user, 'id')),
+            Field('submissionUser', type="hidden", value=getattr(user, 'id', None)),
             Field('invoiceNumber', type="hidden"),
             'category',
             'description',
@@ -462,16 +475,28 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
             'receivedDate'
         ]
 
-    class Media:
-        js = (
-            'js/revenue_reporting.js',
-            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
-        )
-        css = {
-            'all': (
-                'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+    def media(self):
+        ''' Remove jQuery from widget media to avoid duplicate initialization by django-filer '''
+        media = super().media
+
+        regex = re.compile(r"^admin/.*jquery(\.min)?\.js$")
+        new_js = [x for x in media._js if not regex.search(x)]
+        new_css = media._css
+        media = forms.Media(js=new_js, css=new_css)
+
+        add_media = forms.Media(
+            js = (
+                'js/revenue_reporting.js',
+                'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
             ),
-        }
+            css = {
+                'all': (
+                    'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+                ),
+            }
+        )
+        media += add_media
+        return media
 
 
 class CompensationRuleUpdateForm(forms.ModelForm):

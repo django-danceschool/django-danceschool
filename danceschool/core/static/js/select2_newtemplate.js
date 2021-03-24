@@ -1,5 +1,8 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
+
 	$("#id_template").select2({
 	  tags: true,
 	  createTag: function (params) {
@@ -21,7 +24,4 @@ $(document).ready(function(){
 	    return $result;
 	  }
 	});
-
-
 });
-})(django.jQuery);

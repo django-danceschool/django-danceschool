@@ -1,5 +1,7 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
     var this_js_script = $('script[src*=classregistration_ajax]');
     var registration_url = this_js_script.attr('data-registration-url');
@@ -71,4 +73,3 @@ $(document).ready(function(){
         });
     });
 });
-})(django.jQuery);

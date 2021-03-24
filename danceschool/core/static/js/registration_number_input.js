@@ -1,5 +1,7 @@
-(function($) {
-$(document).ready(function() {
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
     function handle_button(button, clicked=true) {
 
@@ -80,5 +82,4 @@ $(document).ready(function() {
         }
     });
 });
-})(django.jQuery);
   

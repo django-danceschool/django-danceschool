@@ -1,5 +1,7 @@
-(function($) {
-    $(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) {
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
     function updateIsMe() {
         var invoice_data = $('#invoiceCustomer').data();
@@ -44,6 +46,4 @@
         return true;
     })
 
-    });
-}(django.jQuery));
-
+});

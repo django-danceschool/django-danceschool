@@ -1,5 +1,8 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
+
 	var isInt = function(n) { return parseInt(Number(n)) === Number(n) };
 
 	function updateRoomOptions(updateCapacity, setRoomVal, allowEmptyRoomVal) {
@@ -49,6 +52,4 @@ $(document).ready(function(){
 	else {
 		updateRoomOptions(false);
 	}
-
 });
-})(django.jQuery);

@@ -1,13 +1,15 @@
 document.addEventListener("DOMContentLoaded", function(event) { 
 
-	django.jQuery(document).on('formset:added', function(event, $row, formsetName) {
+	// The code below requires jQuery
+	var $ = django.jQuery;
+
+	$(document).on('formset:added', function(event, $row, formsetName) {
 		if (formsetName == 'eventoccurrence_set') {
 			makepickers();
 			set_new_times();
 			set_new_dates();
     	}
     });
-
 
 	function makepickers() {
 		// Add classes needed to make the datepair work
@@ -17,22 +19,36 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		$('.dynamic-eventoccurrence_set input[id*=-endTime]').addClass('endTimePicker');
 	
 		$.each($('.dynamic-eventoccurrence_set'), function() {
+
 			$(this).find('.makeTimePicker').timepicker({
 				'scrollDefault': '7:00pm', 'step': 15,'showDuration': true,'timeFormat':'g:ia',
 			});
 			$(this).find('.makeDatePicker').datepicker({
 				'dateFormat': 'yy-mm-dd',
 			});
-			$(this).datepair({
+
+			var datepair = new Datepair($(this)[0],{
 				'dateClass': 'makeDatePicker',
 				'timeClass': 'makeTimePicker',
 				'startClass': 'startTimePicker',
 				'endClass': 'endTimePicker',
+
+				// We specify these to avoid potential namespace issues related
+				// to multiple jQuery instances.
+				parseTime: function(input){
+					return $(input).timepicker('getTime');
+				},
+				updateTime: function(input, dateObj){
+					$(input).timepicker('setTime', dateObj);
+				},
+				setMinTime: function(input, dateObj){
+					$(input).timepicker('option', 'minTime', dateObj);
+				},
 				parseDate: function(input){
-					  return $(input).datepicker('getDate');
-				  },
+					return input.value && $(input).datepicker('getDate');
+				},
 				updateDate: function(input, dateObj){
-					return $(input).datepicker('setDate', dateObj);
+					$(input).datepicker('update', dateObj);
 				}
 			});
 		});
@@ -73,7 +89,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	}
 
 	$(document).ready(function() {
-		makepickers();	
+		makepickers();
 	});
 
 });

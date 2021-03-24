@@ -1,5 +1,7 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
 	function checkSendToSet() {
 		var sendToSet = $('#div_id_sendToSet input:checked').val();
@@ -20,4 +22,3 @@ $(document).ready(function(){
 		checkSendToSet();
 	});
 });
-})(django.jQuery);

@@ -2,8 +2,11 @@
 // Handles related-objects functionality: lookup link for raw_id_fields
 // and Add Another links.
 
-(function($) {
+document.addEventListener("DOMContentLoaded", function(event) { 
     'use strict';
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
     // IE doesn't accept periods or dashes in the window name, but the element IDs
     // we use to generate popup window names may contain them, therefore we map them
@@ -70,4 +73,4 @@
     window.dismissLocationAddRelatedObjectPopup = dismissLocationAddRelatedObjectPopup;
     window.dismissLocationChangeRelatedObjectPopup = dismissLocationChangeRelatedObjectPopup;
 
-})(django.jQuery);
+});

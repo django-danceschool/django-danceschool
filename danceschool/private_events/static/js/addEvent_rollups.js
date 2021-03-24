@@ -1,4 +1,55 @@
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
+
+	function check_visibility_divs() {
+		var this_visibleTo = $('#div_id_visibleTo option:selected').val();
+	
+		if (this_visibleTo == "all" || this_visibleTo == "me") {
+			$('#div_id_displayToGroup').hide();
+			$('#div_id_displayToUsers').hide();
+		}
+		if (this_visibleTo == "group") {
+			$('#div_id_displayToGroup').show();
+			$('#div_id_displayToUsers').hide();
+		}
+		if (this_visibleTo == "users") {
+			$('#div_id_displayToGroup').hide();
+			$('#div_id_displayToUsers').show();
+		}
+	}
+	
+	function check_reminder_divs() {
+		var this_reminderTo = $('#div_id_eventoccurrence_set-0-sendReminderTo option:selected').val();
+	
+		if (this_reminderTo == "all" || this_reminderTo == "me" || this_reminderTo == "none") {
+			$('#div_id_eventoccurrence_set-0-sendReminderGroup').hide();
+			$('#div_id_eventoccurrence_set-0-sendReminderUsers').hide();
+		}
+		if (this_reminderTo == "group") {
+			$('#div_id_eventoccurrence_set-0-sendReminderGroup').show();
+			$('#div_id_eventoccurrence_set-0-sendReminderUsers').hide();
+		}
+		if (this_reminderTo == "users") {
+			$('#div_id_eventoccurrence_set-0-sendReminderGroup').hide();
+			$('#div_id_eventoccurrence_set-0-sendReminderUsers').show();
+		}
+	}
+	
+	function check_allDay() {
+		var selected = $('#id_eventoccurrence_set-0-allDay').is(':checked');
+	
+		if (selected == true) {
+			$('#id_eventoccurrence_set-0-startTime_1').prop("disabled", true);
+			$('#id_eventoccurrence_set-0-endTime_1').prop("disabled", true);
+		}
+		else {
+			$('#id_eventoccurrence_set-0-startTime_1').prop("disabled", false);
+			$('#id_eventoccurrence_set-0-endTime_1').prop("disabled", false);
+		}
+	}
+	
 	check_visibility_divs();
 	check_reminder_divs();
 
@@ -35,52 +86,3 @@ $(document).ready(function(){
 		$('#id_eventoccurrence_set-0-endTime_1').removeAttr('disabled');
 	});
 });
-
-function check_visibility_divs() {
-	var this_visibleTo = $('#div_id_visibleTo option:selected').val();
-
-	if (this_visibleTo == "all" || this_visibleTo == "me") {
-		$('#div_id_displayToGroup').hide();
-		$('#div_id_displayToUsers').hide();
-	}
-	if (this_visibleTo == "group") {
-		$('#div_id_displayToGroup').show();
-		$('#div_id_displayToUsers').hide();
-	}
-	if (this_visibleTo == "users") {
-		$('#div_id_displayToGroup').hide();
-		$('#div_id_displayToUsers').show();
-	}
-}
-
-
-function check_reminder_divs() {
-	var this_reminderTo = $('#div_id_eventoccurrence_set-0-sendReminderTo option:selected').val();
-
-	if (this_reminderTo == "all" || this_reminderTo == "me" || this_reminderTo == "none") {
-		$('#div_id_eventoccurrence_set-0-sendReminderGroup').hide();
-		$('#div_id_eventoccurrence_set-0-sendReminderUsers').hide();
-	}
-	if (this_reminderTo == "group") {
-		$('#div_id_eventoccurrence_set-0-sendReminderGroup').show();
-		$('#div_id_eventoccurrence_set-0-sendReminderUsers').hide();
-	}
-	if (this_reminderTo == "users") {
-		$('#div_id_eventoccurrence_set-0-sendReminderGroup').hide();
-		$('#div_id_eventoccurrence_set-0-sendReminderUsers').show();
-	}
-}
-
-
-function check_allDay() {
-	var selected = $('#id_eventoccurrence_set-0-allDay').is(':checked');
-
-	if (selected == true) {
-		$('#id_eventoccurrence_set-0-startTime_1').prop("disabled", true);
-		$('#id_eventoccurrence_set-0-endTime_1').prop("disabled", true);
-	}
-	else {
-		$('#id_eventoccurrence_set-0-startTime_1').prop("disabled", false);
-		$('#id_eventoccurrence_set-0-endTime_1').prop("disabled", false);
-	}
-}

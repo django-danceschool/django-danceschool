@@ -1619,6 +1619,10 @@ class EventOccurrence(models.Model):
         ))
     timeDescription.fget.short_description = _('Occurs')
 
+    def clean(self):
+        if self.endTime < self.startTime:
+            raise ValidationError(_('End time cannot occur before start time.'))
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
         self.event.updateTimes()
@@ -1635,6 +1639,13 @@ class EventOccurrence(models.Model):
         verbose_name = _('Event occurrence')
         verbose_name_plural = _('Event occurrences')
         ordering = ('event', 'startTime')
+        constraints = [
+            models.CheckConstraint(
+                check=Q(endTime__gte=F('startTime')),
+                name='%(app_label)s_%(class)s_correct_endTime'
+            ),
+        ]
+
 
 
 class EventRole(models.Model):

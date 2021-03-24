@@ -1,5 +1,7 @@
-(function($) {
-    $(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
     function disableNames() {
         $.each($("input[name$=customerId][value='0']"), function() {
@@ -25,6 +27,4 @@
         disableNames();
     });
 
-    });
-}(django.jQuery));
-
+});

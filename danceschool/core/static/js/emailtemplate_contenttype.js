@@ -1,5 +1,7 @@
-(function($) {
-$(document).ready(function(){
+document.addEventListener("DOMContentLoaded", function(event) { 
+
+	// The code below requires jQuery
+	var $ = django.jQuery;
 
 	function checkRichTextChoice() {
 		var richTextChoice = $('#id_richTextChoice input:checked').val();
@@ -39,4 +41,3 @@ $(document).ready(function(){
 	});
 
 });
-})(django.jQuery);

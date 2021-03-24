@@ -1,4 +1,7 @@
-document.addEventListener("DOMContentLoaded", function(event) {
+document.addEventListener("DOMContentLoaded", function(e) {
+
+	// Requires jQuery
+	var $ = django.jQuery;
 
 	$('#div_id_total').show();
 	$('#div_id_hours').hide();
