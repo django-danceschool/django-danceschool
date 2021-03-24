@@ -10,6 +10,8 @@
 			{% else %}
 				<button data-id="{{ series.id }}" data-role-id="{{ role.id }}" data-event-type="series" class="btn btn-primary mr-2 my-2 btn-lg register-ajax">{% trans "Register:" %} {{ role.name }}</button>
 			{% endif %}
+		{% empty %}
+			<button data-id="{{ series.id }}" data-event-type="series" class="btn btn-primary btn-lg register-ajax">{% trans "Register Now" %}</button>
 		{% endfor %}
 	{% elif series.soldOut %}
 		<button class="btn btn-secondary btn-lg disabled">{% trans "Sold Out!" %}</button>
