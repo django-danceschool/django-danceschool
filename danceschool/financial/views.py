@@ -13,6 +13,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.forms.models import model_to_dict
 
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
 from calendar import month_name
 from urllib.parse import unquote_plus
@@ -24,7 +25,7 @@ import re
 from danceschool.core.models import Instructor, Location, Event, StaffMember, EventStaffCategory
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
-from danceschool.core.utils.timezone import ensure_timezone
+from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
 from .models import ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory, RepeatedExpenseRule, StaffMemberWageInfo
@@ -498,6 +499,11 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             month = getIntFromGet(request, 'month')
 
         try:
+            day = int(self.kwargs.get('day'))
+        except (ValueError, TypeError):
+            day = getIntFromGet(request, 'day')
+
+        try:
             event_id = int(self.kwargs.get('event'))
         except (ValueError, TypeError):
             event_id = getIntFromGet(request, 'event')
@@ -512,6 +518,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         kwargs.update({
             'year': year,
             'month': month,
+            'day': day,
             'startDate': getDateTimeFromGet(request, 'startDate'),
             'endDate': getDateTimeFromGet(request, 'endDate'),
             'basis': request.GET.get('basis'),
@@ -531,6 +538,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         # Determine the period over which the statement should be produced.
         year = kwargs.get('year')
         month = kwargs.get('month')
+        day = kwargs.get('day')
         startDate = kwargs.get('startDate')
         endDate = kwargs.get('endDate')
         event = kwargs.get('event')
@@ -557,35 +565,43 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             context['rangeTitle'] += str(_('To %s ' % endDate.strftime('%b. %d, %Y')))
 
         if not startDate and not endDate:
-            if month and year:
-                end_month = ((month) % 12) + 1
-                end_year = year
-                if end_month == 1:
-                    end_year = year + 1
+            start = None
+            delta = None
 
-                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(year, month, 1))
-                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(end_year, end_month, 1))
-
-                context['rangeType'] = 'Month'
-                context['rangeTitle'] = '%s %s' % (month_name[month], year)
-
-            elif year:
-                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(year, 1, 1))
-                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(year + 1, 1, 1))
-
-                context['rangeType'] = 'Year'
-                context['rangeTitle'] = '%s' % year
-
+            if day and month and year:
+                start = ensure_localtime(datetime(year, month, day))
+                delta = relativedelta(days=1)
+                context.update({
+                    'rangeType': 'Day',
+                    'rangeTitle': start.strftime('%B %d, %Y')
+                })
+            elif month and year:
+                start = ensure_localtime(datetime(year, month, 1))
+                delta = relativedelta(months=1)
+                context.update({
+                    'rangeType': 'Month',
+                    'rangeTitle': start.strftime('%B %Y')
+                })
             elif event:
                 context['rangeType'] = 'Event'
-
+            elif year:
+                start = ensure_localtime(datetime(year, 1, 1))
+                delta = relativedelta(years=1)
+                context.update({
+                    'rangeType': 'Year',
+                    'rangeTitle': start.strftime('%Y')
+                })
             else:
-                # Assume year to date if nothing otherwise specified
-                timeFilters['%s__gte' % basis] = ensure_timezone(datetime(timezone.now().year, 1, 1))
-                timeFilters['%s__lt' % basis] = ensure_timezone(datetime(timezone.now().year + 1, 1, 1))
+                start = ensure_localtime(datetime(timezone.now().year, 1, 1))
+                delta = relativedelta(years=1)
+                context.update({
+                    'rangeType': 'YTD',
+                    'rangeTitle': _('Calendar Year To Date')
+                })
 
-                context['rangeType'] = 'YTD'
-                context['rangeTitle'] = _('Calendar Year To Date')
+            if start and delta:
+                timeFilters['%s__gte' % basis] = start
+                timeFilters['%s__lt' % basis] = start + delta
 
         context['startDate'] = timeFilters.get('%s__gte' % basis)
         context['endDate'] = timeFilters.get('%s__lt' % basis)
