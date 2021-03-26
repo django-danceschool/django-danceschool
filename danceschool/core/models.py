@@ -2689,6 +2689,21 @@ class Invoice(EmailRecipientMixin, models.Model):
             k in item_keys
         }
 
+        # If the invoice has previously been saved with adjustments
+        # (in RegistrationSummaryView), but it is still a preliminary invoice,
+        # then we need to un-apply those previous adjustments by starting with
+        # the total equal to grossTotal and with adjustments equal to 0.  This
+        # prevents the duplicate application of discounts and vouchers by
+        # pressing the back button.  The saved_adjustments flag in Invoice
+        # data is set later in updateTotals() whenever the invoice is saved.
+        saved_adjustments = self.data.pop('saved_adjustments', False)
+        if (saved_adjustments and self.status == self.PaymentStatus.preliminary):
+            self.total = self.grossTotal
+            self.adjustments = 0
+            self.save(sendSignals=False)
+            prior_queryset = self.invoiceitem_set.all()
+            prior_queryset.update(total=F('grossTotal'), adjustments=0)
+
         # before going any further, we need to ensure that the queryset to be
         # handled begins with the same format, which means that all the "old"
         # values must be put into annotations to avoid name conflicts.
@@ -2842,6 +2857,8 @@ class Invoice(EmailRecipientMixin, models.Model):
                 changed_invoice = True
 
         if (changed_invoice and save) or forceSave:
+            if changed_invoice:
+                self.data['saved_adjustments'] = True
             self.save()
 
             # Clear the annotations from the queryset if we have saved to avoid confusion.
