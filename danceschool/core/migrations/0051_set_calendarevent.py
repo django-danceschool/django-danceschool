@@ -16,7 +16,7 @@ def set_calendarevent(apps, schema_editor):
     ).annotate(
         statusRule=Case(
             When(Q(status__in=['L', 'X']), then=False),
-            default=True, output_field=models.BooleanField
+            default=True, output_field=models.BooleanField()
         )
     )
     
