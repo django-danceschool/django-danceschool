@@ -41,6 +41,7 @@ def processSquarePayment(request):
     logger.info('Received request for Square Checkout payment.')
 
     nonce_id = request.POST.get('nonce')
+    idempotency_key = request.POST.get('idempotency_key', str(uuid.uuid1()))
     invoice_id = request.POST.get('invoice_id')
     amount = request.POST.get('amount')
     submissionUserId = request.POST.get('user_id')
@@ -144,7 +145,6 @@ def processSquarePayment(request):
 
     api_instance = TransactionsApi()
     api_instance.api_client.configuration.access_token = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
-    idempotency_key = str(uuid.uuid1())
     location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
     amount = {'amount': int(100 * this_total), 'currency': this_currency}
     body = {'idempotency_key': idempotency_key, 'card_nonce': nonce_id, 'amount_money': amount}

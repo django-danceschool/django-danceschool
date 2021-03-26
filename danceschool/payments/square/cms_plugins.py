@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
+import uuid
 
 from .models import SquareCheckoutFormModel
 
@@ -22,6 +23,7 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
         context.update({
             'allow_amount_entry': False,
             'squareApplicationId': getattr(settings, 'SQUARE_APPLICATION_ID', ''),
+            'idempotency_key': str(uuid.uuid1()),
         })
 
         return context

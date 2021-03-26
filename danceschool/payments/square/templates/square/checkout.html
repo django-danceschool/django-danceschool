@@ -17,6 +17,8 @@
         {% csrf_token %}
         {# Whenever a nonce is generated, it's assigned as the value of this hidden input field. #}
         <input type="hidden" id="card-nonce" name="nonce">
+        {# The idempotency key is generated on the server side before this page is rendered so that duplicate charges should not happen. #}
+        <input type="hidden" id="idempotency-key" name="idempotency_key" value="{{ idempotency_key }}">
         {% if user.is_authenticated %}
           <input type="hidden" name="user_id" value="{{ user.id }}">
         {% endif %}
