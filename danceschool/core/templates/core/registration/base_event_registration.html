@@ -24,14 +24,14 @@
     <div class="col-md-12 content-col">
 
       {% block coming_soon %}
-        {% if not allSeries and not allEvents %}
+        {% if not allSeries and not allEvents and not categorySeparateSeries and not categorySeparateEvents %}
           <h2>{% trans "More Classes and Events Coming Soon!" %}</h2>
           <p>{% blocktrans %}Our upcoming classes have not yet been posted, but don't worry, they will be posted here
             soon!  Check back soon for more information.{% endblocktrans %}</p>
           {% if calendar_url %}
             <p>{% blocktrans %}In the meantime, check out our <a href="{{ calendar_url }}">calendar</a> for more
               information about our past and current classes.</p>{% endblocktrans %}{% endif %}
-        {% elif not allSeries %}
+        {% elif not allSeries and not categorySeparateSeries %}
           <h2>{% trans "More Classes Coming Soon!" %}</h2>
           <p>{% blocktrans %}Our upcoming classes have not yet been posted, but don't worry, they will be posted here
             soon!  Check back soon for more information.{% endblocktrans %}</p>
@@ -63,7 +63,7 @@
               {% endif %}
             {% endblock %}
 
-            {% if regOpenEvents or regOpenSeries %}
+            {% if regOpenEvents or regOpenSeries or categorySeparateSeries or categorySeparateEvents %}
                 <input class="btn btn-success btn-lg float-right position-sticky sticky-top"
                        style="top: 0.5em"
                        type="submit"
