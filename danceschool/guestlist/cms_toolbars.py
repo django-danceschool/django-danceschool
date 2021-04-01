@@ -15,13 +15,17 @@ class GuestListToolbar(CMSToolbar):
     def populate(self):
         menu = self.toolbar.get_or_create_menu('core-events', _('Events'))
 
-        break_index = menu.find_first(Break, identifier='related_items_break').index
+        position = menu.find_first(Break, identifier='related_items_break')
+
+        if not position:
+            menu.add_break('related_items_break')
+            position = menu.find_first(Break, identifier='related_items_break')
 
         if (
             self.request.user.has_perm('guestlist.view_guestlist') or
             self.request.user.has_perm('guestlist.change_guestlist')
         ):
-            guestlist_menu = menu.get_or_create_menu('guestlist', _('Guest Lists'), position=break_index + 1)
+            guestlist_menu = menu.get_or_create_menu('guestlist', _('Guest Lists'), position=position + 1)
         else:
             return
 
