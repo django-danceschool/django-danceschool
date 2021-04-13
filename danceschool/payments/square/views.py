@@ -120,7 +120,7 @@ def processSquarePayment(request):
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error(
             'Invalid invoice/amount information passed to createSquarePayment ' +
-            'view: (%s, %s, %s)' % (invoice_id, amount)
+            'view: (%s, %s)' % (invoice_id, amount)
         )
         messages.error(
             request,
@@ -129,7 +129,7 @@ def processSquarePayment(request):
                 str(_('ERROR: Error with Square checkout transaction attempt.')),
                 str(_(
                     'Invalid invoice/amount information passed to ' +
-                    'createSquarePayment view: (%s, %s, %s)' % (
+                    'createSquarePayment view: (%s, %s)' % (
                         invoice_id, amount
                     )
                 ))
