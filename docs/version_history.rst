@@ -1,6 +1,19 @@
 Version History
 ===============
 
+0.9.3 - May 2, 2021
+-------------------
+
+- Daily financial detail views by URL (linked from daily summary) are now available.
+- Better handling for direct registration of classes with/without roles.
+- Fixed Javascript issues related to jQuery load order or duplicate loading. EventOccurrence start/end times must now be in the right order.
+- Fixed error where pressing back or refreshing at end of registration process could lead discounts to be applied more than once.
+- Fixed various registration page logic, especially related to category-separated events.
+- Fix for error when staff users have banlist or guest list permissions but not certain core permissions
+- Idempotency keys are now generated on server side before plugin rendering to avoid duplicate charges.
+- Fixed issue with error message on Square payments when invoice is invalid
+
+
 0.9.2 - March 13, 2021
 -------------------------
 
