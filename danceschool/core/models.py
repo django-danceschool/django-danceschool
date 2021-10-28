@@ -3095,6 +3095,7 @@ class InvoiceItem(models.Model):
         ''' Provides additional context for invoice items. '''
         kwargs.update({
             'id': self.id,
+            'name': self.name,
             'description': self.description,
             'grossTotal': self.grossTotal,
             'total': self.total,

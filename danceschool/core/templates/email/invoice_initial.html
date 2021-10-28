@@ -5,7 +5,7 @@
 
 Invoice items:
 {% for item in itemList %}
-{% if item.eventRegistration %}{{ item.eventRegistration.event.title}}, begins {{ item.eventRegistration.event.start|date:"l, F jS, g:i A" }}{% else %}{{ item.description }}{% endif %}{% endfor %}
+{% if 'eventRegistration' in item %}{{ item.eventRegistration.event.title}}, begins {{ item.eventRegistration.event.start|date:"l, F jS, g:i A" }}{% else %}{{ item.name }}{% endif %}{% endfor %}
 
 Payment details:
 {% if thisPaymentAmount %}

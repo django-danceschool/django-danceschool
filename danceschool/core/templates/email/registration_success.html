@@ -3,7 +3,7 @@
 Thank you for registering with {{ businessName }}!  We have received and processed your registration for the following:
 
 {% for item in itemList %}
-{% if item.eventRegistration %}{{ item.eventRegistration.event.title}}, begins {{ item.eventRegistration.event.start|date:"l, F jS, g:i A" }}{% else %}{{ item.description }}{% endif %}{% endfor %}
+{% if 'eventRegistration' in item %}{{ item.eventRegistration.event.title}}, begins {{ item.eventRegistration.event.start|date:"l, F jS, g:i A" }}{% else %}{{ item.name }}{% endif %}{% endfor %}
 
 Total, Net of Discounts: {{ currencySymbol }}{{ total|floatformat:2 }}{% if taxes %}
 Taxes: {{ currencySymbol }}{{ taxes|floatformat:2 }}{% endif %}{% if adjustments %}
