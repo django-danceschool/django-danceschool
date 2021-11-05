@@ -701,10 +701,6 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # discount, addons, and vouchers
         reg = response.pop('__relateditem_registration', None)
 
-        # Pass back student status.
-        if getattr(reg, 'student', False):
-            response.update({'student': reg.student})
-
         # Pop out keys associated with related items that are no longer needed,
         # since once the signal handlers are complete the remaining logic does
         # not use them.
@@ -1126,8 +1122,9 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             item.grossTotal = this_event.getBasePrice(payAtDoor=registration.payAtDoor)
             this_eventreg.role = this_role
 
-        if post_data.get('student', False):
-            this_eventreg.student = post_data.get('student')
+        if item_data.get('student', False):
+            this_eventreg.student = item_data.get('student')
+            response['student'] = True
 
         if item_data.get('checkInType') in ['E', 'S'] and item_data.get('checkInOccurrence'):
             this_eventreg.data['__checkInOccurrence'] = item_data['checkInOccurrence']

@@ -334,13 +334,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
             delete this_data.voucherId;
         }
 
-        // The student attribute actually applies to the registration, not to
-        // one particular item, so move this to the correct place in regData
-        if (this_data.student === true) {
-            regData.student = this_data.student;
-            delete this_data.student;
-        }
-
         if (this_data.type == "eventRegistration") {
             // Avoid passing anything but integer values for role ID, which will
             // happen when registration buttons have no associated role.
@@ -496,7 +489,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                             role_text += this.role.name;
                         }
                         this_row.find('.customerInfoRole').text(role_text);
-                        this_row.find('.customerInfoStudent').text(toTitleCase(this.registration.student.toString()));
+                        this_row.find('.customerInfoStudent').text(toTitleCase(this.student.toString()));
                         this_row.find('.customerInfoPaymentStatus').text(statusString);
                         this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
                         this_row.find('.customerRegistrationLink').attr('href',this.registration.url);
