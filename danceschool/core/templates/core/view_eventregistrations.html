@@ -49,6 +49,7 @@
 		<td>
 			<input type="checkbox" class="customerCheckIn" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}" 
 				{% if reg.dropIn %}data-drop-in="true" data-occurrence-ids="{% for occ in reg.occurrences.all %}{{ occ.id }}{% if not forloop.last %}|{% endif %}{% endfor %}"{%endif %}
+				style="display: none;"
 			/>
 			<label class="customerCheckInLabel" for="reg_id_{{ reg.id }}"></label>
 		</td>
