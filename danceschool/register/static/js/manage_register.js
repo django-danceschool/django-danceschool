@@ -474,7 +474,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         }
 
                         this_row.find('.customerCheckIn').attr('id', 'checkIn_' + this.id + '_' + this.occurrenceId);
-                        this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id);
+                        this_row.find('.customerCheckInLabel').attr('for', 'checkIn_' + this.id + '_' + this.occurrenceId);
                         this_row.find('.customerCheckIn').attr('checked', this.checkedIn);
                         this_row.find('.customerCheckIn').attr('value', this.id);
                         this_row.find('.customerCheckIn').data('occurrence-id', this.occurrenceId);

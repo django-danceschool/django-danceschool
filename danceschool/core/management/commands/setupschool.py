@@ -537,7 +537,7 @@ Remember, all page settings and content can be changed later via the admin inter
                 sidebar_placeholder, 'StaffMemberListPlugin', initial_language,
                 orderChoice=StaffMemberListPluginModel.OrderChoices.random,
                 photoRequired=True,
-                template='core/instructor_image_set.html'
+                template='core/staff_image_set.html'
             )
             publish_page(instructor_page, this_user, initial_language)
             self.stdout.write('Instructor page added.\n')
