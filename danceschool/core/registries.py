@@ -1,30 +1,35 @@
 from persisting_theory import Registry
 
 
-class PluginTemplateBase(object):
-    ''' The base class for registering custom plugin templates. '''
+class TemplateBase(object):
+    '''
+    The base class for registering templates in registries, subclassed as
+    needed for template registries, etc.    
+    '''
 
     # The name of the template to use
     template_name = ''
+
+    # An optional description of the template
+    description = ''
+
+
+class PluginTemplateBase(TemplateBase):
+    ''' The base class for registering custom plugin templates. '''
 
     # The plugin class for which this is a template.
     plugin = None
 
-    # An optional description of the template (used in the dropdown)
-    description = ''
 
-
-class ModelTemplateBase(object):
+class ModelTemplateBase(TemplateBase):
     ''' The base class for registering custom model page templates. '''
-
-    # The name of the template to use
-    template_name = ''
 
     # The plugin class for which this is a template.
     model = None
 
-    # An optional description of the template (used in the dropdown)
-    description = ''
+
+class ExtrasTemplateBase(TemplateBase):
+    ''' The base class for registering event registration extras templates. '''
 
 
 class PluginTemplatesRegistry(Registry):
@@ -49,7 +54,7 @@ class PluginTemplatesRegistry(Registry):
 class ModelTemplatesRegistry(Registry):
     '''
     The Event models (including its child models) allow for the use of
-    selectable templates (e.g. for different types of events).n  This registry
+    selectable templates (e.g. for different types of events).  This registry
     keeps track of the list of template options that is presented when adding
     an event.  To use this feature, register your model templates by defining
     a class in your app's model_templates.py that inherits from
@@ -62,5 +67,20 @@ class ModelTemplatesRegistry(Registry):
     look_into = "model_templates"
 
 
+class RegExtrasTemplatesRegistry(Registry):
+    '''
+    Applications can hook into the registration check-in process to provide
+    extra information that may be pertinent at check-in. This information is
+    already provided to the core app views using the get_eventregistration_data
+    signal. However, the core app does not know how to display this information.
+    This registry allows apps to specify their own templates in which the extra
+    information can be displayed.
+    '''
+
+    # the package where the registry will try to find callbacks in each app
+    look_into = "extras_templates"
+
+
 plugin_templates_registry = PluginTemplatesRegistry()
 model_templates_registry = ModelTemplatesRegistry()
+extras_templates_registry = RegExtrasTemplatesRegistry()

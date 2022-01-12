@@ -3,9 +3,10 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import View
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.db.models import Q, Value
+from django.db.models import Q, Value, Case, When, F, DateTimeField, Min, Max
 from django.db.models.functions import Concat
 
 from braces.views import PermissionRequiredMixin
@@ -13,8 +14,9 @@ import json
 
 from .models import (
     Event, EventOccurrence, SeriesTeacher, EventRegistration, EmailTemplate,
-    EventCheckIn
+    EventCheckIn, Invoice
 )
+from .utils.timezone import ensure_localtime
 
 
 class UserAccountInfo(View):
@@ -120,11 +122,19 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
             return self.errorResponse(errors)
 
         requested = post_data.get('request')
+        scope = post_data.get('scope', 'event')
         event_id = post_data.get('event_id')
+        invoice_id = post_data.get('invoice_id')
+
         checkin_type = post_data.get('checkin_type')
         occurrence_id = post_data.get('occurrence_id')
         registrations = post_data.get('registrations', [])
         names = post_data.get('names', [])
+
+        # Initialize event, invoice, and occurrence for easier logic.
+        this_event = None
+        this_invoice = None
+        this_occurrence = None
 
         if requested not in ['get', 'get_all', 'update']:
             errors.append({
@@ -135,24 +145,24 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                 )
             })
 
-        if not event_id:
+        if scope == 'event' and not event_id:
             errors.append({
                 'code': 'no_event',
                 'message': _('No event specified.')
             })
             return self.errorResponse(errors)
-
-        this_event = Event.objects.filter(id=event_id).prefetch_related(
-            'eventoccurrence_set', 'eventregistration_set', 'eventcheckin_set',
-            'eventregistration_set__registration', 'eventregistration_set__customer',
-        ).first()
-
-        if not this_event:
+        elif scope == 'invoice' and not invoice_id:
             errors.append({
-                'code': 'invalid_event',
-                'message': _('Invalid event specified.')
+                'code': 'no_invoice',
+                'message': _('No invoice specified.')
             })
-            return self.errorResponse(errors)
+        elif scope not in ['event', 'invoice']:
+            errors.append({
+                'code': 'invalid_scope',
+                'message': _(
+                    'Invalid scope. Options are \'event\' and \'invoice\'.'
+                )
+            })
 
         if checkin_type not in ['E', 'O']:
             errors.append({
@@ -160,23 +170,66 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                 'message': _('Invalid check-in type.'),
             })
 
-        if checkin_type == 'O':
-            this_occurrence = this_event.eventoccurrence_set.filter(
-                id=occurrence_id
+        if errors:
+            return self.errorResponse(errors)
+
+        if scope == 'event':
+            this_event = Event.objects.filter(id=event_id).prefetch_related(
+                'eventoccurrence_set', 'eventregistration_set', 'eventcheckin_set',
+                'eventregistration_set__registration', 'eventregistration_set__customer',
             ).first()
-            if not this_occurrence:
+
+            if not this_event:
                 errors.append({
-                    'code': 'invalid_occurrence',
-                    'message': _('Invalid event occurrence.'),
+                    'code': 'invalid_event',
+                    'message': _('Invalid event specified.')
                 })
-        else:
-            this_occurrence = None
+            elif checkin_type == 'O':
+                this_occurrence = this_event.eventoccurrence_set.filter(
+                    id=occurrence_id
+                ).first()
+                if not this_occurrence:
+                    errors.append({
+                        'code': 'invalid_occurrence',
+                        'message': _('Invalid event occurrence.'),
+                    })
+
+        if scope == 'invoice':
+            this_invoice = Invoice.objects.filter(id=invoice_id).select_related(
+                'registration',
+            ).prefetch_related(
+                'invoiceitem_set', 'invoiceitem_set__eventRegistration',
+                'invoiceitem_set__eventRegistration__event',
+                'invoiceitem_set__eventRegistration__customer',
+            ).first()
+
+            if not this_invoice:
+                errors.append({
+                    'code': 'invalid_invoice',
+                    'message': _('Invalid invoice specified.')
+                })
+
+        if errors:
+            return self.errorResponse(errors)
 
         if registrations:
-            these_registrations = this_event.eventregistration_set.filter(
-                id__in=[x.get('id') for x in registrations],
-                registration__final=True,
+            er_filters = (
+                Q(id__in=[x.get('id') for x in registrations]) &
+                Q(registration__final=True)
             )
+
+            if this_event:
+                er_filters = er_filters & Q(event=this_event)
+
+            if this_invoice:
+                er_filters = er_filters & Q(registration__invoice=this_invoice)
+
+            these_registrations = EventRegistration.objects.filter(
+                er_filters
+            ).select_related('event', 'customer', 'registration').prefetch_related(
+                'event__eventoccurrence_set'
+            )
+
             if these_registrations.count() < len(registrations):
                 errors.append({
                     'code': 'invalid_registrations',
@@ -200,9 +253,38 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
             return self.errorResponse(errors)
 
         # Get the set of existing check-ins that need to be returned or updated.
-        existing_checkins = EventCheckIn.objects.filter(
-            event=this_event, checkInType=checkin_type,
-            occurrence=this_occurrence,
+        checkin_filters = Q(checkInType=checkin_type)
+        annotations = {}
+
+        if scope == 'event':
+            checkin_filters = checkin_filters & Q(event=this_event)
+            
+            if checkin_type == 'O':
+                checkin_filters = checkin_filters & Q(occurrence=this_occurrence)
+
+        elif scope == 'invoice':
+            checkin_filters = checkin_filters & Q(eventRegistration__invoiceItem__invoice=this_invoice)
+
+            if checkin_type == 'O':
+                annotations = {
+                    'future': Case(When(
+                        occurrence__startTime__gte=ensure_localtime(timezone.now()).replace(
+                            hour=0, minute=0, second=0
+                        ), then=F('occurrence__startTime')
+                    ), default=None, output_field=DateTimeField()),
+                    'min_startTime': Min('future'),
+                    'max_startTime': Max('occurrence__startTime'),
+                }
+                checkin_filters = (
+                    checkin_filters &
+                    Q(eventRegistration__registration__invoice=this_invoice) &
+                    (Q(future=F('min_startTime')) | (
+                        Q(min_startTime__isnull=True) & Q(occurrence__startTime=F('max_startTime'))
+                    ))
+                )
+
+        existing_checkins = EventCheckIn.objects.annotate(**annotations).filter(
+            checkin_filters
         ).select_related('eventRegistration')
 
         if requested != 'get_all':
@@ -279,24 +361,44 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
 
         # Create EventCheckIns associated with remaining new registrations and
         # names.
-        new_checkins = [
+        new_checkins = []
+        new_checkin_kwargs = {
+            'checkInType': checkin_type,
+            'submissionUser': submissionUser,
+        }
+        if scope == "event":
+            new_checkin_kwargs.update({
+                'event': this_event,
+                'occurrence': this_occurrence
+            })
+
+        for x in registrations:
+            this_checkin_reg = these_registrations.get(id=x.get('id'))
+
+            this_checkin_kwargs = {
+                'eventRegistration': this_checkin_reg,
+                'cancelled': x.get('cancelled', False),
+                'firstName': getattr(this_checkin_reg.customer, 'first_name', None),
+                'lastName': getattr(this_checkin_reg.customer, 'last_name', None),
+            }
+
+            if scope == 'invoice':
+                this_checkin_kwargs['event'] = this_checkin_reg.event
+                this_checkin_kwargs['occurrence'] = (
+                    this_checkin_reg.event.nextOccurrenceForToday or
+                    this_checkin_reg.event.lastOccurrence
+                )
+
+            new_checkins.append(EventCheckIn(
+                **this_checkin_kwargs, **new_checkin_kwargs
+            ))
+
+        new_checkins += [
             EventCheckIn(
-                event=this_event, checkInType=checkin_type,
-                occurrence=this_occurrence,
-                eventRegistration=this_event.eventregistration_set.get(id=x.get('id')),
-                cancelled=x.get('cancelled', False),
-                firstName=getattr(this_event.eventregistration_set.get(id=x.get('id')).customer, 'firstName', None),
-                lastName=getattr(this_event.eventregistration_set.get(id=x.get('id')).customer, 'lastName', None),
-                submissionUser=submissionUser,
-            ) for x in registrations
-        ] + [
-            EventCheckIn(
-                event=this_event, checkInType=checkin_type,
-                occurrence=this_occurrence,
                 cancelled=x.get('cancelled', False),
                 firstName=x.get('first_name'),
                 lastName=x.get('last_name'),
-                submissionUser=submissionUser,
+                **new_checkin_kwargs
             ) for x in names
         ]
 

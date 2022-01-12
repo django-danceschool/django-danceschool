@@ -2,7 +2,8 @@ from django.urls import path
 
 from .views import (
     EventRegistrationSummaryView, EventRegistrationSelectView,
-    EventRegistrationJsonView, 
+    EventRegistrationJsonView, CustomerSingleCheckInView, CustomerQrCodeView,
+    SchoolSingleCheckInView
 )
 from .classreg import (
     RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
@@ -58,6 +59,15 @@ urlpatterns = [
     path(
         'viewregistrations/<int:event_id>/',
         EventRegistrationSummaryView.as_view(), name='viewregistrations'
+    ),
+    path(
+        'check-in/show/<uuid:invoice_id>/',
+        CustomerSingleCheckInView.as_view(), name='customer_checkin'
+    ),
+    path('check-in/qr/<uuid:invoice_id>/', CustomerQrCodeView.as_view(), name='customer_qrcode'),
+    path(
+        'check-in/process/<uuid:pk>/',
+        SchoolSingleCheckInView.as_view(), name='school_checkin'
     ),
     path('registrations/json/', EventRegistrationJsonView.as_view(), name='viewregistrations_json'),
     path('registrations/checkin/', ProcessCheckInView.as_view(), name='ajax_checkin'),

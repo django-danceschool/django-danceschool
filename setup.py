@@ -57,6 +57,7 @@ setup(
         'Pillow>=3.4.2',
         'python-dateutil>=2.4.1',
         'pytz>=2017.2',
+        'qrcode>=7.1',
         'redis>=3.1.0',
         'requests>=2.6.0',
         'six>=1.10.0',

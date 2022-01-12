@@ -1,0 +1,23 @@
+{% extends "cms/home.html" %}
+{% load cms_tags danceschool_tags sekizai_tags i18n %}
+
+{% block content %}
+
+<h1>{% blocktrans with name=object.first_name %}Welcome, {{ name }}{% endblocktrans %}</h1>
+
+{% if object.registration %}
+	<p>{% blocktrans %}Show this QR code when you arrive at check-in.{% endblocktrans %}</p>
+
+	<div class="mx-auto d-block"><img src="{{ qrcode_url }}?v={{ object.validationString }}" alt="{% trans 'QR code' %}" style="max-width: 300px;"></img></div>
+{% endif %}
+
+<dl>
+	<dt>{% trans "Invoice" %}:</dt>
+	<dd>
+		{{ object.id }}: {{ object.get_status_display }}
+	</dd>
+</dl>
+
+<a class="btn btn-primary mx-auto d-block" href="{{ object.url }}">{% trans "View Invoice" %}</a>
+
+{% endblock %}

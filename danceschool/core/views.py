@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.generic import (
     FormView, CreateView, UpdateView, DetailView, TemplateView, ListView,
-    RedirectView
+    RedirectView, View
 )
 from django.db.models import Min, Q, Count, F, Case, When, BooleanField
 from django.utils.translation import gettext_lazy as _
@@ -29,10 +29,12 @@ from cms.models import Page
 import re
 import logging
 import json
+import qrcode
+from io import BytesIO
 
 from .models import (
-    ClassDescription, Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
-    StaffMember, Instructor, Invoice, Customer, EventCheckIn
+    Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
+    StaffMember, Instructor, Invoice, Customer, EventCheckIn, Registration
 )
 from .forms import (
     SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
@@ -47,7 +49,7 @@ from .mixins import (
 from .signals import get_customer_data, get_eventregistration_data
 from .utils.requests import getIntFromGet
 from .utils.timezone import ensure_timezone, ensure_localtime
-
+from .registries import extras_templates_registry
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -56,7 +58,7 @@ logger = logging.getLogger(__name__)
 class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, FormView):
     '''
     This view is used to select an event for viewing registration data in
-    the EventRegistrationSummaryView
+    the EventRegistrationSummaryView.
     '''
     template_name = 'core/events_viewregistration_list.html'
     permission_required = 'core.view_registration_summary'
@@ -131,6 +133,125 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'event': self.object,
             'registrations': registrations,
             'extras': extras_dict,
+            'extras_templates_registry': extras_templates_registry,
+        }
+        context.update(kwargs)
+        return super().get_context_data(**context)
+
+
+class CustomerSingleCheckInView(AccessMixin, DetailView):
+    '''
+    This view can be sent to customers (e.g. in a registration email).  It
+    allows them to present a QR code at the door for quicker check-in.
+    '''
+    template_name = 'core/customer_single_checkin.html'
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(
+            Invoice.objects.filter(
+                id=self.kwargs.get('invoice_id')
+            ).select_related('registration')
+        )
+
+    def get(self, request, *args, **kwargs):
+        '''
+        Registrations can be viewed only if the validation string is provided
+        along with the invoice ID, unless the user is logged in and has
+        view_all_invoice permissions
+        '''
+        self.object = self.get_object()
+        user_has_permissions = request.user.has_perm('core.view_all_invoices')
+        user_has_validation_string = (
+            request.GET.get('v', None) == self.object.validationString
+        )
+
+        if user_has_validation_string or user_has_permissions:
+            context = self.get_context_data(
+                object=self.object,
+                user_has_permissions=user_has_permissions,
+                user_has_validation_string=user_has_validation_string,
+            )
+
+            if self.object.registration:
+                context['qrcode_url'] = request.build_absolute_uri(
+                    '{}?v={}'.format(
+                        reverse('customer_qrcode', args=(self.object.id,)),
+                        self.object.validationString
+                    )
+                )
+
+            return self.render_to_response(context)
+        return self.handle_no_permission()
+
+
+class CustomerQrCodeView(AccessMixin, DetailView):
+    ''' This class returns the QR code PNG '''
+
+    def get_object(self, queryset=None):
+        return get_object_or_404(
+            Invoice.objects.filter(
+                id=self.kwargs.get('invoice_id')
+            ).select_related('registration')
+        )
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        user_has_permissions = request.user.has_perm('core.view_all_invoices')
+        user_has_validation_string = (
+            request.GET.get('v', None) == self.object.validationString
+        )
+
+        if (user_has_validation_string or user_has_permissions):
+            checkin_url = request.build_absolute_uri(reverse(
+                'school_checkin', args=(self.object.id, )
+            ))
+            img = qrcode.make(checkin_url, box_size=20)
+            stream = BytesIO()
+            img.save(stream)
+            return HttpResponse(stream.getvalue(), content_type='image/png')
+        return self.handle_no_permission()
+
+
+class SchoolSingleCheckInView(PermissionRequiredMixin, DetailView):
+    '''
+    This view is generally accessed by scanning a QR code.  It provides a list
+    similar to the EventRegistrationSummaryView, but for which the scope of
+    check-in options is all the event registrations associated with an invoice,
+    rather than all those associated with an event.
+    '''
+    permission_required = 'core.view_registration_summary'
+    template_name = 'core/view_eventregistrations.html'
+    model = Invoice
+
+    def get_context_data(self, **kwargs):
+        ''' Add the list of event registrations for the given invoice. '''
+
+        registrations = EventRegistration.objects.filter(
+            registration__invoice=self.object, cancelled=False,
+            registration__final=True,
+        ).select_related(
+            'registration', 'event', 'customer',
+            'invoiceItem', 'role', 'registration__invoice',
+        ).order_by(
+            F('customer__last_name').asc(nulls_last=True),
+            F('customer__first_name').asc(nulls_last=True),
+        )
+
+        extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
+
+        if registrations:
+            extras = get_eventregistration_data.send(
+                sender=SchoolSingleCheckInView, eventregistrations=registrations
+            )
+            for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
+                extras_dict[k].extend(v)
+
+        context = {
+            'scope': 'invoice',
+            'invoice': self.object,
+            'registrations': registrations,
+            'extras': extras_dict,
+            'extras_templates_registry': extras_templates_registry,
         }
         context.update(kwargs)
         return super().get_context_data(**context)

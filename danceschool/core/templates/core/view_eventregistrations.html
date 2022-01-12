@@ -1,30 +1,43 @@
 {% extends "cms/admin_home.html" %}
-{% load sekizai_tags i18n %}
+{% load danceschool_tags sekizai_tags i18n %}
 
 {% block content %}
 
-<h3>{{ event.name }}</h3>
+{% if scope == "invoice" %}
+	<h3>{% blocktrans with id=invoice.id %}Check-in for invoice #{{ id }}{% endblocktrans %}</h3>
+{% else %}
+	<h3>{{ event.name }}</h3>
 
-<dl>
-	<dt>{% trans "Total Students" %}:</dt><dd>{{ event.numRegistered }}</dd>
-	<dt>{% trans "Location" %}:</dt><dd>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</dd>
-	<dt>{% trans "Time" %}:</dt><dd>{{ event.startTime|date:'l, h:i A' }}</dd>
-	<dt>{% trans "Partner Required" %}:</dt><dd>{{ event.partnerRequired|yesno }}</dd>
-</dl>
+	<dl>
+		<dt>{% trans "Total Students" %}:</dt><dd>{{ event.numRegistered }}</dd>
+		<dt>{% trans "Location" %}:</dt><dd>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</dd>
+		<dt>{% trans "Time" %}:</dt><dd>{{ event.startTime|date:'l, h:i A' }}</dd>
+		<dt>{% trans "Partner Required" %}:</dt><dd>{{ event.partnerRequired|yesno }}</dd>
+	</dl>
+{% endif %}
 
 {% if 'core.checkin_customers' in perms %}
-<form id="checkin_form">
+	<form id="checkin_form">
 
-<div class="form-group">
-	<label for="occurrenceSelect">{% trans "Select Event Occurrence for Check-In" %}</label>
-	<select id="occurrenceSelect" class="form-control">
-		{% for occ in event.eventoccurrence_set.all %}
-		<option value="{{ occ.id }}" {% if occ.id == event.nextOccurrenceForToday.id %}selected{% endif %}>{{ occ }}</option>
-		{% endfor %}
-		<option value="event">{% trans "Event-level check-in" %}</option>
-	</select>
-</div>
-
+	{% if scope == "invoice" %}
+		<div class="form-group">
+			<label for="checkInTypeSelect">{% trans "Select Check-In Type" %}</label>
+			<select id="checkInTypeSelect" class="form-control">
+				<option value="O" selected>{% trans "Check into today's/next occurrence" %}</option>
+				<option value="E">{% trans "Event-level check-in" %}</option>
+			</select>
+		</div>
+	{% else %}
+		<div class="form-group">
+			<label for="occurrenceSelect">{% trans "Select Event Occurrence for Check-In" %}</label>
+			<select id="occurrenceSelect" class="form-control">
+				{% for occ in event.eventoccurrence_set.all %}
+				<option value="{{ occ.id }}" {% if occ.id == event.nextOccurrenceForToday.id %}selected{% endif %}>{{ occ }}</option>
+				{% endfor %}
+				<option value="event">{% trans "Event-level check-in" %}</option>
+			</select>
+		</div>
+	{% endif %}
 {% endif %}
 
 <table class="classregsummary table table-striped table-responsive">
@@ -34,6 +47,12 @@
 		<th>{% trans "Check In" %}</th>
 		{% endif %}
 		<th>{% trans "Customer" %}</th>
+		{% if scope == "invoice" %}
+		<th>{% trans "Event" %}</th>
+		{% endif %}
+		{% if extras and extras_templates_registry %}
+		<th>{% trans "Additional Info" %}</th>
+		{% endif %}
 		<th>{% trans "Reg. Details" %}</th>
 		{% if event.partnerRequired %}<th>{% trans "Partner" %}</th>{% endif %}
 		<th>{% trans "Event Pricing" %}</th>
@@ -47,8 +66,12 @@
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
 		<td>
-			<input type="checkbox" class="checkInCheckBox" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}" 
-				{% if reg.dropIn %}data-drop-in="true" data-occurrence-ids="{% for occ in reg.occurrences.all %}{{ occ.id }}{% if not forloop.last %}|{% endif %}{% endfor %}"{%endif %}
+			<input type="checkbox" class="checkInCheckBox" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}"
+				data-next-occurrence="{{ reg.event.nextOccurrenceForToday.id }}"
+				{% if reg.dropIn %}
+					data-drop-in="true"	
+					data-occurrence-ids="{% for occ in reg.occurrences.all %}{{ occ.id }}{% if not forloop.last %}|{% endif %}{% endfor %}"
+				{%endif %}
 			/>
 		</td>
 		{% endif %}
@@ -64,6 +87,19 @@
 				{% trans "N/A" %}
 			{% endif %}
 		</td>
+
+		{% if scope == "invoice" %}
+		<td>{{ reg.event.name }}</td>
+		{% endif %}
+		{% if extras and extras_templates_registry %}
+		<td>
+			{% with extras|get_item:reg.id as reg_extras %}
+			{% for k,t in extras_templates_registry.items %}
+				{% include t.template %}
+			{% endfor %}
+			{% endwith %}
+		</td>
+		{% endif %}
 
 		<td>
 		<strong>{% trans "Role" %}:</strong> {% if reg.role %}{{ reg.role }}{% else %}{% trans "N/A" %}{% endif %}<br />
@@ -165,7 +201,7 @@
 		<div class="dropdown show">
 			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 				{% trans "Related Items" %}
-			</a>			
+			</a>
 			<div class="dropdown-menu" aria-labelledby="itemsLink_{{ reg.id }}">
 				{% if 'core.view_all_invoices' in perms and reg.registration.invoice %}
 					<a class="dropdown-item" href="{% url 'viewInvoice' reg.registration.invoice.id %}">{% trans "Invoice" %}</a>
@@ -209,7 +245,9 @@
 	var $ = django.jQuery;
 
 	regParams = {
+		scope: "{{ scope }}",
 		event: "{{ event.id }}",
+		invoice: "{{ invoice.id }}",
 		ajaxUrl: "{% url 'ajax_checkin' %}",
 	}
 
@@ -220,19 +258,27 @@
 
 		var this_request = {
 			request: "get_all",
-			event_id: regParams.event,
 			checkin_type: "E",
 		};
 
-		var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
-		if (thisOccurrence !== "event") {
-			this_request["checkin_type"] = "O";
-			this_request["occurrence_id"] = thisOccurrence;
+		if (regParams.scope == "invoice") {
+			this_request["scope"] = "invoice";
+			this_request["invoice_id"] = regParams.invoice;
+			this_request["checkin_type"] = $('#checkInTypeSelect').children("option:selected").val();
+		}
+		else {
+			this_request["scope"] = "event";
+			this_request["event_id"] = regParams.event;
+			var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
+			if (thisOccurrence !== "event") {
+				this_request["checkin_type"] = "O";
+				this_request["occurrence_id"] = thisOccurrence;
 
-			var mismatched = $('.checkInCheckBox[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
-			$(mismatched).attr('disabled', true);
-			$(mismatched).hide();
+				var mismatched = $('.checkInCheckBox[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
+				$(mismatched).attr('disabled', true);
+				$(mismatched).hide();
 
+			}
 		}
 
 	    $.ajax(
@@ -278,6 +324,11 @@
 		getCheckIns();
 	});
 
+	$('#checkInTypeSelect').change(function() {
+		$('.checkInCheckbox').removeData('existing');
+		getCheckIns();
+	});
+
 	// Use Jquery to get the cookie value of the CSRF token
 	function getCookie(name) {
 	    var cookieValue = null;
@@ -316,15 +367,23 @@
 
 		var this_request = {
 			request: "update",
-			event_id: regParams.event,
 			checkin_type: "E",
 			registrations: [],
 		};
 
-		var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
-		if (thisOccurrence !== "event") {
-			this_request["checkin_type"] = "O";
-			this_request["occurrence_id"] = thisOccurrence;
+		if (regParams.scope == "invoice") {
+			this_request["scope"] = "invoice";
+			this_request["invoice_id"] = regParams.invoice;
+			this_request["checkin_type"] = $('#checkInTypeSelect').children("option:selected").val();
+		}
+		else {
+			this_request["scope"] = "event";
+			this_request["event_id"] = regParams.event;
+			var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
+			if (thisOccurrence !== "event") {
+				this_request["checkin_type"] = "O";
+				this_request["occurrence_id"] = thisOccurrence;
+			}
 		}
 
 		$.each($('.checkInCheckBox'), function() {
