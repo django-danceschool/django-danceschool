@@ -373,7 +373,7 @@ def processPointOfSalePayment(request):
 
     if 'invoice' in metadata.keys():
         try:
-            this_invoice = Invoice.objects.get(id=int(metadata.get('invoice')))
+            this_invoice = Invoice.objects.get(id=metadata.get('invoice'))
             this_description = _('Invoice Payment: %s' % this_invoice.id)
 
             if this_invoice.status == Invoice.PaymentStatus.preliminary:

@@ -141,7 +141,7 @@ def checkVoucherCode(sender, **kwargs):
     if registration:
         events = Event.objects.filter(
             eventregistration__registration=registration
-        ).exclude(eventregistration__dropIn=True).values_list('id', flat=True)
+        ).exclude(eventregistration__dropIn=True)
 
     return obj.validate(
         customer=customer, events=events,

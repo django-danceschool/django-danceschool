@@ -66,13 +66,14 @@
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
 		<td>
-			<input type="checkbox" class="checkInCheckBox" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}"
+			<input type="checkbox" class="customerCheckIn" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}"
 				data-next-occurrence="{{ reg.event.nextOccurrenceForToday.id }}"
 				{% if reg.dropIn %}
 					data-drop-in="true"	
 					data-occurrence-ids="{% for occ in reg.occurrences.all %}{{ occ.id }}{% if not forloop.last %}|{% endif %}{% endfor %}"
 				{%endif %}
 			/>
+			<label class="customerCheckInLabel" for="reg_id_{{ reg.id }}"></label>
 		</td>
 		{% endif %}
 		<td>
@@ -224,7 +225,6 @@
 </table>
 
 {% if 'core.checkin_customers' in perms %}
-	<input class="btn btn-primary" type="submit" value="{% trans 'Submit Checkins' %}" />
 	</form>
 
 	<div id="update_ok" style="display:none; font-size: 1.5em; color: #0a0; background-color: #ddd; padding: 0.5em; width: 95%;">{% trans "Check-ins submitted successfully!" %}</div>
@@ -253,8 +253,8 @@
 
 	function getCheckIns() {
 
-		$('.checkInCheckBox').removeAttr('disabled');
-		$('.checkInCheckBox').show();
+		$('.customerCheckIn').removeAttr('disabled');
+		$('.customerCheckIn').show();
 
 		var this_request = {
 			request: "get_all",
@@ -274,7 +274,7 @@
 				this_request["checkin_type"] = "O";
 				this_request["occurrence_id"] = thisOccurrence;
 
-				var mismatched = $('.checkInCheckBox[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
+				var mismatched = $('.customerCheckIn[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
 				$(mismatched).attr('disabled', true);
 				$(mismatched).hide();
 
@@ -293,7 +293,7 @@
 					$('#update_error').slideDown();
 				}
 				else {
-					$('.checkInCheckBox').prop('checked', false);
+					$('.customerCheckIn').prop('checked', false);
 					$.each(data['checkins'], function() {
 						var this_element = $('#reg_id_' + this.eventRegistration);
 						this_element.prop('checked', (this.cancelled == false));
@@ -314,18 +314,18 @@
 	  getCheckIns();
 	});
 
-	$('.checkInCheckBox').click(function(){
+	$('.customerCheckIn').click(function(){
 		$('#update_ok').slideUp();
 		$('#update_error').slideUp();
 	});
 
 	$('#occurrenceSelect').change(function() {
-		$('.checkInCheckbox').removeData('existing');
+		$('.customerCheckIn').removeData('existing');
 		getCheckIns();
 	});
 
 	$('#checkInTypeSelect').change(function() {
-		$('.checkInCheckbox').removeData('existing');
+		$('.customerCheckIn').removeData('existing');
 		getCheckIns();
 	});
 
@@ -361,9 +361,10 @@
 	    }
 	});
 
+    // Check-in customer, guest.
+    $(document).on("click", ".customerCheckIn", function() {
 
-	$('#checkin_form').submit(function(e) {
-		e.preventDefault(); //STOP default action
+		$('.customerCheckIn').attr("disabled", true);
 
 		var this_request = {
 			request: "update",
@@ -386,7 +387,7 @@
 			}
 		}
 
-		$.each($('.checkInCheckBox'), function() {
+		$.each($('.customerCheckIn'), function() {
 			if ($(this).is(':checked') || $(this).data('existing') == "true") {
 				this_request.registrations.push({
 					id: $(this).val(),
@@ -409,7 +410,7 @@
 				}
 				else {
 					$('#update_ok').slideDown();
-					$.each($('.checkInCheckBox'), function() {
+					$.each($('.customerCheckIn'), function() {
 						if ($(this).is(':checked') || $(this).data('existing') == "true") {
 							$(this).data('existing',"true");
 						}
@@ -422,8 +423,59 @@
 				$('#update_error').slideDown();
 	        }
 	    });
+
+		setTimeout(function() {
+			$(".customerCheckIn,.guestCheckIn").removeAttr("disabled");
+		}, 500);
+
 	});
+
 	</script>
+{% endaddtoblock %}
+
+{% addtoblock "css" %}
+    <style type="text/css">
+    .customerCheckInLabel {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+        background-color: #6C757D;
+        border-radius: 20px;
+        transition: all 0.3s;
+    }
+    .customerCheckInLabel::after {
+        content: '';
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius:50%;
+        background-color: white;
+        top: 1px;
+        left: 1px;
+        transition: all 0.3s;
+    }
+
+    .customerCheckIn:checked + .customerCheckInLabel::after {
+        left : 20px;
+    }
+    .customerCheckIn:checked + .customerCheckInLabel {
+        background-color: #28A745;
+    }
+
+    .customerCheckIn:disabled + .customerCheckInLabel {
+        background-color: #BFBFBF;
+    }
+
+    .customerCheckIn:disabled + .customerCheckInLabel::after {
+        background-color: #6C757D;
+    }
+
+    .customerCheckIn {
+	    position: absolute;
+		opacity: 0;
+    }
+</style>
 {% endaddtoblock %}
 
 {% endblock %}
