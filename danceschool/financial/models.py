@@ -1,9 +1,12 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 from polymorphic.models import PolymorphicModel
 from filer.fields.file import FilerFileField
@@ -168,6 +171,16 @@ class TransactionParty(models.Model):
                 _('Able to use transaction party autocomplete features (in admin forms)')
             ),
         )
+
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    Q(name__isnull=False) | Q(user__isnull=False) |
+                    Q(staffMember__isnull=False) | Q(location__isnull=False)
+                ),
+                name='must_specify_party'
+            ),
+        ]
 
 
 class RepeatedExpenseRule(PolymorphicModel):
@@ -406,9 +419,9 @@ class RepeatedExpenseRule(PolymorphicModel):
 
         if startTime and endTime:
             overlapping = self.expenseitem_set.filter(
-                (models.Q(periodStart__lte=endTime) & models.Q(periodStart__gte=startTime)) |
-                (models.Q(periodEnd__gte=startTime) & models.Q(periodEnd__lte=endTime)) |
-                (models.Q(periodStart__lte=startTime) & models.Q(periodEnd__gte=endTime))
+                (Q(periodStart__lte=endTime) & Q(periodStart__gte=startTime)) |
+                (Q(periodEnd__gte=startTime) & Q(periodEnd__lte=endTime)) |
+                (Q(periodStart__lte=startTime) & Q(periodEnd__gte=endTime))
             )
         else:
             overlapping = self.expenseitem_set.none()
@@ -956,6 +969,17 @@ class ExpenseItem(models.Model):
             ('mark_expenses_paid', _('Mark expenses as paid at the time of submission')),
         )
 
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    'expenseRule','payTo','periodStart','periodEnd','category'
+                ],
+                name='unique_payment_per_rule_recipient_time_and_category'
+            ),
+        ]
+
+
+
 
 class RevenueItem(models.Model):
     '''
@@ -1193,3 +1217,26 @@ class RevenueItem(models.Model):
             ('view_finances_byevent', _('View school finances by Event')),
             ('view_finances_detail', _('View school finances as detailed statement')),
         )
+
+
+class ExpensePurpose(models.Model):
+    '''
+    This model provides a generic relation that makes it possible to correspond
+    expense items directly to specific 
+    '''
+
+    item = models.ForeignKey(
+        ExpenseItem,
+        verbose_name=_('Expense item purpose'),
+        on_delete=models.CASCADE,
+    )
+    content_type = models.ForeignKey(
+        ContentType, on_delete=models.CASCADE
+    )
+    object_id = models.PositiveIntegerField()
+    purpose = GenericForeignKey('content_type', 'object_id')
+
+    def __str__(self):
+        return str(_(
+            'Purpose for expense item #{item.id}: {purpose}'
+        ))

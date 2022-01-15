@@ -9,9 +9,15 @@ class FinancialAppConfig(AppConfig):
 
     def ready(self):
         from django.core.exceptions import ValidationError
+        from django.contrib.contenttypes.fields import GenericRelation
 
-        from danceschool.core.models import Event, SubstituteTeacher, Invoice, InvoiceItem
+        from danceschool.core.models import (
+            Event, SubstituteTeacher, Invoice, InvoiceItem, EventStaffMember,
+            EventOccurrence
+        )
         from danceschool.core.constants import getConstant
+
+        from .models import ExpensePurpose
 
         # Add some properties to Invoices that are useful for the check-in process.
         # to ensure that the financials are being recorded correctly.
@@ -130,6 +136,15 @@ class FinancialAppConfig(AppConfig):
 
         for field in [f for f in SubstituteTeacher._meta.fields if f.name == 'event']:
             field.validators.append(validate_EnsureNotPaidOut)
+
+        # Add GenericRelation managers to EventOccurrence and EventStaffMember
+        # so that they can be ExpensePurposes
+        EventStaffMember.add_to_class(
+            'related_expenses', GenericRelation(ExpensePurpose)
+        )
+        EventOccurrence.add_to_class(
+            'related_expenses', GenericRelation(ExpensePurpose)
+        )
 
         # This ensures that the receivers are loaded.
         from . import handlers
