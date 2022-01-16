@@ -78,7 +78,7 @@ def add_venue_expensepurpose(apps, schema_editor):
             )
 
         ExpensePurpose.objects.bulk_create(
-            [ExpensePurpose(item=l, purpose=o) for o in purposes]
+            [ExpensePurpose(item=expense, purpose=o) for o in purposes]
         )
 
         generated_purposes += purposes.count()
