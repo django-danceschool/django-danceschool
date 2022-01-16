@@ -319,7 +319,9 @@ class RepeatedExpenseRule(PolymorphicModel):
         # Everything else is nonsensical, so False.
         return False
 
-    def getWindowsAndTotals(self, intervals):
+    def getWindowsAndTotals(
+        self, intervals, remove_existing_overlaps=False, category=None, payTo=None
+    ):
 
         # Ensure that the intervals are passed with startTime and endTime in order, and reduce
         # the intervals down to non-overlapping intervals.
@@ -417,17 +419,22 @@ class RepeatedExpenseRule(PolymorphicModel):
         startTime = tree.begin()
         endTime = tree.end()
 
-        if startTime and endTime:
-            overlapping = self.expenseitem_set.filter(
-                (Q(periodStart__lte=endTime) & Q(periodStart__gte=startTime)) |
-                (Q(periodEnd__gte=startTime) & Q(periodEnd__lte=endTime)) |
-                (Q(periodStart__lte=startTime) & Q(periodEnd__gte=endTime))
-            )
-        else:
-            overlapping = self.expenseitem_set.none()
+        if remove_existing_overlaps:
+            if startTime and endTime:
+                overlapping = self.expenseitem_set.filter(
+                    (Q(periodStart__lte=endTime) & Q(periodStart__gte=startTime)) |
+                    (Q(periodEnd__gte=startTime) & Q(periodEnd__lte=endTime)) |
+                    (Q(periodStart__lte=startTime) & Q(periodEnd__gte=endTime))
+                )
+                if category:
+                    overlapping = overlapping.filter(category=category)
+                if payTo:
+                    overlapping = overlapping.filter(payTo=payTo)
+            else:
+                overlapping = self.expenseitem_set.none()
 
-        for item in overlapping:
-            tree.chop(item.periodStart, item.periodEnd)
+            for item in overlapping:
+                tree.chop(item.periodStart, item.periodEnd)
 
         # Now merge the intervals again, and split at the split times if needed
         tree.merge_overlaps()

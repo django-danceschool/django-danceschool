@@ -11,7 +11,17 @@ from danceschool.financial.models import ExpensePurpose, ExpenseItem, RepeatedEx
 class Command(BaseCommand):
     help = 'Identify and link expense purposes for existing expense items related to staffing and venues'
 
-    def handle_venue_expenses(self, *args, **options):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--allow_hours_mismatch', action='store_true',
+            help='Allow hours mismatch in linked staff expenses.'
+        )
+        parser.add_argument(
+            '--verbose', action='store_true',
+            help='Provide detailed information on generated linkages.'
+        )
+
+    def handle_venue_expenses(self, *args, **kwargs):
         elig_expenses = ExpenseItem.objects.filter(
             Q(expensepurpose__isnull=True) & (
                 Q(expenseRule__locationrentalinfo__isnull=False) |
@@ -74,6 +84,13 @@ class Command(BaseCommand):
                     'expense later to avoid the creation of duplicate expense items.'
                 )
 
+            if kwargs.get('verbose', False):
+                self.stdout.write(
+                    'Found {} occurrences matching the venue expense item #{}: {}'.format(
+                        purposes.count(), expense.id, expense.descriptions
+                    )
+                )
+
             ExpensePurpose.objects.bulk_create([ExpensePurpose(
                     item=expense, object_id=o.id, content_type=eventoccurrence_ct
             ) for o in purposes])
@@ -85,6 +102,7 @@ class Command(BaseCommand):
         ))
 
     def handle_staff_expenses(self, *args, **kwargs):
+        allow_hours_mismatch = kwargs.get('allow_hours_mismatch', False)
 
         # First, construct the set of rules that need to be checked for affiliated
         # event staff. The ordering of these rules matters because staff member-
@@ -118,6 +136,12 @@ class Command(BaseCommand):
                         getConstant('financial__autoGenerateFromStaffCategoryDefaults')
                     )
             ):
+                if kwargs.get('verbose', False):
+                    self.stdout.write(
+                        'NOTE: Unable to identify a staff or category target for rule #{}: {}.'.format(
+                            rule.id, rule.ruleName
+                        )
+                    )
                 continue
 
             # This is the generic category for all Event staff, but it may be overridden below
@@ -178,6 +202,13 @@ class Command(BaseCommand):
                 'staffMember', 'event',
             ).prefetch_related('occurrences').distinct()
 
+            if kwargs.get('verbose', False):
+                self.stdout.write(
+                    'Identified {} event staffers subject to rule #{}: {}.'.format(
+                        staffers.count(), rule.id, rule.ruleName
+                    )
+                )
+
             if rule.applyRateRule == rule.RateRuleChoices.hourly:
                 for staffer in staffers:
                     # Hourly expenses are allocated directly to events, so we just
@@ -186,9 +217,19 @@ class Command(BaseCommand):
                     this_staffer_items = ExpenseItem.objects.filter(
                         expenseRule=rule, payTo__staffMember=staffer.staffMember,
                         event=staffer.event, category=expense_category,
-                        hours=staffer.netHours
                     )
+                    if not allow_hours_mismatch:
+                        this_staffer_items = this_staffer_items.filter(
+                            hours=staffer.netHours
+                        )
                     this_count = this_staffer_items.count()
+
+                    if kwargs.get('verbose', False):
+                        self.stdout.write(
+                            'Identified {} expense items for staffer #{}: {}.'.format(
+                                this_count, staffer.id, staffer.__str__()
+                            )
+                        )
 
                     if this_count > 0:
                         ExpensePurpose.objects.bulk_create([
@@ -221,7 +262,9 @@ class Command(BaseCommand):
                             staffer.event.eventoccurrence_set.all()
                         )
                     ]
-                    remaining_intervals = rule.getWindowsAndTotals(intervals)
+                    remaining_intervals = rule.getWindowsAndTotals(
+                        intervals, remove_existing_overlaps=False
+                    )
 
                     matched_this_staffer = False
 
@@ -232,6 +275,13 @@ class Command(BaseCommand):
                             periodEnd=endTime
                         ).first()
                         if ei:
+                            if kwargs.get('verbose', False):
+                                self.stdout.write(
+                                    'Identified expense item for interval ({}, {}) for staffer #{}: {}.'.format(
+                                        startTime, endTime, staffer.id, staffer.__str__()
+                                    )
+                                )
+
                             ExpensePurpose.objects.create(
                                 item=ei, object_id=staffer.id,
                                 content_type=eventstaffmember_ct
@@ -240,6 +290,12 @@ class Command(BaseCommand):
                             if not matched_this_staffer:
                                 matched_staff_count += 1
                                 matched_this_staffer = True
+                        elif kwargs.get('verbose', False):
+                            self.stdout.write(
+                                'Unable to identify expense item for interval ({}, {}) for staffer #{}: {}.'.format(
+                                    startTime, endTime, staffer.id, staffer.__str__()
+                                )
+                            )
 
         self.stdout.write('Successfully generated {} expense purposes for {} staff members.'.format(
             generated_purposes, matched_staff_count
