@@ -1,5 +1,3 @@
-from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 from django.db import migrations
 from django.db.models import Q, F
 from django.utils import timezone
@@ -132,19 +130,19 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
                 (not staffMember and not staffCategory) or
                 (
                     not staffMember and not
-                    getConstant('financial__autoGenerateFromStaffCategoryDefaults')
+                    getConstant('financial__autoGenerateFromStaffCategoryDefaults', True)
                 )
         ):
             continue
 
         # This is the generic category for all Event staff, but it may be overridden below
-        expense_category = getConstant('financial__otherStaffExpenseCat')
+        expense_category = getConstant('financial__otherStaffExpenseCat', True)
 
         if staffCategory:
             if staffMember:
                 # This staff member in this category
                 eventstaff_filter = Q(staffMember=staffMember) & Q(category=staffCategory)
-            elif getConstant('financial__autoGenerateFromStaffCategoryDefaults'):
+            elif getConstant('financial__autoGenerateFromStaffCategoryDefaults', True):
                 # Any staff member who does not already have a rule specified this category
                 eventstaff_filter = (
                     Q(category=staffCategory) &
@@ -153,13 +151,13 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
             # For standard categories of staff, map the EventStaffCategory to
             # an ExpenseCategory using the stored constants.  Otherwise, the
             # ExpenseCategory is a generic one.
-            if staffCategory == getConstant('general__eventStaffCategoryAssistant'):
-                expense_category = getConstant('financial__assistantClassInstructionExpenseCat')
+            if staffCategory == getConstant('general__eventStaffCategoryAssistant', True):
+                expense_category = getConstant('financial__assistantClassInstructionExpenseCat', True)
             elif staffCategory in [
-                    getConstant('general__eventStaffCategoryInstructor'),
-                    getConstant('general__eventStaffCategorySubstitute')
+                    getConstant('general__eventStaffCategoryInstructor', True),
+                    getConstant('general__eventStaffCategorySubstitute', True)
             ]:
-                expense_category = getConstant('financial__classInstructionExpenseCat')
+                expense_category = getConstant('financial__classInstructionExpenseCat', True)
 
         else:
             # We don't want to generate duplicate expenses when there is both a category-limited

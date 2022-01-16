@@ -12,7 +12,7 @@ from .utils.sys import isPreliminaryRun
 logger = logging.getLogger(__name__)
 
 
-def getConstant(name):
+def getConstant(name, force_preliminary=False):
     '''
     This is a convenience function that makes it easy to access the value of a preference/constant
     without needing to check if the django_dynamic_preferences app has been set up and without
@@ -20,7 +20,10 @@ def getConstant(name):
     '''
 
     # We instantiate a manager for our global preferences
-    if 'dynamic_preferences_globalpreferencemodel' in connection.introspection.table_names() and not isPreliminaryRun():
+    if (
+        'dynamic_preferences_globalpreferencemodel' in connection.introspection.table_names() and
+        (force_preliminary or not isPreliminaryRun())
+    ):
         params = global_preferences_registry.manager()
         try:
             return params.get(name)
