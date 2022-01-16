@@ -46,6 +46,9 @@ def add_venue_expensepurpose(apps, schema_editor):
     roomrentalinfo_ct = ContentType.objects.using(db_alias).get(
         app_label='financial', model='roomrentalinfo'
     )
+    eventoccurrence_ct = ContentType.objects.using(db_alias).get(
+        app_label='core', model='eventoccurrence'
+    )
 
     generated_purposes = 0
 
@@ -68,7 +71,7 @@ def add_venue_expensepurpose(apps, schema_editor):
         elif ct == roomrentalinfo_ct:
             filters = filters & Q(event__room=expense.expenseRule.roomrentalinfo.room)
 
-        purposes = EventOccurrence.objects.filter(filters)
+        purposes = EventOccurrence.objects.using(db_alias).filter(filters)
 
         if not purposes:
             print(
@@ -77,9 +80,9 @@ def add_venue_expensepurpose(apps, schema_editor):
                 'expense later to avoid the creation of duplicate expense items.'
             )
 
-        ExpensePurpose.objects.bulk_create(
-            [ExpensePurpose(item=expense, purpose=o) for o in purposes]
-        )
+        ExpensePurpose.objects.using(db_alias).bulk_create([ExpensePurpose(
+                item=expense, object_id=o.id, content_type=eventoccurrence_ct
+        ) for o in purposes])
 
         generated_purposes += purposes.count()
 
@@ -96,10 +99,13 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
     ExpensePurpose = apps.get_model("financial", "ExpensePurpose")
     ExpenseItem = apps.get_model("financial", "ExpenseItem")
     RepeatedExpenseRule = apps.get_model("financial", "RepeatedExpenseRule")
-    EventOccurrence = apps.get_model("core", "EventOccurrence")
     EventStaffMember = apps.get_model("core", "EventStaffMember")
     ContentType = apps.get_model("contenttypes", "ContentType")
     db_alias = schema_editor.connection.alias
+
+    eventstaffmember_ct = ContentType.objects.using(db_alias).get(
+        app_label='core', model='eventstaffmember'
+    )
 
     # First, construct the set of rules that need to be checked for affiliated
     # event staff. The ordering of these rules matters because staff member-
@@ -182,7 +188,7 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
 
         # Loop through EventStaffMembers that are eligible under this rule, and
         # for which there is not yet any identified expense.
-        staffers = EventStaffMember.objects.filter(
+        staffers = EventStaffMember.objects.using(db_alias).filter(
             eventstaff_filter & event_timefilters &
             Q(related_expenses__isnull=True)
         ).select_related(
@@ -194,7 +200,7 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
                 # Hourly expenses are allocated directly to events, so we just
                 # need to link this staff members to any expenses 
 
-                this_staffer_items = ExpenseItem.objects.filter(
+                this_staffer_items = ExpenseItem.objects.using(db_alias).filter(
                     expenseRule=rule, payTo__staffMember=staffer.staffMember,
                     event=staffer.event, category=expense_category,
                     hours=staffer.netHours
@@ -202,8 +208,11 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
                 this_count = this_staffer_items.count()
 
                 if this_count > 0:
-                    ExpensePurpose.objects.bulk_create([
-                        ExpensePurpose(item=i, purpose=staffer) for i in
+                    ExpensePurpose.objects.using(db_alias).bulk_create([
+                        ExpensePurpose(
+                            item=i, object_id=staffer.id,
+                            content_type=eventstaffmember_ct
+                        ) for i in
                         this_staffer_items
                     ])
                     matched_staff_count += 1
@@ -234,13 +243,16 @@ def add_eventstaff_expensepurpose(apps, schema_editor):
                 matched_this_staffer = False
 
                 for startTime, endTime, total, description in remaining_intervals:
-                    ei = ExpenseItem.objects.filter(
+                    ei = ExpenseItem.objects.using(db_alias).filter(
                         expenseRule=rule, payTo__staffMember=staffer.staffMember,
                         category=expense_category, periodStart=startTime,
                         periodEnd=endTime
                     ).first()
                     if ei:
-                        ExpensePurpose.objects.create(item=ei, purpose=staffer)
+                        ExpensePurpose.objects.using(db_alias).create(
+                            item=ei, object_id=staffer.id,
+                            content_type=eventstaffmember_ct
+                        )
                         generated_purposes += 1
                         if not matched_this_staffer:
                             matched_staff_count += 1

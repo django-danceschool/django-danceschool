@@ -1238,5 +1238,7 @@ class ExpensePurpose(models.Model):
 
     def __str__(self):
         return str(_(
-            'Purpose for expense item #{item.id}: {purpose}'
+            'Purpose for expense item #{item_id}: {purpose}'.format(
+                item_id=self.item.id, purpose=self.purpose
+            )
         ))
