@@ -497,7 +497,7 @@ class RepeatedExpenseRule(PolymorphicModel):
 
     def __str__(self):
         ''' Should be overridden by child classes with something more descriptive. '''
-        return str(_('Repeated expense rule: %s' % self.name))
+        return str(_('Repeated expense rule: %s' % self.ruleName))
 
     class Meta:
         verbose_name = _('Repeated expense rule')
