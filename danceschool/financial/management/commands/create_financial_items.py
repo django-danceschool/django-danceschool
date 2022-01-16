@@ -29,4 +29,4 @@ class Command(BaseCommand):
             createRevenueItemsForRegistrations()
             self.stdout.write('...done.')
         else:
-            self.stdout.write('Generation of revnue items for registrations is not enabled.')
+            self.stdout.write('Generation of revenue items for registrations is not enabled.')
