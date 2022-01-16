@@ -64,9 +64,9 @@ def add_venue_expensepurpose(apps, schema_editor):
             )
 
         if ct == locationrentalinfo_ct:
-            filters = filters & Q(event__location=l.expenseRule.locationrentalinfo.location)
+            filters = filters & Q(event__location=expense.expenseRule.locationrentalinfo.location)
         elif ct == roomrentalinfo_ct:
-            filters = filters & Q(event__room=l.expenseRule.roomrentalinfo.room)
+            filters = filters & Q(event__room=expense.expenseRule.roomrentalinfo.room)
 
         purposes = EventOccurrence.objects.filter(filters)
 
