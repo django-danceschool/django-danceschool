@@ -31,14 +31,13 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
 
     logger.debug('ExpenseItem signal fired for EventStaffMember %s.' % instance.pk)
 
-    staff_expenses = ExpenseItem.objects.filter(
-        event=instance.event,
-        expenseRule__in=instance.staffMember.expenserules.all(),
-        expenseRule__applyRateRule=RepeatedExpenseRule.RateRuleChoices.hourly,
-    )
+    staff_expenses = [
+        x.item for x in instance.related_expenses.all() if
+        x.item.expenseRule == RepeatedExpenseRule.RateRuleChoices.hourly
+    ]
 
     if staff_expenses:
-        logger.debug('Updating existing expense items for event staff member.')
+        logger.debug('Updating existing hourly expense item for event staff member.')
         # Fill in the updated hours and the updated total.  Set the expense item
         # to unapproved.
         for expense in staff_expenses:
@@ -50,11 +49,11 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
 
     if hasattr(instance.replacedStaffMember, 'staffMember'):
         logger.debug('Adjusting totals for replaced event staff member.')
-        replaced_expenses = ExpenseItem.objects.filter(
-            event=instance.event,
-            expenseRule__staffmemberwageinfo__staffMember=instance.replacedStaffMember.staffMember,
-            expenseRule__applyRateRule=RepeatedExpenseRule.RateRuleChoices.hourly,
-        )
+
+        replaced_expenses = [
+            x.item for x in instance.replacedStaffMember.related_expenses.all() if
+            x.item.expenseRule == RepeatedExpenseRule.RateRuleChoices.hourly
+        ]
 
         # Fill in the updated hours and the updated total.  Set the expense item
         # to unapproved.
@@ -73,30 +72,27 @@ def modifyExistingExpenseItemsForSeriesClass(sender, instance, **kwargs):
 
     logger.debug('ExpenseItem signal fired for EventOccurrence %s.' % instance.id)
 
-    staff_expenses = ExpenseItem.objects.filter(
-        event=instance.event,
-        expenseRule__staffmemberwageinfo__isnull=False,
-        expenseRule__applyRateRule=RepeatedExpenseRule.RateRuleChoices.hourly,
+    event_staff = EventStaffMember.objects.filter(
+        Q(event=instance.event) &
+        Q(related_expenses__item__expenseRule__applyRateRule=RepeatedExpenseRule.RateRuleChoices.hourly)
+    ).distinct().prefetch_related(
+        'related_expenses__item', 'related_expenses__item__expenseRule'
     )
+
+    staff_expenses = set()
+
+    for staff in event_staff:
+        staff_expenses.update([x.item for x in staff.related_expenses.all()])
 
     # Fill in the updated hours and the updated total.  Set the expense item
     # to unapproved.
     for expense in staff_expenses:
-        esm_filters = Q(event=expense.event) & Q(staffMember=expense.expenseRule.staffMember)
-        if expense.expenseRule.category:
-            esm_filters = esm_filters & Q(category=expense.expenseRule.category)
 
-        # In instances where the expense rule does not specify a category, there could
-        # be more than one EventStaffMember object for a given staffMember at the
-        # same Event.  There is no easy way to identify which expense is which in this instance,
-        # so when EventOccurrences are modified, these expenses will not update.
-        eventstaffmembers = EventStaffMember.objects.filter(esm_filters)
-        if eventstaffmembers.count() == 1:
-            esm = eventstaffmembers.first()
-            expense.hours = esm.netHours
-            expense.total = expense.hours * expense.wageRate
-            expense.approved = None
-            expense.save()
+        this_staff = event_staff.filter(related_expenses__item=expense)
+        expense.hours = sum([x.netHours for x in this_staff])
+        expense.total = expense.hours * expense.wageRate
+        expense.approved = None
+        expense.save()
 
 
 @receiver(post_save, sender=InvoiceItem)

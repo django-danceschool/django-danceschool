@@ -1,10 +1,13 @@
 from django.conf import settings
-from django.db.models import Sum, Count, Q
-from django.db.models.functions import TruncDate, TruncMonth
+from django.db.models import (
+    Sum, Count, Q, ExpressionWrapper, F, DurationField, Case, When
+)
+from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from django.http import HttpResponse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.contrib.contenttypes.models import ContentType
 
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -14,12 +17,15 @@ import pytz
 
 from danceschool.core.constants import getConstant
 from danceschool.core.models import (
-    Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room, StaffMember
+    Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room
 )
 from danceschool.core.utils.timezone import ensure_timezone
 
 from .constants import EXPENSE_BASES
-from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule, RoomRentalInfo, TransactionParty
+from .models import (
+    ExpenseItem, RevenueItem, RepeatedExpenseRule, RoomRentalInfo,
+    TransactionParty, ExpensePurpose
+)
 
 
 def getExpenseItemsCSV(queryset, scope='instructor'):
@@ -125,6 +131,59 @@ def getRevenueItemsCSV(queryset):
     return response
 
 
+def addEventTimeFilters(
+    event_timefilters=None, rule=None, datetimeTuple=None, event=None
+):
+    '''
+    This function provides the filters needed to identify events for which an
+    expense item may need to be generated.
+    '''
+
+    if not event_timefilters:
+        event_timefilters = Q()
+
+    if datetimeTuple and len(datetimeTuple) == 2:
+        timelist = list(datetimeTuple)
+        timelist.sort()
+        event_timefilters = event_timefilters & (
+            Q(event__startTime__gte=timelist[0]) & Q(event__startTime__lte=timelist[1])
+        )
+
+    if event:
+        event_timefilters = event_timefilters & Q(event__id=event.id)
+
+    if rule:
+        if rule.advanceDays is not None:
+            if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
+                event_timefilters = event_timefilters & \
+                    Q(event__endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+            elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
+                event_timefilters = event_timefilters & \
+                    Q(event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
+        if rule.priorDays is not None:
+            if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
+                event_timefilters = event_timefilters & \
+                    Q(event__endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+            elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
+                event_timefilters = event_timefilters & \
+                    Q(event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
+        if rule.startDate:
+            event_timefilters = event_timefilters & Q(
+                event__startTime__gte=timezone.now().replace(
+                    year=rule.startDate.year, month=rule.startDate.month, day=rule.startDate.day,
+                    hour=0, minute=0, second=0, microsecond=0,
+                )
+            )
+        if rule.endDate:
+            event_timefilters = event_timefilters & Q(
+                event__startTime__lte=timezone.now().replace(
+                    year=rule.endDate.year, month=rule.endDate.month, day=rule.endDate.day,
+                    hour=0, minute=0, second=0, microsecond=0,
+                )
+            )
+
+    return event_timefilters
+
 def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None, event=None):
     '''
     For each Location or Room-related Repeated Expense Rule, look for Events
@@ -149,19 +208,6 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
         rule_filters = rule_filters & Q(id=rule.id)
     rulesToCheck = RepeatedExpenseRule.objects.filter(rule_filters).distinct()
 
-    # These are the filters place on Events that overlap the window in which
-    # expenses are being generated.
-    event_timefilters = Q()
-
-    if datetimeTuple and len(datetimeTuple) == 2:
-        timelist = list(datetimeTuple)
-        timelist.sort()
-        event_timefilters = event_timefilters & (
-            Q(startTime__gte=timelist[0]) & Q(startTime__lte=timelist[1])
-        )
-    if event:
-        event_timefilters = event_timefilters & Q(id=event.id)
-
     # Now, we loop through the set of rules that need to be applied, then loop through the
     # Events in the window in question that occurred at the location indicated by the rule.
     for rule in rulesToCheck:
@@ -172,41 +218,16 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
             getattr(rule, 'location', None)
         )
         loc = getattr(venue, 'location') if isinstance(venue, Room) else venue
-        event_locfilter = Q(room=venue) if isinstance(venue, Room) else Q(location=venue)
+        event_locfilter = Q(event__room=venue) if isinstance(venue, Room) else Q(event__location=venue)
 
         # Find or create the TransactionParty associated with the location.
         loc_party = TransactionParty.objects.get_or_create(
             location=loc, defaults={'name': loc.name}
         )[0]
 
-        if rule.advanceDays:
-            if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & \
-                    Q(endTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
-            elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & \
-                    Q(startTime__lte=timezone.now() + timedelta(days=rule.advanceDays))
-        if rule.priorDays:
-            if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & \
-                    Q(endTime__gte=timezone.now() - timedelta(days=rule.priorDays))
-            elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & \
-                    Q(startTime__gte=timezone.now() - timedelta(days=rule.priorDays))
-        if rule.startDate:
-            event_timefilters = event_timefilters & Q(
-                event__startTime__gte=timezone.now().replace(
-                    year=rule.startDate.year, month=rule.startDate.month, day=rule.startDate.day,
-                    hour=0, minute=0, second=0, microsecond=0,
-                )
-            )
-        if rule.endDate:
-            event_timefilters = event_timefilters & Q(
-                event__startTime__lte=timezone.now().replace(
-                    year=rule.endDate.year, month=rule.endDate.month, day=rule.endDate.day,
-                    hour=0, minute=0, second=0, microsecond=0,
-                )
-            )
+        event_timefilters = addEventTimeFilters(
+            rule=rule, datetimeTuple=datetimeTuple, event=event
+        )
 
         # For construction of expense descriptions
         replacements = {
@@ -216,32 +237,35 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
             'for': _('for'),
         }
 
-        # Loop through Events for which there are not already directly allocated
-        # expenses under this rule, and create new ExpenseItems for them depending
-        # on whether the rule requires hourly expenses or non-hourly ones to
-        # be generated.
-        events = Event.objects.filter(event_locfilter & event_timefilters).exclude(
-            Q(expenseitem__expenseRule=rule)).distinct()
+        # Loop through EventOccurrences for which there are not already directly
+        # allocated expenses under this rule, and create new ExpenseItems for
+        # them depending on whether the rule requires hourly expenses or
+        # non-hourly ones to be generated.
+        occurrences = EventOccurrence.objects.filter(
+            event_locfilter & event_timefilters
+        ).exclude(Q(related_expenses__item__expenseRule=rule)).select_related(
+            'event', 'event__location', 'event__room'
+        ).distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
-            for this_event in events:
+            for this_occ in occurrences:
                 # Hourly expenses are always generated without checking for
                 # overlapping windows, because the periods over which hourly expenses
                 # are defined are disjoint.  However, hourly expenses are allocated
                 # directly to events, so we just need to create expenses for any events
                 # that do not already have an Expense Item generate under this rule.
-                replacements['name'] = this_event.name
-                replacements['dates'] = this_event.localStartTime.strftime('%Y-%m-%d')
+                replacements['name'] = this_occ.event.name
+                replacements['dates'] = this_occ.localStartTime.strftime('%Y-%m-%d')
                 if (
-                        event.localStartTime.strftime('%Y-%m-%d') !=
-                        this_event.localEndTime.strftime('%Y-%m-%d')
+                        this_occ.localStartTime.strftime('%Y-%m-%d') !=
+                        this_occ.localEndTime.strftime('%Y-%m-%d')
                 ):
                     replacements['dates'] += ' %s %s' % (
-                        _('to'), this_event.localEndTime.strftime('%Y-%m-%d')
+                        _('to'), this_occ.localEndTime.strftime('%Y-%m-%d')
                     )
 
-                ExpenseItem.objects.create(
-                    event=this_event,
+                new_item = ExpenseItem.objects.create(
+                    event=this_occ.event,
                     category=rental_category,
                     payTo=loc_party,
                     expenseRule=rule,
@@ -250,9 +274,17 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
                         replacements
                     ),
                     submissionUser=submissionUser,
-                    total=this_event.duration * rule.rentalRate,
-                    accrualDate=this_event.startTime,
+                    total=this_occ.duration * rule.rentalRate,
+                    accrualDate=this_occ.startTime,
                 )
+
+                # Record that this occurrence was the purpose of the
+                # newly-generated expense item.
+                ExpensePurpose.objects.create(
+                    item=new_item,
+                    purpose=this_occ
+                )
+
                 generate_count += 1
         else:
             # Non-hourly expenses are generated by constructing the time
@@ -261,27 +293,37 @@ def createExpenseItemsForVenueRental(request=None, datetimeTuple=None, rule=None
             # generated under this rule (so, for example, monthly rentals will
             # now show up multiple times). So, we just need to construct the set
             # of intervals for which to construct expenses
-            intervals = [
-                (x.localStartTime, x.localEndTime) for x in
-                EventOccurrence.objects.filter(event__in=events)
-            ]
-            remaining_intervals = rule.getWindowsAndTotals(intervals)
+            intervals = [(x.localStartTime, x.localEndTime) for x in occurrences]
+            remaining_intervals = rule.getWindowsAndTotals(
+                intervals, remove_existing_overlaps=True
+            )
 
             for startTime, endTime, total, description in remaining_intervals:
                 replacements['when'] = description
 
-                ExpenseItem.objects.create(
+                new_item, created = ExpenseItem.objects.get_or_create(
                     category=rental_category,
                     payTo=loc_party,
                     expenseRule=rule,
                     periodStart=startTime,
                     periodEnd=endTime,
-                    description='%(type)s %(of)s %(location)s %(for)s %(when)s' % replacements,
-                    submissionUser=submissionUser,
-                    total=total,
-                    accrualDate=startTime,
+                    defaults={
+                        'description': '%(type)s %(of)s %(location)s %(for)s %(when)s' % replacements,
+                        'submissionUser': submissionUser,
+                        'total': total,
+                        'accrualDate': startTime,   
+                    }
                 )
-                generate_count += 1
+
+                # Record that this occurrence was the purpose of the
+                # newly-generated expense item.
+                ExpensePurpose.objects.create(
+                    item=new_item,
+                    purpose=this_occ
+                )
+
+                if created:
+                    generate_count += 1
     rulesToCheck.update(lastRun=timezone.now())
     return generate_count
 
@@ -311,20 +353,6 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
         rule_filters).distinct().order_by(
             '-staffmemberwageinfo__category', '-staffdefaultwage__category'
         )
-
-    # These are the filters placed on Events that overlap the window in which
-    # expenses are being generated.
-    event_timefilters = Q()
-
-    if datetimeTuple and len(datetimeTuple) == 2:
-        timelist = list(datetimeTuple)
-        timelist.sort()
-        event_timefilters = event_timefilters & (
-            Q(event__startTime__gte=timelist[0]) & Q(event__startTime__lte=timelist[1])
-        )
-
-    if event:
-        event_timefilters = event_timefilters & Q(event__id=event.id)
 
     # Now, we loop through the set of rules that need to be applied, then loop
     # through the Events in the window in question that involved the staff
@@ -384,42 +412,19 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                 category__isnull=False).values_list('category__id', flat=True))
             eventstaff_filter = Q(staffMember=staffMember) & ~Q(category__id__in=coveredCategories)
 
-        if rule.advanceDays is not None:
-            if rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & Q(
-                    event__endTime__lte=timezone.now() + timedelta(days=rule.advanceDays)
-                )
-            elif rule.advanceDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & Q(
-                    event__startTime__lte=timezone.now() + timedelta(days=rule.advanceDays)
-                )
-        if rule.priorDays is not None:
-            if rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.end:
-                event_timefilters = event_timefilters & Q(
-                    event__endTime__gte=timezone.now() - timedelta(days=rule.priorDays)
-                )
-            elif rule.priorDaysReference == RepeatedExpenseRule.MilestoneChoices.start:
-                event_timefilters = event_timefilters & Q(
-                    event__startTime__gte=timezone.now() - timedelta(days=rule.priorDays)
-                )
-        if rule.startDate:
-            event_timefilters = event_timefilters & Q(event__startTime__gte=timezone.now().replace(
-                year=rule.startDate.year, month=rule.startDate.month, day=rule.startDate.day,
-                hour=0, minute=0, second=0, microsecond=0,
-            ))
-        if rule.endDate:
-            event_timefilters = event_timefilters & Q(event__startTime__lte=timezone.now().replace(
-                year=rule.endDate.year, month=rule.endDate.month, day=rule.endDate.day,
-                hour=0, minute=0, second=0, microsecond=0,
-            ))
+        event_timefilters = addEventTimeFilters(
+            rule=rule, datetimeTuple=datetimeTuple, event=event
+        )
 
         # Loop through EventStaffMembers for which there are not already
         # directly allocated expenses under this rule, and create new
         # ExpenseItems for them depending on whether the rule requires hourly
         # expenses or non-hourly ones to be generated.
-
-        staffers = EventStaffMember.objects.filter(eventstaff_filter & event_timefilters).exclude(
-            Q(event__expenseitem__expenseRule=rule)).distinct()
+        staffers = EventStaffMember.objects.filter(
+            eventstaff_filter & event_timefilters
+        ).exclude(Q(related_expenses__item__expenseRule=rule)).select_related(
+            'staffMember', 'event',
+        ).prefetch_related('occurrences').distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
             for staffer in staffers:
@@ -428,7 +433,7 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                 # expenses are defined are disjoint.  However, hourly expenses
                 # are allocated directly to events, so we just need to create
                 # expenses for any events that do not already have an Expense
-                # Item generate under this rule.
+                # Item generated under this rule.
                 replacements['event'] = staffer.event.name
                 replacements['name'] = staffer.staffMember.fullName
                 replacements['dates'] = staffer.event.localStartTime.strftime('%Y-%m-%d')
@@ -462,56 +467,78 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                     'payTo': staffer_party,
                 }
 
-                ExpenseItem.objects.create(**params)
+                new_item = ExpenseItem.objects.create(**params)
+
+                # Record that this staffing was the purpose of the
+                # newly-generated expense item.
+                ExpensePurpose.objects.create(
+                    item=new_item,
+                    purpose=staffer
+                )
+
                 generate_count += 1
         else:
             # Non-hourly expenses are generated by constructing the time
             # intervals in which the occurrence occurs, and removing from that
             # interval any intervals in which an expense has already been
             # generated under this rule (so, for example, monthly rentals will
-            # now show up multiple times). So, we just need to construct the set
-            # of intervals for which to construct expenses.  We first need to
-            # split the set of EventStaffMember objects by StaffMember (in case
-            # this rule is not person-specific) and then run this provedure
-            # separated by StaffMember.
-            members = StaffMember.objects.filter(eventstaffmember__in=staffers)
-
-            for member in members:
-                events = [x.event for x in staffers.filter(staffMember=member)]
+            # not show up multiple times). So, we just need to construct the set
+            # of intervals for which to construct expenses. This is done
+            # separately for each EventStaffMember instance so that we can keep
+            # track of the full set of purposes of each expense.
+            for staffer in staffers:
 
                 # Find or create the TransactionParty associated with the staff member.
                 staffer_party = TransactionParty.objects.get_or_create(
-                    staffMember=member,
+                    staffMember=staffer.staffMember,
                     defaults={
-                        'name': member.fullName,
-                        'user': getattr(member, 'userAccount', None)
+                        'name': staffer.staffMember.fullName,
+                        'user': getattr(staffer.staffMember, 'userAccount', None)
                     }
-                )[0]
+                )[0]                
 
+                # Intervals are defined by the occurrences for which the
+                # individual staffed, or by the full set of event occurrences
+                # if no staffing-specific occurrences are specified.
                 intervals = [
                     (x.localStartTime, x.localEndTime) for x in
-                    EventOccurrence.objects.filter(event__in=events)
+                    (
+                        staffer.occurrences.all() or
+                        staffer.event.eventoccurrence_set.all()
+                    )
                 ]
-                remaining_intervals = rule.getWindowsAndTotals(intervals)
+                remaining_intervals = rule.getWindowsAndTotals(
+                    intervals, remove_existing_overlaps=True,
+                    category=expense_category, payTo=staffer_party
+                )
 
                 for startTime, endTime, total, description in remaining_intervals:
                     replacements['when'] = description
-                    replacements['name'] = member.fullName
+                    replacements['name'] = staffer.staffMember.fullName
 
-                    params = {
-                        'category': expense_category,
-                        'expenseRule': rule,
-                        'periodStart': startTime,
-                        'periodEnd': endTime,
-                        'description': '%(type)s %(to)s %(name)s %(for)s %(when)s' % replacements,
-                        'submissionUser': submissionUser,
-                        'total': total,
-                        'accrualDate': startTime,
-                        'payTo': staffer_party,
-                    }
+                    new_item, created = ExpenseItem.objects.get_or_create(
+                        category=expense_category,
+                        payTo=staffer_party,
+                        expenseRule=rule,
+                        periodStart=startTime,
+                        periodEnd=endTime,
+                        defaults={
+                            'description': '%(type)s %(to)s %(name)s %(for)s %(when)s' % replacements,
+                            'submissionUser': submissionUser,
+                            'total': total,
+                            'accrualDate': startTime,
+                        }
+                    )
 
-                    ExpenseItem.objects.create(**params)
-                    generate_count += 1
+                    # Record that this staffing was the purpose of the
+                    # newly-generated expense item.
+                    ExpensePurpose.objects.create(
+                        item=new_item,
+                        purpose=staffer
+                    )
+
+                    if created:
+                        generate_count += 1
     rulesToCheck.update(lastRun=timezone.now())
     return generate_count
 
@@ -911,7 +938,13 @@ def prepareStatementByEvent(**kwargs):
     all_events = Event.objects.prefetch_related(
         'expenseitem_set', 'expenseitem_set__category',
         'revenueitem_set', 'revenueitem_set__category'
+        'eventoccurrence_set', 'eventoccurrence_set__related_expenses__item'
+        'eventstaffmember_set', 'eventstaffmember_set__related_expenses__item'
     )
+
+    # These are needed to allocate non-hourly expenses across events.
+    eventoccurrence_ct = ContentType.objects.get_for_model(EventOccurrence).id
+    eventstaffmember_ct = ContentType.objects.get_for_model(EventStaffMember).id
 
     start_date = kwargs.get('start_date')
     end_date = kwargs.get('end_date')
@@ -973,20 +1006,94 @@ def prepareStatementByEvent(**kwargs):
             -1 * this_event_statement['revenues']['fees']
         ])
 
+        # This is done in two queries and a loop because we cannot filter or
+        # aggregate directly on the reverse generic relation from ExpenseItem
+        # to EventOccurrence.
+        allocated_venue_expenses = ExpenseItem.objects.filter(
+            event__isnull=True,
+            expensepurpose__content_type=eventoccurrence_ct,
+            expensepurpose__object_id__in=event.eventoccurrence_set.values_list('id', flat=True),
+            payTo__location__isnull=False
+        )
+        venue_occurrences = EventOccurrence.objects.filter(
+            related_expenses__item__in=allocated_venue_expenses
+        ).annotate(
+            dur=ExpressionWrapper(
+                F('endTime') - F('startTime'), output_field=DurationField()
+            ),
+            event_dur=Case(When(Q(event=event), then=F('dur')), output_field=DurationField())
+        ).distinct()
+
+        total_allocated_venue = 0
+
+        for expense in allocated_venue_expenses:
+            this_durations = venue_occurrences.filter(
+                related_expenses__item=expense
+            ).aggregate(
+                total_dur=Coalesce(Sum('dur'), timedelta()),
+                total_event_dur=Coalesce(Sum('event_dur'), timedelta())
+            )
+            total_allocated_venue += (
+                (this_durations['total_event_dur']/this_durations['total_dur']) *
+                expense.total
+            )
+
+        # This is done in two queries and a loop because we cannot filter or
+        # aggregate directly on the reverse generic relation from ExpenseItem
+        # to EventStaffMember.
+        allocated_staff_expenses = ExpenseItem.objects.filter(
+            event__isnull=True,
+            expensepurpose__content_type=eventstaffmember_ct,
+            expensepurpose__object_id__in=event.eventstaffmember_set.values_list('id', flat=True)
+        )
+        staff_occurrences = EventStaffMember.objects.filter(
+            related_expenses__item__in=allocated_staff_expenses
+        ).annotate(
+            dur=F('event__duration'),
+            event_dur=Case(When(Q(event=event), then=F('dur')), output_field=DurationField())
+        ).distinct()
+
+        total_allocated_staff = 0
+
+        for expense in allocated_staff_expenses:
+            this_durations = staff_occurrences.filter(
+                related_expenses__item=expense
+            ).aggregate(
+                total_dur=Coalesce(Sum('dur'), timedelta()),
+                total_event_dur=Coalesce(Sum('event_dur'), timedelta())
+            )
+            total_allocated_staff += (
+                (this_durations['total_event_dur']/this_durations['total_dur']) *
+                expense.total
+            )
+
         this_event_statement['expenses'] = {
             'instruction': event.expenseitem_set.filter(
                 category=getConstant('financial__classInstructionExpenseCat')
             ).aggregate(Sum('total'))['total__sum'] or 0,
-            'venue': event.expenseitem_set.filter(
+            'direct_venue': event.expenseitem_set.filter(
                 category=getConstant('financial__venueRentalExpenseCat')
             ).aggregate(Sum('total'))['total__sum'] or 0,
-            'other': event.expenseitem_set.exclude(
+            'allocated_venue': total_allocated_venue,
+            'allocated_staff': total_allocated_staff,
+            'direct_other': event.expenseitem_set.exclude(
                 category=getConstant('financial__venueRentalExpenseCat')
             ).exclude(
                 category=getConstant('financial__classInstructionExpenseCat')
             ).aggregate(Sum('total'))['total__sum'] or 0,
-            'fees': event.expenseitem_set.aggregate(Sum('fees'))['fees__sum'] or 0
+            'fees': event.expenseitem_set.aggregate(Sum('fees'))['fees__sum'] or 0,
         }
+        this_event_statement['expenses'].update({
+            'venue': sum([
+                this_event_statement['expenses']['direct_venue'],
+                this_event_statement['expenses']['allocated_venue'],
+            ]),
+            'other': sum([
+                this_event_statement['expenses']['direct_other'],
+                this_event_statement['expenses']['allocated_staff'],
+            ])
+        })
+        
         this_event_statement['expenses']['total'] = sum([
             this_event_statement['expenses']['instruction'],
             this_event_statement['expenses']['venue'],
