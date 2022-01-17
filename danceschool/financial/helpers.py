@@ -938,8 +938,8 @@ def prepareStatementByEvent(paginate=True, **kwargs):
     all_events = Event.objects.prefetch_related(
         'expenseitem_set', 'expenseitem_set__category',
         'revenueitem_set', 'revenueitem_set__category',
-        'eventoccurrence_set', 'eventoccurrence_set__related_expenses__item'
-        'eventstaffmember_set', 'eventstaffmember_set__related_expenses__item'
+        'eventoccurrence_set', 'eventoccurrence_set__related_expenses__item',
+        'eventstaffmember_set', 'eventstaffmember_set__related_expenses__item',
     )
 
     # These are needed to allocate non-hourly expenses across events.
