@@ -645,12 +645,18 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                     expensepurpose__content_type=eventoccurrence_ct,
                     expensepurpose__object_id__in=event.eventoccurrence_set.values_list('id', flat=True),
                     payTo__location__isnull=False
-                ),
+                ).annotate(
+                    net=F('total') + F('adjustments') + F('fees'),
+                    basisDate=Min(basis)
+                ).order_by(basis),
                 'allocatedStaffExpenseItems': ExpenseItem.objects.filter(
                 event__isnull=True,
                 expensepurpose__content_type=eventstaffmember_ct,
                 expensepurpose__object_id__in=event.eventstaffmember_set.values_list('id', flat=True)
-                ),
+                ).annotate(
+                    net=F('total') + F('adjustments') + F('fees'),
+                    basisDate=Min(basis)
+                ).order_by(basis),
             })
             context.update({
                 'allocatedVenueTotal': sum([

@@ -278,6 +278,74 @@
 	</table>
 {% endif %}
 
+{% if allocatedStaffExpenseItems %}
+<table class="table table-hover">
+	<thead class="thead-default">
+		<tr>
+			<th colspan="3">{% trans "Allocated Staff Expenses" %}:</th>
+			<th>{{ currencySymbol }}{{ allocatedStaffTotal|floatformat:"2" }}</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<th>{% trans "Date" %}</th>
+			<th>{% trans "Pay To" %}</th>
+			<th>{% trans "Description" %}</th>
+			<th>{% trans "Amount" %}</th>
+		</tr>		
+	{% for item in allocatedStaffExpenseItems|dictsort:"basisDate" %}
+		<tr>
+			<td>{% if 'financial.change_expenseitem' in perms %}<a href="{% url 'admin:financial_expenseitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}</td>
+			<td>{{ item.payTo.name }}</td>
+			<td>
+				{{ item.description }}{% spaceless %}
+				{% if not item.paid %}
+					&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+				{% elif not item.approved %}
+					&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+				{% endif %}{% endspaceless %}
+			</td>
+			<td>{{ currencySymbol }}{{ item.allocationByEvent|get_item:event.id|multiply:item.net|floatformat:"2" }}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+
+{% if allocatedVenueExpenseItems %}
+<table class="table table-hover">
+	<thead class="thead-default">
+		<tr>
+			<th colspan="3">{% trans "Allocated Venue Expenses" %}:</th>
+			<th>{{ currencySymbol }}{{ allocatedVenueTotal|floatformat:"2" }}</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr>
+			<th>{% trans "Date" %}</th>
+			<th>{% trans "Pay To" %}</th>
+			<th>{% trans "Description" %}</th>
+			<th>{% trans "Amount" %}</th>
+		</tr>		
+	{% for item in allocatedVenueExpenseItems|dictsort:"basisDate" %}
+		<tr>
+			<td>{% if 'financial.change_expenseitem' in perms %}<a href="{% url 'admin:financial_expenseitem_change' item.id %}">{{ item.basisDate|date:"M. d, Y" }}</a>{% else %}{{ item.basisDate|date:"M. d, Y" }}{% endif %}</td>
+			<td>{{ item.payTo.name }}</td>
+			<td>
+				{{ item.description }}{% spaceless %}
+				{% if not item.paid %}
+					&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+				{% elif not item.approved %}
+					&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+				{% endif %}{% endspaceless %}
+			</td>
+			<td>{{ currencySymbol }}{{ item.allocationByEvent|get_item:event.id|multiply:item.net|floatformat:"2" }}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+</table>
+{% endif %}
+
 </div>
 </div>
 

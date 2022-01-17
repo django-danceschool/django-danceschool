@@ -159,6 +159,9 @@ def camelSpace(obj):
     ''' Add spaces in camelCase words '''
     return re.sub(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))', r' \1', obj)
 
+@register.filter
+def multiply(value, arg):
+    return value * arg
 
 @register.simple_tag(takes_context=True)
 def getReturnPage(context, prior=False):

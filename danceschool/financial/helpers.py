@@ -934,10 +934,10 @@ def prepareStatementByPeriod(**kwargs):
     return (paginator, paged_periods, periodStatement, paged_periods.has_other_pages())
 
 
-def prepareStatementByEvent(**kwargs):
+def prepareStatementByEvent(paginate=True, **kwargs):
     all_events = Event.objects.prefetch_related(
         'expenseitem_set', 'expenseitem_set__category',
-        'revenueitem_set', 'revenueitem_set__category'
+        'revenueitem_set', 'revenueitem_set__category',
         'eventoccurrence_set', 'eventoccurrence_set__related_expenses__item'
         'eventstaffmember_set', 'eventstaffmember_set__related_expenses__item'
     )
@@ -961,16 +961,20 @@ def prepareStatementByEvent(**kwargs):
     if year and not (start_date or end_date):
         all_events = all_events.filter(year=year)
 
-    paginator = Paginator(all_events, kwargs.get('paginate_by', 50))
-    try:
-        paged_events = paginator.page(kwargs.get('page', 1))
-    except PageNotAnInteger:
-        if kwargs.get('page') == 'last':
+
+    if paginate:
+        paginator = Paginator(all_events, kwargs.get('paginate_by', 50))
+        try:
+            paged_events = paginator.page(kwargs.get('page', 1))
+        except PageNotAnInteger:
+            if kwargs.get('page') == 'last':
+                paged_events = paginator.page(paginator.num_pages)
+            else:
+                paged_events = paginator.page(1)
+        except EmptyPage:
             paged_events = paginator.page(paginator.num_pages)
-        else:
-            paged_events = paginator.page(1)
-    except EmptyPage:
-        paged_events = paginator.page(paginator.num_pages)
+    else:
+        paged_events = all_events
 
     statementByEvent = []
 
@@ -1068,6 +1072,9 @@ def prepareStatementByEvent(**kwargs):
 
         statementByEvent.append(this_event_statement)
 
-    # Return not just the statement, but also the paginator in the style of
-    # ListView's paginate_queryset()
-    return (paginator, paged_events, statementByEvent, paged_events.has_other_pages())
+    if paginate:
+        # Return not just the statement, but also the paginator in the style of
+        # ListView's paginate_queryset()
+        return (paginator, paged_events, statementByEvent, paged_events.has_other_pages())
+    else:
+        return statementByEvent
