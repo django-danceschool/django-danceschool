@@ -1006,66 +1006,28 @@ def prepareStatementByEvent(**kwargs):
             -1 * this_event_statement['revenues']['fees']
         ])
 
-        # This is done in two queries and a loop because we cannot filter or
-        # aggregate directly on the reverse generic relation from ExpenseItem
-        # to EventOccurrence.
         allocated_venue_expenses = ExpenseItem.objects.filter(
             event__isnull=True,
             expensepurpose__content_type=eventoccurrence_ct,
             expensepurpose__object_id__in=event.eventoccurrence_set.values_list('id', flat=True),
             payTo__location__isnull=False
         )
-        venue_occurrences = EventOccurrence.objects.filter(
-            related_expenses__item__in=allocated_venue_expenses
-        ).annotate(
-            dur=ExpressionWrapper(
-                F('endTime') - F('startTime'), output_field=DurationField()
-            ),
-            event_dur=Case(When(Q(event=event), then=F('dur')), output_field=DurationField())
-        ).distinct()
 
-        total_allocated_venue = 0
+        total_allocated_venue = sum([
+            x.getAllocationForEvent(event) * x.total
+            for x in allocated_venue_expenses
+        ])
 
-        for expense in allocated_venue_expenses:
-            this_durations = venue_occurrences.filter(
-                related_expenses__item=expense
-            ).aggregate(
-                total_dur=Coalesce(Sum('dur'), timedelta()),
-                total_event_dur=Coalesce(Sum('event_dur'), timedelta())
-            )
-            total_allocated_venue += (
-                (this_durations['total_event_dur']/this_durations['total_dur']) *
-                expense.total
-            )
-
-        # This is done in two queries and a loop because we cannot filter or
-        # aggregate directly on the reverse generic relation from ExpenseItem
-        # to EventStaffMember.
         allocated_staff_expenses = ExpenseItem.objects.filter(
             event__isnull=True,
             expensepurpose__content_type=eventstaffmember_ct,
             expensepurpose__object_id__in=event.eventstaffmember_set.values_list('id', flat=True)
         )
-        staff_occurrences = EventStaffMember.objects.filter(
-            related_expenses__item__in=allocated_staff_expenses
-        ).annotate(
-            dur=F('event__duration'),
-            event_dur=Case(When(Q(event=event), then=F('dur')), output_field=DurationField())
-        ).distinct()
 
-        total_allocated_staff = 0
-
-        for expense in allocated_staff_expenses:
-            this_durations = staff_occurrences.filter(
-                related_expenses__item=expense
-            ).aggregate(
-                total_dur=Coalesce(Sum('dur'), timedelta()),
-                total_event_dur=Coalesce(Sum('event_dur'), timedelta())
-            )
-            total_allocated_staff += (
-                (this_durations['total_event_dur']/this_durations['total_dur']) *
-                expense.total
-            )
+        total_allocated_staff = sum([
+            x.getAllocationForEvent(event) * x.total
+            for x in allocated_staff_expenses
+        ])
 
         this_event_statement['expenses'] = {
             'instruction': event.expenseitem_set.filter(

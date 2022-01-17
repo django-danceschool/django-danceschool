@@ -22,7 +22,10 @@ from collections import OrderedDict
 from itertools import chain
 import re
 
-from danceschool.core.models import Instructor, Location, Event, StaffMember, EventStaffCategory
+from danceschool.core.models import (
+    Location, Event, StaffMember, EventStaffCategory, EventStaffMember,
+    EventOccurrence
+)
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
 from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
@@ -631,6 +634,38 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         context['expenseItems'] = expenseItems
         context['revenueItems'] = revenueItems
 
+        if event:
+            # These are needed to allocate non-hourly expenses across events.
+            eventoccurrence_ct = ContentType.objects.get_for_model(EventOccurrence).id
+            eventstaffmember_ct = ContentType.objects.get_for_model(EventStaffMember).id
+
+            context.update({
+                'allocatedVenueExpenseItems': ExpenseItem.objects.filter(
+                    event__isnull=True,
+                    expensepurpose__content_type=eventoccurrence_ct,
+                    expensepurpose__object_id__in=event.eventoccurrence_set.values_list('id', flat=True),
+                    payTo__location__isnull=False
+                ),
+                'allocatedStaffExpenseItems': ExpenseItem.objects.filter(
+                event__isnull=True,
+                expensepurpose__content_type=eventstaffmember_ct,
+                expensepurpose__object_id__in=event.eventstaffmember_set.values_list('id', flat=True)
+                ),
+            })
+            context.update({
+                'allocatedVenueTotal': sum([
+                    x.getAllocationForEvent(event) * x.total
+                    for x in context['allocatedVenueExpenseItems']
+                ]),
+                'allocatedStaffTotal': sum([
+                    x.getAllocationForEvent(event) * x.total
+                    for x in context['allocatedStaffExpenseItems']
+                ])
+            })
+            context['allocatedTotal'] = (
+                context['allocatedVenueTotal'] + context['allocatedStaffTotal']
+            )
+
         # Registration revenues, instruction and venue expenses
         # are broken out separately.
 
@@ -727,7 +762,10 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                 )
             ]),
 
-            'totalExpenses': sum([x.category_net or 0 for x in context['expenseCategoryTotals']]),
+            'totalExpenses': (
+                sum([x.category_net or 0 for x in context['expenseCategoryTotals']]) +
+                context.get('allocatedTotal', 0)
+            ),
         })
 
         context.update({

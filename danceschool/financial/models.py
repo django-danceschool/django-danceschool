@@ -1,5 +1,8 @@
 from django.db import models
-from django.db.models import Q
+from django.db.models import (
+    Q, F, ExpressionWrapper, DurationField, Case, When, Sum
+)
+from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -18,7 +21,8 @@ from dateutil.relativedelta import relativedelta
 from intervaltree import IntervalTree
 
 from danceschool.core.models import (
-    StaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room
+    StaffMember, EventStaffCategory, Event, InvoiceItem, Location, Room,
+    EventOccurrence, EventStaffMember
 )
 from danceschool.core.constants import getConstant
 
@@ -859,6 +863,51 @@ class ExpenseItem(models.Model):
             theTime = self.event.endTime
         return theTime
     expenseEndDate.fget.short_description = _('End Date')
+
+    @property
+    def allocationByEvent(self):
+        '''
+        Since expenses such as periodic staffing or venue rentals can have
+        multiple purposes, they should be allocated among those events in
+        financial summaries. This method calculates the allocation across each
+        event that is associated with it.
+        '''
+
+       # First, ensure that this expense is allocated across only one content
+        # type. Otherwise, the expense is currently inallocable.
+        content_types = list(set(self.expensepurpose_set.values_list('content_type', flat=True)))
+        if len(content_types) > 1:
+            return {}
+        model_class = ContentType.objects.get(id=content_types[0]).model_class()
+
+        # This method also requires that the model have a related_expenses
+        # GenericRelation. These are provided by default for EventStaffMember
+        # and EventOccurrence, since those expenses can be auto-generated.
+        if not hasattr(model_class, 'related_expenses'):
+            return {}
+
+        # Get the associated objects. 
+        related_objects = model_class.objects.filter(related_expenses__item=self)
+
+        if model_class == EventOccurrence:
+            allocation_by_event = related_objects.annotate(
+                dur=ExpressionWrapper(
+                    F('endTime') - F('startTime'), output_field=DurationField()
+                ),
+            ).values('event').annotate(event_dur=Coalesce(Sum('dur'), timedelta()))
+            total_seconds = sum([x['event_dur'].seconds for x in allocation_by_event])
+            return {x['event']: x['event_dur'].seconds/total_seconds for x in allocation_by_event}
+
+        elif model_class == EventStaffMember:
+            allocation_by_event = related_objects.values('event').annotate(
+                event_dur=Coalesce(Sum('event__duration'), 0)
+            )
+            total_hours = sum([x['event_dur'] for x in allocation_by_event])
+            return {x['event']: x['event_dur']/total_hours for x in allocation_by_event}
+
+    def getAllocationForEvent(self, event):
+        allocation_by_event = self.allocationByEvent
+        return allocation_by_event.get(event.id, None)
 
     def save(self, *args, **kwargs):
         '''
