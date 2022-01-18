@@ -995,13 +995,15 @@ class ExpenseItem(models.Model):
     def __str__(self):
         if self.accrualDate:
             return '%s %s: %s = %s%s' % (
-                self.category.name, self.accrualDate.strftime('%B %Y'),
+                getattr(self.category, 'name', str(_('Expense'))),
+                self.accrualDate.strftime('%B %Y'),
                 self.description, getConstant('general__currencySymbol'),
                 self.total
             )
         else:
             return '%s: %s = %s%s' % (
-                self.category.name, self.description,
+                getattr(self.category, 'name', str(_('Expense'))),
+                self.description,
                 getConstant('general__currencySymbol'), self.total
             )
 
@@ -1241,13 +1243,15 @@ class RevenueItem(models.Model):
     def __str__(self):
         if self.accrualDate:
             return '%s %s: %s = %s%s' % (
-                self.category.name, self.accrualDate.strftime('%B %Y'),
+                getattr(self.category, 'name', str(_('Revenue'))),
+                self.accrualDate.strftime('%B %Y'),
                 self.description, getConstant('general__currencySymbol'),
                 self.total
             )
         else:
             return '%s: %s = %s%s' % (
-                self.category.name, self.description,
+                getattr(self.category, 'name', str(_('Expense'))),
+                self.description,
                 getConstant('general__currencySymbol'), self.total
             )
 
