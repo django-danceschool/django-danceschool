@@ -130,6 +130,33 @@ def getRevenueItemsCSV(queryset):
         writer.writerow(this_row_data)
     return response
 
+def getExpenseCategoryForStaffer(staffer=None, staffCategory=None):
+    '''
+    For standard categories of staff, map the EventStaffCategory to
+    an ExpenseCategory using the stored constants.  Otherwise, the
+    ExpenseCategory is a generic one.
+    '''
+    if staffer:
+        staffCategory=staffer.category
+
+    if staffCategory == getConstant('general__eventStaffCategoryAssistant'):
+        return getConstant('financial__assistantClassInstructionExpenseCat')
+    elif staffCategory in [
+            getConstant('general__eventStaffCategoryInstructor'),
+            getConstant('general__eventStaffCategorySubstitute')
+    ]:
+        return getConstant('financial__classInstructionExpenseCat')
+    else:
+        # This is the generic category for all Event staff, but it may be overridden below
+        return getConstant('financial__otherStaffExpenseCat')
+
+
+def getBestRuleForStaffer(staffer=None, staffCategory=None, staffMember=None):
+    '''
+    When generating expense items...
+    '''
+    pass
+
 
 def addEventTimeFilters(
     event_timefilters=None, rule=None, datetimeTuple=None, event=None
@@ -378,9 +405,6 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
             'for': _('for'),
         }
 
-        # This is the generic category for all Event staff, but it may be overridden below
-        expense_category = getConstant('financial__otherStaffExpenseCat')
-
         if staffCategory:
             if staffMember:
                 # This staff member in this category
@@ -392,17 +416,6 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
                     ~Q(staffMember__expenserules__category=staffCategory)
                 )
             replacements['type'] = staffCategory.name
-
-            # For standard categories of staff, map the EventStaffCategory to
-            # an ExpenseCategory using the stored constants.  Otherwise, the
-            # ExpenseCategory is a generic one.
-            if staffCategory == getConstant('general__eventStaffCategoryAssistant'):
-                expense_category = getConstant('financial__assistantClassInstructionExpenseCat')
-            elif staffCategory in [
-                    getConstant('general__eventStaffCategoryInstructor'),
-                    getConstant('general__eventStaffCategorySubstitute')
-            ]:
-                expense_category = getConstant('financial__classInstructionExpenseCat')
 
         else:
             # We don't want to generate duplicate expenses when there is both a category-limited
@@ -456,7 +469,7 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
 
                 params = {
                     'event': staffer.event,
-                    'category': expense_category,
+                    'category': getExpenseCategoryForStaffer(staffer),
                     'expenseRule': rule,
                     'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
                     'submissionUser': submissionUser,
@@ -487,6 +500,8 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
             # separately for each EventStaffMember instance so that we can keep
             # track of the full set of purposes of each expense.
             for staffer in staffers:
+
+                expense_category=getExpenseCategoryForStaffer(staffer)
 
                 # Find or create the TransactionParty associated with the staff member.
                 staffer_party = TransactionParty.objects.get_or_create(
