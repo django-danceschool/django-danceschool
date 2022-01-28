@@ -3,23 +3,27 @@
 {% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
 {% url "customizeGiftCertificate" as certificate_url %}
 
-<form id="payment-form">
-  <div id="card-container"></div>
-  <button id="card-button" type="button">Submit Payment</button>
-</form>
-<div id="payment-status-container"></div>
-
-<form id="old-form" method="post">
-  {% if allow_amount_entry %}
-    <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
-    <input type="hidden" class="sq-input full-width" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
-    <input type="hidden" class="sq-input full-width" id="id_email" type="email" name="customerEmail">
-  {% endif %}
-</form>
+<div class="card my-4 door-payment-section">
+  <h6 class="card-header">
+    {% trans "Pay Now with Square" %}
+    </h6>
+    <div class="card-body">
+      <form id="payment-form">
+        {% if allow_amount_entry %}
+            <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
+            <input class="sq-input full-width" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
+            <input class="sq-input full-width" id="id_email" type="email" name="customerEmail">
+        {% endif %}
+        <div id="card-container"></div>
+        <button id="card-button" class="btn btn-lg btn-primary" type="button">Submit Payment</button>
+      </form>
+      <div id="payment-status-container"></div>
+    </div>
+</div>
 
 {% addtoblock "js" %}
 <script>
-    var squareCheckoutParams = {
+    const squareCheckoutParams = {
       appId: '{{ squareApplicationId }}',
       locationId: '{{ squareLocationId }}',
       process_url: "{% url 'processSquarePayment' %}",
@@ -120,17 +124,22 @@
     // to the project server code so that a payment can be created with 
     // Payments API
     async function createPayment(token) {
+      const form_data = new FormData(document.getElementById('payment-form'));
+      const form_data_object = Object.fromEntries(form_data.entries());
+      const details = Object.assign(form_data_object, squareCheckoutParams.transaction_details);
+
       const body = JSON.stringify({
         locationId,
-        csrf_token: csrftoken,
         sourceId: token,
-        transaction_details: squareCheckoutParams.transaction_details,
+        transaction_details: details,
       });
       const paymentResponse = await fetch(squareCheckoutParams.process_url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken,
         },
+        mode: 'same-origin',
         body,
       });
       if (paymentResponse.ok) {
