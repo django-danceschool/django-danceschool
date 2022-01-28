@@ -127,11 +127,11 @@
     async function createPayment(token) {
       console.log('Got to call createPayment');
       const options_form = document.getElementById('options-form');
-      var form_data = new FormData();
+      var this_form_data = new FormData();
       if (options_form !== null) {
-        form_data = new FormData(document.getElementById('options-form'));
+        this_form_data = new FormData(document.getElementById('options-form'));
       }
-      const form_data_object = Object.fromEntries(form_data.entries());
+      const form_data_object = Object.fromEntries(this_form_data.entries());
 
       const details = Object.assign(
         squareCheckoutParams.transaction_details,
