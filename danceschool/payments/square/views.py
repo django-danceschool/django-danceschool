@@ -29,13 +29,6 @@ from .tasks import updateSquareFees
 logger = logging.getLogger(__name__)
 
 
-def processSquarePaymentTest(request):
-    try:
-        data = json.loads(request.body)
-    except json.decoder.JSONDecodeError:
-        return HttpResponseBadRequest()
-
-
 def processSquarePayment(request):
     '''
     This view handles the charging of approved Square Checkout payments.
