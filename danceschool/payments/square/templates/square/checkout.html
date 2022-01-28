@@ -24,7 +24,6 @@
       locationId: '{{ squareLocationId }}',
       process_url: "{% url 'processSquarePayment' %}",
       transaction_details: {
-        csrf_token: "{% csrf_token %}",
         idempotency_key: "{{ idempotency_key }}",
         {% if user.is_authenticated %}
           user_id: "{{ user.id }}",
@@ -50,6 +49,25 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script>
+    const locationId = squareCheckoutParams.locationId;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
     async function initializeCard(payments) {
       const card = await payments.card();
       await card.attach('#card-container'); 
@@ -61,7 +79,7 @@
         throw new Error('Square.js failed to load properly');
       }
 
-      const payments = window.Square.payments(squareCheckoutParams.appId, squareCheckoutParams.locationId);
+      const payments = window.Square.payments(squareCheckoutParams.appId, locationId);
       let card;
       try {
         card = await initializeCard(payments);
@@ -103,7 +121,8 @@
     // Payments API
     async function createPayment(token) {
       const body = JSON.stringify({
-        squareCheckoutParams.locationId,
+        locationId,
+        csrf_token: csrftoken,
         sourceId: token,
         transaction_details: squareCheckoutParams.transaction_details,
       });
