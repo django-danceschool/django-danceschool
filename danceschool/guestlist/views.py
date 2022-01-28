@@ -147,7 +147,11 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
                 this_item = StaffMember.objects.get(id=post_data['id'])
                 this_first_name = this_item.firstName
                 this_last_name = this_item.lastName
-                this_email = this_item.privateEmail
+                this_email = (
+                    this_item.privateEmail or
+                    getattr(this_item.userAccount, 'email') or
+                    this_item.publicEmail
+                )
             elif post_data['modelType'] == 'Registration':
                 this_item = Registration.objects.get(id=post_data['id'])
                 this_first_name = this_item.invoice.firstName
