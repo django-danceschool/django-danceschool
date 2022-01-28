@@ -31,6 +31,9 @@ class ModelTemplateBase(TemplateBase):
 class ExtrasTemplateBase(TemplateBase):
     ''' The base class for registering event registration extras templates. '''
 
+    # The Javascript file associated with this extras template, if needed.
+    js_name = ''
+
 
 class PluginTemplatesRegistry(Registry):
     '''

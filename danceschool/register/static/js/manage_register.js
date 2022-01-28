@@ -481,14 +481,25 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         this_row.find('.customerCheckIn').data('event-id', this.event.id);
                         this_row.find('.customerInfoEvent').text(this.event.name);
                         this_row.find('.customerInfoTime').text(moment(this.occurrenceStartTime).format('LT'));
+
+                        var extras_text="";
+                        regExtrasFunctions.forEach(function (item, index) {
+                            extras_text += item(this.extras);
+                        }, this);
+                        this_row.find('.customerInfoExtras').html(extras_text);
+
                         var role_text = "";
+                        if (extras_text !== "") {
+                            role_text += '<strong>' + regParams.roleString + ':</strong> ';
+                        }
                         if (this.dropIn == true) {
                             role_text += regParams.dropInString + ' ';
                         }
                         if (this.role.name) {
                             role_text += this.role.name;
                         }
-                        this_row.find('.customerInfoRole').text(role_text);
+                        this_row.find('.customerInfoRole').html(role_text);
+                        
                         this_row.find('.customerInfoStudent').text(toTitleCase(this.student.toString()));
                         this_row.find('.customerInfoPaymentStatus').text(statusString);
                         this_row.find('.customerInvoiceLink').attr('href',this.registration.invoice.url);
@@ -537,6 +548,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         this_row.find('.customerCheckIn').data('occurrence-id', this.occurrenceId);
                         this_row.find('.guestInfoEvent').text(this.eventName);
                         this_row.find('.guestInfoType').text(this.guestType);
+
+                        var extras_text="";
+                        regExtrasFunctions.forEach(function (item, index) {
+                            extras_text += item(this.extras);
+                        }, this);
+                        this_row.find('.guestInfoExtras').html(extras_text);
+
                     });
                 },
             });

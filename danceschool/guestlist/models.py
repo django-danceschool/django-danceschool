@@ -248,6 +248,8 @@ class GuestList(models.Model):
                 Registration.objects.filter(
                     filters & Q(final=True) & Q(eventregistration__event=event)
                 ).annotate(
+                    firstName=F('invoice__firstName'),
+                    lastName=F('invoice__lastName'),
                     modelType=Value('Registration', output_field=models.CharField()),
                     guestListId=Value(self.id, output_field=models.IntegerField()),
                     guestType=Value(_('Registered'), output_field=models.CharField()),
@@ -274,6 +276,7 @@ class GuestListName(models.Model):
     guestList = models.ForeignKey(GuestList, on_delete=models.CASCADE)
     firstName = models.CharField(_('First name'), max_length=50)
     lastName = models.CharField(_('Last name'), max_length=50)
+    email = models.CharField(_('Email (optional)'), max_length=200, null=True, blank=True)
 
     notes = models.CharField(
         _('Notes (optional)'),

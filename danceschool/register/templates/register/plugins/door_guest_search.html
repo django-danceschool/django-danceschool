@@ -19,7 +19,7 @@
                     </td>
                     {% endif %}
                     <td><span class="customerInfoEvent"></span><br /><small><span class="customerInfoTime"></span></small></td>
-                    <td class="customerInfoRole"></td>
+                    <td><span class="customerInfoRole"></span><br /><span class="customerInfoExtras"></span></td>
                     <td class="customerInfoStudent"></td>
                     <td class="customerInfoPaymentStatus"></td>
                     <td class="customerInfoLinks">
@@ -51,6 +51,7 @@
                     <td class="guestInfoName"></td>
                     <td class="guestInfoEvent"></td>
                     <td class="guestInfoType"></td>
+                    {% if extras_templates_registry %}<td class="guestInfoExtras"></td>{% endif %}
                 </tr>
             </table>
             <table id="customerInfoTable" class="table d-none">
@@ -59,7 +60,11 @@
                     <th>{% trans "Check-in" %}</th>
                     {% endif %}
                     <th>{% trans "Event" %}</th>
-                    <th>{% trans "Role" %}</th>
+                    {% if extras_templates_registry %}
+                        <th>{% trans "Additional Info" %}</th>
+                    {% else %}
+                        <th>{% trans "Role" %}</th>
+                    {% endif %}
                     <th>{% trans "Student" %}</th>
                     <th>{% trans "Payment Status" %}</th>
                     <th>{% trans "Links" %}<button class="float-right btn btn-sm" role="button" data-toggle="collapse" data-target="#customerInfoCard" aria-expanded="true" aria-controls="customerInfoCard" aria-label="Hide Table" title="Hide Table"><i class="fa fa-chevron-up" aria-hidden="true"></i></button></th>
@@ -74,6 +79,9 @@
                     <th>{% trans "Name" %}</th>
                     <th>{% trans "Event" %}</th>
                     <th>{% trans "Guest Type" %}
+                    {% if extras_templates_registry %}
+                        <th>{% trans "Additional Info" %}</th>
+                    {% endif %}
                     <button class="float-right btn btn-sm" role="button" data-toggle="collapse" data-target="#customerInfoCard" aria-expanded="true" aria-controls="customerInfoCard" aria-label="Hide Table" title="Hide Table"><i class="fa fa-chevron-up" aria-hidden="true"></i></button></th>
                 </tr></thead>
                 <tbody></tbody>

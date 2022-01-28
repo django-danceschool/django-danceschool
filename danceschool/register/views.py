@@ -13,6 +13,7 @@ from danceschool.core.models import Event, Series, PublicEvent
 from danceschool.core.mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
 )
+from danceschool.core.registries import extras_templates_registry
 
 from .forms import CustomerGuestAutocompleteForm
 from .models import Register
@@ -82,6 +83,7 @@ class RegisterView(
             'today': today,
             'register': register,
             'allEvents': self.get_allEvents(),
+            'extras_templates_registry': extras_templates_registry,
         }
         context.update(kwargs)
 

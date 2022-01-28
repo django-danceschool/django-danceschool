@@ -22,6 +22,7 @@ Amount Paid {{ currencySymbol }}{{ amountPaid|floatformat:2 }}
 Outstanding Balance: {{ currencySymbol }}{{ outstandingBalance|floatformat:2 }}
 
 View Full Invoice/Make Payments: {{ url }}
+{% if checkin_url %}QR code check-in: {{ checkin_url }}{% endif %}
 
 {% if outstandingBalance %}We appreciate your prompt payment of your remaining balance.{% else %}Thanks again!{% endif %}
 

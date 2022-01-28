@@ -69,9 +69,9 @@ invoice_finalized = Signal(''' ['invoice'] ''')
 # Fires whenever an invoice is cancelled.
 invoice_cancelled = Signal(''' ['invoice'] ''')
 
-# Fires on the customer profile page to collect customer information from other apps
-# without overriding the CustomerStatsView.
-get_customer_data = Signal(''' ['customer'] ''')
+# Fires on the customer profile page and elsewhere to collect customer or
+# person-level information from other apps without overriding the CustomerStatsView.
+get_person_data = Signal(''' ['customer', 'first_name', 'last_name', 'email', 'staff_member] ''')
 
 # Fires when viewing prior EventRegistrations to collect information from other apps
 # such as discounts or vouchers that were applied to the Registrations.

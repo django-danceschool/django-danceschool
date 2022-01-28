@@ -6,7 +6,7 @@ from django.db.models.query import QuerySet
 from django.db.models.functions import Concat
 
 from danceschool.core.signals import (
-    post_student_info, apply_price_adjustments, get_customer_data,
+    post_student_info, apply_price_adjustments, get_person_data,
     check_student_info, get_eventregistration_data, check_voucher,
     invoice_finalized
 )
@@ -290,19 +290,20 @@ def applyVoucherCodesFinal(sender, **kwargs):
             awardReferrers(vu)
 
 
-@receiver(get_customer_data)
+@receiver(get_person_data)
 def provideCustomerReferralCode(sender, **kwargs):
     '''
     If the vouchers app is installed and referrals are enabled,
     then the customer's profile page can show their voucher referral code.
     '''
-    customer = kwargs.pop('customer')
-    if getConstant('vouchers__enableVouchers') and getConstant('referrals__enableReferralProgram'):
+    customer = kwargs.pop('customer', None)
+    if (
+        customer and getConstant('vouchers__enableVouchers') and
+        getConstant('referrals__enableReferralProgram')
+    ):
         vrd = ensureReferralVouchersExist(customer)
 
-        return {
-            'referralVoucherId': vrd.referreeVoucher.voucherId
-        }
+        return {'referralVoucherId': vrd.referreeVoucher.voucherId}
 
 
 @receiver(get_eventregistration_data)

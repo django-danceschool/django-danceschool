@@ -12,7 +12,9 @@ Adjustments/Refunds: {{ currencySymbol }}{{ adjustments|floatformat:2 }}{% endif
 {% if thisPaymentAmount %}This Payment Amount: {{ currencySymbol }}{{ thisPaymentAmount|floatformat:2 }}
 {% endif %}Total Amount paid: {{ currencySymbol }}{{ amountPaid|floatformat:2 }}
 Outstanding balance: {{ currencySymbol }}{{ outstandingBalance|floatformat:2 }}
-View Invoice/Make Payments: {{ url }}{% if registrationComments %}Your comments:
+View Invoice/Make Payments: {{ url }}{% if checkin_url %}
+QR code check-in: {{ checkin_url }}
+{% endif %}{% if registrationComments %}Your comments:
 {{ registrationComments }}
 
 {% endif %}{% if registrationHowHeardAboutUs %}

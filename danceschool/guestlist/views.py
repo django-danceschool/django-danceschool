@@ -12,6 +12,7 @@ import logging
 from .models import GuestList, Event, GuestListName
 from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.models import EventCheckIn, Registration, StaffMember
+from danceschool.core.signals import get_person_data
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
@@ -96,7 +97,10 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
         except json.decoder.JSONDecodeError:
             return JsonResponse({'code': 'invalid_json', 'message': _('Invalid JSON.')})
 
-        if not post_data.get('eventList', None):
+        event_list = post_data.get('eventList', [])
+        event_list = filter(lambda x: x.isdigit(), event_list)
+
+        if not event_list:
             return JsonResponse({
                 'code': 'no_event_list', 'message': _('No event list specified.')
             })
@@ -136,10 +140,19 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
         try:
             if post_data['modelType'] == 'GuestListName':
                 this_item = GuestListName.objects.get(id=post_data['id'])
+                this_first_name = this_item.firstName
+                this_last_name = this_item.lastName
+                this_email = this_item.email
             elif post_data['modelType'] == 'StaffMember':
                 this_item = StaffMember.objects.get(id=post_data['id'])
+                this_first_name = this_item.firstName
+                this_last_name = this_item.lastName
+                this_email = this_item.privateEmail
             elif post_data['modelType'] == 'Registration':
                 this_item = Registration.objects.get(id=post_data['id'])
+                this_first_name = this_item.invoice.firstName
+                this_last_name = this_item.invoice.lastName
+                this_email = this_item.invoice.email
         except ObjectDoesNotExist:
             return JsonResponse({
                 'code': 'guest_not_found', 'message': _('Guest not found.')
@@ -156,10 +169,19 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
                 'message': _('Invalid guest.')
             })
 
+        extras_response = []
+        extra_person_data = get_person_data.send(
+            sender=GuestCheckInfoJsonView, first_name=this_first_name,
+            last_name=this_last_name, email=this_email
+        )
+        for item in extra_person_data:
+            if len(item) > 1 and isinstance(item[1], dict) and item[1]:
+                extras_response.append(item[1])
+
         # Since we got this far, generate a response
         response = {'status': 'success', 'events': []}
 
-        for event in Event.objects.filter(id__in=post_data.get('eventList', [])):
+        for event in Event.objects.filter(id__in=event_list):
 
             # Only report check-in status for the events that apply to this
             # StaffMember:
@@ -180,8 +202,8 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
             filters = {
                 'event': event, 'eventRegistration__isnull': True,
                 'checkInType': post_data.get('checkInType', 'O'),
-                'firstName': this_item.firstName,
-                'lastName': this_item.lastName,
+                'firstName': this_first_name,
+                'lastName': this_last_name,
                 'cancelled': False,
             }
 
@@ -196,8 +218,10 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
             response['events'].append({
                 'id': this_item.id,
                 'modelType': post_data['modelType'],
-                'firstName': this_item.firstName,
-                'lastName': this_item.lastName,
+                'firstName': this_first_name,
+                'lastName': this_last_name,
+                'email': this_email,
+                'extras': extras_response,
                 'eventId': event.id, 'eventName': event.name,
                 'checkedIn': EventCheckIn.objects.filter(**filters).exists(),
                 'occurrenceId': this_occurrence.id,

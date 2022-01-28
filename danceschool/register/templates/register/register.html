@@ -87,17 +87,26 @@
         outstandingBalanceString: "{% trans 'Balance' %}",
         voucherString: "{% trans 'Voucher' %}",
         dropInString: "{% trans 'Drop-in' %}",
+        roleString: "{% trans 'Role' %}",
         registerUrl: "{% url 'ajaxRegistration' %}",
         customerLookupUrl: "{% url 'viewregistrations_json' %}",
         guestLookupUrl: "{% url 'guestCheckInfoJSON' %}",
         checkInUrl: "{% url 'ajax_checkin' %}",
         registerDate: "{{ year }}-{{ month }}-{{ day }}",
-    }
+    };
+
+    // This array holds functions that take registration data and return output for extras tables.
+    var regExtrasFunctions = [];
 </script>
 {% endaddtoblock %}
 
 {% addtoblock "js" %}<script type="text/javascript" src="{% static 'moment/moment.min.js' %}"></script>{% endaddtoblock %}
 {% addtoblock "js" %}<script type="text/javascript" src="{% static 'js/manage_register.js' %}"></script>{% endaddtoblock %}
+{% addtoblock "js" %}
+{% for k,t in extras_templates_registry.items %}
+    {% if t.js_name %}<script type="text/javascript" src="{% static t.js_name %}"></script>{% endif %}
+{% endfor %}
+{% endaddtoblock %}
 
 {% addtoblock "css" %}
     <style type="text/css">

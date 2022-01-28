@@ -1,3 +1,4 @@
+from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils import timezone
@@ -10,6 +11,13 @@ from .constants import getConstant
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+def getSiteUrl():
+    return '%s://%s' % (
+        getConstant('email__linkProtocol'),
+        Site.objects.get_current().domain,
+    )
 
 
 def emailErrorMessage(subject, message):

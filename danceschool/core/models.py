@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
-from django.contrib.sites.models import Site
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Q, Sum, F, Case, When, Value, Count
@@ -29,6 +28,7 @@ import random
 from cms.models.pluginmodel import CMSPlugin
 
 from .constants import getConstant
+from .helpers import getSiteUrl
 from .signals import (
     post_registration, invoice_finalized, invoice_cancelled
 )
@@ -2503,9 +2503,8 @@ class Invoice(EmailRecipientMixin, models.Model):
         settings.
         '''
         if self.id:
-            return '%s://%s%s' % (
-                getConstant('email__linkProtocol'),
-                Site.objects.get_current().domain,
+            return '%s%s' % (
+                getSiteUrl(),
                 reverse('viewInvoice', args=[self.id, ]),
             )
     url.fget.short_description = _('Invoice URL')
@@ -2553,6 +2552,9 @@ class Invoice(EmailRecipientMixin, models.Model):
                 self.invoiceitem_set.all()
             ],
         })
+        if self.registration:
+            context.update(self.registration.get_email_context())
+
         return context
 
     def get_payments(self):
@@ -3359,12 +3361,19 @@ class Registration(EmailRecipientMixin, models.Model):
             )
         ]
 
-    def get_email_context(self, **kwargs):
+    def get_email_context(self, from_invoice=True, **kwargs):
         ''' Overrides EmailRecipientMixin '''
         context = super().get_email_context(**kwargs)
-        context.update(self.invoice.get_email_context())
+        if not from_invoice:
+            context.update(self.invoice.get_email_context())
 
         context.update({
+            'checkin_url': '%s%s' % (
+                getSiteUrl(), reverse('customer_checkin', args=[self.invoice.id, ]),
+            ),
+            'qrcode_url': '%s%s' % (
+                getSiteUrl(), reverse('customer_qrcode', args=[self.invoice.id, ]),
+            ),
             'registrationComments': self.comments,
             'registrationHowHeardAboutUs': self.howHeardAboutUs,
         })

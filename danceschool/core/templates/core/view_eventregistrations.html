@@ -96,7 +96,7 @@
 		<td>
 			{% with extras|get_item:reg.id as reg_extras %}
 			{% for k,t in extras_templates_registry.items %}
-				{% include t.template %}
+				{% include t.template_name %}
 			{% endfor %}
 			{% endwith %}
 		</td>

@@ -46,12 +46,16 @@ class SquarePaymentRecord(PaymentRecord):
     @property
     def netAmountPaid(self):
         payment = self.getPayment()
+        if not payment:
+            return None
         return sum([x.amount_money.amount / 100 for x in payment.tenders or []]) - \
             sum([x.amount_money.amount / 100 for x in payment.refunds or []])
 
     @property
     def netFees(self):
         payment = self.getPayment()
+        if not payment:
+            return None
         return sum([x.processing_fee_money.amount / 100 for x in payment.tenders or []]) - \
             sum([x.processing_fee_money.amount / 100 for x in payment.refunds or []])
 
@@ -79,6 +83,14 @@ class SquarePaymentRecord(PaymentRecord):
         api_instance = TransactionsApi()
         api_instance.api_client.configuration.access_token = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
         transaction = self.getPayment()
+
+        if not transaction:
+            return {
+                'status': 'error', 'errors': [
+                    {'code': 'no_transaction', 'message': _('Unable to retrieve Square transaction from record.')},
+                ]
+
+            }
 
         # For both partial and full refunds, we loop through the tenders and refund
         # them as much as possible until we've refunded all that we want to refund.
@@ -115,7 +127,7 @@ class SquarePaymentRecord(PaymentRecord):
                 )
                 if response.errors:
                     logger.error('Error in providing Square refund: %s' % response.errors)
-                    refundData.append({'status': 'error', 'status': response.errors})
+                    refundData.append({'status': 'error', 'errors': response.errors})
                     break
             except ApiException as e:
                 logger.error('Error in providing Square refund.')

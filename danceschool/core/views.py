@@ -46,7 +46,7 @@ from .mixins import (
     AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin,
     ReferralInfoMixin
 )
-from .signals import get_customer_data, get_eventregistration_data
+from .signals import get_person_data, get_eventregistration_data
 from .utils.requests import getIntFromGet
 from .utils.timezone import ensure_timezone, ensure_localtime
 from .registries import extras_templates_registry
@@ -1085,7 +1085,7 @@ class AccountProfileView(LoginRequiredMixin, DetailView):
         # Get any extra context data passed by other apps.  These data require unique keys, so when writing
         # a handler for this signal, be sure to provide unique context keys.
         if hasattr(user, 'customer'):
-            extra_customer_data = get_customer_data.send(
+            extra_customer_data = get_person_data.send(
                 sender=AccountProfileView,
                 customer=user.customer,
             )

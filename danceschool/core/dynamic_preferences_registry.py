@@ -732,7 +732,7 @@ class EmailLinkProtocol(ChoicePreference):
 class RegSuccessEmailTemplate(ModelChoicePreference):
     section = email
     name = 'registrationSuccessTemplate'
-    verbose_name = _('Email template used for successful email registrations')
+    verbose_name = _('Email template used for successful registrations')
     model = EmailTemplate
     queryset = EmailTemplate.objects.all()
 
