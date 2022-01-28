@@ -1,4 +1,4 @@
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
@@ -31,8 +31,15 @@ logger = logging.getLogger(__name__)
 
 
 def processSquarePaymentTest(request):
-    logger.error(request.POST)
-
+    try:
+        data = json.loads(request.body)
+    except json.decoder.JSONDecodeError:
+        return HttpResponseBadRequest()
+    logger.error(data)
+    return JsonResponse({
+        'status': 'ok',
+        'data': data,
+    })
 
 
 def processSquarePayment(request):
