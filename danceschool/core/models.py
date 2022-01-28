@@ -2552,7 +2552,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 self.invoiceitem_set.all()
             ],
         })
-        if self.registration:
+        if getattr(self, 'registration', None):
             context.update(self.registration.get_email_context())
 
         return context
