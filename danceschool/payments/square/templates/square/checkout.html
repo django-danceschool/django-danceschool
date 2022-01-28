@@ -56,7 +56,11 @@
 </div>
 
 {% addtoblock "js" %}
-    <script type="text/javascript" src="https://js.squareup.com/v2/paymentform"></script>
+    {% if 'sandbox' in squareApplicationId %}
+        <script type="text/javascript" src="https://js.squareupsandbox.com/v2/paymentform"></script>
+    {% else %}
+        <script type="text/javascript" src="https://js.squareup.com/v2/paymentform"></script>
+    {% endif %}
 {% endaddtoblock %}
 {% addtoblock "js" %}
     <script>
