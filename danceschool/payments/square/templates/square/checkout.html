@@ -130,11 +130,12 @@
       if (options_form !== null) {
         form_data = new FormData(document.getElementById('options-form'));
       }
+      const form_data_object = Object.fromEntries(form_data.entries());
 
       const details = Object.assign(
         squareCheckoutParams.transaction_details,
         {locationId: squareCheckoutParams.locationId, sourceId: token},
-        Object.fromEntries(form_data.entries()),
+        form_data_object
       );
 
       const body = JSON.stringify(details);
