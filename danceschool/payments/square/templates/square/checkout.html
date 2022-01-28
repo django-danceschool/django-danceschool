@@ -55,8 +55,6 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script>
-    const locationId = squareCheckoutParams.locationId;
-
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -72,7 +70,6 @@
         }
         return cookieValue;
     }
-    const csrftoken = getCookie('csrftoken');
 
     async function initializeCard(payments) {
       const card = await payments.card();
@@ -126,12 +123,17 @@
     // to the project server code so that a payment can be created with 
     // Payments API
     async function createPayment(token) {
-      const form_data = new FormData(document.getElementById('options-form'));
-      const form_data_object = Object.fromEntries(form_data.entries());
+      const options_form = document.getElementById('options-form');
+      if (options_form) {
+          const form_data = Object.fromEntries(new FormData(document.getElementById('payment-form')).entries());
+      }
+      else {
+          const form_data = {};
+      }
       const details = Object.assign(
-        form_data_object,
         squareCheckoutParams.transaction_details,
-        {locationId, sourceId: token},
+        {locationId: squareCheckoutParams.locationId, sourceId: token},
+        form_data,
       );
 
       const body = JSON.stringify(details);
@@ -139,7 +141,7 @@
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken,
+          'X-CSRFToken': getCookie('csrftoken'),
         },
         mode: 'same-origin',
         body,
