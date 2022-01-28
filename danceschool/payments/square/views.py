@@ -10,8 +10,7 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 import uuid
-from squareconnect.rest import ApiException
-from squareconnect.apis.transactions_api import TransactionsApi
+from square.client import Client
 import logging
 from datetime import timedelta
 import json
@@ -35,11 +34,6 @@ def processSquarePaymentTest(request):
         data = json.loads(request.body)
     except json.decoder.JSONDecodeError:
         return HttpResponseBadRequest()
-    logger.error(data)
-    return JsonResponse({
-        'status': 'ok',
-        'data': data,
-    })
 
 
 def processSquarePayment(request):
@@ -52,17 +46,20 @@ def processSquarePayment(request):
     '''
     logger.info('Received request for Square Checkout payment.')
 
-    nonce_id = request.POST.get('nonce')
-    idempotency_key = request.POST.get('idempotency_key', str(uuid.uuid1()))
-    invoice_id = request.POST.get('invoice_id')
-    amount = request.POST.get('amount')
-    submissionUserId = request.POST.get('user_id')
-    transactionType = request.POST.get('transaction_type')
-    taxable = request.POST.get('taxable', False)
-    sourceUrl = request.POST.get('sourceUrl', reverse('showRegSummary'))
-    addSessionInfo = request.POST.get('addSessionInfo', False)
-    successUrl = request.POST.get('successUrl', reverse('registration'))
-    customerEmail = request.POST.get('customerEmail')
+    try:
+        data = json.loads(request.body)
+    except json.decoder.JSONDecodeError:
+        return HttpResponseBadRequest()
+
+    invoice_id = data.get('invoice_id')
+    amount = data.get('amount')
+    submissionUserId = data.get('user_id')
+    transactionType = data.get('transaction_type')
+    taxable = data.get('taxable', False)
+    sourceUrl = data.get('sourceUrl', reverse('showRegSummary'))
+    addSessionInfo = data.get('addSessionInfo', False)
+    successUrl = data.get('successUrl', reverse('registration'))
+    customerEmail = data.get('customerEmail')
 
     # If a specific amount to pay has been passed, then allow payment
     # of that amount.
@@ -155,29 +152,29 @@ def processSquarePayment(request):
     this_currency = getConstant('general__currencyCode')
     this_total = min(this_invoice.outstandingBalance, amount)
 
-    api_instance = TransactionsApi()
-    api_instance.api_client.configuration.access_token = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
-    location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
-    amount = {'amount': int(100 * this_total), 'currency': this_currency}
-    body = {'idempotency_key': idempotency_key, 'card_nonce': nonce_id, 'amount_money': amount}
+    client = Client(
+        access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
+        environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production'),
+    )
 
-    errors_list = []
+    body = {
+        'source_id': data.get('sourceId'),
+        'location_id': getattr(settings, 'SQUARE_LOCATION_ID', ''),
+        'idempotency_key': data.get('idempotency_key', str(uuid.uuid1())),
+        'amount_money': {
+            'amount': int(100 * this_total),
+            'currency': this_currency,
+        },
+    }
 
-    try:
-        # Charge
-        api_response = api_instance.charge(location_id, body)
-        if api_response.errors:
-            logger.error('Error in charging Square transaction: %s' % api_response.errors)
-            errors_list = api_response.errors
-    except ApiException as e:
-        logger.error('Exception when calling TransactionApi->charge: %s\n' % e)
-        errors_list = json.loads(e.body).get('errors', [])
+    response = client.payments.create_payment(body)
+    if response.is_error():
+        logger.error('Error in charging Square transaction: %s' % response.errors)
 
-    if errors_list:
         this_invoice.status = Invoice.PaymentStatus.error
         this_invoice.save()
         errors_string = ''
-        for err in errors_list:
+        for err in response.errors:
             errors_string += '<li><strong>CODE:</strong> %s, %s</li>' % (
                 err.get('code', str(_('Unknown'))), err.get('detail', str(_('Unknown')))
             )
@@ -186,19 +183,20 @@ def processSquarePayment(request):
             format_html(
                 '<p>{}</p><ul>{}</ul>',
                 str(_('ERROR: Error with Square checkout transaction attempt.')),
-                mark_safe(errors_list),
+                mark_safe(response.errors),
             )
         )
         return HttpResponseRedirect(sourceUrl)
     else:
         logger.info('Square charge successfully created.')
 
-    transaction = api_response.transaction
+    payment = response.get('payment')
 
     paymentRecord = SquarePaymentRecord.objects.create(
         invoice=this_invoice,
-        transactionId=transaction.id,
-        locationId=transaction.location_id,
+        orderId=payment.get('order_id'),
+        paymentId=payment.get('id'),
+        locationId=payment.get('location_id'),
     )
 
     # We process the payment now, and enqueue the job to retrieve the
@@ -208,7 +206,7 @@ def processSquarePayment(request):
         fees=0,
         paidOnline=True,
         methodName='Square Checkout',
-        methodTxn=transaction.id,
+        methodTxn=payment.get('id'),
         notify=customerEmail,
     )
     updateSquareFees.schedule(args=(paymentRecord, ), delay=60)
@@ -321,45 +319,44 @@ def processPointOfSalePayment(request):
         )
         return HttpResponseRedirect(sourceUrl)
 
-    api_instance = TransactionsApi()
-    api_instance.api_client.configuration.access_token = getattr(settings, 'SQUARE_ACCESS_TOKEN', '')
     location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
+    client = Client(
+        access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
+        environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production'),   
+    )
 
     if serverTransId:
-        try:
-            api_response = api_instance.retrieve_transaction(transaction_id=serverTransId, location_id=location_id)
-        except ApiException:
-            logger.error('Unable to find Square transaction by server ID.')
-            messages.error(request, _('ERROR: Unable to find Square transaction by server ID.'))
-            return HttpResponseRedirect(sourceUrl)
-        if api_response.errors:
-            logger.error('Unable to find Square transaction by server ID: %s' % api_response.errors)
+        response = client.orders.retrieve_order(serverTransId)
+        if response.is_error():
+            logger.error('Unable to find Square transaction by server ID: %s' % response.errors)
             messages.error(
                 request,
                 str(_('ERROR: Unable to find Square transaction by server ID:')) +
-                api_response.errors
+                response.errors
             )
             return HttpResponseRedirect(sourceUrl)
-        transaction = api_response.transaction
-    elif clientTransId:
-        # Try to find the transaction in the 50 most recent transactions
-        try:
-            api_response = api_instance.list_transactions(location_id=location_id)
-        except ApiException:
-            logger.error('Unable to find Square transaction by client ID.')
-            messages.error(request, _('ERROR: Unable to find Square transaction by client ID.'))
+        payment_list = [x.get('id') for x in response.body.get('order', {}).get('tenders', [])]
+        if len(payment_list) == 1:
+            payment = client.payments.get_payment(payment_list[0])
+        else:
+            logger.error('Returned client transaction ID not found.')
+            messages.error(request, _('ERROR: Returned client transaction ID not found.'))
             return HttpResponseRedirect(sourceUrl)
-        if api_response.errors:
-            logger.error('Unable to find Square transaction by client ID: %s' % api_response.errors)
+    elif clientTransId:
+        # Try to find the payment in the 50 most recent payments
+        response = client.payments.list_payments(location_id=location_id)
+        if response.is_error():
+            logger.error('Unable to find Square transaction by client ID: %s' % response.errors)
             messages.error(
                 request,
                 str(_('ERROR: Unable to find Square transaction by client ID:')) +
-                api_response.errors
+                response.errors
             )
             return HttpResponseRedirect(sourceUrl)
-        transactions_list = [x for x in api_response.transactions if x.client_id == clientTransId]
-        if len(transactions_list) == 1:
-            transaction = transactions_list[0]
+
+        payment_list = [x for x in response.body.get('payments', []) if x.get('order_id') == clientTransId]
+        if len(payment_list) == 1:
+            payment = payment_list[0]
         else:
             logger.error('Returned client transaction ID not found.')
             messages.error(request, _('ERROR: Returned client transaction ID not found.'))
@@ -372,8 +369,10 @@ def processPointOfSalePayment(request):
         return HttpResponseRedirect(sourceUrl)
 
     # Get total information from the transaction for handling invoice.
-    this_total = sum([x.amount_money.amount / 100 for x in transaction.tenders or []]) - \
-        sum([x.amount_money.amount / 100 for x in transaction.refunds or []])
+    this_total = (
+        payment.get('amount_money', {}).get('amount', 0) / 100 -
+        payment.get('refunded_money', {}).get('amount', 0) / 100
+    )
 
     # Parse if a specific submission user is indicated
     submissionUser = None
@@ -418,8 +417,8 @@ def processPointOfSalePayment(request):
         )
 
     paymentRecord, created = SquarePaymentRecord.objects.get_or_create(
-        transactionId=transaction.id,
-        locationId=transaction.location_id,
+        paymentId=payment.get('id'), orderId=payment.get('order_id'),
+        locationId=payment.get('location_id'),
         defaults={'invoice': this_invoice, }
     )
     if created:
@@ -430,7 +429,7 @@ def processPointOfSalePayment(request):
             fees=0,
             paidOnline=True,
             methodName='Square Point of Sale',
-            methodTxn=transaction.id,
+            methodTxn=payment.get('id'),
             notify=customerEmail,
         )
     updateSquareFees.schedule(args=(paymentRecord, ), delay=60)

@@ -85,47 +85,32 @@ CHECKING SQUARE INTEGRATION
 
         if location_id and client_id and client_secret:
             try:
-                from squareconnect.rest import ApiException
-                from squareconnect.apis.locations_api import LocationsApi
-                from squareconnect.apis.transactions_api import TransactionsApi
-
-                locations_api_instance = LocationsApi()
-                locations_api_instance.api_client.configuration.access_token = getattr(
-                    settings, 'SQUARE_ACCESS_TOKEN', ''
-                )
-                transactions_api_instance = TransactionsApi()
-                transactions_api_instance.api_client.configuration.access_token = getattr(
-                    settings, 'SQUARE_ACCESS_TOKEN', ''
+                from square.client import Client
+                client = Client(
+                    access_token=client_secret,
+                    environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production')
                 )
 
                 # Check that the location ID from settings actually identifies a location.
-                api_response = locations_api_instance.list_locations()
-                if api_response.errors:
-                    self.stdout.write(self.style.ERROR(
-                        'Error in listing Locations: %s' % api_response.errors
-                    ))
-                    foundErrors = True
-                if location_id not in [x.id for x in api_response.locations]:
+                location_response = client.locations.retrieve_location(location_id)
+                if location_response.is_error():
                     self.stdout.write(self.style.ERROR(
                         'Location ID from settings does not identify a valid ' +
                         'Square Location.'
                     ))
                     foundErrors = True
 
-                # Check that we can access transaction information
-                api_response = transactions_api_instance.list_transactions(location_id=location_id)
-                if api_response.errors:
-                    self.stdout.write(self.style.ERROR('Error in listing Transactions: %s' % api_response.errors))
+                # Check that we can access payment information
+                payment_response = client.payments.list_payments(location_id=location_id)
+                if payment_response.is_error():
+                    self.stdout.write(self.style.ERROR('Error in listing payments: %s' % payment_response.errors))
                     foundErrors = True
                 else:
                     self.stdout.write(self.style.SUCCESS(
                         'Successfully connected to Square API with provided credentials.'
                     ))
             except ImportError:
-                self.stdout.write(self.style.ERROR('Required squareconnect app not installed.'))
-                foundErrors = True
-            except ApiException as e:
-                self.stdout.write(self.style.ERROR('Exception in using Square API: %s\n' % e))
+                self.stdout.write(self.style.ERROR('Required squareup app not installed.'))
                 foundErrors = True
 
         add_square_checkout = self.boolean_input(

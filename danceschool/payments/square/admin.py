@@ -22,16 +22,16 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     invoiceLink.allow_tags = True
     invoiceLink.short_description = _('Registration invoice')
 
-    list_display = ['transactionId', 'invoiceLink']
+    list_display = ['paymentId', 'orderId', 'invoiceLink']
     list_filter = ['creationDate', 'modifiedDate', 'locationId']
-    search_fields = ['transactionId', 'invoice__id']
+    search_fields = ['paymentId', 'orderId', 'invoice__id']
 
     ordering = ['-modifiedDate', ]
-    readonly_fields = ['transactionId', 'locationId', 'creationDate', 'modifiedDate', 'invoiceLink']
+    readonly_fields = ['paymentId', 'orderId', 'locationId', 'creationDate', 'modifiedDate', 'invoiceLink']
 
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('transactionId', 'locationId', 'invoiceLink'),
+            'fields': ('paymentId', 'orderId', 'locationId', 'invoiceLink'),
         }),
         (_('Dates'), {
             'fields': ('creationDate', 'modifiedDate'),
