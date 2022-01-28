@@ -8,12 +8,14 @@
     {% trans "Pay Now with Square" %}
     </h6>
     <div class="card-body">
-      <form id="payment-form">
-        {% if allow_amount_entry %}
+      {% if allow_amount_entry %}
+      <form id="options-form" onsubmit="event.preventDefault();">
             <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
             <input class="sq-input full-width" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
             <input class="sq-input full-width" id="id_email" type="email" name="customerEmail">
-        {% endif %}
+      </form>
+      {% endif %}
+      <form id="payment-form">
         <div id="card-container"></div>
         <button id="card-button" class="btn btn-lg btn-primary" type="button">Submit Payment</button>
       </form>
@@ -124,15 +126,15 @@
     // to the project server code so that a payment can be created with 
     // Payments API
     async function createPayment(token) {
-      const form_data = new FormData(document.getElementById('payment-form'));
+      const form_data = new FormData(document.getElementById('options-form'));
       const form_data_object = Object.fromEntries(form_data.entries());
-      const details = Object.assign(form_data_object, squareCheckoutParams.transaction_details);
+      const details = Object.assign(
+        form_data_object,
+        squareCheckoutParams.transaction_details,
+        {locationId, sourceId: token},
+      );
 
-      const body = JSON.stringify({
-        locationId,
-        sourceId: token,
-        transaction_details: details,
-      });
+      const body = JSON.stringify(details);
       const paymentResponse = await fetch(squareCheckoutParams.process_url, {
         method: 'POST',
         headers: {
