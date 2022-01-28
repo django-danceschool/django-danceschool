@@ -183,7 +183,7 @@ def processSquarePayment(request):
     else:
         logger.info('Square charge successfully created.')
 
-    payment = response.get('payment')
+    payment = response.body.get('payment')
 
     paymentRecord = SquarePaymentRecord.objects.create(
         invoice=this_invoice,

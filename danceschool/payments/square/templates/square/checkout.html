@@ -125,7 +125,6 @@
     // to the project server code so that a payment can be created with 
     // Payments API
     async function createPayment(token) {
-      console.log('Got to call createPayment');
       const options_form = document.getElementById('options-form');
       var this_form_data = new FormData();
       if (options_form !== null) {
@@ -138,17 +137,11 @@
         {locationId: squareCheckoutParams.locationId, sourceId: token},
         form_data_object
       );
-
-      console.log('Here are details')
-      console.log(details);
-
       const body = JSON.stringify(details);
-
-      console.log('Here is body');
-      console.log(body);
 
       const paymentResponse = await fetch(squareCheckoutParams.process_url, {
         method: 'POST',
+        redirect: 'follow',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': getCookie('csrftoken'),
@@ -156,8 +149,8 @@
         mode: 'same-origin',
         body,
       });
-      if (paymentResponse.ok) {
-        return paymentResponse.json();
+      if (paymentResponse.redirected) {
+        window.location.href = paymentResponse.url;
       }
       const errorBody = await paymentResponse.text();
       throw new Error(errorBody);
