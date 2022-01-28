@@ -23,6 +23,7 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
         context.update({
             'allow_amount_entry': False,
             'squareApplicationId': getattr(settings, 'SQUARE_APPLICATION_ID', ''),
+            'squareLocationId': getattr(settings, 'SQUARE_LOCATION_ID', ''),
             'idempotency_key': str(uuid.uuid1()),
         })
 

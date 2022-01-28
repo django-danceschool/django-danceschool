@@ -3,216 +3,160 @@
 {% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
 {% url "customizeGiftCertificate" as certificate_url %}
 
-<div id="error_payment"></div>
+<form id="payment-form">
+  <div id="card-container"></div>
+  <button id="card-button" type="button">Submit Payment</button>
+</form>
+<div id="payment-status-container"></div>
 
-{# These div elements are the placeholder elements that are replaced by the SqPaymentForm's iframes. #}
-<div class="card my-4 door-payment-section">
-  <h6 class="card-header">
-  {% trans "Pay Now with Square" %}
-  </h6>
-  <div class="card-body">
-    <div id="card-container">
-      {# After the SqPaymentForm generates a card nonce, *this* form POSTs the generated card nonce to your application's server. #}
-      <form id="nonce-form" novalidate action="{% url 'processSquarePayment' %}" method="post">
-        {% csrf_token %}
-        {# Whenever a nonce is generated, it's assigned as the value of this hidden input field. #}
-        <input type="hidden" id="card-nonce" name="nonce">
-        {# The idempotency key is generated on the server side before this page is rendered so that duplicate charges should not happen. #}
-        <input type="hidden" id="idempotency-key" name="idempotency_key" value="{{ idempotency_key }}">
+<form id="old-form" method="post">
+  {% if allow_amount_entry %}
+    <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
+    <input type="hidden" class="sq-input full-width" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
+    <input type="hidden" class="sq-input full-width" id="id_email" type="email" name="customerEmail">
+  {% endif %}
+</form>
+
+{% addtoblock "js" %}
+<script>
+    var squareCheckoutParams = {
+      appId: '{{ squareApplicationId }}',
+      locationId: '{{ squareLocationId }}',
+      process_url: "{% url 'processSquarePayment' %}",
+      transaction_details: {
+        csrf_token: "{% csrf_token %}",
+        idempotency_key: "{{ idempotency_key }}",
         {% if user.is_authenticated %}
-          <input type="hidden" name="user_id" value="{{ user.id }}">
+          user_id: "{{ user.id }}",
         {% endif %}
         {% if invoice %}
-          <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
-          {% if invoice.email %}
-          <input type="hidden" name="customerEmail" value="{{ invoice.email }}">
-          {% endif %}
-        {% elif allow_amount_entry %}
-          <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
-          <label>{% trans "Enter Amount" %}</label>
-          <input class="sq-input full-width" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
-          <label>{% trans "Enter Email" %}</label>
-          <input class="sq-input full-width" id="id_email" type="email" name="customerEmail">
-          <label>{% trans "Enter Card Details" %}</label>
+            invoice_id: "{{ invoice.id }}",
+            {% if invoice.email %}
+            customerEmail: "{{ invoice.email }}",
+            {% endif %}
         {% endif %}
         {% if transaction_type == "Gift Certificate" and certificate_url %}
-          <input type="hidden" name="successUrl" value="{{ certificate_url }}">
-          <input type="hidden" name="addSessionInfo" value="True">
+          successUrl: "{{ certificate_url }}",
+          addSessionInfo: true,
         {% else %}
-          <input type="hidden" name="successUrl" value="{% page_url instance.successPage.id %}">
+          addSessionInfo: "{% page_url instance.successPage.id %}",
         {% endif %}
-      </form>
-
-      {# This is the div in which Square places the iframe with everything it needs to create a card nonce. #}
-      <div id="form-container">
-          <div id="sq-card-number"></div>
-          <div class="third" id="sq-expiration-date"></div>
-          <div class="third" id="sq-cvv"></div>
-          <div class="third" id="sq-postal-code"></div>
-          <button id="sq-creditcard" class="button-credit-card" onclick="onGetCardNonce(event)">{% trans 'Pay Now' %}</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-{% addtoblock "js" %}
-    {% if 'sandbox' in squareApplicationId %}
-        <script type="text/javascript" src="https://js.squareupsandbox.com/v2/paymentform"></script>
-    {% else %}
-        <script type="text/javascript" src="https://js.squareup.com/v2/paymentform"></script>
-    {% endif %}
+      },
+    };
+</script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-    <script>
-
-    var applicationId = '{{ squareApplicationId }}'; // <-- Add your application's ID here
-
-    if (applicationId == '') {
-      alert('You need to provide a value for the applicationId variable.');
+<script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script>
+    async function initializeCard(payments) {
+      const card = await payments.card();
+      await card.attach('#card-container'); 
+      return card; 
     }
 
-    {# Initializes the payment form.  See the Square documentation for descriptions of each parameter. #}
-    var paymentForm = new SqPaymentForm({
-      applicationId: applicationId,
-      inputClass: 'sq-input',
-      inputStyles: [
-        {
-          fontSize: '15px'
-        }
-      ],
-      cardNumber: {
-        elementId: 'sq-card-number',
-        placeholder: '•••• •••• •••• ••••'
-      },
-      cvv: {
-        elementId: 'sq-cvv',
-        placeholder: 'CVV'
-      },
-      expirationDate: {
-        elementId: 'sq-expiration-date',
-        placeholder: 'MM/YY'
-      },
-      postalCode: {
-        elementId: 'sq-postal-code',
-        placeholder: 'Postal Code',
-      },
-      callbacks: {
-
-        cardNonceResponseReceived: function(errors, nonce, cardData) {
-          if (errors) {
-            var message = '';
-            errors.forEach(function(error) {
-              message += error.message + ' ';
-            });
-            $('#error_payment').html('<div class="alert alert-danger"><strong>ERROR:</strong> ' + 
-              message + '</div>');
-
-          // No errors occurred. Extract the card nonce.
-          } else {
-            $('#error_payment').html();
-            document.getElementById('card-nonce').value = nonce;
-            document.getElementById('nonce-form').submit();
-          }
-        },
-
-        unsupportedBrowserDetected: function() {
-            var message = '{% trans "Your browser does not support Square checkout.  Please use another browser." %}';
-            $('#error_payment').html('<div class="alert alert-danger"><strong>ERROR:</strong> ' + 
-              message + '</div>');
-        },
+    document.addEventListener('DOMContentLoaded', async function () {
+      if (!window.Square) {
+        throw new Error('Square.js failed to load properly');
       }
+
+      const payments = window.Square.payments(squareCheckoutParams.appId, squareCheckoutParams.locationId);
+      let card;
+      try {
+        card = await initializeCard(payments);
+      } catch (e) {
+        console.error('Initializing Card failed', e);
+        return;
+      }
+
+      // Checkpoint 2.
+      async function handlePaymentMethodSubmission(event, paymentMethod) {
+        event.preventDefault();
+
+        try {
+          // disable the submit button as we await tokenization and make a
+          // payment request.
+          cardButton.disabled = true;
+          const token = await tokenize(paymentMethod);
+          const paymentResults = await createPayment(token);
+          displayPaymentResults('SUCCESS');
+
+          console.debug('Payment Success', paymentResults);
+        } catch (e) {
+          cardButton.disabled = false;
+          displayPaymentResults('FAILURE');
+          console.error(e.message);
+        }
+      }
+
+      const cardButton = document.getElementById(
+        'card-button'
+      );
+      cardButton.addEventListener('click', async function (event) {
+        await handlePaymentMethodSubmission(event, card);
+      });
     });
 
-    {# This function is called when a buyer clicks the Submit button on the webpage to charge their card. #}
-    function onGetCardNonce(event) {
-      event.preventDefault();
-      paymentForm.requestCardNonce();
+    // Call this function to send a payment token, buyer name, and other details
+    // to the project server code so that a payment can be created with 
+    // Payments API
+    async function createPayment(token) {
+      const body = JSON.stringify({
+        squareCheckoutParams.locationId,
+        sourceId: token,
+        transaction_details: squareCheckoutParams.transaction_details,
+      });
+      const paymentResponse = await fetch(squareCheckoutParams.process_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body,
+      });
+      if (paymentResponse.ok) {
+        return paymentResponse.json();
+      }
+      const errorBody = await paymentResponse.text();
+      throw new Error(errorBody);
     }
-    </script>
-{% endaddtoblock %}
 
-{% addtoblock "css" %}
-    <style type="text/css">
-      #card-container {
-        width: 380px;
-        margin: 0 auto;
+    // This function tokenizes a payment method. 
+    // The ‘error’ thrown from this async function denotes a failed tokenization,
+    // which is due to buyer error (such as an expired card). It is up to the
+    // developer to handle the error and provide the buyer the chance to fix
+    // their mistakes.
+    async function tokenize(paymentMethod) {
+      const tokenResult = await paymentMethod.tokenize();
+      if (tokenResult.status === 'OK') {
+        return tokenResult.token;
+      } else {
+        let errorMessage = `Tokenization failed-status: ${tokenResult.status}`;
+        if (tokenResult.errors) {
+          errorMessage += ` and errors: ${JSON.stringify(
+            tokenResult.errors
+          )}`;
+        }
+        throw new Error(errorMessage);
+      }
+    }
+
+    // Helper method for displaying the Payment Status on the screen.
+    // status is either SUCCESS or FAILURE;
+    function displayPaymentResults(status) {
+      const statusContainer = document.getElementById(
+        'payment-status-container'
+      );
+      if (status === 'SUCCESS') {
+        statusContainer.classList.remove('is-failure');
+        statusContainer.classList.add('is-success');
+      } else {
+        statusContainer.classList.remove('is-success');
+        statusContainer.classList.add('is-failure');
       }
 
-      #card-container label {
-        display: block;
-        font-weight: 500;
-        margin: 2em 0 0 0;
-      }
+      statusContainer.style.visibility = 'visible';
+    }    
 
-      .full-width {
-        float: left;
-        width: 100%;
-        margin-bottom: 1em;
-      }
-
-      .third {
-        float: left;
-        width: calc((100% - 32px) / 3);
-        padding: 0;
-        margin: 0 16px 16px 0;
-      }
-
-      .third:last-of-type {
-        margin-right: 0;
-      }
-
-      /* Define how SqPaymentForm iframes should look */
-      .sq-input {
-        height: 56px;
-        box-sizing: border-box;
-        border: 1px solid #E0E2E3;
-        background-color: white;
-        border-radius: 6px;
-        display: inline-block;
-        -webkit-transition: border-color .2s ease-in-out;
-          -moz-transition: border-color .2s ease-in-out;
-            -ms-transition: border-color .2s ease-in-out;
-                transition: border-color .2s ease-in-out;
-      }
-
-      /* Define how SqPaymentForm iframes should look when they have focus */
-      .sq-input--focus {
-        border: 1px solid #4A90E2;
-      }
-
-      /* Define how SqPaymentForm iframes should look when they contain invalid values */
-      .sq-input--error {
-        border: 1px solid #E02F2F;
-      }
-
-      #sq-card-number {
-        margin-bottom: 16px;
-      }
-
-      /* Customize the "Pay with Credit Card" button */
-      .button-credit-card {
-        width: 100%;
-        height: 56px;
-        margin-top: 10px;
-        background: #4A90E2;
-        border-radius: 6px;
-        cursor: pointer;
-        display: block;
-        color: #FFFFFF;
-        font-size: 16px;
-        line-height: 24px;
-        font-weight: 700;
-        letter-spacing: 0;
-        text-align: center;
-        -webkit-transition: background .2s ease-in-out;
-          -moz-transition: background .2s ease-in-out;
-            -ms-transition: background .2s ease-in-out;
-                transition: background .2s ease-in-out;
-      }
-
-      .button-credit-card:hover {
-        background-color: #4281CB;
-      }
-
-    </style>
+</script>
 {% endaddtoblock %}

@@ -30,6 +30,11 @@ from .tasks import updateSquareFees
 logger = logging.getLogger(__name__)
 
 
+def processSquarePaymentTest(request):
+    logger.error(request.POST)
+
+
+
 def processSquarePayment(request):
     '''
     This view handles the charging of approved Square Checkout payments.
