@@ -126,16 +126,15 @@
     // Payments API
     async function createPayment(token) {
       const options_form = document.getElementById('options-form');
-      if (options_form) {
-          const form_data = Object.fromEntries(new FormData(document.getElementById('payment-form')).entries());
+      var form_data = new FormData();
+      if (options_form !== null) {
+        form_data = new FormData(document.getElementById('options-form'));
       }
-      else {
-          const form_data = {};
-      }
+
       const details = Object.assign(
         squareCheckoutParams.transaction_details,
         {locationId: squareCheckoutParams.locationId, sourceId: token},
-        form_data,
+        Object.fromEntries(form_data.entries()),
       );
 
       const body = JSON.stringify(details);
