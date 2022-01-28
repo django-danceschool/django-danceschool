@@ -125,6 +125,7 @@
     // to the project server code so that a payment can be created with 
     // Payments API
     async function createPayment(token) {
+      console.log('Got to call createPayment');
       const options_form = document.getElementById('options-form');
       var form_data = new FormData();
       if (options_form !== null) {
@@ -138,7 +139,14 @@
         form_data_object
       );
 
+      console.log('Here are details')
+      console.log(details);
+
       const body = JSON.stringify(details);
+
+      console.log('Here is body');
+      console.log(body);
+
       const paymentResponse = await fetch(squareCheckoutParams.process_url, {
         method: 'POST',
         headers: {
