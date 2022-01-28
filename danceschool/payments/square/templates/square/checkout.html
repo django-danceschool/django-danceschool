@@ -11,8 +11,14 @@
       {% if allow_amount_entry %}
       <form id="options-form" onsubmit="event.preventDefault();">
             <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
-            <input class="sq-input full-width" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
-            <input class="sq-input full-width" id="id_email" type="email" name="customerEmail">
+            <div class="form-group">
+              <label for="id_amount">{% trans "Enter Amount" %}</label>
+              <input class="form-control" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
+            </div>
+            <div class="form-group">
+              <label for="id_email">{% trans "Enter Email" %}</label>
+              <input class="form-control" id="id_email" type="email" name="customerEmail">
+            </div>
       </form>
       {% endif %}
       <form id="payment-form">
