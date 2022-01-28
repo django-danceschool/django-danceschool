@@ -92,11 +92,11 @@ class SquarePaymentRecord(PaymentRecord):
             client = self.getClient()
 
         if self.paymentId:
-            return [client.payments.get_payment(self.payment).body.get('payment'),]
+            return [client.payments.get_payment(self.payment).body.get('payment', {}),]
         else:
-            order = client.orders.retrieve_order(self.orderId).body.get('order')
+            order = client.orders.retrieve_order(self.orderId).body.get('order', {})
             return [
-                client.payments.get_payment(x.get('id')).body.get('payment')
+                client.payments.get_payment(x.get('id')).body.get('payment', {})
                 for x in order.get('tenders', []) if x.get('id')
             ]
 
