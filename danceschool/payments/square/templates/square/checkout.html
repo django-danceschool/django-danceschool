@@ -82,7 +82,9 @@
         throw new Error('Square.js failed to load properly');
       }
 
-      const payments = window.Square.payments(squareCheckoutParams.appId, locationId);
+      const payments = window.Square.payments(
+        squareCheckoutParams.appId, squareCheckoutParams.locationId
+      );
       let card;
       try {
         card = await initializeCard(payments);
