@@ -57,10 +57,15 @@ class EmailRecipientMixin(object):
             email_kwargs[none_arg] = kwargs.pop(none_arg, None) or None
 
         # Ignore any passed HTML content unless explicitly told to send as HTML
-        if kwargs.pop('send_html', False) and kwargs.get('html_message'):
+        if kwargs.pop('send_html', False) and (
+            kwargs.get('html_message') or kwargs.get('html_content')
+        ):
             email_kwargs['html_content'] = render_to_string(
                 'email/html_email_base.html',
-                context={'html_content': kwargs.get('html_message'), 'subject': subject}
+                context={
+                    'subject': subject,
+                    'html_content': kwargs.get('html_message', kwargs.get('html_content')),
+                }
             )
 
         email_kwargs['from_name'] = kwargs.pop('from_name', getConstant('email__defaultEmailName')) or \
@@ -80,8 +85,8 @@ class EmailRecipientMixin(object):
 
         # In situations where there are no context
         # variables to be rendered, send a mass email
-        has_tags = re.search(r'\{\{.+\}\}', content)
-        if not has_tags:
+        has_tags = re.search(r'\{[\{\%].+[\}\%]\}', content)
+        if not has_tags and not email_kwargs.get('html_content'):
             t = Template(content)
             rendered_content = t.render(Context(kwargs))
             sendEmail(subject, rendered_content, **email_kwargs)
