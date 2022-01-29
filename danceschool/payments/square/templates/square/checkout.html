@@ -49,8 +49,8 @@
         {% if transaction_type == "Gift Certificate" and certificate_url %}
           successUrl: "{{ certificate_url }}",
           addSessionInfo: true,
-        {% elif instance.successPage %}
-          successUrl: "{% page_url instance.successPage.id %}",
+        {% elif instance.successPage.id %}
+          successUrl: "{% page_url instance.successPage %}",
           addSessionInfo: true,
         {% endif %}
       },

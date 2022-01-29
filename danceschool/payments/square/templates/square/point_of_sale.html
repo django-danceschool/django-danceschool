@@ -55,8 +55,8 @@ $(document).ready(function(){
     {% endif %}
     
     sourceUrl: "{{ request.get_full_path }}",
-    {% if instance.successPage %}
-      successUrl: "{% page_url instance.successPage.id %}",
+    {% if instance.successPage.id %}
+      successUrl: "{% page_url instance.successPage %}",
     {% endif %}
   }
 
