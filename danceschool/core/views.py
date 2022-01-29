@@ -162,7 +162,8 @@ class CustomerSingleCheckInView(AccessMixin, DetailView):
         self.object = self.get_object()
         user_has_permissions = request.user.has_perm('core.view_all_invoices')
         user_has_validation_string = (
-            request.GET.get('v', None) == self.object.validationString
+            request.GET.get('v', None) == self.object.validationString or
+            self.kwargs.get('validation_string') == self.object.validationString
         )
 
         if user_has_validation_string or user_has_permissions:
@@ -174,9 +175,9 @@ class CustomerSingleCheckInView(AccessMixin, DetailView):
 
             if self.object.registration:
                 context['qrcode_url'] = request.build_absolute_uri(
-                    '{}?v={}'.format(
-                        reverse('customer_qrcode', args=(self.object.id,)),
-                        self.object.validationString
+                    reverse(
+                        'customer_qrcode_validated',
+                        args=(self.object.id, self.object.validationString)
                     )
                 )
 
@@ -198,7 +199,8 @@ class CustomerQrCodeView(AccessMixin, DetailView):
         self.object = self.get_object()
         user_has_permissions = request.user.has_perm('core.view_all_invoices')
         user_has_validation_string = (
-            request.GET.get('v', None) == self.object.validationString
+            request.GET.get('v', None) == self.object.validationString or
+            self.kwargs.get('validation_string') == self.object.validationString
         )
 
         if (user_has_validation_string or user_has_permissions):

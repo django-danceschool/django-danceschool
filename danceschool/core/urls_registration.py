@@ -64,7 +64,15 @@ urlpatterns = [
         'check-in/show/<uuid:invoice_id>/',
         CustomerSingleCheckInView.as_view(), name='customer_checkin'
     ),
+    path(
+        'check-in/show/<uuid:invoice_id>/<str:validation_string>/',
+        CustomerSingleCheckInView.as_view(), name='customer_checkin_validated'
+    ),
     path('check-in/qr/<uuid:invoice_id>/', CustomerQrCodeView.as_view(), name='customer_qrcode'),
+    path(
+        'check-in/qr/<uuid:invoice_id>/<str:validation_string>/',
+        CustomerQrCodeView.as_view(), name='customer_qrcode_validated'
+    ),
     path(
         'check-in/process/<uuid:pk>/',
         SchoolSingleCheckInView.as_view(), name='school_checkin'

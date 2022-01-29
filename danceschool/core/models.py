@@ -3367,15 +3367,19 @@ class Registration(EmailRecipientMixin, models.Model):
             context.update(self.invoice.get_email_context())
 
         context.update({
-            'checkin_url': '%s%s?v=%s' % (
+            'checkin_url': '%s%s' % (
                 getSiteUrl(),
-                reverse('customer_checkin', args=[self.invoice.id, ]),
-                self.invoice.validationString
+                reverse(
+                    'customer_checkin_validated',
+                    args=(self.invoice.id, self.invoice.validationString)
+                ),
             ),
-            'qrcode_url': '%s%s?v=%s' % (
+            'qrcode_url': '%s%s' % (
                 getSiteUrl(),
-                reverse('customer_qrcode', args=[self.invoice.id, ]),
-                self.invoice.validationString
+                reverse(
+                    'customer_qrcode_validated',
+                    args=(self.invoice.id, self.invoice.validationString)
+                ),
             ),
             'registrationComments': self.comments,
             'registrationHowHeardAboutUs': self.howHeardAboutUs,
