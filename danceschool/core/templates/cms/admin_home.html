@@ -5,7 +5,9 @@
 	{% addtoblock "meta" %}
 		<meta name="robots" content="noindex, nofollow">
 	{% endaddtoblock %}
-
+    {% addtoblock "css" %}
+      <link rel="stylesheet" type="text/css" href="{% static 'css/admin_style.css' %}" />
+    {% endaddtoblock %}
 {% endblock %}
 
 {% block navbar %}{% endblock %}
