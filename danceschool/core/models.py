@@ -3104,7 +3104,6 @@ class InvoiceItem(models.Model):
             'adjustments': self.adjustments,
             'taxes': self.taxes,
             'fees': self.fees,
-            'eventRegistration': {},
         })
 
         er = getattr(self, 'eventRegistration', None)
