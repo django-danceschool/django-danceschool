@@ -198,7 +198,7 @@ class SquareCheckoutFormModel(CMSPlugin):
             'When the user returns to the site after a successful ' +
             'transaction, send them to this page.'
         ),
-        related_name='successPageForSquare'
+        related_name='successPageForSquare', null=True, blank=True
     )
     defaultAmount = models.FloatField(
         verbose_name=_('Default amount'),

@@ -22,7 +22,7 @@ $(document).ready(function(){
    * @returns {String}
    */
   function getMobileOperatingSystem() {
-    var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
   
         // Windows Phone must come first because its UA also contains "Android"
       if (/windows phone/i.test(userAgent)) {
@@ -41,9 +41,9 @@ $(document).ready(function(){
       return "unknown";
   }
 
-  var amount = "{% if invoice %}{% widthratio invoice.outstandingBalance 1 100 %}{% else %}{% widthratio defaultAmount 1 100 %}{% endif %}"
+  const amount = "{% if invoice %}{% widthratio invoice.outstandingBalance 1 100 %}{% else %}{% widthratio defaultAmount 1 100 %}{% endif %}"
 
-  var metadata = {
+  const metadata = {
     {% if user.is_authenticated %}
       userId: "{{ user.id }}",
     {% endif %}
@@ -55,12 +55,14 @@ $(document).ready(function(){
     {% endif %}
     
     sourceUrl: "{{ request.get_full_path }}",
-    successUrl: "{{ returnPage }}",
+    {% if instance.successPage %}
+      successUrl: "{% page_url instance.successPage.id %}",
+    {% endif %}
   }
 
-  var androidHref = "intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI={{ returnUrl }};S.com.squareup.pos.CLIENT_ID={{ squareApplicationId }};S.com.squareup.pos.API_VERSION=v2.0;i.com.squareup.pos.TOTAL_AMOUNT=" + amount + ";S.com.squareup.pos.CURRENCY_CODE={{ currencyCode }};S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CARD_ON_FILE;S.com.squareup.pos.REQUEST_METADATA=" + Base64.encode(JSON.stringify(metadata)) + ";end";
+  const androidHref = "intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI={{ returnUrl }};S.com.squareup.pos.CLIENT_ID={{ squareApplicationId }};S.com.squareup.pos.API_VERSION=v2.0;i.com.squareup.pos.TOTAL_AMOUNT=" + amount + ";S.com.squareup.pos.CURRENCY_CODE={{ currencyCode }};S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CARD_ON_FILE;S.com.squareup.pos.REQUEST_METADATA=" + Base64.encode(JSON.stringify(metadata)) + ";end";
 
-  var iosParams = {
+  const iosParams = {
     "amount_money": {
       "amount" : amount,
       "currency_code" : "{{ currencyCode }}"
@@ -75,7 +77,7 @@ $(document).ready(function(){
       "auto_return": true,
     }
   };
-  var iosHref = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(iosParams));
+  const iosHref = "square-commerce-v1://payment/create?data=" + encodeURIComponent(JSON.stringify(iosParams));
 
   switch(getMobileOperatingSystem()) {
   	  case "Android":
