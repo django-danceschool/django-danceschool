@@ -27,6 +27,11 @@ class SquareCheckoutFormPlugin(CMSPluginBase):
             'idempotency_key': str(uuid.uuid1()),
         })
 
+        if getattr(settings, 'SQUARE_ENVIRONMENT', 'production') == 'production':
+            context['checkoutJsUrl'] = 'https://web.squarecdn.com/v1/square.js'
+        else:
+            context['checkoutJsUrl'] = 'https://sandbox.web.squarecdn.com/v1/square.js'
+
         return context
 
 
