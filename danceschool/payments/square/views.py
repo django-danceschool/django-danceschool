@@ -369,7 +369,7 @@ class ProcessPointOfSalePaymentView(View):
 
             payment_list = [x for x in response.body.get('payments', []) if x.get('order_id') == clientTransId]
             if len(payment_list) == 1:
-                payment = payment_list[0]
+                payment = payment_list[0].body.get('payment')
             else:
                 logger.error('Returned client transaction ID not found.')
                 messages.error(request, _('ERROR: Returned client transaction ID not found.'))
