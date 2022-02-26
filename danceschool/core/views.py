@@ -38,7 +38,8 @@ from .models import (
 )
 from .forms import (
     SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
-    RepeatEventForm, InvoiceNotificationForm, EventAutocompleteForm
+    RepeatEventForm, InvoiceNotificationForm, EventAutocompleteForm,
+    RegistrationTransferForm
 )
 from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
 from .mixins import (
@@ -798,6 +799,53 @@ class RefundProcessingView(FinancialContextMixin, PermissionRequiredMixin, Staff
         if not getattr(self, 'payments', None):
             self.payments = self.object.get_payments()
         return self.payments
+
+
+class RegistrationTransferProcessingView(
+    FinancialContextMixin, AdminSuccessURLMixin, PermissionRequiredMixin,
+    StaffuserRequiredMixin, UpdateView
+):
+    template_name = 'core/process_transfer.html'
+    form_class = RegistrationTransferForm
+    permission_required = 'core.process_refunds'
+    model = Registration
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'registration': self.object,
+            'invoice': self.object.invoice,
+        })
+        return context
+
+    def form_valid(self, form):
+        clean_data = form.cleaned_data
+
+        for er in self.object.eventregistration_set.all():
+            old_event = er.event
+            new_event = clean_data.get('new_event_%s' % er.id)
+
+            if (old_event == new_event) or not new_event:
+                continue
+            er.event = new_event
+
+            availableRoles = new_event.availableRoles
+            
+            new_role = clean_data.get('new_role_%s' % er.id)
+            old_role = er.role
+
+            if new_role and new_role in availableRoles:
+                er.role = new_role
+            elif old_role and old_role not in availableRoles:
+                er.role = None
+            er.save()
+
+            linked_revenue = getattr(er.invoiceItem, 'revenueitem', None)
+            if linked_revenue:
+                linked_revenue.event = new_event
+                linked_revenue.save()
+
+        return HttpResponseRedirect(self.get_success_url())
 
 
 #################################

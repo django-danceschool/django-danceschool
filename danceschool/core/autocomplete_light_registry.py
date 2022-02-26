@@ -119,8 +119,11 @@ class EventAutoComplete(autocomplete.Select2QuerySetView):
 
     def get_result_label(self, result):
         return format_html(
-            '<span data-start-date="{}">{}: {} {} <br /><small>{}</small></span>',
-            result.localStartTime.strftime('%Y-%m-%d'), result.name, result.getMonthName, result.year,
+            '<span data-start-date="{}" data-pricingtier-id="{}" data-base-price="{}">{}: {} {} <br /><small>{}</small></span>',
+            result.localStartTime.strftime('%Y-%m-%d'),
+            getattr(result, 'pricingTier', None),
+            getattr(result, 'basePrice', 0), result.name, result.getMonthName,
+            result.year,
             ', '.join([x.localStartTime.strftime('%b. %d') for x in result.eventoccurrence_set.all()])
         )
 

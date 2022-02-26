@@ -9,7 +9,7 @@ from .views import (
     StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView,
     RepeatEventsView, IndividualClassReferralView, IndividualPublicEventReferralView,
     RefundProcessingView, RefundConfirmationView, ViewInvoiceView,
-    InvoiceNotificationView
+    InvoiceNotificationView, RegistrationTransferProcessingView
 )
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
 from .autocomplete_light_registry import (
@@ -149,9 +149,14 @@ urlpatterns = [
     ),
     path('invoice/notify/', InvoiceNotificationView.as_view(), name='sendInvoiceNotifications'),
 
-    # These URLs are for refund processing
+    # These URLs are for refund and transfer processing
     path('invoice/refund/confirm/', RefundConfirmationView.as_view(), name='refundConfirmation'),
     path('invoice/refund/<uuid:pk>/', RefundProcessingView.as_view(), name='refundProcessing'),
+    path(
+        'invoice/registration/transfer/<int:pk>/',
+        RegistrationTransferProcessingView.as_view(),
+        name='registrationTransferProcessing'
+    ),
 
     # User profiles
     path('accounts/profile/<int:user_id>/', OtherAccountProfileView.as_view(), name='accountProfile'),

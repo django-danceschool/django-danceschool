@@ -20,7 +20,8 @@ from djangocms_text_ckeditor.widgets import TextEditorWidget
 from .models import (
     EventStaffMember, SubstituteTeacher, Event, EventOccurrence,
     Series, SeriesTeacher, Instructor, StaffMember, EmailTemplate, Location,
-    Customer, Invoice, get_defaultEmailName, get_defaultEmailFrom
+    Customer, Invoice, Registration, DanceRole, get_defaultEmailName,
+    get_defaultEmailFrom
 )
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
 from .signals import check_student_info
@@ -1146,6 +1147,86 @@ class RefundForm(forms.ModelForm):
         elif total < initial:
             raise ValidationError(_('Cannot reduce the total amount of the refund.'))
         return total
+
+
+class RegistrationTransferForm(forms.ModelForm):
+    '''
+    This is the form that is used to transfer an existing EventRegistration
+    to another event. It provides a drop-down for selecting an event, along
+    with a role selector that auto-updates with the available roles for the
+    event. The view will make note of the pricing of the event, but the view
+    does not handle price adjustments associated with transferring registrations. 
+    '''
+    class Meta:
+        model = Registration
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.registration = kwargs.pop('instance', None)
+        
+        for item in self.registration.eventregistration_set.all():
+
+            self.fields['new_event_%s' % item.id] = forms.ModelChoiceField(
+                queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),
+                label=_('Choose the new event'),
+                required=True,
+                widget=autocomplete.ModelSelect2(
+                    url='autocompleteEvent',
+                    attrs={
+                        # This will set the input placeholder attribute:
+                        'data-placeholder': _('Enter event title, year, or month'),
+                        # This will set the yourlabs.Autocomplete.minimumCharacters
+                        # options, the naming conversion is handled by jQuery
+                        'data-minimum-input-length': 0,
+                        'data-max-results': 10,
+                        'class': 'modern-style',
+                        'data-html': True,
+                    }
+                ),
+                inital = item.event
+            )
+
+            self.fields['new_role_%s' % item.id] = forms.ModelChoiceField(
+                queryset = DanceRole.objects.all(),
+                required=False
+            )
+
+        self.fields['comments'] = forms.CharField(
+            label=_('Explanation/Comments (optional)'), required=False,
+            help_text=_(
+                'This information will be added to the comments on the registration.'
+            ),
+            widget=forms.Textarea(attrs={
+                'placeholder': _('Enter explanation/comments...'),
+                'class': 'form-control'
+            })
+        )
+
+        self.fields['id'] = forms.ModelChoiceField(
+            required=True, queryset=Registration.objects.filter(id=self.registration.id),
+            widget=forms.HiddenInput(), initial=self.registration.id
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        for id in [
+            x.split('_')[-1] for x in cleaned_data.keys()
+            if x.startswith('new_event_')
+        ]:
+            self.clean_new_role(id)
+
+    def clean_new_role(self, id):
+        ''' Ensure that the role is valid for the event. '''
+        event = self.cleaned_data.get('new_event_%s' % id)
+        role = self.cleaned_data.get('new_role_%s' % id)
+
+        if event and role and (role not in event.availableRoles):
+            self.add_error(
+                'new_role_%s' % id, _('This role is not available for the selected event.')
+            )
+        return role
 
 
 class EmailContactForm(forms.Form):

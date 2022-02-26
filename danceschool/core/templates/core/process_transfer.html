@@ -1,0 +1,134 @@
+{% extends "cms/admin_home.html" %}
+{% load danceschool_tags sekizai_tags i18n %}
+
+{% block content %}
+
+<h3 class="my-4">{% trans "Invoice #" %}{{ invoice.id }}
+{% blocktrans with name=invoice.fullName %}
+	for {{ name }}
+{% endblocktrans %}
+</h3>
+
+{% getReturnPage as returnPage %}
+{% if returnPage.url %}
+	<p><a class="btn btn-outline-secondary" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+{% endif %}
+
+
+<dl class="card card-body">
+	<dt>{% trans "Date &amp; Time" %}:</dt><dd>{{ invoice.creationDate|date:'DATETIME_FORMAT' }}</dd>
+	<dt>{% trans "Net Amount Paid" %}:</dt><dd>{{ invoice.amountPaid }}</dd>
+	<dt>{% trans "Price with Discounts" %}:</dt><dd>{{ invoice.total }}</dd>
+	<dt>{% trans "Paid Online" %}:</dt><dd>{{ invoice.paidOnline|yesno }}</dd>
+</dl>
+
+<hr />
+
+<p>{% blocktrans %}
+    This form can be used to transfer an existing event registration to a new event.
+    It does not make price adjustments, nor does it currently allow registrations
+    to be transferred to another customer.
+{% endblocktrans %}</p>
+
+<form id="transfer_form" method="post" action="">{% csrf_token %}
+
+<div class="my-4">
+<input type="submit" class="btn btn-primary float-right" value="{% trans 'Process Registration Transfer' %}" />
+</div>
+
+{% if form.non_field_errors %}
+	<div class="alert alert-danger" role="alert">
+		{{ form.non_field_errors }}
+	</div>
+{% endif %}
+{% if form.id.errors %}
+	<div class="alert alert-danger" role="alert">
+		<strong>{% trans "Error with ID" %}:</strong>
+		{{ form.id.errors }}
+	</div>
+{% endif %}
+
+{{ form.id }}
+
+	<h6>{% trans "Item Details" %}</h6>
+	<table class="regrefundtable table table-bordered">
+	<thead>
+		<tr>
+			<th>{% trans "Item ID" %}</th>
+			<th>{% trans "Customer" %}</th>
+            <th>{% trans "Event" %}</th>
+			<th>{% trans "Role" %}</th>
+			<th>{% trans "New Event" %}</th>
+			<th>{% trans "New Role" %}</th>
+		</tr>
+	</thead>
+	<tbody>
+	{% for er in registration.eventregistration_set.all %}
+		<tr {%if er.invoiceItem.revenueNotYetReceived %}class="warning"{% endif %}>
+			<td>{{ er.invoiceItem.id }}</td>
+			<td>{{ er.customer }}</td>
+            <td id="old_event_info_{{ er.id }}" data-pricingtier-id="{{ er.event.pricingTier.id }}" data-base-price="{{ er.event.basePrice }}">{{ er.event.name }}</td>
+			<td>{{ er.role.name }}</td>
+			<td>
+                {% get_field_for_object 'new_event' er.id form as field_event %}{{ field_event }}
+                <div id="event_price_warning_{{ er.id }}" class="alert alert-warning d-none" role="alert"></div>
+            </td>
+			<td>{% get_field_for_object 'new_role' er.id form as field_role %}{{ field_role }} {{ field_event.errors }}{{ field_role.errors }}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+	</table>
+
+<div class="form-group">
+    {{ form.comments.errors }}
+    {{ form.comments.label_tag }}<br />
+    {{ form.comments }}
+    <p class="help-block">{{ form.comments.help_text }}</p>
+</div>
+</form>
+
+
+<hr />
+
+{% if returnPage.url %}
+	<p><a class="btn btn-outline-secondary" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+{% else %}
+	<p>
+		<a class="btn btn-outline-secondary" href="{% url 'registration' %}">{% trans "Class Registration Page" %}</a>
+		<a class="btn btn-outline-secondary" href="{% url 'viewregistrations_selectevent' %}">{% trans "Select Another Event" %}</a>
+	</p>
+{% endif %}
+
+{% addtoblock "js" %}
+    <script type="text/javascript">
+        var transferParams = {
+            mismatchText: "{% trans 'Note: New event pricing does not match old event pricing. Invoice amounts will not be updated.' %}",
+        }
+    </script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+	var $ = django.jQuery;
+
+	$(document).ready(function(){
+        $('input[id*=_new_event_').change(function() {
+            var thisId = this.id.split("_")[4];
+            var old_tier = $('#old_event_info_' + thisId).data('pricingtierId');
+            var old_base_price = $('#old_event_info_' + thisId).data('basePrice');
+
+            var new_tier = $(this).find(':selected').data('pricingtierId');
+            var new_base_price = $(this).find(':selected').data('basePrice');
+
+            if ((old_base_price !== new_base_price) || (old_tier !== new_tier)) {
+                $('#event_price_warning_' + thisId).html(transferParams.mismatchText);
+                $('#event_price_warning_' + thisId).removeClass('d-none');
+            }
+            else {
+                $('#event_price_warning_' + thisId).addClass('d-none');
+            }
+        });
+	});
+</script>
+{% endaddtoblock %}
+
+{% endblock %}
