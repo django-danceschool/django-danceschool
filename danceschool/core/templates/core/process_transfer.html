@@ -31,9 +31,10 @@
 {% endblocktrans %}</p>
 
 <form id="transfer_form" method="post" action="">{% csrf_token %}
+{{ form.media }}
 
-<div class="my-4">
-<input type="submit" class="btn btn-primary float-right" value="{% trans 'Process Registration Transfer' %}" />
+<div>
+<input type="submit" class="btn btn-primary float-right my-4" value="{% trans 'Process Registration Transfer' %}" />
 </div>
 
 {% if form.non_field_errors %}
@@ -111,13 +112,13 @@
 	var $ = django.jQuery;
 
 	$(document).ready(function(){
-        $('input[id*=_new_event_').change(function() {
-            var thisId = this.id.split("_")[4];
-            var old_tier = $('#old_event_info_' + thisId).data('pricingtierId');
+        $('select[id*=new_event_').change(function() {
+            var thisId = this.id.split("_")[3];
+			var old_tier = $('#old_event_info_' + thisId).data('pricingtierId');
             var old_base_price = $('#old_event_info_' + thisId).data('basePrice');
 
-            var new_tier = $(this).find(':selected').data('pricingtierId');
-            var new_base_price = $(this).find(':selected').data('basePrice');
+            var new_tier = $($(this).find(':selected').text()).data('pricingtierId');
+            var new_base_price = $($(this).find(':selected').text()).data('basePrice');
 
             if ((old_base_price !== new_base_price) || (old_tier !== new_tier)) {
                 $('#event_price_warning_' + thisId).html(transferParams.mismatchText);

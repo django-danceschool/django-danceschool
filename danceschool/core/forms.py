@@ -1185,12 +1185,12 @@ class RegistrationTransferForm(forms.ModelForm):
                         'data-html': True,
                     }
                 ),
-                inital = item.event
+                initial = item.event
             )
 
             self.fields['new_role_%s' % item.id] = forms.ModelChoiceField(
                 queryset = DanceRole.objects.all(),
-                required=False
+                required=False, initial=item.role,
             )
 
         self.fields['comments'] = forms.CharField(
