@@ -22,25 +22,42 @@
 	{% if scope == "invoice" %}
 		<div class="form-group">
 			<label for="checkInTypeSelect">{% trans "Select Check-In Type" %}</label>
-			<select id="checkInTypeSelect" class="form-control">
-				<option value="O" selected>{% trans "Check into today's/next occurrence" %}</option>
-				<option value="E">{% trans "Event-level check-in" %}</option>
-			</select>
+			<div class="input-group">
+				<select disabled id="checkInTypeSelect" class="form-control">
+					<option value="O" selected>{% trans "Check into today's/next occurrence" %}</option>
+					<option value="E">{% trans "Event-level check-in" %}</option>
+				</select>
+				<div class="input-group-append">
+					<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
+				</div>
+			</div>
 		</div>
 	{% else %}
 		<div class="form-group">
 			<label for="occurrenceSelect">{% trans "Select Event Occurrence for Check-In" %}</label>
-			<select id="occurrenceSelect" class="form-control">
-				{% for occ in event.eventoccurrence_set.all %}
-				<option value="{{ occ.id }}" {% if occ.id == event.nextOccurrenceForToday.id %}selected{% endif %}>{{ occ }}</option>
-				{% endfor %}
-				<option value="event">{% trans "Event-level check-in" %}</option>
-			</select>
+			<div class="input-group">
+				<select disabled id="occurrenceSelect" class="form-control">
+					{% for occ in event.eventoccurrence_set.all %}
+					<option value="{{ occ.id }}" {% if occ.id == event.nextOccurrenceForToday.id %}selected{% endif %}>{{ occ }}</option>
+					{% endfor %}
+					<option value="event">{% trans "Event-level check-in" %}</option>
+				</select>
+				<div class="input-group-append">
+					<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
+				</div>
+			</div>
 		</div>
 	{% endif %}
+
+	<div class="form-group">
+		<label for="nameFilter">{% trans 'Filter by customer' %}</label>
+		<input type="text" class="form-control" id="nameFilter" placeholder="{% trans 'Enter name/email...' %}">
+	</div>
+
+
 {% endif %}
 
-<table class="classregsummary table table-striped table-responsive">
+<table class="classregsummary table table-striped table-fixed">
 <thead>
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
@@ -57,11 +74,10 @@
 		{% if event.partnerRequired %}<th>{% trans "Partner" %}</th>{% endif %}
 		<th>{% trans "Event Pricing" %}</th>
 		<th>{% trans "Total Payment" %}</th>
-		<th>{% trans "All-Time Classes" %}</th>
 		<th>{% trans "Links" %}</th>
 	</tr>
 </thead>
-<tbody>
+<tbody id="regListing">
 {% for reg in registrations %}
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
@@ -76,7 +92,7 @@
 			<label class="customerCheckInLabel" for="reg_id_{{ reg.id }}"></label>
 		</td>
 		{% endif %}
-		<td>
+		<td class="customerInfo">
 			{% if reg.customer %}
 				{{ reg.customer.fullName }}
 				<br />{{ reg.customer.email }}
@@ -197,7 +213,6 @@
 		</td>
 		{% endwith %}
 
-		<td>{{ reg.customer.numClassSeries }}</td>
 		<td>
 		<div class="dropdown show">
 			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -364,6 +379,12 @@
 	    }
 	});
 
+	// Enable modification of occurrence.
+	$(document).on("click", "#editTypeButton", function() {
+		$('#occurrenceSelect').attr("disabled", false);
+		$('#checkInTypeSelect').attr("disabled", false);		
+	});
+
     // Check-in customer, guest.
     $(document).on("click", ".customerCheckIn", function() {
 
@@ -433,6 +454,27 @@
 
 	});
 
+    // Check-in customer, guest.
+    $("#nameFilter").keyup(function() {
+		filter = $(this).val().toUpperCase();
+
+		var table = document.getElementById("regListing");
+		var tr = table.getElementsByTagName("tr");
+
+		// Loop through all table rows, and hide those who don't match the search query
+		for (i = 0; i < tr.length; i++) {
+			td = tr[i].getElementsByClassName("customerInfo")[0];
+			if (td) {
+			txtValue = td.textContent || td.innerText;
+			if (txtValue.toUpperCase().indexOf(filter) > -1) {
+				tr[i].style.display = "";
+			} else {
+				tr[i].style.display = "none";
+			}
+			}
+		}
+	});
+	
 	</script>
 {% endaddtoblock %}
 
@@ -478,6 +520,15 @@
 	    position: absolute;
 		opacity: 0;
     }
+
+	.table-fixed thead th {
+		position: -webkit-sticky;
+		position: sticky;
+		top: 44px;
+		z-index: 2;
+		background-color: #fff;
+	}
+
 </style>
 {% endaddtoblock %}
 

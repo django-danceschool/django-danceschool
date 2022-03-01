@@ -679,7 +679,7 @@ class RegistrationContactForm(RegistrationForm):
         help_text=_('We may use this to notify you in event of a cancellation.')
     )
     student = forms.BooleanField(
-        required=False, label=_('I am a student'),
+        required=False,
         help_text=_('Photo ID is required at the door')
     )
     agreeToPolicies = forms.BooleanField(
@@ -746,6 +746,8 @@ class RegistrationContactForm(RegistrationForm):
             self.fields['lastName'].initial = user.customer.last_name or user.last_name
             self.fields['email'].initial = user.customer.email or user.email
             self.fields['phone'].initial = user.customer.phone
+
+        self.fields['student'].label = _('I am a {label}'.format(label=getConstant('registration__studentFieldLabel')))
 
         self.helper.layout = Layout(
             self.get_top_layout(),
@@ -863,7 +865,8 @@ class MultiRegCustomerNameForm(RegistrationForm):
 
             if getConstant('registration__addStudentField'):
                 self.fields['er_%s_student' % er.id] = forms.BooleanField(
-                    label=_('Student'), required=False, initial=er.student
+                    label=getConstant('registration__studentFieldLabel'),
+                    required=False, initial=er.student
                 )
                 field_names.append(('er_%s_student' % er.id, ''))
 

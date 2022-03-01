@@ -239,7 +239,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         regData.discounts = [];
                     }
                     if (!regData.hasOwnProperty('addonItems')) {
-                        regData.discounts = [];
+                        regData.addOnItems = [];
                     }
 
                     refreshCart();

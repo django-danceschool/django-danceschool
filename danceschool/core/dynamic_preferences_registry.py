@@ -611,6 +611,18 @@ class AddStudentField(BooleanPreference):
     default = True
 
 @global_preferences_registry.register
+class StudentFieldLabel(StringPreference):
+    section = registration
+    name = 'studentFieldLabel'
+    verbose_name = _('"student" checkbox field label')
+    help_text = _(
+        'This label is used for checkboxes indicating student status in the ' +
+        'registration process, and can be modified to be more specific or to ' +
+        'include other categories.'
+    )
+    default = str(_('student'))
+
+@global_preferences_registry.register
 class RegistrationSessionExpiryMinutes(IntegerPreference):
     section = registration
     name = 'sessionExpiryMinutes'

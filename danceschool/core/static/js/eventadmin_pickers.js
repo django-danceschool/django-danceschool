@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 				'scrollDefault': '7:00pm', 'step': 15,'showDuration': true,'timeFormat':'g:ia',
 			});
 			$(this).find('.makeDatePicker').datepicker({
-				'dateFormat': 'yy-mm-dd',
+				'format': 'yyyy-mm-dd',
 			});
 
 			var datepair = new Datepair($(this)[0],{

@@ -3661,28 +3661,28 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         these conditions and indicates if anything is amiss so that the template need not
         check each of these conditions individually repeatedly.
         '''
-        if not hasattr(self, 'invoiceitem'):
+        if not hasattr(self, 'invoiceItem'):
             return True
         if apps.is_installed('danceschool.financial'):
             '''
             If the financial app is installed, then we can also check additional
             properties set by that app to ensure that there are no inconsistencies
             '''
-            if self.invoiceitem.revenueNotYetReceived != 0 or self.invoiceitem.revenueMismatch:
+            if self.invoiceItem.revenueNotYetReceived != 0 or self.invoiceItem.revenueMismatch:
                 return True
         return (
-            self.invoiceitem.invoice.unpaid or self.invoiceitem.invoice.outstandingBalance != 0
+            self.invoiceItem.invoice.unpaid or self.invoiceItem.invoice.outstandingBalance != 0
         )
     warningFlag.fget.short_description = _('Issue with event registration')
 
     @property
     def refundFlag(self):
         if (
-            not hasattr(self, 'invoiceitem') or
-            self.invoiceitem.invoice.adjustments != 0 or
+            not hasattr(self, 'invoiceItem') or
+            self.invoiceItem.invoice.adjustments != 0 or
             (
                 apps.is_installed('danceschool.financial') and
-                self.invoiceitem.revenueRefundsReported != 0
+                self.invoiceItem.revenueRefundsReported != 0
             )
         ):
             return True
