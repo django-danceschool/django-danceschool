@@ -504,7 +504,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                     except json.decoder.JSONDecodeError:
                         errors.append({
                             'code': 'invalid_json',
-                            'message': _('You have passed invalid JSON data for this registation.')
+                            'message': _('You have passed invalid JSON data for this registration.')
                         })
 
         # We now have an invoice, but before going further, return failure
@@ -618,6 +618,15 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'choiceId': i.get('choiceId', None),
                 '__item': this_item,
             }
+
+            # Populate the invoice item data with passed data attributes.
+            if isinstance(i.get('data', {}), dict):
+                this_item.data.update(i.get('data', {}))
+            else:
+                try:
+                    this_item.data.update(json.loads(i.get('data', {})))
+                except json.decoder.JSONDecodeError:
+                    pass
 
             # Reset all item totals to 0 (will be populated by the signal handler)
             for attr in ['grossTotal', 'total', 'taxes', 'adjustments', 'fees']:
