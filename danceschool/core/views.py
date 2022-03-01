@@ -63,7 +63,7 @@ class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, Form
     '''
     template_name = 'core/events_viewregistration_list.html'
     permission_required = 'core.view_registration_summary'
-    reverse_time_ordering = True
+    reverse_time_ordering = False
     form_class = EventAutocompleteForm
 
     def get_queryset(self):
@@ -77,12 +77,25 @@ class EventRegistrationSelectView(PermissionRequiredMixin, EventOrderMixin, Form
             Q(count=0) & Q(status__in=[
                 Event.RegStatus.hidden, Event.RegStatus.regHidden, Event.RegStatus.disabled
             ])
-        )
+        ).order_by(*self.get_ordering())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         queryset = self.get_queryset()
-        context.update({'queryset': queryset, 'object_list': queryset, 'event_list': queryset})
+        context.update({
+            'queryset': queryset, 'object_list': queryset,
+            'event_list': queryset,
+            'prior_events': queryset.filter(
+                startTime__lt=ensure_localtime(timezone.now()).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            ),
+            'upcoming_events': queryset.filter(
+                startTime__gte=ensure_localtime(timezone.now()).replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+            ),
+        })
         return context
 
     def form_valid(self, form):

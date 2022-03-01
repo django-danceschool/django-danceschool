@@ -5,8 +5,32 @@
 <div class="selectclass">
     <h1>{% trans "Select an Event to View Registrations" %}</h1>
 
-    <h2 class="mt-4">{% trans "Recent Events" %}</h2>
-    {% regroup event_list|dictsort:"organizer.nameFirst.sorter" by organizer.nameFirst.name as group_list %}
+    <h2 class="mt-4">{% trans "Upcoming Events" %}</h2>
+    {% regroup upcoming_events|dictsort:"organizer.nameFirst.sorter" by organizer.nameFirst.name as group_list %}
+    {% for groupFirst in group_list %}
+        <h4>{{ groupFirst.grouper }}</h4>
+        {% regroup groupFirst.list|dictsort:"organizer.nameSecond.sorter" by organizer.nameSecond.name as groupSecond_list %}
+        {% for groupSecond in groupSecond_list %}
+            {% if groupSecond.grouper %}<h5>{{ groupSecond.grouper }}</h5>{% endif %}
+            <ul>            
+                {% for event in groupSecond.list %}
+                    <li>
+                        <a href="{% url 'viewregistrations' event.id %}">{{ event.name }}</a>:&nbsp;&nbsp;{{ event.startTime|date:'l, h:i A' }}<br />
+                        <small>
+                            {% for occurrence in event.eventoccurrence_set.all %}
+                                {{occurrence.startTime|date:'N jS' }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        </small>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    {% empty %}
+        <p>{% trans "No upcoming classes or events. Check back soon!" %}</p>
+    {% endfor %}
+
+    <h2 class="mt-4">{% trans "Prior Events" %}</h2>
+    {% regroup prior_events|dictsort:"organizer.nameFirst.sorter" by organizer.nameFirst.name as group_list %}
     {% for groupFirst in group_list %}
         <h4>{{ groupFirst.grouper }}</h4>
         {% regroup groupFirst.list|dictsort:"organizer.nameSecond.sorter" by organizer.nameSecond.name as groupSecond_list %}
