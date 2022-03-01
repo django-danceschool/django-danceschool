@@ -155,7 +155,8 @@ Note: This process may take a minute or two to complete.
                 ('delete_privateevent', 'private_events', 'privateevent'),
                 ('edit_own_availability', 'private_lessons', 'instructoravailabilityslot'),
                 ('view_banlist', 'banlist', 'bannedperson'),
-                ('view_guestlist', 'guestlist', 'guestlist'),
+                ('view_guestlist', 'guestlist', 'guestlistname'),
+                ('checkin_guests', 'guestlist', 'guestlistname'),
             ]
 
             for perm in Permission.objects.all():
@@ -187,7 +188,8 @@ Note: This process may take a minute or two to complete.
                 ('view_staff_directory', 'core', 'staffmember'),
                 ('ignore_requirements', 'prerequisites', 'requirement'),
                 ('view_banlist', 'banlist', 'bannedperson'),
-                ('view_guestlist', 'guestlist', 'guestlist'),
+                ('view_guestlist', 'guestlist', 'guestlistname'),
+                ('checkin_guests', 'guestlist', 'guestlistname'),
             ]
 
             for perm in Permission.objects.all():
