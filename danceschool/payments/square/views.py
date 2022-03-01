@@ -341,11 +341,13 @@ class ProcessPointOfSalePaymentView(View):
         if serverTransId:
             response = client.orders.retrieve_order(serverTransId)
             if response.is_error():
-                logger.error('Unable to find Square transaction by server ID: %s' % response.errors)
+                logger.error('Unable to find Square transaction for %s by server ID: %s' % (
+                    serverTransId, response.errors
+                ))
                 messages.error(
                     request,
-                    str(_('ERROR: Unable to find Square transaction by server ID:')) +
-                    response.errors
+                    str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
+                    str(response.errors)
                 )
                 return HttpResponseRedirect(sourceUrl)
             payment_list = [x.get('id') for x in response.body.get('order', {}).get('tenders', [])]
@@ -359,11 +361,13 @@ class ProcessPointOfSalePaymentView(View):
             # Try to find the payment in the 50 most recent payments
             response = client.payments.list_payments(location_id=location_id)
             if response.is_error():
-                logger.error('Unable to find Square transaction by client ID: %s' % response.errors)
+                logger.error('Unable to find Square transaction for %s by client ID: %s' % (
+                    location_id, response.errors
+                ))
                 messages.error(
                     request,
-                    str(_('ERROR: Unable to find Square transaction by client ID:')) +
-                    response.errors
+                    str(_('ERROR: Unable to find Square transaction by client ID:' )) +
+                    str(response.errors)
                 )
                 return HttpResponseRedirect(sourceUrl)
 
