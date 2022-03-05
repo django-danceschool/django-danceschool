@@ -643,6 +643,8 @@ class PricingTier(models.Model):
     basePrice.fget.short_description = _('Base price')
 
     def __str__(self):
+        if self.expired:
+            return '{} ({})'.format(self.name, str(_('expired')))
         return self.name
 
     class Meta:
