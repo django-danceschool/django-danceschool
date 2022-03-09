@@ -149,7 +149,7 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
                 this_last_name = this_item.lastName
                 this_email = (
                     this_item.privateEmail or
-                    getattr(this_item.userAccount, 'email') or
+                    getattr(this_item.userAccount, 'email', None) or
                     this_item.publicEmail
                 )
             elif post_data['modelType'] == 'Registration':
