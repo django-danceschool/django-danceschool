@@ -102,7 +102,12 @@
 	{% for item in invoice.invoiceitem_set.all %}
 		<tr {%if item.revenueNotYetReceived %}class="warning"{% endif %}>
 			<td>{{ item.id }}</td>
-			<td>{{ item.name }}</td>
+			<td>
+				{% if item.eventRegistration and item.eventRegistration.customer and invoice.fullName != item.eventRegistration.customer.fullName %}
+				<strong>{% trans "Customer" %}:</strong> {{ item.eventRegistration.customer.fullName }}<br /><br />
+				{% endif %}
+				{{ item.name }}
+			</td>
 			<td>
 				{% if item.eventRegistration %}
 					{% for occ in item.eventRegistration.event.eventoccurrence_set.all %}
