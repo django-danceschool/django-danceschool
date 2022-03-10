@@ -3,7 +3,7 @@ from django.db.models import Q
 
 from datetime import timedelta
 
-from .models import DiscountCombo
+from .models import DiscountCombo, PointGroup
 
 
 def getApplicableDiscountCombos(
@@ -11,6 +11,8 @@ def getApplicableDiscountCombos(
     addOn=False, cannotCombine=False, dateTime=None
 ):
 
+    # First, identify the set of discounts that could potentially be satisfied
+    # based on customer restrictions, active status, and expiration date.
     filters = Q(active=True)
     if customer:
         filters &= (
@@ -51,34 +53,37 @@ def getApplicableDiscountCombos(
     if not student:
         availableDiscountCodes = availableDiscountCodes.exclude(studentsOnly=True)
 
-    # Because discounts are point-based, simplify the process of finding these
-    # discounts by creating a list of cart items with one entry per point,
-    # not just one entry per cart item
-    pointbased_cart_object_list = []
-    for cart_item in cart_object_list:
-        if hasattr(cart_item.event.pricingTier, 'pricingtiergroup'):
-            for y in range(
-                0,
-                (
-                    (cart_item.event.pricingTier.pricingtiergroup.points or 0) *
-                    int(getattr(cart_item.event, 'discountPointsMultiplier', 1))
-                )
-            ):
-                pointbased_cart_object_list += [cart_item]
-    pointbased_cart_object_list.sort(
-        key=lambda x: (
-            x.event.pricingTier.pricingtiergroup.points *
-            int(getattr(x.event, 'discountPointsMultiplier', 1))
-        ),
-        reverse=True
-    )
+    pointbased_cart_object_lists = {}
+    pointbased_customer_object_lists = {}
+    total_item_points = {}
 
-    # Some discounts require that the customer match, and these discounts use
-    # only a subset of the point-based list to determine eligibility.
-    pointbased_cart_customer_object_list = []
-    if customer:
-        pointbased_cart_customer_object_list = [
-            x for x in pointbased_cart_object_list if x.customer == customer
+    for cart_item in cart_object_list:        
+        for ptgroup in cart_item.event.pricingTier.pricingtiergroup_set.all():
+            this_points = (
+                (ptgroup.points or 0) * int(getattr(cart_item.event, 'discountPointsMultiplier', 1))
+            )
+
+            total_item_points[cart_item.id] = total_item_points.get(cart_item.id, 0) + this_points
+
+            for y in range(0, this_points):
+                pointbased_cart_object_lists[ptgroup.group] = (
+                    pointbased_cart_object_lists.get(ptgroup.group, []) + [(cart_item, this_points),]
+                )
+            if cart_item.customer == customer:
+                for y in range(0, this_points):
+                    pointbased_customer_object_lists[ptgroup.group] = (
+                        pointbased_customer_object_lists.get(ptgroup.group, []) + [(cart_item, this_points),]
+                    )
+
+    for k in pointbased_cart_object_lists.keys():
+        pointbased_cart_object_lists[k] =[
+            p[0] for p in
+            sorted(pointbased_cart_object_lists[k], key=lambda x: x[1], reverse=True)
+        ]
+    for k in pointbased_customer_object_lists.keys():
+        pointbased_customer_object_lists[k] =[
+            p[0] for p in
+            sorted(pointbased_customer_object_lists[k], key=lambda x: x[1], reverse=True)
         ]
 
     # Discounts that require registration a number of days in advance are evaluated against
@@ -112,17 +117,15 @@ def getApplicableDiscountCombos(
         matched_cart_items = []
 
         if x.customerMatchRequired:
-            cart_list = pointbased_cart_customer_object_list
+            cart_lists = pointbased_customer_object_lists
         else:
-            cart_list = pointbased_cart_object_list
+            cart_lists = pointbased_cart_object_lists
 
-        # For each item in the cart
-        for y in cart_list:
-            # for each component of the potential discount that has not already been matched
-            for j, z in enumerate(necessary_discount_items):
-                # If pricing tiers match, then check each of the other attributes.
-                # If they all match too, then we have a match, which should be checked off
-                if y.event.pricingTier.pricingtiergroup.group == z.pointGroup:
+        for cart_list in cart_lists.values():
+            for y in cart_list:
+                # for each component of the potential discount that has not already been matched
+                for j, z in enumerate(necessary_discount_items):
+                    # All items are a match unless shown otherwise below
                     match_flag = True
 
                     # Check for matches in weekdays and levels:
@@ -168,11 +171,9 @@ def getApplicableDiscountCombos(
                 m.pointGroup for m in
                 x.discountcombocomponent_set.all() if m.allWithinPointGroup
             ]
-            additionalItems = [
-                b for b in cart_list if
-                b.event.pricingTier.pricingtiergroup.group in
-                fullPointGroupsMatched
-            ]
+            additionalItems = []
+            for group in fullPointGroupsMatched:
+                additionalItems += cart_lists.get(group, [])
 
             # Return only the unique cart items that matched the combo (not one per point)
             matchedList = list(set(matched_cart_items + additionalItems))
@@ -183,18 +184,11 @@ def getApplicableDiscountCombos(
             matchedTuples = [
                 (
                     item,
-                    (
-                        float(matched_cart_items.count(item)) /
-                        (
-                            item.event.pricingTier.pricingtiergroup.points *
-                            int(getattr(item.event, 'discountPointsMultiplier', 1))
-                        )
-                    )
+                    float(matched_cart_items.count(item)) / total_item_points.get(item.id, 0)
                 )
                 if item not in additionalItems else (item, 1)
                 for item in matchedList
             ]
-
             useableCodes += [x.ApplicableDiscountCode(x, matchedList, matchedTuples)]
 
     return useableCodes

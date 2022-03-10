@@ -36,7 +36,7 @@ class PricingTierGroup(models.Model):
     group = models.ForeignKey(
         PointGroup, verbose_name=_('Point group'), on_delete=models.CASCADE,
     )
-    pricingTier = models.OneToOneField(
+    pricingTier = models.ForeignKey(
         PricingTier, verbose_name=_('Pricing tier'), on_delete=models.CASCADE
     )
     points = models.PositiveIntegerField(_('# of Points'), default=0)

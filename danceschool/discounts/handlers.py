@@ -1,5 +1,5 @@
 from django.dispatch import receiver
-from django.db.models import Q, Value, CharField, F
+from django.db.models import Q, Value, CharField, F, Case, When
 from django.db.models.query import QuerySet
 from django.apps import apps
 
@@ -68,16 +68,26 @@ def getBestDiscount(sender, **kwargs):
         (Q(event__publicevent__isnull=False) & Q(event__publicevent__pricingTier__isnull=True)) |
         Q(dropIn=True)
     )
+    pricingTier_cases = [
+        When(event__publicevent__isnull=False, then='event__publicevent__pricingTier'),
+        When(event__series__isnull=False, then='event__series__pricingTier'),
+    ]
+
     if apps.is_installed('danceschool.private_lessons'):
         eligible_filter = eligible_filter | Q(event__privatelessonevent__pricingTier__isnull=False)
         ineligible_filter = ineligible_filter | (
             Q(event__privatelessonevent__isnull=False) &
             Q(event__privatelessonevent__pricingTier__isnull=True)
         )
+        pricingTier_cases.append(When(event__privatelessonevent__isnull=False, then='event__privatelessonevent__pricingTier'))
 
     # The items for which the customer registered.
     eventregs_list = reg.eventregistration_set.all()
-    eligible_list = eventregs_list.filter(dropIn=False).filter(eligible_filter)
+    eligible_list = eventregs_list.filter(dropIn=False).filter(
+        eligible_filter
+    ).annotate(
+        pricingTier=Case(*pricingTier_cases)
+    )
     ineligible_list = eventregs_list.filter(ineligible_filter)
 
     student = getattr(eligible_list.first(), 'student', False)
@@ -245,6 +255,11 @@ def getAddonItems(sender, **kwargs):
     cart_object_list = reg.eventregistration_set.filter(dropIn=False).filter(
         Q(event__series__pricingTier__isnull=False) |
         Q(event__publicevent__pricingTier__isnull=False)
+    ).annotate(
+        pricingTier=Case(
+            When(event__publicevent__isnull=False, then='event__publicevent__pricingTier'),
+            When(event__series__isnull=False, then='event__series__pricingTier'),
+        )
     )
 
     student = getattr(cart_object_list.first(), 'student', False)
