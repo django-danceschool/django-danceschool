@@ -1,3 +1,4 @@
+from http import server
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
@@ -235,10 +236,74 @@ class ProcessPointOfSalePaymentView(View):
     URL in Square to point to this view.
     '''
 
+    def getPayment(self, request, serverTransId=None, clientTransId=None):
+
+        logger.debug(f'Received callback with identifiers. Server: {serverTransId} Client: {clientTransId}')
+
+        if not serverTransId and not clientTransId:
+            logger.error('An unknown error has occurred with Square point of sale transaction attempt.')
+            messages.error(self.request, _(
+                'ERROR: An unknown error has occurred with Square point of sale transaction attempt.'
+            ))
+            return
+
+        location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
+        client = Client(
+            access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
+            environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production'),   
+        )
+
+        payment = None
+
+        if serverTransId:
+            response = client.orders.retrieve_order(serverTransId)
+            if response.is_error():
+                logger.error('Unable to find Square transaction for %s by server ID: %s' % (
+                    serverTransId, response.errors
+                ))
+                messages.error(
+                    request,
+                    str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
+                    str(response.errors)
+                )
+            else:
+                payment_list = [x.get('id') for x in response.body.get('order', {}).get('tenders', [])]
+                if len(payment_list) == 1:
+                    payment = client.payments.get_payment(payment_list[0]).body.get('payment')
+                    logger.debug(f'Successfully retrieved payment based on server transaction identifier {serverTransId}')
+                else:
+                    logger.error('Returned client transaction ID not found.')
+                    messages.error(request, _('ERROR: Returned client transaction ID not found.'))
+
+        if clientTransId and not payment:
+            # Try to find the payment in the 50 most recent payments
+            response = client.payments.list_payments(location_id=location_id)
+            if response.is_error():
+                logger.error('Unable to find Square transaction for %s by client ID: %s' % (
+                    location_id, response.errors
+                ))
+                messages.error(
+                    request,
+                    str(_('ERROR: Unable to find Square transaction by client ID:' )) +
+                    str(response.errors)
+                )
+            else:
+                payment_list = [x for x in response.body.get('payments', []) if x.get('order_id') == clientTransId]
+                if len(payment_list) == 1:
+                    payment = payment_list[0].body.get('payment')
+                    logger.debug(f'Successfully retrieved payment based on client transaction identifier {clientTransId}')
+                else:
+                    logger.error('Returned client transaction ID not found.')
+                    messages.error(request, _('ERROR: Returned client transaction ID not found.'))
+
+        return payment
+
+
     def get(self, request, *args, **kwargs):
         # iOS transactions put all response information in the data key:
         data = json.loads(request.GET.get('data', '{}'))
         if data:
+            logger.debug(f'Square Point-of-sale request data: {data}')
             status = data.get('status')
             errorCode = data.get('error_code')
             errorDescription = errorCode
@@ -268,6 +333,7 @@ class ProcessPointOfSalePaymentView(View):
             # This is the only identifier passed for non-card transactions.
             clientTransId = data.get('client_transaction_id')
         else:
+            logger.debug(f'Square Point-of-sale request GET: {request.GET}')
             # Android transactions use this GET response syntax
             errorCode = request.GET.get('com.squareup.pos.ERROR_CODE')
             errorDescription = request.GET.get('com.squareup.pos.ERROR_DESCRIPTION')
@@ -310,12 +376,11 @@ class ProcessPointOfSalePaymentView(View):
 
         # Send users back to the invoice to confirm the successful payment.
         # If none is specified, then return to the registration page.
-        successUrl = metadata.get(
-            'successUrl',
-            getReturnPage(request.session.get('SITE_HISTORY', {})).get('url')
+        successUrl = (
+            getReturnPage(request.session.get('SITE_HISTORY', {})).get('url') or
+            metadata.get('successUrl') or
+            reverse('registration')
         )
-        if not successUrl:
-            successUrl = reverse('registration')
 
         if errorCode or status != 'ok':
             # Return the user to their original page with the error message displayed.
@@ -332,57 +397,9 @@ class ProcessPointOfSalePaymentView(View):
             )
             return HttpResponseRedirect(sourceUrl)
 
-        location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
-        client = Client(
-            access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
-            environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production'),   
-        )
-
-        if serverTransId:
-            response = client.orders.retrieve_order(serverTransId)
-            if response.is_error():
-                logger.error('Unable to find Square transaction for %s by server ID: %s' % (
-                    serverTransId, response.errors
-                ))
-                messages.error(
-                    request,
-                    str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
-                    str(response.errors)
-                )
-                return HttpResponseRedirect(sourceUrl)
-            payment_list = [x.get('id') for x in response.body.get('order', {}).get('tenders', [])]
-            if len(payment_list) == 1:
-                payment = client.payments.get_payment(payment_list[0]).body.get('payment')
-            else:
-                logger.error('Returned client transaction ID not found.')
-                messages.error(request, _('ERROR: Returned client transaction ID not found.'))
-                return HttpResponseRedirect(sourceUrl)
-        elif clientTransId:
-            # Try to find the payment in the 50 most recent payments
-            response = client.payments.list_payments(location_id=location_id)
-            if response.is_error():
-                logger.error('Unable to find Square transaction for %s by client ID: %s' % (
-                    location_id, response.errors
-                ))
-                messages.error(
-                    request,
-                    str(_('ERROR: Unable to find Square transaction by client ID:' )) +
-                    str(response.errors)
-                )
-                return HttpResponseRedirect(sourceUrl)
-
-            payment_list = [x for x in response.body.get('payments', []) if x.get('order_id') == clientTransId]
-            if len(payment_list) == 1:
-                payment = payment_list[0].body.get('payment')
-            else:
-                logger.error('Returned client transaction ID not found.')
-                messages.error(request, _('ERROR: Returned client transaction ID not found.'))
-                return HttpResponseRedirect(sourceUrl)
-        else:
-            logger.error('An unknown error has occurred with Square point of sale transaction attempt.')
-            messages.error(request, _(
-                'ERROR: An unknown error has occurred with Square point of sale transaction attempt.'
-            ))
+        # Use the Square API to get the payment based on the passed identifiers.
+        payment = self.getPayment(request, serverTransId, clientTransId)
+        if not payment:
             return HttpResponseRedirect(sourceUrl)
 
         # Get total information from the transaction for handling invoice.
