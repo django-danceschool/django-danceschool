@@ -23,6 +23,7 @@ setup(
     install_requires=[
         'beautifulsoup4>=4.6.0',
         'Django>=3.1.13,<3.2',
+        'django-addanother>=2.1.0',
         'django-admin-rangefilter>=0.6.4',
         'django-admin-sortable2>=0.7.2',
         'django-allauth>=0.31.0',

@@ -59,6 +59,7 @@
 			<th>{% trans "Customer" %}</th>
             <th>{% trans "Event" %}</th>
 			<th>{% trans "Role" %}</th>
+			<th>{% trans "New Customer" %}</th>
 			<th>{% trans "New Event" %}</th>
 			<th>{% trans "New Role" %}</th>
 		</tr>
@@ -70,11 +71,12 @@
 			<td>{{ er.customer }}</td>
             <td id="old_event_info_{{ er.id }}" data-pricingtier-id="{{ er.event.pricingTier.id }}" data-base-price="{{ er.event.basePrice }}">{{ er.event.name }}</td>
 			<td>{{ er.role.name }}</td>
+			<td>{% get_field_for_object 'new_customer' er.id form as field_customer %}{{ field_customer }}</td>
 			<td>
                 {% get_field_for_object 'new_event' er.id form as field_event %}{{ field_event }}
                 <div id="event_price_warning_{{ er.id }}" class="alert alert-warning d-none" role="alert"></div>
             </td>
-			<td>{% get_field_for_object 'new_role' er.id form as field_role %}{{ field_role }} {{ field_event.errors }}{{ field_role.errors }}</td>
+			<td>{% get_field_for_object 'new_role' er.id form as field_role %}{{ field_role }} {{ field_customer.errors }}{{ field_event.errors }}{{ field_role.errors }}</td>
 		</tr>
 	{% endfor %}
 	</tbody>

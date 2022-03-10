@@ -7,6 +7,7 @@ from django.utils.encoding import force_str
 from django.forms.widgets import mark_safe, Select
 from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _, gettext
+from django.urls import reverse_lazy
 
 from itertools import chain
 from crispy_forms.helper import FormHelper
@@ -15,6 +16,7 @@ from dal import autocomplete
 from random import random
 import json
 import logging
+from django_addanother.widgets import AddAnotherWidgetWrapper
 from djangocms_text_ckeditor.widgets import TextEditorWidget
 
 from .models import (
@@ -1170,6 +1172,28 @@ class RegistrationTransferForm(forms.ModelForm):
         self.registration = kwargs.pop('instance', None)
         
         for item in self.registration.eventregistration_set.all():
+
+            self.fields['new_customer_%s' % item.id] = forms.ModelChoiceField(
+                queryset=Customer.objects.all(),
+                label=_('Choose the new customer'),
+                required=False,
+                widget=AddAnotherWidgetWrapper(
+                    autocomplete.ModelSelect2(
+                        url='autocompleteCustomer',
+                        attrs={
+                            # This will set the input placeholder attribute:
+                            'data-placeholder': _('Enter customer name or email'),
+                            # This will set the yourlabs.Autocomplete.minimumCharacters
+                            # options, the naming conversion is handled by jQuery
+                            'data-minimum-input-length': 0,
+                            'data-max-results': 10,
+                            'class': 'modern-style',
+                        }
+                    ),
+                    reverse_lazy('admin:core_customer_add')
+                ),
+                initial = item.customer
+            )
 
             self.fields['new_event_%s' % item.id] = forms.ModelChoiceField(
                 queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),

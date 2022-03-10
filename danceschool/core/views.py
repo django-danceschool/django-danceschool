@@ -835,20 +835,27 @@ class RegistrationTransferProcessingView(
         clean_data = form.cleaned_data
 
         for er in self.object.eventregistration_set.all():
+            old_customer = er.customer
+            new_customer = clean_data.get('new_customer_%s' % er.id)
+
             old_event = er.event
             new_event = clean_data.get('new_event_%s' % er.id)
 
             new_role = clean_data.get('new_role_%s' % er.id)
             old_role = er.role
 
+            customer_changed = (old_customer != new_customer) and new_customer
             event_changed = (old_event != new_event) and new_event
             role_changed = old_role != new_role
 
             # Only proceed if the event or role has changed.
-            if not event_changed and not role_changed:
+            if not customer_changed and not event_changed and not role_changed:
                 continue
 
             er.event = new_event
+
+            if customer_changed:
+                er.customer = new_customer
 
             availableRoles = new_event.availableRoles
 
@@ -858,10 +865,11 @@ class RegistrationTransferProcessingView(
                 er.role = None
             er.save()
 
-            if event_changed:
+            if event_changed or customer_changed:
                 # Delete any event check-ins associated with the old event.
                 er.eventcheckin_set.filter(event=old_event).delete()
 
+            if event_changed:
                 # Link any revenue items in the financial app to the correct event.
                 linked_revenue = getattr(er.invoiceItem, 'revenueitem', None)
                 if linked_revenue:
