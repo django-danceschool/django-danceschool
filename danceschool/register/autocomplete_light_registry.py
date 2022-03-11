@@ -6,6 +6,7 @@ from django.apps import apps
 from dal import autocomplete
 from datetime import timedelta
 from dateutil.parser import parse
+import importlib
 
 from danceschool.core.models import Customer, Event, EventOccurrence
 from danceschool.core.utils.timezone import ensure_localtime
@@ -82,32 +83,14 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
 
         if date and apps.is_installed('danceschool.guestlist'):
 
-            GuestList = apps.get_model('guestlist', 'GuestList')
+            helpers = importlib.import_module('danceschool.guestlist.helpers')
 
             # Needed to avoid DatabaseError from ORDER BY in SQL subqueries.
             queryset = queryset.order_by()
 
-            # This is the same logic as the appliesToEvent() method of GuestList
-            applicable_lists = GuestList.objects.filter(
-                Q(individualEvents__in=today_events) |
-                Q(eventSessions__in=today_events.filter(session__isnull=False).values_list(
-                    'session', flat=True
-                )) |
-                Q(seriesCategories__in=today_events.filter(
-                    series__category__isnull=False
-                ).values_list('series__category', flat=True)) |
-                Q(eventCategories__in=today_events.filter(
-                    publicevent__category__isnull=False
-                ).values_list('publicevent__category', flat=True))
+            queryset = queryset.union(
+                helpers.getList(events=today_events, filters=name_filters, includeRegistrants=False).order_by()
             )
-
-            for this_list in applicable_lists:
-                for this_event in today_events:
-                    queryset = queryset.union(
-                        this_list.getListForEvent(
-                            this_event, filters=name_filters, includeRegistrants=False
-                        ).order_by()
-                    )
 
             # Now that all the subqueries are together, order by the common
             # lastName and firstName fields.
