@@ -12,6 +12,10 @@ from huey import SqliteHuey
 import sys
 from os import path
 
+
+# Required to avoid warnings in Django 3.2
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Required for Django CMS.  Override in your own settings.py
 LANGUAGES = [('en', 'English'), ]
 
