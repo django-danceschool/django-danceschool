@@ -24,3 +24,6 @@ class GuestListAppConfig(AppConfig):
             return GuestList.objects.filter(filters)
 
         Event.add_to_class('guestLists', guestLists)
+
+        # This ensures that the signal receivers are loaded
+        from . import handlers

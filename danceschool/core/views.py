@@ -47,7 +47,9 @@ from .mixins import (
     AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin,
     ReferralInfoMixin
 )
-from .signals import get_person_data, get_eventregistration_data
+from .signals import (
+    get_person_data, get_eventregistration_data, get_additional_event_names
+)
 from .utils.requests import getIntFromGet
 from .utils.timezone import ensure_timezone, ensure_localtime
 from .registries import extras_templates_registry
@@ -143,10 +145,35 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
                 extras_dict[k].extend(v)
 
+        # Call the signal that gets additional names and append them into a single
+        # list.
+        if getConstant('registration__addGuestListToViewRegistrations'):
+            name_response = get_additional_event_names.send(
+                sender=EventRegistrationSummaryView, event=self.object
+            )
+            additional_names = []
+            for r in name_response:
+                if len(r) > 1:
+                    additional_names += list(r[1])
+        else:
+            additional_names = []
+
+        additional_names_extras_dict = {x.get('contact'): [] for x in additional_names if x.get('contact')}
+
+        if additional_names:
+            extra_names_data = get_person_data.send(
+                sender=EventRegistrationSummaryView,
+                names=additional_names,
+            )
+            for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extra_names_data if y[1]]]):
+                additional_names_extras_dict[k].extend(v)
+
         context = {
             'event': self.object,
             'registrations': registrations,
+            'additional_names': additional_names,
             'extras': extras_dict,
+            'additional_names_extras': additional_names_extras_dict,
             'extras_templates_registry': extras_templates_registry,
         }
         context.update(kwargs)

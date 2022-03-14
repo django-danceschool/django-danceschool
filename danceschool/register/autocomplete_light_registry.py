@@ -16,22 +16,20 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
 
     def get_result_value(self, result):
         """Return the value of a result."""
-        return '{} {} ({})'.format(
-            result.get('firstName'), result.get('lastName'), result.get('guestType')
-        )
+        return '{first} {last} ({guestType})'.format(**result)
 
     def get_result_label(self, result):
         """Return the label of a result."""
         if result.get('guestType') != 'Customer':
             return format_html(
                 '<span data-id="{id}" data-type="{guestType}" data-model-type="{modelType}"' +
-                'data-guest-list-id="{guestListId}">{firstName} {lastName} ({guestType})</span>',
+                'data-guest-list-id="{guestListId}">{first} {last} ({guestType})</span>',
                 **result
             )
         return format_html(
             '<span data-id="{id}" data-type="{guestType}" data-model-type="{modelType}"' +
-            'data-guest-list-id="{guestListId}">{firstName} {lastName}</span>',
-            **result
+            'data-guest-list-id="{guestListId}">{first} {last}</span>',
+                **result
         )
 
     def get_queryset(self):
@@ -49,7 +47,7 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             words = self.q.split(' ')
             lastName = words.pop()
             firstName = words.pop() if words else lastName
-            name_filters = Q(firstName__icontains=firstName) | Q(lastName__icontains=lastName)
+            name_filters = Q(first__icontains=firstName) | Q(last__icontains=lastName)
 
         customer_filters = Q()
         if date:
@@ -72,33 +70,28 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             )
 
         queryset = Customer.objects.annotate(
-            firstName=F('first_name'), lastName=F('last_name'),
+            first=F('first_name'), last=F('last_name'), contact=F('email'),
             modelType=Value('Customer', output_field=CharField()),
             guestListId=Value(None, output_field=IntegerField()),
             guestType=Value(gettext('Customer'), output_field=CharField()),
         ).filter(name_filters).filter(customer_filters).values(
-            'id', 'modelType', 'guestListId', 'firstName', 'lastName',
-            'guestType',
-        )
+            'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
+            'guestType'
+        ).order_by()
 
         if date and apps.is_installed('danceschool.guestlist'):
 
             helpers = importlib.import_module('danceschool.guestlist.helpers')
 
-            # Needed to avoid DatabaseError from ORDER BY in SQL subqueries.
-            queryset = queryset.order_by()
-
-            queryset = queryset.union(
-                helpers.getList(events=today_events, filters=name_filters, includeRegistrants=False).order_by()
-            )
-
-            # Now that all the subqueries are together, order by the common
-            # lastName and firstName fields.
-            queryset = queryset.values(
-                'id', 'modelType', 'guestListId', 'firstName', 'lastName',
-                'guestType',
-            ).distinct().order_by(
-                'lastName', 'firstName'
-            )
+            guests = helpers.getList(
+                events=today_events, filters=name_filters, includeRegistrants=False
+            ).values(
+                'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
+                'guestType'
+            ).order_by()
+            if queryset:
+                queryset = queryset.union(guests)
+            else:
+                queryset = guests
 
         return queryset

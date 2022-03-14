@@ -5,14 +5,13 @@ from django.db.models.functions import Concat
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 
-from cms.models.pluginmodel import CMSPlugin
 from intervaltree import IntervalTree
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 
 from danceschool.core.models import (
     PublicEventCategory, SeriesCategory, EventStaffCategory, EventSession,
-    Event, StaffMember, Registration
+    Event, StaffMember, Registration, EventRegistration, EventOccurrence
 )
 from danceschool.core.utils.timezone import ensure_localtime
 from .constants import GUESTLIST_ADMISSION_CHOICES, GUESTLIST_SORT_CHOICES
@@ -69,20 +68,31 @@ class GuestList(models.Model):
             ).order_by('-endTime').first()
         return currentEvent
 
-    def appliesToEvent(self, event):
+    def appliesToEvents(self, events):
         ''' Check whether this guest list is applicable to an event. '''
-        return (
-            event in self.individualEvents.all() or
-            event.session in self.eventSessions.all() or
-            event.category in self.seriesCategories.all() or
-            event.category in self.eventCategories.all()
-        )
+        applies = True
+
+        applicableEvents = self.individualEvents.all()
+        applicableSessions = self.eventSessions.all()
+        applicableSeriesCats = self.seriesCategories.all()
+        applicableEventCats = self.eventCategories.all()
+
+        for event in events:
+            if not (
+                event in applicableEvents or
+                event.session in applicableSessions or
+                event.category in applicableSeriesCats or
+                event.category in applicableEventCats
+            ):
+                applies = False
+
+        return applies
 
     def getDayStart(self, dateTime):
         ''' Ensure local time and get the beginning of the day '''
         return ensure_localtime(dateTime).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def getComponentFilters(self, component, event=None, dateTime=None):
+    def getComponentFilters(self, component, events=None, dateTime=None):
         '''
         Get a parsimonious set of intervals and the associated Q() objects
         based on the occurrences of a specified event, and the rule that
@@ -97,17 +107,17 @@ class GuestList(models.Model):
 
         # Handle 'Always' and 'EventOnly' rules first, because they do not
         # require an analysis of intervals.
-        if component.admissionRule == 'EventOnly' and event:
+        if component.admissionRule == 'EventOnly' and events:
             # Skip the analysis of intervals and include only those who are
             # staffed for the event.
-            return Q(filters & Q(eventstaffmember__event=event))
+            return Q(filters & Q(eventstaffmember__event__in=events))
         elif component.admissionRule in ['Always', 'EventOnly']:
             # If 'Always' or no event is specified, include all associated staff
             return Q(filters)
 
         # Start with the event occurrence intervals, or with the specified time.
-        if event:
-            intervals = [(x.startTime, x.endTime) for x in event.eventoccurrence_set.all()]
+        if events:
+            intervals = [(x.startTime, x.endTime) for x in EventOccurrence.objects.filter(event__in=events)]
         elif dateTime:
             intervals = [(dateTime, dateTime)]
         else:
@@ -166,7 +176,7 @@ class GuestList(models.Model):
 
         return Q(filters & intervalFilters)
 
-    def getStaffForEvent(self, event=None, filters=Q()):
+    def getStaffForEvents(self, events=Event.objects.none(), filters=Q()):
         '''
         Get all StaffMembers associated with a specified event.
         '''
@@ -178,16 +188,19 @@ class GuestList(models.Model):
 
         # Add prior staff based on the component rule.
         for component in components:
-            if event and self.appliesToEvent(event):
-                component_filters = component_filters | self.getComponentFilters(component, event=event)
+            if events and self.appliesToEvents(events):
+                component_filters = component_filters | self.getComponentFilters(component, events=events)
             else:
                 component_filters = component_filters | self.getComponentFilters(component, dateTime=timezone.now())
 
         # Add all event staff if that box is checked (no need for separate components)
-        if self.includeStaff and event and self.appliesToEvent(event):
-            component_filters = component_filters | Q(eventstaffmember__event=event)
+        if self.includeStaff and events and self.appliesToEvents(events):
+            component_filters = component_filters | Q(eventstaffmember__event__in=events)
 
-        return StaffMember.objects.filter(component_filters).filter(filters)
+        return StaffMember.objects.filter(component_filters).annotate(
+            first=F('firstName'), last=F('lastName'), contact=F('privateEmail'),
+            email=F('privateEmail'),
+        ).filter(filters)
 
     def getDescriptionForGuest(self, guest, event=None):
         '''
@@ -207,11 +220,13 @@ class GuestList(models.Model):
                     )
             return gettext('Other Staff')
 
-    def getListForEvent(self, event=None, filters=Q(), includeRegistrants=True):
+    def getListForEvents(self, events=Event.objects.none(), filters=Q(), includeRegistrants=True):
         '''
         Get a union-ed queryset with a list of names associated with a particular event.
+        Use annotations for everything to avoid potential issues with query ordering.
         '''
         names = self.guestlistname_set.annotate(
+            first=F('firstName'), last=F('lastName'), contact=F('email'),
             modelType=Value('GuestListName', output_field=models.CharField()),
             guestListId=Value(self.id, output_field=models.IntegerField()),
             guestType=Case(
@@ -219,18 +234,20 @@ class GuestList(models.Model):
                 default=Value(gettext('Manually Added')),
                 output_field=models.CharField()
             ),
+
         ).filter(filters).values(
-            'id', 'modelType', 'guestListId', 'firstName', 'lastName',
+            'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
             'guestType'
         ).order_by()
 
         # Execute the constructed query and add the names of staff
-        names = names.union(self.getStaffForEvent(event, filters).annotate(
+        names = names.union(self.getStaffForEvents(events, filters).annotate(
+            first=F('firstName'), last=F('lastName'), contact=F('email'),
             modelType=Value('StaffMember', output_field=models.CharField()),
             guestListId=Value(self.id, output_field=models.IntegerField()),
             guestType=Case(
                 When(
-                    eventstaffmember__event=event,
+                    eventstaffmember__event__in=events,
                     then=Concat(
                         Value('Event Staff: '), 'eventstaffmember__category__name'
                     )
@@ -239,27 +256,27 @@ class GuestList(models.Model):
                 output_field=models.CharField()
             ),
         ).distinct().values(
-            'id', 'modelType', 'guestListId', 'firstName', 'lastName',
-            'guestType',
+            'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
+            'guestType'
         ).order_by())
 
-        if includeRegistrants and self.includeRegistrants and event and self.appliesToEvent(event):
+        if includeRegistrants and self.includeRegistrants and events and self.appliesToEvents(events):
             names = names.union(
-                Registration.objects.filter(
-                    filters & Q(final=True) & Q(eventregistration__event=event)
+                EventRegistration.objects.filter(
+                    filters & Q(registration__final=True) & Q(event__in=events)
                 ).annotate(
-                    firstName=F('invoice__firstName'),
-                    lastName=F('invoice__lastName'),
+                    first=F('customer__firstName'), last=F('customer__lastName'),
+                    contact=F('email'),
                     modelType=Value('Registration', output_field=models.CharField()),
                     guestListId=Value(self.id, output_field=models.IntegerField()),
                     guestType=Value(_('Registered'), output_field=models.CharField()),
                 ).values(
-                    'id', 'modelType', 'guestListId', 'firstName', 'lastName',
-                    'guestType',
+                    'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
+                    'guestType'
                 ).order_by()
             )
 
-        return names.order_by('lastName', 'firstName')
+        return names.order_by('last', 'first')
 
     def __str__(self):
         return '%s: %s' % (_('Guest list'), self.name)

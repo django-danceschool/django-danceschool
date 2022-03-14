@@ -3191,25 +3191,25 @@ class Registration(EmailRecipientMixin, models.Model):
 
         return self.invoice.invoiceitem_set.annotate(
             from_reg=Case(
-                When(eventRegistration__registration__id=self.id, then=Value(1)),
-                default=Value(0), output_field=models.FloatField()
+                When(eventRegistration__registration__id=self.id, then=Value(1.0)),
+                default=Value(0.0), output_field=models.FloatField()
             ),
         ).aggregate(
-            reg_grossTotal=Coalesce(Sum(F('grossTotal')*F('from_reg')), 0),
-            reg_total=Coalesce(Sum(F('total')*F('from_reg')), 0),
-            reg_adjustments=Coalesce(Sum(F('adjustments')*F('from_reg')), 0),
-            reg_taxes=Coalesce(Sum(F('taxes')*F('from_reg')), 0),
-            reg_fees=Coalesce(Sum(F('fees')*F('from_reg')), 0),
-            other_grossTotal=Coalesce(Sum(F('grossTotal')*(1 - F('from_reg'))), 0),
-            other_total=Coalesce(Sum(F('total')*(1 - F('from_reg'))), 0),
-            other_adjustments=Coalesce(Sum(F('adjustments')*(1 - F('from_reg'))), 0),
-            other_taxes=Coalesce(Sum(F('taxes')*(1 - F('from_reg'))), 0),
-            other_fees=Coalesce(Sum(F('fees')*(1 - F('from_reg'))), 0),
-            grossTotal=Coalesce(Sum(F('grossTotal')), 0),
-            total=Coalesce(Sum(F('total')), 0),
-            adjustments=Coalesce(Sum(F('adjustments')), 0),
-            taxes=Coalesce(Sum(F('taxes')), 0),
-            fees=Coalesce(Sum(F('fees')), 0),
+            reg_grossTotal=Coalesce(Sum(F('grossTotal')*F('from_reg')), 0, output_field=models.FloatField()),
+            reg_total=Coalesce(Sum(F('total')*F('from_reg')), 0, output_field=models.FloatField()),
+            reg_adjustments=Coalesce(Sum(F('adjustments')*F('from_reg')), 0, output_field=models.FloatField()),
+            reg_taxes=Coalesce(Sum(F('taxes')*F('from_reg')), 0, output_field=models.FloatField()),
+            reg_fees=Coalesce(Sum(F('fees')*F('from_reg')), 0, output_field=models.FloatField()),
+            other_grossTotal=Coalesce(Sum(F('grossTotal')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
+            other_total=Coalesce(Sum(F('total')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
+            other_adjustments=Coalesce(Sum(F('adjustments')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
+            other_taxes=Coalesce(Sum(F('taxes')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
+            other_fees=Coalesce(Sum(F('fees')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
+            grossTotal=Coalesce(Sum(F('grossTotal')), 0, output_field=models.FloatField()),
+            total=Coalesce(Sum(F('total')), 0, output_field=models.FloatField()),
+            adjustments=Coalesce(Sum(F('adjustments')), 0, output_field=models.FloatField()),
+            taxes=Coalesce(Sum(F('taxes')), 0, output_field=models.FloatField()),
+            fees=Coalesce(Sum(F('fees')), 0, output_field=models.FloatField()),
         )
 
     @property

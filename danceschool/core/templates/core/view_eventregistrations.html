@@ -82,14 +82,14 @@
 	<tr>
 		{% if 'core.checkin_customers' in perms %}
 		<td>
-			<input type="checkbox" class="customerCheckIn" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}"
+			<input type="checkbox" class="regCheckIn personCheckIn" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}"
 				data-next-occurrence="{{ reg.event.nextOccurrenceForToday.id }}"
 				{% if reg.dropIn %}
 					data-drop-in="true"	
 					data-occurrence-ids="{% for occ in reg.occurrences.all %}{{ occ.id }}{% if not forloop.last %}|{% endif %}{% endfor %}"
 				{%endif %}
 			/>
-			<label class="customerCheckInLabel" for="reg_id_{{ reg.id }}"></label>
+			<label class="personCheckInLabel" for="reg_id_{{ reg.id }}"></label>
 		</td>
 		{% endif %}
 		<td class="customerInfo">
@@ -242,10 +242,54 @@
 </tbody>
 </table>
 
+{% if scope != "invoice" and additional_names %}
+<h4>{% trans "Additional Guests" %}</h4>
+<table class="additionalnames table table-striped table-fixed">
+	<thead>
+		<tr>
+			{% if 'core.checkin_customers' in perms %}
+			<th>{% trans "Check In" %}</th>
+			{% endif %}
+			<th>{% trans "Name" %}</th>
+			{% if extras and extras_templates_registry %}
+			<th>{% trans "Additional Info" %}</th>
+			{% endif %}
+			<th>{% trans "Details" %}</th>
+		</tr>
+	</thead>
+	<tbody id="additionalNamesListing">
+	{% for person in additional_names %}
+		<tr>
+			{% if 'core.checkin_customers' in perms %}
+			<td>
+				<input type="checkbox" class="nameCheckIn personCheckIn" id="additional_name_{{ person.first|slugify }}_{{ person.last|slugify }}" name="additional_name_{{ person.first|slugify }}_{{ person.last|slugify }}" data-first-name="{{ person.first }}" data-last-name="{{ person.last }}" />
+				<label class="personCheckInLabel" for="additional_name_{{ person.first|slugify }}_{{ person.last|slugify }}"></label>
+			</td>
+			{% endif %}
+			<td class="customerInfo">
+				{{ person.first }} {{ person.last }}
+				{% if person.contact %}<br />{{ person.contact }}{% endif %}
+			</td>
+			{% if extras and extras_templates_registry %}
+			<td>
+				{% with additional_names_extras|get_item:person.contact as reg_extras %}
+				{% for k,t in extras_templates_registry.items %}
+					{% include t.template_name %}
+				{% endfor %}
+				{% endwith %}
+			</td>
+			{% endif %}
+	
+			<td>{{ person.guestType }}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+	</table>
+{% endif %}
+
+
 {% if 'core.checkin_customers' in perms %}
 	</form>
-
-	<div id="update_ok" style="display:none; font-size: 1.5em; color: #0a0; background-color: #ddd; padding: 0.5em; width: 95%;">{% trans "Check-ins submitted successfully!" %}</div>
 	<div id="update_error" style="display:none; font-size: 1.5em; color: #a00; background-color: #ddd; padding: 0.5em; width: 95%;">{% trans "Error submitting class check-in data." %}</div>
 {% endif %}
 
@@ -269,10 +313,19 @@
 		ajaxUrl: "{% url 'ajax_checkin' %}",
 	}
 
+	function slugify(str) {
+		return str
+			.normalize('NFKD')
+			.toLowerCase()
+			.replace(/[^\w\s-]/g, '')
+			.trim()
+			.replace(/[-\s]+/g, '-');
+	};
+
 	function getCheckIns() {
 
-		$('.customerCheckIn').removeAttr('disabled');
-		$('.customerCheckIn').show();
+		$('.personCheckIn').removeAttr('disabled');
+		$('.personCheckIn').show();
 
 		var this_request = {
 			request: "get_all",
@@ -292,7 +345,7 @@
 				this_request["checkin_type"] = "O";
 				this_request["occurrence_id"] = thisOccurrence;
 
-				var mismatched = $('.customerCheckIn[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
+				var mismatched = $('.personCheckIn[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
 				$(mismatched).attr('disabled', true);
 				$(mismatched).hide();
 
@@ -311,11 +364,21 @@
 					$('#update_error').slideDown();
 				}
 				else {
-					$('.customerCheckIn').prop('checked', false);
+					$('.personCheckIn').prop('checked', false);
 					$.each(data['checkins'], function() {
-						var this_element = $('#reg_id_' + this.eventRegistration);
-						this_element.prop('checked', (this.cancelled == false));
-						this_element.data('existing',"true");
+						var this_element;
+
+						if (this.eventRegistration) {
+							this_element = $('#reg_id_' + this.eventRegistration);
+						}
+						else if (this.firstName && this.lastName) {
+							this_element = $('#additional_name_' + slugify(this.firstName) + '_' + slugify(this.lastName));
+						}
+
+						if (this_element) {
+							this_element.prop('checked', (this.cancelled == false));
+							this_element.data('existing',"true");
+						}
 					});
 				}
 			},
@@ -332,18 +395,17 @@
 	  getCheckIns();
 	});
 
-	$('.customerCheckIn').click(function(){
-		$('#update_ok').slideUp();
+	$('.personCheckIn').click(function(){
 		$('#update_error').slideUp();
 	});
 
 	$('#occurrenceSelect').change(function() {
-		$('.customerCheckIn').removeData('existing');
+		$('.personCheckIn').removeData('existing');
 		getCheckIns();
 	});
 
 	$('#checkInTypeSelect').change(function() {
-		$('.customerCheckIn').removeData('existing');
+		$('.personCheckIn').removeData('existing');
 		getCheckIns();
 	});
 
@@ -386,14 +448,15 @@
 	});
 
     // Check-in customer, guest.
-    $(document).on("click", ".customerCheckIn", function() {
+    $(document).on("click", ".personCheckIn", function() {
 
-		$('.customerCheckIn').attr("disabled", true);
+		$('.personCheckIn').attr("disabled", true);
 
 		var this_request = {
 			request: "update",
 			checkin_type: "E",
 			registrations: [],
+			names: [],
 		};
 
 		if (regParams.scope == "invoice") {
@@ -411,7 +474,7 @@
 			}
 		}
 
-		$.each($('.customerCheckIn'), function() {
+		$.each($('.regCheckIn'), function() {
 			if ($(this).is(':checked') || $(this).data('existing') == "true") {
 				this_request.registrations.push({
 					id: $(this).val(),
@@ -420,6 +483,17 @@
 				$(this).data('existing',"true");
 			}
 		});
+		$.each($('.nameCheckIn'), function() {
+			if ($(this).is(':checked') || $(this).data('existing') == "true") {
+				this_request.names.push({
+					first_name: $(this).data('firstName'),
+					last_name: $(this).data('lastName'),
+					cancelled: ($(this).prop('checked') == false),
+				});
+				$(this).data('existing',"true");
+			}
+		});
+
 
 	    $.ajax(
 	    {
@@ -433,8 +507,12 @@
 					$('#update_error').slideDown();
 				}
 				else {
-					$('#update_ok').slideDown();
-					$.each($('.customerCheckIn'), function() {
+					$.each($('.regCheckIn'), function() {
+						if ($(this).is(':checked') || $(this).data('existing') == "true") {
+							$(this).data('existing',"true");
+						}
+					});
+					$.each($('.nameCheckIn'), function() {
 						if ($(this).is(':checked') || $(this).data('existing') == "true") {
 							$(this).data('existing',"true");
 						}
@@ -449,16 +527,17 @@
 	    });
 
 		setTimeout(function() {
-			$(".customerCheckIn,.guestCheckIn").removeAttr("disabled");
+			$(".personCheckIn").removeAttr("disabled");
 		}, 500);
 
 	});
 
-    // Check-in customer, guest.
-    $("#nameFilter").keyup(function() {
-		filter = $(this).val().toUpperCase();
+	function filterCustomers(table_id, filter) {
 
-		var table = document.getElementById("regListing");
+		var table = document.getElementById(table_id);
+		if (table === null) {
+			return;
+		}
 		var tr = table.getElementsByTagName("tr");
 
 		// Loop through all table rows, and hide those who don't match the search query
@@ -473,6 +552,13 @@
 			}
 			}
 		}
+	}
+
+    // Filter the list of names
+    $("#nameFilter").keyup(function() {
+		var filter = $(this).val().toUpperCase();
+		filterCustomers("regListing", filter);
+		filterCustomers("additionalNamesListing", filter);
 	});
 	
 	</script>
@@ -480,7 +566,7 @@
 
 {% addtoblock "css" %}
     <style type="text/css">
-    .customerCheckInLabel {
+    .personCheckInLabel {
         position: relative;
         display: inline-block;
         width: 40px;
@@ -489,7 +575,7 @@
         border-radius: 20px;
         transition: all 0.3s;
     }
-    .customerCheckInLabel::after {
+    .personCheckInLabel::after {
         content: '';
         position: absolute;
         width: 18px;
@@ -501,22 +587,22 @@
         transition: all 0.3s;
     }
 
-    .customerCheckIn:checked + .customerCheckInLabel::after {
+    .personCheckIn:checked + .personCheckInLabel::after {
         left : 20px;
     }
-    .customerCheckIn:checked + .customerCheckInLabel {
+    .personCheckIn:checked + .personCheckInLabel {
         background-color: #28A745;
     }
 
-    .customerCheckIn:disabled + .customerCheckInLabel {
+    .personCheckIn:disabled + .personCheckInLabel {
         background-color: #BFBFBF;
     }
 
-    .customerCheckIn:disabled + .customerCheckInLabel::after {
+    .personCheckIn:disabled + .personCheckInLabel::after {
         background-color: #6C757D;
     }
 
-    .customerCheckIn {
+    .personCheckIn {
 	    position: absolute;
 		opacity: 0;
     }

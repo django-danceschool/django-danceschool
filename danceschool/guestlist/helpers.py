@@ -1,16 +1,15 @@
-from django.db.models import Q
+from django.db.models import Q, Value, F, CharField, IntegerField
 
-from danceschool.core.models import Event, EventOccurrence, Customer
-from .models import GuestList
+from danceschool.core.models import Event, EventOccurrence
+from .models import GuestList, GuestListName
 
 def getList(
-    guestList=None, event=None, events=[], startTime=None, endTime=None,
+    guestList=None, event=None, events=Event.objects.none(), startTime=None, endTime=None,
     **kwargs
 ):
 
-    # Do not pass a specific event if passing events as a queryset because then append will fail.
     if event:
-        events.append(event)
+        events = Event.objects.filter(id=getattr(event, 'id', event))
 
     if (not events) and startTime and endTime:
         occs = EventOccurrence.objects.filter(
@@ -19,7 +18,12 @@ def getList(
         events = Event.objects.filter(eventoccurrence__in=occs).distinct()
 
     if not events:
-        return Customer.objects.none()
+        return GuestListName.objects.annotate(
+            first=F('firstName'), last=F('lastName'), contact=F('email'),
+            modelType=Value(None, output_field=CharField()),
+            guestListId=Value(None, output_field=IntegerField()),
+            guestType=Value(None, output_field=CharField()),
+        ).none()
 
     applicable_lists = None
 
@@ -40,21 +44,14 @@ def getList(
             ).values_list('publicevent__category', flat=True))
         )
 
-    queryset = Customer.objects.none().order_by()
+    queryset = []
 
     for this_list in applicable_lists:
-        for this_event in events:
+        if not queryset:
+            queryset = this_list.getListForEvents(events, **kwargs).order_by()
+        else:
             queryset = queryset.union(
-                this_list.getListForEvent(this_event, **kwargs).order_by()
+                this_list.getListForEvent(events, **kwargs).order_by()
             )
-
-    # Now that all the subqueries are together, order by the common
-    # lastName and firstName fields.
-    queryset = queryset.values(
-        'id', 'modelType', 'guestListId', 'firstName', 'lastName',
-        'guestType',
-    ).distinct().order_by(
-        'lastName', 'firstName'
-    )
 
     return queryset

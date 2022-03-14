@@ -71,8 +71,15 @@ invoice_cancelled = Signal(''' ['invoice'] ''')
 
 # Fires on the customer profile page and elsewhere to collect customer or
 # person-level information from other apps without overriding the CustomerStatsView.
-get_person_data = Signal(''' ['customer', 'first_name', 'last_name', 'email', 'staff_member] ''')
+get_person_data = Signal(
+    ''' ['customer', 'first_name', 'last_name', 'email', 'staff_member', 'names'] '''
+)
 
 # Fires when viewing prior EventRegistrations to collect information from other apps
 # such as discounts or vouchers that were applied to the Registrations.
 get_eventregistration_data = Signal(''' ['eventregistrations'] ''')
+
+# Fires when viewing the list of registrations by event in
+# views.EventRegistrationSummaryView to get other names that may be checked in,
+# such as guest list names.  
+get_additional_event_names = Signal(''' ['event'] ''')
