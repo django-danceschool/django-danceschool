@@ -256,7 +256,14 @@ class ProcessPointOfSalePaymentView(View):
         payment = None
 
         if serverTransId:
-            response = client.orders.retrieve_order(serverTransId)
+            response = client.transactions.retrieve_transaction(
+                transaction_id=serverTransId, location_id=location_id
+            )
+            response_key = 'transaction'
+            if response.is_error():
+                response = client.orders.retrieve_order(serverTransId)
+                response_key = 'order'
+
             if response.is_error():
                 logger.error('Unable to find Square transaction for %s by server ID: %s' % (
                     serverTransId, response.errors
@@ -267,7 +274,7 @@ class ProcessPointOfSalePaymentView(View):
                     str(response.errors)
                 )
             else:
-                payment_list = [x.get('id') for x in response.body.get('order', {}).get('tenders', [])]
+                payment_list = [x.get('id') for x in response.body.get(response_key, {}).get('tenders', [])]
                 if len(payment_list) == 1:
                     payment = client.payments.get_payment(payment_list[0]).body.get('payment')
                     logger.debug(f'Successfully retrieved payment based on server transaction identifier {serverTransId}')
