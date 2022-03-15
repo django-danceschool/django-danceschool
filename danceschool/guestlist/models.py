@@ -68,9 +68,10 @@ class GuestList(models.Model):
             ).order_by('-endTime').first()
         return currentEvent
 
-    def appliesToEvents(self, events):
+    def appliesToEvents(self, events, verbose=False):
         ''' Check whether this guest list is applicable to an event. '''
         applies = True
+        verbose_response = {}
 
         applicableEvents = self.individualEvents.all()
         applicableSessions = self.eventSessions.all()
@@ -85,7 +86,12 @@ class GuestList(models.Model):
                 event.category in applicableEventCats
             ):
                 applies = False
+                verbose_response[event.id] = False
+            else:
+                verbose_response[event.id] = True
 
+        if verbose:
+            return verbose_response
         return applies
 
     def getDayStart(self, dateTime):

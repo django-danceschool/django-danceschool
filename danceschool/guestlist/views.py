@@ -97,6 +97,8 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
         except json.decoder.JSONDecodeError:
             return JsonResponse({'code': 'invalid_json', 'message': _('Invalid JSON.')})
 
+        logger.debug(f'Here is the post data: {post_data}')
+
         event_list = post_data.get('eventList', [])
         event_list = Event.objects.filter(id__in=list(filter(lambda x: x.isdigit(), event_list)))
 
@@ -153,7 +155,9 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
                     this_item.publicEmail
                 )
             elif post_data['modelType'] == 'Registration':
-                this_item = Registration.objects.get(id=post_data['id'])
+                this_item = Registration.objects.prefetch_related(
+                    'invoice', 'eventregistration_set'
+                ).get(id=post_data['id'])
                 this_first_name = this_item.invoice.firstName
                 this_last_name = this_item.invoice.lastName
                 this_email = this_item.invoice.email
@@ -185,50 +189,52 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
         # Since we got this far, generate a response
         response = {'status': 'success', 'events': []}
 
-        # Only report check-in status for the events that apply to this
-        # StaffMember:
-        if not (
-            (not this_list.appliesToEvents(event_list)) or
-            (
+        applies_list = this_list.appliesToEvents(event_list, verbose=True)
+
+        # Only report check-in status for the events that apply to this person.
+        for event in event_list:
+            if not applies_list.get(event.id, False):
+                continue
+            elif (
                 post_data['modelType'] == 'StaffMember' and not
-                this_list.getStaffForEvents(event_list).filter(id=post_data['id'])
-            ) or
-            (
+                this_list.getStaffForEvents([event,]).filter(id=post_data['id']).exists()
+            ):
+                continue
+            elif (
                 post_data['modelType'] == 'Registration' and not
-                this_item.eventregistration_set.filter(event__in=event_list).exists()
-            )
-        ):
-            for event in event_list:
+                this_item.eventregistration_set.filter(event=event).exists()
+            ):
+                continue
 
-                # Look for an existing event check-in
-                filters = {
-                    'event': event, 'eventRegistration__isnull': True,
-                    'checkInType': post_data.get('checkInType', 'O'),
-                    'firstName': this_first_name,
-                    'lastName': this_last_name,
-                    'cancelled': False,
-                }
+            # Look for an existing event check-in
+            filters = {
+                'event': event, 'eventRegistration__isnull': True,
+                'checkInType': post_data.get('checkInType', 'O'),
+                'firstName': this_first_name,
+                'lastName': this_last_name,
+                'cancelled': False,
+            }
 
-                if post_data.get('checkInType', 'O') == "O":
-                    this_occurrence = post_data.get(
-                        'occurrence', event.getNextOccurrenceForDate(date=date)
-                    )
-                    filters['occurrence'] = this_occurrence
-                else:
-                    this_occurrence = None
+            if post_data.get('checkInType', 'O') == "O":
+                this_occurrence = post_data.get(
+                    'occurrence', event.getNextOccurrenceForDate(date=date)
+                )
+                filters['occurrence'] = this_occurrence
+            else:
+                this_occurrence = None
 
-                response['events'].append({
-                    'id': this_item.id,
-                    'modelType': post_data['modelType'],
-                    'firstName': this_first_name,
-                    'lastName': this_last_name,
-                    'email': this_email,
-                    'extras': extras_response,
-                    'eventId': event.id, 'eventName': event.name,
-                    'checkedIn': EventCheckIn.objects.filter(**filters).exists(),
-                    'occurrenceId': this_occurrence.id,
-                    'checkInType':  post_data.get('checkInType', 'O'),
-                    'guestType': this_list.getDescriptionForGuest(this_item, event),
-                })
+            response['events'].append({
+                'id': this_item.id,
+                'modelType': post_data['modelType'],
+                'firstName': this_first_name,
+                'lastName': this_last_name,
+                'email': this_email,
+                'extras': extras_response,
+                'eventId': event.id, 'eventName': event.name,
+                'checkedIn': EventCheckIn.objects.filter(**filters).exists(),
+                'occurrenceId': this_occurrence.id,
+                'checkInType':  post_data.get('checkInType', 'O'),
+                'guestType': this_list.getDescriptionForGuest(this_item, event),
+            })
 
         return JsonResponse(response)
