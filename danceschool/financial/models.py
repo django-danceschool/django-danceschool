@@ -1009,9 +1009,9 @@ class ExpenseItem(models.Model):
 
     def getAllocation(self, event=None, occurrence=None):
         if occurrence:
-            return self.getAllocationForOccurrence(self, occurrence)
+            return self.getAllocationForOccurrence(occurrence=occurrence)
         elif event:
-            return self.getAllocationForEvent(self, event)
+            return self.getAllocationForEvent(event=event)
         else:
             return 1
 
@@ -1311,7 +1311,7 @@ class RevenueItem(models.Model):
 
     def getAllocation(self, event=None, occurrence=None):
         if occurrence:
-            return self.getAllocationForOccurrence(self, occurrence)
+            return self.getAllocationForOccurrence(occurrence=occurrence)
         elif event and event != self.event:
             return 0
         return 1
