@@ -63,7 +63,7 @@
 	<thead class="thead-default">
 		<tr>
 			<th colspan="2">{% trans "Registrations:" %}</th>
-			<th>{{ currencySymbol }}{% getAllocatedSum registrationRevenueItems 'net' %}</th>
+			<th>{{ currencySymbol }}{% getAllocatedSum registrationRevenueItems 'netRevenue' %}</th>
 		</tr>
 	</thead>
 	{% regroup registrationRevenueItems by event as event_item_list %}
@@ -73,7 +73,7 @@
 					<th colspan="2">
 						<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>{{ event.grouper|default:grouper_default }}
 					</th>
-					<td>{{ currencySymbol }}{% getAllocatedSum event.list 'net' %}</td>
+					<td>{{ currencySymbol }}{% getAllocatedSum event.list 'netRevenue' %}</td>
 				</tr>
 			</tbody>
 			<tbody id="accordionevent_{{ event.grouper.id }}" class="collapse">
@@ -91,7 +91,7 @@
 							&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
 						{% endif %}{% endspaceless %}
 					</td>
-					<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
+					<td>{{ currencySymbol }}{% getAllocation item 'netRevenue' %}</td>
 				</tr>
 			{% endfor %}
 			</tbody>
@@ -103,7 +103,7 @@
 		<thead class="thead-default">
 			<tr>
 				<th colspan="2">{% trans "Other Revenues" %}:</th>
-				<th>{{ currencySymbol }}{% getAllocatedSum otherRevenueItems 'net' %}</th>
+				<th>{{ currencySymbol }}{% getAllocatedSum otherRevenueItems 'netRevenue' %}</th>
 			</tr>
 		</thead>
 		{% regroup otherRevenueItems by category as other_item_list %}
@@ -113,7 +113,7 @@
 						<th colspan="2">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper|default:grouper_default }}
 						</th>
-						<td>{{ currencySymbol }}{% getAllocatedSum category.list 'net' %}</td>
+						<td>{{ currencySymbol }}{% getAllocatedSum category.list 'netRevenue' %}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionotherrevenue_{{ category.grouper.id }}" class="collapse">
@@ -131,7 +131,7 @@
 								&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
-						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
+						<td>{{ currencySymbol }}{% getAllocation item 'netRevenue' %}</td>
 					</tr>
 				{% endfor %}
 				</tbody>

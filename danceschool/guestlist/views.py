@@ -42,7 +42,7 @@ class GuestListView(PermissionRequiredMixin, TemplateView):
 
         if (
             self.guest_list and self.event and not
-            self.guest_list.appliesToEvent(self.event)
+            self.guest_list.appliesToEvents([self.event,])
         ):
             raise Http404(_('Invalid event.'))
 
@@ -55,7 +55,7 @@ class GuestListView(PermissionRequiredMixin, TemplateView):
             'guestList': self.guest_list,
             'event': self.event,
             'date': self.date,
-            'names': self.guest_list.getListForEvent(self.event),
+            'names': self.guest_list.getListForEvents([self.event,]),
         }
         context.update(kwargs)
         return super(GuestListView, self).get_context_data(**context)
@@ -69,7 +69,7 @@ class GuestListJsonView(GuestListView):
 
     def render_to_response(self, context, **response_kwargs):
         json_context = {
-            'names': context.get('names'),
+            'names': list(context.get('names')),
             'guestlist_id': getattr(context.get('guestList'), 'id'),
             'event_id': getattr(context.get('event'), 'id'),
         }

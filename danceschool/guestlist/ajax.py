@@ -26,5 +26,5 @@ def getGuestList(request):
         return JsonResponse({})
 
     return JsonResponse({
-        'names': guestList.getListForEvent(event),
+        'names': guestList.getListForEvents([event,]),
     })

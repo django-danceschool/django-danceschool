@@ -30,7 +30,7 @@ def getList(
     if guestList:
         applicable_lists = GuestList.objects.filter(id__in=getattr(guestList, 'id', guestList))
     else:
-        # This is the same logic as the appliesToEvent() method of GuestList
+        # This is the same logic as the appliesToEvents() method of GuestList
         applicable_lists = GuestList.objects.filter(
             Q(individualEvents__in=events) |
             Q(eventSessions__in=events.filter(session__isnull=False).values_list(
@@ -51,7 +51,7 @@ def getList(
             queryset = this_list.getListForEvents(events, **kwargs).order_by()
         else:
             queryset = queryset.union(
-                this_list.getListForEvent(events, **kwargs).order_by()
+                this_list.getListForEvents(events, **kwargs).order_by()
             )
 
     return queryset

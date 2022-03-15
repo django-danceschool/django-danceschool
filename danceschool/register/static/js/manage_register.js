@@ -533,6 +533,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 success: function(response){
                     $('#guestInfoTable').removeClass('d-none');
 
+                    console.log(response);
+
                     $.each(response.events, function() {
                         $('#guestInfoExample tr').clone().appendTo($('#guestInfoTable tbody'));
                         var this_row = $('#guestInfoTable tbody tr:last');
@@ -547,6 +549,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
                         this_row.find('.customerCheckIn').data('event-id', this.eventId);
                         this_row.find('.customerCheckIn').data('occurrence-id', this.occurrenceId);
                         this_row.find('.guestInfoEvent').text(this.eventName);
+
+                        var nameField = this.firstName + ' ' + this.lastName;
+                        if (this.email) {
+                            nameField += '<br />' + this.email;
+                        }
+                        this_row.find('.guestInfoName').html(nameField);
+
                         this_row.find('.guestInfoType').text(this.guestType);
 
                         var extras_text="";

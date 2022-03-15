@@ -31,7 +31,7 @@
 	<tbody id="guestListBody">
     {% for name in names %}
     	<tr>
-			<td>{{ name.firstName }} {{ name.lastName }}</td>
+			<td>{{ name.first }} {{ name.last }}</td>
 			<td>{{ name.guestType }}</td>
     	</tr>
     {% endfor %}
@@ -56,7 +56,7 @@
 					$("#guestListBody").empty();
 
 					$.each(data.names, function(index, item) {
-						$("#guestListBody").append('<tr><td>' + item.firstName + ' ' + item.lastName + '</td><td>' + item.guestType + '</td></tr>');
+						$("#guestListBody").append('<tr><td>' + item.first + ' ' + item.last + '</td><td>' + item.guestType + '</td></tr>');
 					});
 					$('#guestListTable').trigger('update');
 				},

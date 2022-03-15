@@ -265,8 +265,8 @@ class GuestList(models.Model):
                 EventRegistration.objects.filter(
                     filters & Q(registration__final=True) & Q(event__in=events)
                 ).annotate(
-                    first=F('customer__firstName'), last=F('customer__lastName'),
-                    contact=F('email'),
+                    first=F('customer__first_name'), last=F('customer__last_name'),
+                    contact=F('customer__email'),
                     modelType=Value('Registration', output_field=models.CharField()),
                     guestListId=Value(self.id, output_field=models.IntegerField()),
                     guestType=Value(_('Registered'), output_field=models.CharField()),
