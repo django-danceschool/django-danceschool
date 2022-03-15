@@ -998,7 +998,10 @@ class ExpenseItem(models.Model):
         allocation_by_event = self.allocationByEvent
         return allocation_by_event.get(event.id, {}).get('allocation', 0)
 
-    def getAllocationForOccurrence(self, occurrence):
+    def getAllocationForOccurrence(self, **kwargs):
+        occurrence = kwargs.get('occurrence', None)
+        if not occurrence:
+            return 0
         allocation_by_occurrence = self.allocationByOccurrence
         return allocation_by_occurrence.get(
             (occurrence.id, occurrence.event.id), {}
@@ -1297,7 +1300,10 @@ class RevenueItem(models.Model):
             for x in occurrences
         }
 
-    def getAllocationForOccurrence(self, occurrence):
+    def getAllocationForOccurrence(self, **kwargs):
+        occurrence = kwargs.get('occurrence', None)
+        if not occurrence:
+            return 0
         allocation_by_occurrence = self.allocationByOccurrence
         return allocation_by_occurrence.get(
             (occurrence.id, occurrence.event.id), {}
