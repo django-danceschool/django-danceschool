@@ -514,7 +514,21 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         event = None
         if event_id:
             try:
-                event = Event.objects.get(id=event_id)
+                event = Event.objects.prefetch_related(
+                    'eventoccurrence_set'
+                ).get(id=event_id)
+            except ObjectDoesNotExist:
+                pass
+
+        try:
+            occurrence_id = int(self.kwargs.get('occurrence'))
+        except (ValueError, TypeError):
+            occurrence_id = None
+
+        occurrence = None
+        if event and occurrence_id:
+            try:
+                occurrence = event.eventoccurrence_set.get(id=occurrence_id)
             except ObjectDoesNotExist:
                 pass
 
@@ -526,7 +540,16 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'endDate': getDateTimeFromGet(request, 'endDate'),
             'basis': request.GET.get('basis'),
             'event': event,
+            'occurrence': occurrence,
+            'allocationBasis': {},
         })
+
+        # The allocation basis determines whether expenses are reported in full
+        # or only fractionally.
+        if event and occurrence:
+            kwargs['allocationBasis']['event'] = event
+        if occurrence:
+            kwargs['allocationBasis']['occurrence'] = occurrence
 
         if kwargs.get('basis') not in EXPENSE_BASES.keys():
             kwargs['basis'] = 'accrualDate'
@@ -545,7 +568,8 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         startDate = kwargs.get('startDate')
         endDate = kwargs.get('endDate')
         event = kwargs.get('event')
-
+        occurrence = kwargs.get('occurrence')
+        allocationBasis = kwargs.get('allocationBasis')
         basis = kwargs.get('basis')
 
         context.update({
@@ -557,6 +581,10 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         if event:
             timeFilters['event'] = event
             context['rangeTitle'] += '%s ' % event.name
+
+        if occurrence:
+            timeFilters['event__eventoccurrence'] = occurrence
+            context['rangeTitle'] += ': %s ' % occurrence.timeDescription
 
         if startDate:
             timeFilters['%s__gte' % basis] = startDate
@@ -660,11 +688,11 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             })
             context.update({
                 'allocatedVenueTotal': sum([
-                    x.getAllocationForEvent(event) * x.total
+                    x.getAllocation(**allocationBasis) * x.net
                     for x in context['allocatedVenueExpenseItems']
                 ]),
                 'allocatedStaffTotal': sum([
-                    x.getAllocationForEvent(event) * x.total
+                    x.getAllocation(**allocationBasis) * x.net
                     for x in context['allocatedStaffExpenseItems']
                 ])
             })
@@ -692,85 +720,11 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
                     getConstant('financial__venueRentalExpenseCat')
                 ]
             ).order_by('category'),
-            'expenseCategoryTotals': ExpenseCategory.objects.filter(
-                expenseitem__in=expenseItems
-            ).annotate(
-                category_total=Sum('expenseitem__total'),
-                category_adjustments=Sum('expenseitem__adjustments'),
-                category_fees=Sum('expenseitem__fees')
-            ).annotate(
-                category_net=F('category_total') + F('category_adjustments') + F('category_fees')
-            ),
-        })
-        context.update({
-            'instructionExpenseInstructorTotals': StaffMember.objects.filter(
-                transactionparty__expenseitem__in=context['instructionExpenseItems']
-            ).annotate(
-                instructor_total=Sum('transactionparty__expenseitem__total'),
-                instructor_adjustments=Sum('transactionparty__expenseitem__adjustments'),
-                instructor_fees=Sum('transactionparty__expenseitem__fees')
-            ).annotate(
-                instructor_net=F('instructor_total') + F('instructor_adjustments') + F('instructor_fees')
-            ),
-            'instructionExpenseOtherTotal': context['instructionExpenseItems'].filter(
-                payTo__staffMember__isnull=True
-            ).annotate(
-                net=F('total') + F('adjustments') + F('fees')
-            ).aggregate(
-                instructor_total=Sum('total'),
-                instructor_adjustments=Sum('adjustments'),
-                instructor_fees=Sum('fees'),
-                instructor_net=Sum('net')
-            ),
-
-            'venueExpenseVenueTotals': Location.objects.filter(
-                transactionparty__expenseitem__in=context['venueExpenseItems']
-            ).annotate(
-                location_total=Sum('transactionparty__expenseitem__total'),
-                location_adjustments=Sum('transactionparty__expenseitem__adjustments'),
-                location_fees=Sum('transactionparty__expenseitem__fees')
-            ).annotate(
-                location_net=F('location_total') + F('location_adjustments') + F('location_fees')
-            ),
-            'venueExpenseOtherTotal': context['venueExpenseItems'].filter(
-                payTo__location__isnull=True
-            ).annotate(
-                location_net=F('total') + F('adjustments') + F('fees')
-            ).aggregate(
-                location_total=Sum('total'),
-                location_adjustments=Sum('adjustments'),
-                location_fees=Sum('fees'), location_net=Sum('net')
-            ),
-
-            'totalInstructionExpenses': sum([
-                x.category_net or 0 for x in
-                context['expenseCategoryTotals'].filter(
-                    id__in=[
-                        getConstant('financial__classInstructionExpenseCat').id,
-                        getConstant('financial__assistantClassInstructionExpenseCat').id
-                    ]
-                )
-            ]),
-            'totalVenueExpenses': sum([
-                x.category_net or 0 for x in
-                context['expenseCategoryTotals'].filter(
-                    id=getConstant('financial__venueRentalExpenseCat').id
-                )
-            ]),
-            'totalOtherExpenses': sum([
-                x.category_net or 0 for x in
-                context['expenseCategoryTotals'].exclude(
-                    id__in=[
-                        getConstant('financial__classInstructionExpenseCat').id,
-                        getConstant('financial__assistantClassInstructionExpenseCat').id,
-                        getConstant('financial__venueRentalExpenseCat').id
-                    ]
-                )
-            ]),
-
             'totalExpenses': (
-                sum([x.category_net or 0 for x in context['expenseCategoryTotals']]) +
-                context.get('allocatedTotal', 0)
+                sum([
+                    x.getAllocation(**allocationBasis) * x.net
+                    for x in expenseItems
+                ])
             ),
         })
 
@@ -781,50 +735,9 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'otherRevenueItems': revenueItems.exclude(
                 category=getConstant('financial__registrationsRevenueCat')
             ).order_by('category'),
-            'revenueCategoryTotals': RevenueCategory.objects.filter(
-                revenueitem__in=revenueItems
-            ).annotate(
-                category_total=Sum('revenueitem__total'),
-                category_adjustments=Sum('revenueitem__adjustments'),
-                category_fees=Sum('revenueitem__fees')
-            ).annotate(
-                category_net=F('category_total') + F('category_adjustments') - F('category_fees')
-            ),
-        })
-        context.update({
-            'registrationRevenueEventTotals': Event.objects.filter(
-                revenueitem__in=context['registrationRevenueItems']
-            ).annotate(
-                event_total=Sum('revenueitem__total'),
-                event_adjustments=Sum('revenueitem__adjustments'),
-                event_fees=Sum('revenueitem__fees')
-            ).annotate(
-                event_net=F('event_total') + F('event_adjustments') - F('event_fees')
-            ),
-            'registrationRevenueOtherTotal': context['registrationRevenueItems'].filter(
-                event__isnull=True
-            ).annotate(
-                event_net=F('total') + F('adjustments') - F('fees')
-            ).aggregate(
-                event_total=Sum('total'),
-                event_adjustments=Sum('adjustments'),
-                event_fees=Sum('fees'),
-                event_net=Sum('net')
-            ),
-
-            'totalRegistrationRevenues': sum([
-                x.category_net or 0 for x in
-                context['revenueCategoryTotals'].filter(
-                    id=getConstant('financial__registrationsRevenueCat').id
-                )
+            'totalRevenues': sum([
+                x.getAllocation(**allocationBasis) * x.net for x in revenueItems
             ]),
-            'totalOtherRevenues': sum([
-                x.category_net or 0 for x in
-                context['revenueCategoryTotals'].exclude(
-                    id=getConstant('financial__registrationsRevenueCat').id
-                )
-            ]),
-            'totalRevenues': sum([x.category_net or 0 for x in context['revenueCategoryTotals']]),
         })
 
         context.update({

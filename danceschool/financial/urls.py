@@ -80,7 +80,10 @@ urlpatterns = [
         'finances/event/<slug:event>/',
         FinancialDetailView.as_view(), name='financialEventDetailView'
     ),
-
+    path(
+        'finances/event/<slug:event>/<int:occurrence>/',
+        FinancialDetailView.as_view(), name='financialEventOccurrenceDetailView'
+    ),
     path(
         'finances/daily/csv/', FinancesByDateView.as_view(as_csv=True),
         name='financesByDateCSV'

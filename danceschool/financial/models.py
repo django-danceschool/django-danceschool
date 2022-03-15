@@ -864,50 +864,153 @@ class ExpenseItem(models.Model):
         return theTime
     expenseEndDate.fget.short_description = _('End Date')
 
+    def getDefaultOccurrenceAllocation(self):
+        '''
+        Provide a default allocation across event occurrences that is solely
+        based on the duration of all occurrences of the event.
+        '''
+        if not self.event:
+            return {}
+
+        occurrences = self.event.eventoccurrence_set.annotate(
+            dur=ExpressionWrapper(
+                F('endTime') - F('startTime'), output_field=DurationField()
+            ),
+        )
+        sum_dur = sum([x.dur.seconds for x in occurrences])
+
+        return {
+            (x.id, x.event.id): {
+                'allocation': x.dur.seconds/sum_dur,
+                'total_duration': sum_dur,
+                'duration': x.dur.seconds,
+            }
+            for x in occurrences
+        }
+
     @property
-    def allocationByEvent(self):
+    def allocationByOccurrence(self):
         '''
         Since expenses such as periodic staffing or venue rentals can have
-        multiple purposes, they should be allocated among those events in
-        financial summaries. This method calculates the allocation across each
-        event that is associated with it.
+        multiple purposes, they should be allocated among those events and/or
+        event occurrences in financial summaries. This method calculates the
+        allocation across each occurrence that is associated with the expense.
         '''
 
        # First, ensure that this expense is allocated across only one content
         # type. Otherwise, the expense is currently inallocable.
         content_types = list(set(self.expensepurpose_set.values_list('content_type', flat=True)))
-        if len(content_types) > 1:
-            return {}
+        if len(content_types) != 1:
+            return self.getDefaultOccurrenceAllocation()
+
         model_class = ContentType.objects.get(id=content_types[0]).model_class()
 
         # This method also requires that the model have a related_expenses
         # GenericRelation. These are provided by default for EventStaffMember
         # and EventOccurrence, since those expenses can be auto-generated.
         if not hasattr(model_class, 'related_expenses'):
-            return {}
+            return self.getDefaultOccurrenceAllocation()
 
         # Get the associated objects. 
         related_objects = model_class.objects.filter(related_expenses__item=self)
 
         if model_class == EventOccurrence:
-            allocation_by_event = related_objects.annotate(
+            occurrences = related_objects.select_related('event').annotate(
                 dur=ExpressionWrapper(
                     F('endTime') - F('startTime'), output_field=DurationField()
                 ),
-            ).values('event').annotate(event_dur=Coalesce(Sum('dur'), timedelta()))
-            total_seconds = sum([x['event_dur'].seconds for x in allocation_by_event])
-            return {x['event']: x['event_dur'].seconds/total_seconds for x in allocation_by_event}
-
-        elif model_class == EventStaffMember:
-            allocation_by_event = related_objects.values('event').annotate(
-                event_dur=Coalesce(Sum('event__duration'), 0)
             )
-            total_hours = sum([x['event_dur'] for x in allocation_by_event])
-            return {x['event']: x['event_dur']/total_hours for x in allocation_by_event}
+            sum_dur = sum([x.dur.seconds for x in occurrences])
+
+            return {
+                (x.id, x.event.id): {
+                    'allocation': x.dur.seconds/sum_dur,
+                    'total_duration': sum_dur,
+                    'duration': x.dur.seconds,
+                }
+                for x in occurrences
+            }
+        elif model_class == EventStaffMember:
+            individual_allocations = [
+                x.allocationByOccurrence for x in related_objects
+            ]
+            aggregate_allocation = {}
+            total_duration = 0
+            for a in individual_allocations:
+                for k,v in a.items():
+                    aggregate_allocation[k] = {
+                        'allocation': (
+                            aggregate_allocation.get(k, {}.get('allocation', 0)) +
+                            v.get('allocation', 0)*v.get('duration', 0)
+                        ),
+                        'duration': aggregate_allocation.get(k,{}).get('duration', 0) + v.get('duration', 0),
+                    }
+                    total_duration += v.get('duration', 0)
+
+            for k,v in aggregate_allocation.items():
+                aggregate_allocation[k]['allocation'] /= aggregate_allocation[k]['duration']
+                aggregate_allocation[k]['total_duration'] = total_duration
+            return aggregate_allocation
+
+    @property
+    def allocationByEvent(self):
+        '''
+        Since expenses such as periodic staffing or venue rentals can have
+        multiple purposes, they should be allocated among those events in
+        financial summaries. This method calculates the allocation across each
+        event that is associated with it, aggregating from the occurrence level.
+        '''
+
+        # No need to aggregate occurrence allocations if a specific event is
+        # specified.
+        if self.event:
+            this_dur = (self.event.duration or 0)*3600
+            return {
+                self.event.id: {
+                    'allocation': 1,
+                    'duration': this_dur,
+                    'total_duration': this_dur,                
+                }
+            }
+
+        occ_allocation = self.allocationByOccurrence
+        if not occ_allocation:
+            return {}
+
+        event_allocation = {}
+        total_duration = 0
+        for k,v in occ_allocation.items():
+            event_allocation[k[1]] = {
+                'allocation': (
+                    event_allocation.get(k[1], {}.get('allocation', 0)) +
+                    v.get('allocation', 0)*v.get('duration', 0)
+                ),
+                'duration': event_allocation.get(k[1],{}).get('duration', 0) + v.get('duration', 0)
+            }
+            total_duration += v.get('duration', 0)
+
+        for k,v in event_allocation.items():
+            event_allocation[k]['allocation'] /= event_allocation[k]['duration']
+            event_allocation[k]['total_duration'] = total_duration
+        return event_allocation
 
     def getAllocationForEvent(self, event):
         allocation_by_event = self.allocationByEvent
-        return allocation_by_event.get(event.id, None)
+        return allocation_by_event.get(event.id, {}).get('allocation', 0)
+
+    def getAllocationForOccurrence(self, occurrence):
+        allocation_by_occurrence = self.allocationByOccurrence
+        return allocation_by_occurrence.get(
+            (occurrence.id, occurrence.event.id), {}
+        ).get('allocation', 0)
+
+    def getAllocation(self, event=None, occurrence=None):
+        if occurrence:
+            return self.getAllocationForOccurrence(self, occurrence)
+        elif event:
+            return self.getAllocationForEvent(self, event)
+        else:
+            return 1
 
     def save(self, *args, **kwargs):
         '''
@@ -1035,8 +1138,6 @@ class ExpenseItem(models.Model):
                 name='unique_payment_per_rule_recipient_time_and_category'
             ),
         ]
-
-
 
 
 class RevenueItem(models.Model):
@@ -1170,6 +1271,44 @@ class RevenueItem(models.Model):
             net -= self.taxes
         return net
     netRevenue.fget.short_description = _('Net revenue')
+
+    @property
+    def allocationByOccurrence(self):
+        '''
+        Provide a default allocation across event occurrences that is solely
+        based on the duration of all occurrences of the event.
+        '''
+        if not self.event:
+            return {}
+
+        occurrences = self.event.eventoccurrence_set.annotate(
+            dur=ExpressionWrapper(
+                F('endTime') - F('startTime'), output_field=DurationField()
+            ),
+        )
+        sum_dur = sum([x.dur.seconds for x in occurrences])
+
+        return {
+            (x.id, x.event.id): {
+                'allocation': x.dur.seconds/sum_dur,
+                'total_duration': sum_dur,
+                'duration': x.dur.seconds,
+            }
+            for x in occurrences
+        }
+
+    def getAllocationForOccurrence(self, occurrence):
+        allocation_by_occurrence = self.allocationByOccurrence
+        return allocation_by_occurrence.get(
+            (occurrence.id, occurrence.event.id), {}
+        ).get('allocation', 0)
+
+    def getAllocation(self, event=None, occurrence=None):
+        if occurrence:
+            return self.getAllocationForOccurrence(self, occurrence)
+        elif event and event != self.event:
+            return 0
+        return 1
 
     def save(self, *args, **kwargs):
         '''

@@ -2,7 +2,9 @@ from django.db import models
 from django.contrib.auth.models import User, Group
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Q, Sum, F, Case, When, Value, Count
+from django.db.models import (
+    Q, Sum, F, Case, When, Value, Count, DurationField, ExpressionWrapper
+)
 from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
@@ -1707,6 +1709,39 @@ class EventStaffMember(models.Model):
     )
     creationDate = models.DateTimeField(_('Creation date'), auto_now_add=True)
     modifyDate = models.DateTimeField(_('Last modified date'), auto_now=True)
+
+    @property
+    def allocationByOccurrence(self):
+        '''
+        Return a fraction of the event time associated with each occurrence so
+        that things like event staff expenses can be allocated across event
+        occurrences.
+        '''
+        occurrences = (
+            self.occurrences.filter(cancelled=False).annotate(
+                dur=ExpressionWrapper(
+                    F('endTime') - F('startTime'), output_field=DurationField()
+                ),
+            ) or
+            self.event.eventoccurrence_set.filter(cancelled=False).annotate(
+                dur=ExpressionWrapper(
+                    F('endTime') - F('startTime'), output_field=DurationField()
+                ),
+            )
+        )
+        sum_dur = sum([x.dur.seconds for x in occurrences])
+        total_dur = (self.specifiedHours or 0)*3600 or sum_dur
+
+        return {
+            (x.id, x.event.id): {
+                'allocation': x.dur.seconds/sum_dur,
+                'total_duration': total_dur,
+                'duration': (
+                    (x.dur.seconds/sum_dur) * total_dur
+                )
+            }
+            for x in occurrences
+        }
 
     @property
     def netHours(self):

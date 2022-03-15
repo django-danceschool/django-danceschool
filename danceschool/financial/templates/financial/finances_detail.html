@@ -1,5 +1,5 @@
 {% extends "cms/admin_home.html" %}
-{% load danceschool_tags sekizai_tags i18n %}
+{% load danceschool_tags financial_tags sekizai_tags i18n %}
 
 {% block content %}
 
@@ -63,7 +63,7 @@
 	<thead class="thead-default">
 		<tr>
 			<th colspan="2">{% trans "Registrations:" %}</th>
-			<th>{{ currencySymbol }}{{ totalRegistrationRevenues|floatformat:"2" }} </th>
+			<th>{{ currencySymbol }}{% getAllocatedSum registrationRevenueItems 'net' %}</th>
 		</tr>
 	</thead>
 	{% regroup registrationRevenueItems by event as event_item_list %}
@@ -73,7 +73,7 @@
 					<th colspan="2">
 						<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>{{ event.grouper|default:grouper_default }}
 					</th>
-					<td>{% get_item_by_key registrationRevenueEventTotals 'id' event.grouper.id as cat %} {{ currencySymbol }}{{ cat.event_net|default_if_none:registrationRevenueOtherTotal.event_net|floatformat:"2" }}</td>
+					<td>{{ currencySymbol }}{% getAllocatedSum event.list 'net' %}</td>
 				</tr>
 			</tbody>
 			<tbody id="accordionevent_{{ event.grouper.id }}" class="collapse">
@@ -91,7 +91,7 @@
 							&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
 						{% endif %}{% endspaceless %}
 					</td>
-					<td>{{ currencySymbol }}{{ item.net|floatformat:"2" }}</td>
+					<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 				</tr>
 			{% endfor %}
 			</tbody>
@@ -103,7 +103,7 @@
 		<thead class="thead-default">
 			<tr>
 				<th colspan="2">{% trans "Other Revenues" %}:</th>
-				<th>{{ currencySymbol }}{{ totalOtherRevenues|floatformat:"2" }} </th>
+				<th>{{ currencySymbol }}{% getAllocatedSum otherRevenueItems 'net' %}</th>
 			</tr>
 		</thead>
 		{% regroup otherRevenueItems by category as other_item_list %}
@@ -113,7 +113,7 @@
 						<th colspan="2">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper|default:grouper_default }}
 						</th>
-						<td>{% get_item_by_key revenueCategoryTotals 'id' category.grouper.id as cat %} {{ currencySymbol }}{{ cat.category_net|floatformat:"2" }}</td>
+						<td>{{ currencySymbol }}{% getAllocatedSum category.list 'net' %}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionotherrevenue_{{ category.grouper.id }}" class="collapse">
@@ -131,7 +131,7 @@
 								&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
-						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
+						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 					</tr>
 				{% endfor %}
 				</tbody>
@@ -148,7 +148,7 @@
 		<thead class="thead-default">
 			<tr>
 				<th colspan="2">{% trans "Instruction" %}:</th>
-				<th>{{ currencySymbol }}{{ totalInstructionExpenses|floatformat:"2" }}</th>
+				<th>{{ currencySymbol }}{% getAllocatedSum instructionExpenseItems 'net' %}</th>
 			</tr>
 		</thead>
 		{% regroup instructionExpenseItems by payTo as teacher_item_list %}
@@ -159,7 +159,7 @@
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>
 							{{ teacher.grouper.name|default:grouper_default }}
 						</th>
-						<td>{% get_item_by_key instructionExpenseInstructorTotals 'transactionparty' teacher.grouper.id as cat %} {{ currencySymbol }}{{ cat.instructor_net|default:instructionExpenseOtherTotal.instructor_net|floatformat:"2" }}</td>
+						<td>{{ currencySymbol }}{% getAllocatedSum teacher.list 'net' %}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordioninstructor_{{ teacher.grouper.id }}" class="collapse">
@@ -181,7 +181,7 @@
 								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
-						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
+						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 					</tr>
 				{% endfor %}
 				</tbody>
@@ -194,7 +194,7 @@
 		<thead class="thead-default">
 			<tr>
 				<th colspan="2">{% trans "Venue Rental" %}:</th>
-				<th>{{ currencySymbol }}{{ totalVenueExpenses|floatformat:"2" }}</th>
+				<th>{{ currencySymbol }}{% getAllocatedSum venueExpenseItems 'net' %}</th>
 			</tr>
 		</thead>
 		{% regroup venueExpenseItems by payTo as venue_item_list %}
@@ -204,7 +204,7 @@
 						<th colspan="2">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ venue.grouper.name|default:grouper_default }}
 						</th>
-						<td>{% get_item_by_key venueExpenseVenueTotals 'id' venue.grouper.id as cat %} {{ currencySymbol }}{{ cat.location_net|default:venueExpenseOtherTotal.location_net|floatformat:"2" }}</td>
+						<td>{{ currencySymbol }}{% getAllocatedSum venue.list 'net' %}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionlocation_{{ venue.grouper.id }}" class="collapse">
@@ -224,7 +224,7 @@
 								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
-						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
+						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 					</tr>
 				{% endfor %}
 				</tbody>
@@ -238,7 +238,7 @@
 		<thead class="thead-default">
 			<tr>
 				<th colspan="3">{% trans "Other Expenses" %}:</th>
-				<th>{{ currencySymbol }}{{ totalOtherExpenses|floatformat:"2" }}</th>
+				<th>{{ currencySymbol }}{% getAllocatedSum otherExpenseItems 'net' %}</th>
 			</tr>
 		</thead>
 		{% regroup otherExpenseItems by category as category_item_list %}
@@ -248,7 +248,7 @@
 						<th colspan="3">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper.name|default:grouper_default }}
 						</th>
-						<td>{% get_item_by_key expenseCategoryTotals 'id' category.grouper.id as cat %} {{ currencySymbol }}{{ cat.category_net|floatformat:"2" }}</td>
+						<td>{{ currencySymbol }}{% getAllocatedSum category.list 'net' %}</td>
 					</tr>
 				</tbody>
 				<tbody id="accordionotherexpense_{{ category.grouper.id }}" class="collapse">
@@ -270,7 +270,7 @@
 								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
-						<td>{{ currencySymbol }}{{ item.net|floatformat:"2"  }}</td>
+						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 					</tr>
 				{% endfor %}
 				</tbody>
@@ -305,7 +305,7 @@
 					&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
 				{% endif %}{% endspaceless %}
 			</td>
-			<td>{{ currencySymbol }}{{ item.allocationByEvent|get_item:event.id|multiply:item.net|floatformat:"2" }}</td>
+			<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 		</tr>
 	{% endfor %}
 	</tbody>
@@ -339,7 +339,7 @@
 					&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
 				{% endif %}{% endspaceless %}
 			</td>
-			<td>{{ currencySymbol }}{{ item.allocationByEvent|get_item:event.id|multiply:item.net|floatformat:"2" }}</td>
+			<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
 		</tr>
 	{% endfor %}
 	</tbody>
