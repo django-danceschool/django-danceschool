@@ -76,7 +76,7 @@ class SquarePaymentRecord(PaymentRecord):
                     r = refund_response.body.get('refund', {})
                     fees += sum([
                         f.get('amount_money', {}).get('amount', 0) / 100
-                        for f in r.get('processing_fee')
+                        for f in r.get('processing_fee', [])
                     ])
 
         return fees
