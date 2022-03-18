@@ -121,15 +121,19 @@ def getApplicableDiscountCombos(
         else:
             cart_lists = pointbased_cart_object_lists
 
-        for cart_list in cart_lists.values():
+        for p, cart_list in cart_lists.items():
             for y in cart_list:
                 # for each component of the potential discount that has not already been matched
                 for j, z in enumerate(necessary_discount_items):
                     # All items are a match unless shown otherwise below
                     match_flag = True
 
+                    # Check that this component requires this type of points.
+                    if z.pointGroup != p:
+                        match_flag = False
+
                     # Check for matches in weekdays and levels:
-                    if z.weekday and y.event.weekday != z.weekday:
+                    elif z.weekday and y.event.weekday != z.weekday:
                         match_flag = False
                     elif (
                         z.level and hasattr(y.event, 'series') and
