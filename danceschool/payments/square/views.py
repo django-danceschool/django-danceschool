@@ -1,5 +1,4 @@
-from http import server
-from django.http import HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
+from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
@@ -19,6 +18,7 @@ import json
 from base64 import b64decode
 import binascii
 from urllib.parse import unquote
+from time import sleep
 
 from danceschool.core.models import Invoice
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
@@ -256,6 +256,8 @@ class ProcessPointOfSalePaymentView(View):
         payment = None
 
         if serverTransId:
+            # Added to avoid errors associated with Square API not being up to date.
+            sleep(1)
             response = client.transactions.retrieve_transaction(
                 transaction_id=serverTransId, location_id=location_id
             )
