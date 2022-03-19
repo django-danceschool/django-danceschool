@@ -29,8 +29,8 @@ class CustomerGuestAutocompleteForm(forms.Form):
         # with filtering unioned querysets.
         self.fields['name'] = forms.ModelChoiceField(
             queryset=Customer.objects.annotate(
-                firstName=F('first_name'), lastName=F('last_name')
-            ).values('firstName', 'lastName'),
+                first=F('first_name'), last=F('last_name')
+            ).values('first', 'last'),
             widget=autocomplete.ModelSelect2(
                 url='registerAutocomplete',
                 forward=['date'],

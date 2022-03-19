@@ -2,6 +2,7 @@ from django.db.models import Q, F, Value, CharField, IntegerField
 from django.utils.translation import gettext
 from django.utils.html import format_html
 from django.apps import apps
+from django.core.cache import cache
 
 from dal import autocomplete
 from datetime import timedelta
@@ -42,12 +43,28 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
         except ValueError:
             date = None
 
-        name_filters = Q()
-        if self.q:
-            words = self.q.split(' ')
+        # These filters are applied after the query is complete or the cache is
+        # referenced.
+        def filter_names(q=''):
+            words = q.split(' ')
             lastName = words.pop()
             firstName = words.pop() if words else lastName
-            name_filters = Q(first__icontains=firstName) | Q(last__icontains=lastName)
+            return lambda x: (
+                firstName.lower() in x.get('first', '').lower() or
+                lastName.lower() in x.get('last', '').lower()
+            )
+
+        cache_key = 'RegisterAutoComplete_{}'.format(
+            date.strftime("%Y%m%d") if hasattr(date, "strftime") else None
+        )
+
+        # Use the cached value as long as it exists (5 minutes) and as long as
+        # it actually returns one or more results.
+        cached_queryset = cache.get(cache_key)
+        if cached_queryset:
+            filtered_cache = list(filter(filter_names(self.q), cached_queryset))
+            if filtered_cache:
+                return filtered_cache
 
         customer_filters = Q()
         if date:
@@ -74,7 +91,7 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             modelType=Value('Customer', output_field=CharField()),
             guestListId=Value(None, output_field=IntegerField()),
             guestType=Value(gettext('Customer'), output_field=CharField()),
-        ).filter(name_filters).filter(customer_filters).values(
+        ).filter(customer_filters).values(
             'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
             'guestType'
         ).order_by()
@@ -84,7 +101,7 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             helpers = importlib.import_module('danceschool.guestlist.helpers')
 
             guests = helpers.getList(
-                events=today_events, filters=name_filters, includeRegistrants=False
+                events=today_events, includeRegistrants=False
             ).values(
                 'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
                 'guestType'
@@ -94,4 +111,7 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             else:
                 queryset = guests
 
-        return queryset
+        # Cache this query for 5 minutes to speed up the check-in process.
+        queryset_list = list(queryset)
+        cache.set(cache_key, queryset_list, 300)
+        return list(filter(filter_names(self.q), queryset_list))
