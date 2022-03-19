@@ -196,6 +196,14 @@ class GuestList(models.Model):
         for component in components:
             if events and self.appliesToEvents(events):
                 component_filters = component_filters | self.getComponentFilters(component, events=events)
+            elif events:
+                for event in events:
+                    today_flag = False
+                    if self.appliesToEvents([event,]):
+                        component_filters = component_filters | self.getComponentFilters(component, events=[event,])
+                    elif not today_flag:
+                        component_filters | self.getComponentFilters(component, dateTime=timezone.now())
+                        today_flag = True
             else:
                 component_filters = component_filters | self.getComponentFilters(component, dateTime=timezone.now())
 
