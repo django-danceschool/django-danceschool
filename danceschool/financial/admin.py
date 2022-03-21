@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
@@ -147,15 +148,17 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
         'expenseRule'
     )
     readonly_fields = (
-        'eventLink', 'submissionUser', 'expenseRule', 'expenseDateRange'
+        'eventLink', 'duplicateLink', 'submissionUser', 'expenseRule',
+        'expenseDateRange'
     )
-    actions = ('approveExpense', 'unapproveExpense')
+    actions = ('approveExpense', 'unapproveExpense', 'duplicateExpense')
 
     fieldsets = (
         (_('Basic Info'), {
             'fields': (
                 'category', 'description', 'payTo', 'hours', 'wageRate',
-                'total', 'adjustments', 'fees', 'reimbursement', 'comments'
+                'total', 'adjustments', 'fees', 'reimbursement', 'comments',
+                'duplicateLink',
             )
         }),
         (_('Series/Event'), {
@@ -200,6 +203,15 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
     eventLink.allow_tags = True
     eventLink.short_description = _('Related Links')
 
+    def duplicateLink(self, obj):
+        if obj.id:
+            return mark_safe(
+                '<p><a class="btn" href="%s">%s</a></p>' % (
+                    reverse('duplicateExpense') + "?ids=%s" % obj.id, _('Duplicate Expense'))
+            )
+    duplicateLink.allow_tags = True
+    duplicateLink.short_description = _('Duplicate This Expense')
+
     def approveExpense(self, request, queryset):
         rows_updated = queryset.update(approved=_('Approved'))
         if rows_updated == 1:
@@ -217,6 +229,11 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
             message_bit = "%s expense items were" % rows_updated
         self.message_user(request, "%s successfully marked as not approved." % message_bit)
     unapproveExpense.short_description = _('Mark Expense Items as not approved')
+
+    def duplicateExpense(self, request, queryset):
+        selected = request.POST.getlist(ACTION_CHECKBOX_NAME)
+        return HttpResponseRedirect(reverse('duplicateExpense') + "?ids=%s" % ", ".join(selected))
+    duplicateExpense.short_description = _('Duplicate Expense Items')
 
     def get_changelist_form(self, request, **kwargs):
         ''' Ensures that the autocomplete view works for payment methods. '''

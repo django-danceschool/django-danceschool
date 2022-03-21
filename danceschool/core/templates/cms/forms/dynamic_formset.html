@@ -1,0 +1,35 @@
+{% load crispy_forms_tags sekizai_tags static %}
+<table class="mb-4">
+{{ formset.management_form|crispy }}
+
+    {% for form in formset.forms %}
+            <tr class="form-row align-items-end {% cycle 'row1' 'row2' %} formset_row-{{ formset.prefix }}">
+                {% for field in form.visible_fields %}
+                <td class="col">
+                    {# Include the hidden fields in the form #}
+                    {% if forloop.first %}
+                        {% for hidden in form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    {% endif %}
+                    {{ field.errors.as_ul }}
+                    {{ field|as_crispy_field }}
+                </td>
+                {% endfor %}
+                {% if add_delete_container %}<td class="col delete-container"></td>{% endif %}
+            </tr>
+    {% endfor %}
+
+</table>
+
+<script src="{% static 'django-dynamic-formset/jquery.formset.js' %}"></script>
+<script type="text/javascript">
+    $('.formset_row-{{ formset.prefix }}').formset({
+        addText: 'Add another',
+        addCssClass: 'btn btn-sm btn-outline-primary',
+        deleteText: 'Delete',
+        deleteCssClass: 'btn btn-outline-secondary mt-4 mb-3',
+        {% if add_delete_container %}deleteContainerClass: 'delete-container',{% endif %}
+        prefix: '{{ formset.prefix }}',
+    });
+</script>

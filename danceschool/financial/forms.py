@@ -4,7 +4,9 @@ from django.contrib.auth.models import User
 from django.core.validators import ValidationError
 from django.urls import reverse
 from django.db.models import Q
+from django.forms import formset_factory
 from django.forms.widgets import Select
+from django.template.loader import render_to_string
 from django.utils.encoding import force_str
 from django.utils.safestring import mark_safe
 from django.utils.html import format_html
@@ -12,7 +14,10 @@ from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, Div, Submit, HTML
+from crispy_forms.layout import (
+    Layout, Field, Div, Submit, HTML, LayoutObject, Fieldset, ButtonHolder,
+    TEMPLATE_PACK
+)
 from dal import autocomplete
 import logging
 import re
@@ -36,6 +41,22 @@ PAYBY_CHOICES = (
     (1, _('Hours of Work/Rental (paid at default rate)')),
     (2, _('Flat Payment')),
 )
+
+
+class ExpenseDuplicationFormsetLayout(LayoutObject):
+    template = "cms/forms/dynamic_formset.html"
+
+    def __init__(self, formset_name_in_context, template=None):
+        self.formset_name_in_context = formset_name_in_context
+        self.fields = []
+        if template:
+            self.template = template
+
+    def render(self, form, form_style, context, template_pack=TEMPLATE_PACK):
+        formset = context[self.formset_name_in_context]
+        return render_to_string(self.template, {
+            'formset': formset, 'add_delete_container': True
+        })
 
 
 class ExpenseCategoryWidget(Select):
@@ -499,6 +520,45 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         return media
 
 
+class ExpenseDuplicationFormsetForm(forms.Form):
+    ''' Used for bulk duplication of expense items. '''
+
+    approved = forms.BooleanField(label=_('Approved'), initial=True, required=False)
+    paid = forms.BooleanField(label=_('Paid'), initial=True, required=False)
+    paymentDate = forms.DateField(label=_('Payment date'), required=False)
+    total = forms.FloatField(label=_('Total'), min_value=0, required=False)
+
+
+class ExpenseDuplicationForm(forms.Form):
+    '''
+    This form handles the selection of options for duplicating expense items,
+    and it also handles the associated formset logic for each duplication.
+    '''
+
+    repeatEvery = forms.IntegerField(label=_('Repeat every'), min_value=1, initial=1)
+    periodicity = forms.ChoiceField(
+        label=_('Period'),
+        choices=(('D', _('Days')), ('W', _('Weeks')), ('M', _('Months')),),
+        initial='W'
+    )
+
+    def __init__(self, **kwargs):
+        self.helper = FormHelper()
+        self.helper.form_tag = True
+        self.helper.layout = Layout(
+            Div(
+                'repeatEvery',
+                'periodicity',
+                Fieldset(
+                    'Select dates and totals',
+                    ExpenseDuplicationFormsetLayout('itemDuplicates'),
+                ),
+                ButtonHolder(Submit('submit', _('Duplicate Expenses'), css_class='btn-lg')),
+                )
+            )
+        return super().__init__(**kwargs)
+
+
 class CompensationRuleUpdateForm(forms.ModelForm):
     ''' Used for bulk update of StaffMember compensation rules. '''
 
@@ -584,3 +644,8 @@ class ExpenseRuleGenerationForm(forms.Form):
             self.fields['%s_%s' % (prefix, rule.id)] = forms.BooleanField(
                 required=False, initial=True, label=rule.ruleName
             )
+
+
+ExpenseDuplicationFormset = formset_factory(
+    ExpenseDuplicationFormsetForm, extra=1
+)

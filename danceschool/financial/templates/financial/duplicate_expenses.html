@@ -1,0 +1,148 @@
+{% extends "cms/admin_home.html" %}
+{% load crispy_forms_tags i18n sekizai_tags static %}
+
+{% block content %}
+
+<h2>{% trans "Duplicate Expense Items" %}</h2>
+
+<div class="card my-4">
+    <div class="card-header">
+      <h5 class="card-title">{% trans "Selected Items" %}</h5>
+    </div>
+    {% for item in items %}
+    <div class="card-body" {% if forloop.first %}id="first-item"{% endif %}
+        data-total="{{ item.total }}" data-payment-date="{{ item.paymentDate|date:'Y-m-d' }}">
+        <h5 class="card-title">{{ item.description }}</h5>
+    
+        <dl>
+            <dt>{% trans "Category" %}:</dt><dd>{{ item.category }}</dd>
+            <dt>{% trans "Pay to" %}:</dt><dd>{{ item.payTo }}</dd>
+            <dt>{% trans "Total" %}:</dt><dd>{{ item.total }}</dd>
+            {% if item.adjustments %}<dt>{% trans "Adjustments" %}:</dt><dd>{{ item.adjustments }}</dd>{% endif %}
+            {% if item.fees %}<dt>{% trans "Fees" %}:</dt><dd>{{ item.fees }}</dd>{% endif %}
+            <dt>{% trans "Approved for Payment" %}:</dt><dd>{{ item.approved|yesno }}</dd>
+            <dt>{% trans "Paid" %}:</dt><dd>{{ item.paid|yesno }}</dd>
+            {% if item.paid %}<dt>{% trans "Payment Date" %}:</dt><dd>{{ item.paymentDate }}</dd>{% endif %}
+            {% if item.reimbursement %}<dt>{% trans "Reimbursement Expense" %}:</dt><dd>{{ item.reimbursement|yesno }}</dd>{% endif %}
+            {% if item.event %}<dt>{% trans "Associated Event" %}:</dt><dd>{{ item.event }}</dd>{% endif %}
+            {% if item.comments %}<dt>{% trans "Comments" %}:</dt><dd>{{ item.comments }}</dd>{% endif %}
+        </dl>
+    
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card my-4">
+	<div class="card-header">
+		<h5 class="card-title">{% trans "Create duplicates" %}</h5>
+	</div>
+	<div class="card-body">
+		{% crispy form %}
+	</div>
+</div>
+
+</div>
+{% addtoblock "css" %}
+<style>
+tr.dynamic-form {
+	border-top: 1px dashed #ccc;
+    padding: 2em 0;
+}
+.card-header .fa {
+  transition: .3s transform ease-in-out;
+}
+.card-header .collapsed .fa {
+  transform: rotate(90deg);
+}
+.select2-container {
+	min-width: 10em !important;
+}
+</style>
+{% endaddtoblock %}
+{% addtoblock "css" %}
+<link rel="stylesheet" href="{% static 'jquery-ui/jquery-ui.min.css' %}">
+{% endaddtoblock %}
+{% addtoblock "css" %}
+<link rel="stylesheet" href="{% static 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css' %}">
+{% endaddtoblock %}
+{% addtoblock "js" %}
+	{{ form.media }}
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript" src="{% static 'jquery-ui/jquery-ui.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript" src="{% static 'bootstrap-datepicker/js/bootstrap-datepicker.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script src="{% static 'moment/moment.min.js' %}"></script>
+{% endaddtoblock %}
+{% addtoblock "js" %}
+<script type="text/javascript">
+$(document).ready(function() {
+
+$('.dynamic-form-add a').on('click', function() {
+    makepickers();
+    set_new_item_date();
+    set_new_item_total();
+    $('.dynamic-form input[id*=-approved]').last().prop('checked', true);
+    $('.dynamic-form input[id*=-paid]').last().prop('checked', true);
+});
+
+function makepickers() {
+    // Add classes needed to make the datepair work
+    $('.dynamic-form input[id*=-paymentDate]').addClass('makeDatePicker');
+
+    $.each($('.dynamic-form'), function() {
+
+        $(this).find('.makeDatePicker').datepicker({
+            'format': 'yyyy-mm-dd',
+        });
+    });
+}
+
+function set_new_item_date() {
+    // Requires moment.js
+
+    const first_item_date = $('#first-item').data('paymentDate');
+    const repeatEvery = $('#id_repeatEvery').val();
+
+    var parsed_periodicity;
+    switch ($('#id_periodicity').val()) {
+        case "W":
+            parsed_periodicity = "week";
+            break;
+        case "D":
+            parsed_periodicity = "day";
+            break;
+        case "M":
+            parsed_periodicity = "month";
+            break;
+    }
+
+    const paymentDate_fields = $('.dynamic-form input[id*=-paymentDate]');
+
+    const new_paymentDate_field = paymentDate_fields.last()[0];
+    const old_paymentDate = moment($(paymentDate_fields.not(new_paymentDate_field).last()[0]).val());
+    if (old_paymentDate.isValid()) {
+        new_paymentDate_field.value = old_paymentDate.add(repeatEvery,parsed_periodicity).format('YYYY-MM-DD');
+    }
+
+
+}
+
+function set_new_item_total() {
+    $('.dynamic-form input[id*=-total]').last().val($('#first-item').data('total'));
+}
+
+makepickers();
+set_new_item_total();
+
+});
+</script>
+{% endaddtoblock %}
+
+{% endblock %}

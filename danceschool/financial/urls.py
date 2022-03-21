@@ -4,7 +4,8 @@ from .views import (
     StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView,
     FinancesByDateView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV,
     FinancialDetailView, ExpenseReportingView, RevenueReportingView,
-    CompensationRuleUpdateView, CompensationRuleResetView, ExpenseRuleGenerationView
+    CompensationRuleUpdateView, CompensationRuleResetView, ExpenseRuleGenerationView,
+    ExpenseDuplicationView
 )
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import (
@@ -118,6 +119,8 @@ urlpatterns = [
 
     path('finances/expenses/<slug:year>/csv/', AllExpensesViewCSV.as_view(), name='allexpensesCSV'),
     path('finances/revenues/<slug:year>/csv/', AllRevenuesViewCSV.as_view(), name='allrevenuesCSV'),
+
+    path('expenseitem/duplicate/', ExpenseDuplicationView.as_view(), name='duplicateExpense'),
 
     path('compensation/update/', CompensationRuleUpdateView.as_view(), name='updateCompensationRules'),
     path('compensation/reset/', CompensationRuleResetView.as_view(), name='resetCompensationRules'),

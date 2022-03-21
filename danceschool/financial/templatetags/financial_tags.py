@@ -8,7 +8,7 @@ register = template.Library()
 
 @register.simple_tag(takes_context=True)
 def getAllocation(context, item, property):
-    if not isinstance(item, ExpenseItem) or isinstance(item, RevenueItem):
+    if not (isinstance(item, ExpenseItem) or isinstance(item, RevenueItem)):
         return None
     basis = context.get('allocationBasis', {})
     return "{:.2f}".format(item.getAllocation(**basis) * getattr(item, property, 0))

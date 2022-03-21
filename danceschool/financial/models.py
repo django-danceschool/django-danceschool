@@ -25,6 +25,7 @@ from danceschool.core.models import (
     EventOccurrence, EventStaffMember
 )
 from danceschool.core.constants import getConstant
+from danceschool.core.utils.timezone import ensure_localtime
 
 
 def ordinal(n):
@@ -851,7 +852,7 @@ class ExpenseItem(models.Model):
             theTime = self.periodStart
         elif self.event:
             theTime = self.event.startTime
-        return theTime
+        return ensure_localtime(theTime)
     expenseStartDate.fget.short_description = _('Start Date')
 
     @property
@@ -861,7 +862,7 @@ class ExpenseItem(models.Model):
             theTime = self.periodEnd
         elif self.event:
             theTime = self.event.endTime
-        return theTime
+        return ensure_localtime(theTime)
     expenseEndDate.fget.short_description = _('End Date')
 
     def getDefaultOccurrenceAllocation(self):

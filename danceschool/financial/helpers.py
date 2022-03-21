@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db.models import (
-    Sum, Count, Q, ExpressionWrapper, F, DurationField, Case, When
+    Sum, Count, Q, ExpressionWrapper, F, DurationField, Case, When, Min
 )
 from django.db.models.functions import TruncDate, TruncMonth, Coalesce
 from django.http import HttpResponse
@@ -19,7 +19,7 @@ from danceschool.core.constants import getConstant
 from danceschool.core.models import (
     Registration, Event, EventOccurrence, EventStaffMember, InvoiceItem, Room
 )
-from danceschool.core.utils.timezone import ensure_timezone
+from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
 
 from .constants import EXPENSE_BASES
 from .models import (
@@ -1093,3 +1093,193 @@ def prepareStatementByEvent(paginate=True, **kwargs):
         return (paginator, paged_events, statementByEvent, paged_events.has_other_pages())
     else:
         return statementByEvent
+
+
+def prepareFinancialDetails(**kwargs):
+        context = kwargs.copy()
+        timeFilters = {}
+
+        # Determine the period over which the statement should be produced.
+        year = kwargs.get('year')
+        month = kwargs.get('month')
+        day = kwargs.get('day')
+        startDate = kwargs.get('startDate')
+        endDate = kwargs.get('endDate')
+        event = kwargs.get('event')
+        occurrence = kwargs.get('occurrence')
+        allocationBasis = kwargs.get('allocationBasis')
+        basis = kwargs.get('basis')
+
+        context.update({
+            'basis': basis,
+            'basis_name': EXPENSE_BASES[basis],
+            'rangeTitle': '',
+        })
+
+        if event:
+            timeFilters['event'] = event
+            context['rangeTitle'] += '%s ' % event.name
+
+        if occurrence:
+            timeFilters['event__eventoccurrence'] = occurrence
+            context['rangeTitle'] += ': %s ' % occurrence.timeDescription
+
+        if startDate:
+            timeFilters['%s__gte' % basis] = startDate
+            context['rangeType'] = 'Date Range'
+            context['rangeTitle'] += str(_('From %s ' % startDate.strftime('%b. %d, %Y')))
+        if endDate:
+            timeFilters['%s__lt' % basis] = endDate
+            context['rangeType'] = 'Date Range'
+            context['rangeTitle'] += str(_('To %s ' % endDate.strftime('%b. %d, %Y')))
+
+        if not startDate and not endDate:
+            start = None
+            delta = None
+
+            if day and month and year:
+                start = ensure_localtime(datetime(year, month, day))
+                delta = relativedelta(days=1)
+                context.update({
+                    'rangeType': 'Day',
+                    'rangeTitle': start.strftime('%B %d, %Y')
+                })
+            elif month and year:
+                start = ensure_localtime(datetime(year, month, 1))
+                delta = relativedelta(months=1)
+                context.update({
+                    'rangeType': 'Month',
+                    'rangeTitle': start.strftime('%B %Y')
+                })
+            elif event:
+                context['rangeType'] = 'Event'
+            elif year:
+                start = ensure_localtime(datetime(year, 1, 1))
+                delta = relativedelta(years=1)
+                context.update({
+                    'rangeType': 'Year',
+                    'rangeTitle': start.strftime('%Y')
+                })
+            else:
+                start = ensure_localtime(datetime(timezone.now().year, 1, 1))
+                delta = relativedelta(years=1)
+                context.update({
+                    'rangeType': 'YTD',
+                    'rangeTitle': _('Calendar Year To Date')
+                })
+
+            if start and delta:
+                timeFilters['%s__gte' % basis] = start
+                timeFilters['%s__lt' % basis] = start + delta
+
+        context['startDate'] = timeFilters.get('%s__gte' % basis)
+        context['endDate'] = timeFilters.get('%s__lt' % basis)
+
+        # Revenues are booked on receipt basis, not payment/approval basis
+        rev_timeFilters = timeFilters.copy()
+        rev_basis = basis
+
+        if basis in ['paymentDate', 'approvalDate']:
+            rev_basis = 'receivedDate'
+            if rev_timeFilters.get('%s__gte' % basis):
+                rev_timeFilters['receivedDate__gte'] = rev_timeFilters.get('%s__gte' % basis)
+                rev_timeFilters.pop('%s__gte' % basis, None)
+            if rev_timeFilters.get('%s__lt' % basis):
+                rev_timeFilters['receivedDate__lt'] = rev_timeFilters.get('%s__lt' % basis)
+                rev_timeFilters.pop('%s__lt' % basis, None)
+
+        expenseItems = ExpenseItem.objects.filter(**timeFilters).annotate(
+            net=F('total') + F('adjustments') + F('fees'),
+            basisDate=Min(basis)
+        ).order_by(basis)
+        revenueItems = RevenueItem.objects.filter(**rev_timeFilters).annotate(
+            net=F('total') + F('adjustments') - F('fees'),
+            basisDate=Min(rev_basis)
+        ).order_by(rev_basis)
+
+        context['expenseItems'] = expenseItems
+        context['revenueItems'] = revenueItems
+
+        if event:
+            # These are needed to allocate non-hourly expenses across events.
+            eventoccurrence_ct = ContentType.objects.get_for_model(EventOccurrence).id
+            eventstaffmember_ct = ContentType.objects.get_for_model(EventStaffMember).id
+
+            context.update({
+                'allocatedVenueExpenseItems': ExpenseItem.objects.filter(
+                    event__isnull=True,
+                    expensepurpose__content_type=eventoccurrence_ct,
+                    expensepurpose__object_id__in=event.eventoccurrence_set.values_list('id', flat=True),
+                    payTo__location__isnull=False
+                ).annotate(
+                    net=F('total') + F('adjustments') + F('fees'),
+                    basisDate=Min(basis)
+                ).order_by(basis),
+                'allocatedStaffExpenseItems': ExpenseItem.objects.filter(
+                event__isnull=True,
+                expensepurpose__content_type=eventstaffmember_ct,
+                expensepurpose__object_id__in=event.eventstaffmember_set.values_list('id', flat=True)
+                ).annotate(
+                    net=F('total') + F('adjustments') + F('fees'),
+                    basisDate=Min(basis)
+                ).order_by(basis),
+            })
+            context.update({
+                'allocatedVenueTotal': sum([
+                    x.getAllocation(**allocationBasis) * x.net
+                    for x in context['allocatedVenueExpenseItems']
+                ]),
+                'allocatedStaffTotal': sum([
+                    x.getAllocation(**allocationBasis) * x.net
+                    for x in context['allocatedStaffExpenseItems']
+                ])
+            })
+            context['allocatedTotal'] = (
+                context['allocatedVenueTotal'] + context['allocatedStaffTotal']
+            )
+
+        # Registration revenues, instruction and venue expenses
+        # are broken out separately.
+
+        context.update({
+            'instructionExpenseItems': expenseItems.filter(
+                category__in=[
+                    getConstant('financial__classInstructionExpenseCat'),
+                    getConstant('financial__assistantClassInstructionExpenseCat')
+                ]
+            ).order_by('payTo__name'),
+            'venueExpenseItems': expenseItems.filter(
+                category=getConstant('financial__venueRentalExpenseCat')
+            ).order_by('payTo__name'),
+            'otherExpenseItems': expenseItems.exclude(
+                category__in=[
+                    getConstant('financial__classInstructionExpenseCat'),
+                    getConstant('financial__assistantClassInstructionExpenseCat'),
+                    getConstant('financial__venueRentalExpenseCat')
+                ]
+            ).order_by('category'),
+            'totalExpenses': (
+                sum([
+                    x.getAllocation(**allocationBasis) * x.net
+                    for x in expenseItems
+                ])
+            ),
+        })
+
+        context.update({
+            'registrationRevenueItems': revenueItems.filter(
+                category=getConstant('financial__registrationsRevenueCat')
+            ).order_by('-event__startTime', 'event__uuid'),
+            'otherRevenueItems': revenueItems.exclude(
+                category=getConstant('financial__registrationsRevenueCat')
+            ).order_by('category'),
+            'totalRevenues': sum([
+                x.getAllocation(**allocationBasis) * x.net for x in revenueItems
+            ]),
+        })
+
+        context.update({
+            'netProfit': context['totalRevenues'] - context['totalExpenses'],
+        })
+
+        return context
