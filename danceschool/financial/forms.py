@@ -523,7 +523,12 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
 class ExpenseDuplicationFormsetForm(forms.Form):
     ''' Used for bulk duplication of expense items. '''
 
-    approved = forms.BooleanField(label=_('Approved'), initial=True, required=False)
+    approved = autocomplete.Select2ListCreateChoiceField(
+        choice_list=get_approval_status_list,
+        required=False,
+        widget=autocomplete.ListSelect2(url='approved-list-autocomplete'),
+        label=_('Approved'),
+    )
     paid = forms.BooleanField(label=_('Paid'), initial=True, required=False)
     paymentDate = forms.DateField(label=_('Payment date'), required=False)
     total = forms.FloatField(label=_('Total'), min_value=0, required=False)

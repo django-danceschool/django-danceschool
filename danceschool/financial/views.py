@@ -610,8 +610,6 @@ class ExpenseDuplicationView(
         items = context.get('items')
         itemDuplicates = context.get('itemDuplicates')
 
-        new_items = []
-
         if itemDuplicates.is_valid():
             for old_item in items:
                 for dup in itemDuplicates:
@@ -632,6 +630,9 @@ class ExpenseDuplicationView(
                     else:
                         new_item.paymentDate = None
 
+                    if not new_item.event:
+                        new_item.accrualDate = new_item.paymentDate or timezone.now()
+
                     if dup.cleaned_data.get('total') is not None:
                         new_item.total = dup.cleaned_data.get('total')
 
@@ -643,8 +644,7 @@ class ExpenseDuplicationView(
 
                     new_item.submissionUser = getattr(self.request, 'user', None)
 
-                    new_items.append(new_item)
-        ExpenseItem.objects.bulk_create(new_items)
+                    new_item.save()
         return super().form_valid(form)
 
     def get_success_url(self):
