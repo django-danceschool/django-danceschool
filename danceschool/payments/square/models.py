@@ -81,6 +81,10 @@ class SquarePaymentRecord(PaymentRecord):
 
         return fees
 
+    @property
+    def netRevenue(self):
+        return self.netAmountPaid - self.netFees
+
     def getClient(self):
         return Client(
             access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
@@ -99,6 +103,22 @@ class SquarePaymentRecord(PaymentRecord):
                 client.payments.get_payment(x.get('id')).body.get('payment', {})
                 for x in order.get('tenders', []) if x.get('id')
             ]
+
+    def getRefunds(self, client=None):
+        client = self.getClient()
+        payments = self.getPayments(client=client)
+        refunds = []
+
+        for x in payments:
+            if x.get('refund_ids', []):
+                for y in x['refund_ids']:
+                    refund_response = client.refunds.get_payment_refund(y)
+                    if refund_response.is_error():
+                        continue
+                    r = refund_response.body.get('refund', {})
+                    if r:
+                        refunds.append(r)
+        return refunds
 
     def getPayerEmail(self):
         return self.payerEmail
