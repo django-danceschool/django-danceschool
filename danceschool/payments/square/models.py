@@ -12,6 +12,9 @@ import uuid
 
 from danceschool.core.models import PaymentRecord
 from .tasks import updateSquareFees
+from .helpers import (
+    getClient, getPayments, getRefunds, getNetAmountPaid, getNetFees
+)
 
 
 # Define logger for this file
@@ -51,45 +54,18 @@ class SquarePaymentRecord(PaymentRecord):
 
     @property
     def netAmountPaid(self):
-        return sum([
-            x.get('amount_money', {}).get('amount', 0) / 100 -
-            x.get('refunded_money', {}).get('amount', 0) / 100
-            for x in self.getPayments()
-        ])
+        return getNetAmountPaid(order_id=self.orderId)
 
     @property
     def netFees(self):
-        client = self.getClient()
-        payments = self.getPayments(client=client)
-        fees = 0
-
-        for x in payments:
-            fees += sum([
-                y.get('amount_money', {}).get('amount', 0) / 100
-                for y in x.get('processing_fee', [])
-            ])
-            if x.get('refund_ids', []):
-                for y in x['refund_ids']:
-                    refund_response = client.refunds.get_payment_refund(y)
-                    if refund_response.is_error():
-                        continue
-                    r = refund_response.body.get('refund', {})
-                    fees += sum([
-                        f.get('amount_money', {}).get('amount', 0) / 100
-                        for f in r.get('processing_fee', [])
-                    ])
-
-        return fees
+        return getNetFees(order_id=self.orderId)
 
     @property
     def netRevenue(self):
         return self.netAmountPaid - self.netFees
 
     def getClient(self):
-        return Client(
-            access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
-            environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production')
-        )
+        return getClient()
 
     def getPayments(self, client=None):
         if not client:
@@ -98,27 +74,10 @@ class SquarePaymentRecord(PaymentRecord):
         if self.paymentId:
             return [client.payments.get_payment(self.paymentId).body.get('payment', {}),]
         else:
-            order = client.orders.retrieve_order(self.orderId).body.get('order', {})
-            return [
-                client.payments.get_payment(x.get('id')).body.get('payment', {})
-                for x in order.get('tenders', []) if x.get('id')
-            ]
+            return getPayments(order_id=self.orderId, client=client)
 
     def getRefunds(self, client=None):
-        client = self.getClient()
-        payments = self.getPayments(client=client)
-        refunds = []
-
-        for x in payments:
-            if x.get('refund_ids', []):
-                for y in x['refund_ids']:
-                    refund_response = client.refunds.get_payment_refund(y)
-                    if refund_response.is_error():
-                        continue
-                    r = refund_response.body.get('refund', {})
-                    if r:
-                        refunds.append(r)
-        return refunds
+        return getRefunds(order_id=self.orderId, client=client)
 
     def getPayerEmail(self):
         return self.payerEmail
