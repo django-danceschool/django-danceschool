@@ -4,16 +4,33 @@ from urllib.parse import unquote
 from .timezone import ensure_timezone
 
 
-def getIntFromGet(request, key):
+def getIntFromGet(request, key, allow_list=False, force_list=False):
     '''
     This function just parses the request GET data for the requested key,
     and returns it as an integer, returning none if the key is not
     available or is in incorrect format.
     '''
-    try:
-        return int(request.GET.get(key))
-    except (ValueError, TypeError):
+
+    # Allow lists to be returned only if the processs that called permits it.
+    if force_list:
+        allow_list = True
+
+    value = request.GET.get(key)
+    if not value:
         return None
+
+    values = value.split(',')
+    int_values = []
+    for v in values:
+        try:
+            int_values.append(int(v))
+        except (ValueError, TypeError):
+            return None
+
+    if len(int_values) == 1 and not force_list:
+        return int_values[0]
+    elif allow_list:
+        return int_values
 
 
 def getDateTimeFromGet(request, key):

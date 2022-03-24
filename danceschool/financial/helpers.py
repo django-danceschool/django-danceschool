@@ -1105,8 +1105,8 @@ def prepareFinancialDetails(**kwargs):
         day = kwargs.get('day')
         startDate = kwargs.get('startDate')
         endDate = kwargs.get('endDate')
-        event = kwargs.get('event')
-        occurrence = kwargs.get('occurrence')
+        events = kwargs.get('events')
+        occurrences = kwargs.get('occurrences')
         allocationBasis = kwargs.get('allocationBasis')
         basis = kwargs.get('basis')
 
@@ -1116,13 +1116,17 @@ def prepareFinancialDetails(**kwargs):
             'rangeTitle': '',
         })
 
-        if event:
-            timeFilters['event'] = event
-            context['rangeTitle'] += '%s ' % event.name
-
-        if occurrence:
-            timeFilters['event__eventoccurrence'] = occurrence
-            context['rangeTitle'] += ': %s ' % occurrence.timeDescription
+        if events:
+            timeFilters['event__in'] = events
+            if not occurrences:
+                context['rangeTitle'] += '; '.join([x.name for x in events])
+    
+        if occurrences:
+            timeFilters['event__eventoccurrence__in'] = occurrences
+            context['rangeTitle'] += '; '.join([
+                '{}: {}'.format(x.event.name, x.timeDescription)
+                for x in occurrences
+            ])
 
         if startDate:
             timeFilters['%s__gte' % basis] = startDate
@@ -1151,8 +1155,8 @@ def prepareFinancialDetails(**kwargs):
                     'rangeType': 'Month',
                     'rangeTitle': start.strftime('%B %Y')
                 })
-            elif event:
-                context['rangeType'] = 'Event'
+            elif events:
+                context['rangeType'] = 'Events'
             elif year:
                 start = ensure_localtime(datetime(year, 1, 1))
                 delta = relativedelta(years=1)
@@ -1200,16 +1204,27 @@ def prepareFinancialDetails(**kwargs):
         context['expenseItems'] = expenseItems
         context['revenueItems'] = revenueItems
 
-        if event:
+        if events:
             # These are needed to allocate non-hourly expenses across events.
             eventoccurrence_ct = ContentType.objects.get_for_model(EventOccurrence).id
             eventstaffmember_ct = ContentType.objects.get_for_model(EventStaffMember).id
 
+            if occurrences:
+                purpose_occurrences = occurrences.values_list('id', flat=True)
+            else:
+                purpose_occurrences = EventOccurrence.objects.filter(
+                    event__in=events
+                ).values_list('id', flat=True)
+
+            purpose_staff = EventStaffMember.objects.filter(
+                event__in=events
+            ).values_list('id', flat=True)
+            
             context.update({
                 'allocatedVenueExpenseItems': ExpenseItem.objects.filter(
                     event__isnull=True,
                     expensepurpose__content_type=eventoccurrence_ct,
-                    expensepurpose__object_id__in=event.eventoccurrence_set.values_list('id', flat=True),
+                    expensepurpose__object_id__in=purpose_occurrences,
                     payTo__location__isnull=False
                 ).annotate(
                     net=F('total') + F('adjustments') + F('fees'),
@@ -1218,7 +1233,7 @@ def prepareFinancialDetails(**kwargs):
                 'allocatedStaffExpenseItems': ExpenseItem.objects.filter(
                 event__isnull=True,
                 expensepurpose__content_type=eventstaffmember_ct,
-                expensepurpose__object_id__in=event.eventstaffmember_set.values_list('id', flat=True)
+                expensepurpose__object_id__in=purpose_staff,
                 ).annotate(
                     net=F('total') + F('adjustments') + F('fees'),
                     basisDate=Min(basis)

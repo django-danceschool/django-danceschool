@@ -8,10 +8,12 @@
 <div class="row">
 <div class="col-12">
 
-	{% if event %}
+	{% if events %}
 		<div class="btn-group float-right" role="group" aria-label="Event Links">
 			<a href="{% url 'financesByEvent' %}" class="btn btn-primary">{% trans "Return to Event Summary" %}</a>
-			<a href="{% url 'admin:core_event_change' event.id %}" class="btn btn-outline-primary">{% trans "Edit Event" %}</a>
+			{% if events.count == 1 %}
+				<a href="{% url 'admin:core_event_change' events.first.id %}" class="btn btn-outline-primary">{% trans "Edit Event" %}</a>
+			{% endif %}
 		</div>	
 	{% else %}
 		<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
@@ -34,10 +36,10 @@
 <div class="col-12">
 
 <h1 class="my-4 text-center">{% trans "Detailed Financial Statement" %}: {{ rangeTitle }}</h1>
-{% if event %}
+{% if events.count == 1 %}
 	<h4 class="text-center">
-	{% if event.eventoccurrence_set.count == 1 %}{% trans "Date" %}{% else %}{% trans "Dates" %}{% endif %}:
-	{% for occurrence in event.eventoccurrence_set.all %}
+	{% if events.first.eventoccurrence_set.count == 1 %}{% trans "Date" %}{% else %}{% trans "Dates" %}{% endif %}:
+	{% for occurrence in events.first.eventoccurrence_set.all %}
 		{{occurrence.startTime|date:'N jS' }}{% if not forloop.last %}, {% endif %}
 	{% endfor %}
 	</h4>

@@ -995,24 +995,29 @@ class ExpenseItem(models.Model):
             event_allocation[k]['total_duration'] = total_duration
         return event_allocation
 
-    def getAllocationForEvent(self, event):
+    def getAllocationForEvents(self, events):
         allocation_by_event = self.allocationByEvent
-        return allocation_by_event.get(event.id, {}).get('allocation', 0)
+        return sum([
+            allocation_by_event.get(e.id, {}).get('allocation', 0)
+            for e in events
+        ])
 
-    def getAllocationForOccurrence(self, **kwargs):
-        occurrence = kwargs.get('occurrence', None)
-        if not occurrence:
+    def getAllocationForOccurrences(self, **kwargs):
+        occurrences = kwargs.get('occurrences', None)
+        if not occurrences:
             return 0
         allocation_by_occurrence = self.allocationByOccurrence
-        return allocation_by_occurrence.get(
-            (occurrence.id, occurrence.event.id), {}
-        ).get('allocation', 0)
+        return sum([
+            allocation_by_occurrence.get((o.id, o.event.id), {}).get(
+                'allocation', 0
+            ) for o in occurrences
+        ]) 
 
-    def getAllocation(self, event=None, occurrence=None):
-        if occurrence:
-            return self.getAllocationForOccurrence(occurrence=occurrence)
-        elif event:
-            return self.getAllocationForEvent(event=event)
+    def getAllocation(self, events=None, occurrences=None):
+        if occurrences:
+            return self.getAllocationForOccurrences(occurrences=occurrences)
+        elif events:
+            return self.getAllocationForEvents(events=events)
         else:
             return 1
 
@@ -1301,21 +1306,24 @@ class RevenueItem(models.Model):
             for x in occurrences
         }
 
-    def getAllocationForOccurrence(self, **kwargs):
-        occurrence = kwargs.get('occurrence', None)
-        if not occurrence:
+    def getAllocationForOccurrences(self, **kwargs):
+        occurrences = kwargs.get('occurrences', None)
+        if not occurrences:
             return 0
         allocation_by_occurrence = self.allocationByOccurrence
-        return allocation_by_occurrence.get(
-            (occurrence.id, occurrence.event.id), {}
-        ).get('allocation', 0)
+        return sum([
+            allocation_by_occurrence.get(
+                (o.id, o.event.id), {}
+            ).get('allocation', 0) for o in occurrences
+        ])
 
-    def getAllocation(self, event=None, occurrence=None):
-        if occurrence:
-            return self.getAllocationForOccurrence(occurrence=occurrence)
-        elif event and event != self.event:
-            return 0
-        return 1
+    def getAllocation(self, events=None, occurrences=None):
+        if occurrences:
+            return self.getAllocationForOccurrences(occurrences=occurrences)
+        elif events and self.event not in events:
+            0
+        else:
+            return 1
 
     def save(self, *args, **kwargs):
         '''

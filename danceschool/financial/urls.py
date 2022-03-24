@@ -78,11 +78,15 @@ urlpatterns = [
     ),
     path('finances/detail/', FinancialDetailView.as_view(), name='financialDetailView'),
     path(
-        'finances/event/<slug:event>/',
+        'finances/event/detail/',
         FinancialDetailView.as_view(), name='financialEventDetailView'
     ),
     path(
-        'finances/event/<slug:event>/<int:occurrence>/',
+        'finances/event/detail/<slug:event>/',
+        FinancialDetailView.as_view(), name='financialEventDetailView'
+    ),
+    path(
+        'finances/event/detail/<slug:event>/<int:occurrence>/',
         FinancialDetailView.as_view(), name='financialEventOccurrenceDetailView'
     ),
     path(

@@ -514,30 +514,31 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             day = getIntFromGet(request, 'day')
 
         try:
-            event_id = int(self.kwargs.get('event'))
+            event_ids = [int(self.kwargs.get('event')),]
         except (ValueError, TypeError):
-            event_id = getIntFromGet(request, 'event')
+            event_ids = getIntFromGet(request, 'events', force_list=True)
 
-        event = None
-        if event_id:
-            try:
-                event = Event.objects.prefetch_related(
-                    'eventoccurrence_set'
-                ).get(id=event_id)
-            except ObjectDoesNotExist:
-                pass
+        events = None
+        if event_ids:
+            events = Event.objects.prefetch_related(
+                'eventoccurrence_set'
+            ).filter(id__in=event_ids)
 
         try:
-            occurrence_id = int(self.kwargs.get('occurrence'))
+            occurrence_ids = [int(self.kwargs.get('occurrence')),]
         except (ValueError, TypeError):
-            occurrence_id = None
+            occurrence_ids = getIntFromGet(request, 'occurrences', force_list=True)
 
-        occurrence = None
-        if event and occurrence_id:
-            try:
-                occurrence = event.eventoccurrence_set.get(id=occurrence_id)
-            except ObjectDoesNotExist:
-                pass
+        occurrences = None
+        if events and occurrence_ids:
+            occurrences = EventOccurrence.objects.filter(
+                event__in=events, id__in=occurrence_ids
+            )
+
+        # Prevents producing an event-level summary when invalid occurrences
+        # are passed.
+        if occurrence_ids and not occurrences:
+            events = None
 
         kwargs.update({
             'year': year,
@@ -546,17 +547,17 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
             'startDate': getDateTimeFromGet(request, 'startDate'),
             'endDate': getDateTimeFromGet(request, 'endDate'),
             'basis': request.GET.get('basis'),
-            'event': event,
-            'occurrence': occurrence,
+            'events': events,
+            'occurrences': occurrences,
             'allocationBasis': {},
         })
 
         # The allocation basis determines whether expenses are reported in full
         # or only fractionally.
-        if event and occurrence:
-            kwargs['allocationBasis']['event'] = event
-        if occurrence:
-            kwargs['allocationBasis']['occurrence'] = occurrence
+        if (event_ids and events) and (occurrence_ids and occurrences):
+            kwargs['allocationBasis']['occurrences'] = occurrences
+        if (event_ids and events):
+            kwargs['allocationBasis']['events'] = events
 
         if kwargs.get('basis') not in EXPENSE_BASES.keys():
             kwargs['basis'] = 'accrualDate'
