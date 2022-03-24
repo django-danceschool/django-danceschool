@@ -34,7 +34,8 @@ from io import BytesIO
 
 from .models import (
     Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
-    StaffMember, Instructor, Invoice, Customer, EventCheckIn, Registration
+    StaffMember, Instructor, Invoice, Customer, EventCheckIn, Registration,
+    EventStaffMember
 )
 from .forms import (
     SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
@@ -930,8 +931,8 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         richTextChoice = self.form_data.pop('richTextChoice')
         cc_myself = self.form_data.pop('cc_myself')
         testemail = self.form_data.pop('testemail')
-        month = self.form_data.pop('month')
         series = self.form_data.pop('series')
+        include_staff = self.form_data.pop('include_staff')
         customers = self.form_data.pop('customers', [])
 
         email_kwargs = {
@@ -946,10 +947,6 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             })
 
         items_to_send = []
-        if month is not None and month != '':
-            get_month = datetime.strptime(month, '%m-%Y').month
-            get_year = datetime.strptime(month, '%m-%Y').year
-            items_to_send += list(Series.objects.filter(month=get_month, year=get_year))
         if series not in [None, '', [], ['']]:
             items_to_send += list(Event.objects.filter(id__in=series))
         if customers:
@@ -961,9 +958,13 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         for s in items_to_send:
             if isinstance(s, Event):
                 regs = EventRegistration.objects.filter(event=s, cancelled=False)
+                staff = EventStaffMember.objects.filter(event=s)
                 emails = []
                 for x in regs:
                     emails += x.get_default_recipients() or []
+                if include_staff:
+                    for x in staff:
+                        emails += x.get_default_recipients() or []
             else:
                 # Customers are themselves the list.
                 regs = s
@@ -995,6 +996,9 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             else:
                 for r in regs:
                     r.email_recipient(subject, message, **email_kwargs)
+                if include_staff:
+                    for r in staff:
+                        r.email_recipient(subject, message, **email_kwargs)
 
         self.request.session.pop(EMAIL_VALIDATION_STR, None)
         messages.success(self.request, self.success_message)
@@ -1005,27 +1009,34 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         context = super().get_context_data(**kwargs)
         context.update(self.form_data)
 
-        month = self.form_data['month']
         series = self.form_data['series']
         customers = self.form_data.get('customers')
         from_address = self.form_data['from_address']
         cc_myself = self.form_data['cc_myself']
+        include_staff = self.form_data['include_staff']
 
         events_to_send = []
-        if month is not None and month != '':
-            get_month = datetime.strptime(month, '%m-%Y').month
-            get_year = datetime.strptime(month, '%m-%Y').year
-            events_to_send += Series.objects.filter(month=get_month, year=get_year)
         if series not in [None, '', [], ['']]:
             events_to_send += [Event.objects.get(id=x) for x in series]
 
         # We always call one email per series so that the series-level tags
         # can be passed.
-        regs = EventRegistration.objects.filter(event__in=events_to_send)
-
+        regs = EventRegistration.objects.select_related('customer').filter(
+            event__in=events_to_send
+        )
         customerSet = Customer.objects.filter(id__in=customers) if customers else []
 
-        emails = [r.customer.email for r in regs] + [r.email for r in customerSet]
+        staff = EventStaffMember.objects.none()
+        if include_staff:
+            staff = EventStaffMember.objects.select_related('staffMember').filter(
+                event__in=events_to_send
+            )
+
+        emails = (
+            [r.customer.email for r in regs if r.customer] +
+            [r.staffMember.privateEmail for r in staff if r.staffMember.privateEmail] +
+            [r.email for r in customerSet]
+        )
         cc = []
         if cc_myself:
             cc.append(from_address)
@@ -1034,7 +1045,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         context.update({
             'events_to_send': events_to_send,
             'customers_to_send': customerSet,
-            'emails': emails,
+            'emails': list(set(emails)),
             'cc': cc,
             'bcc': bcc,
         })
@@ -1071,42 +1082,15 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
 
     def get_form_kwargs(self, **kwargs):
         '''
-        Get the list of recent months and recent series to pass to the form
+        Get the list of recent events to pass to the form.
         '''
 
-        numMonths = 12
-        lastStart = (
-            Event.objects.annotate(Min('eventoccurrence__startTime'))
-            .order_by('-eventoccurrence__startTime__min')
-            .values_list('eventoccurrence__startTime__min', flat=True)
-            .first()
-        )
-        if lastStart:
-            month = lastStart.month
-            year = lastStart.year
-        else:
-            month = timezone.now().month
-            year = timezone.now().year
-
-        months = [('', _('None'))]
-        for i in range(0, numMonths):
-            newmonth = (month - i - 1) % 12 + 1
-            newyear = year
-            if month - i - 1 < 0:
-                newyear = year - 1
-            newdate = datetime(year=newyear, month=newmonth, day=1)
-            newdateStr = newdate.strftime("%m-%Y")
-            monthStr = newdate.strftime("%B, %Y")
-            months.append((newdateStr, monthStr))
-
         cutoff = timezone.now() - timedelta(days=120)
-
         allEvents = Event.objects.filter(startTime__gte=cutoff).order_by('-startTime')
         recentSeries = [('', 'None')] + [(x.id, '%s %s: %s' % (month_name[x.month], x.year, x.name)) for x in allEvents]
 
         kwargs = super().get_form_kwargs(**kwargs)
         kwargs.update({
-            "months": months,
             "recentseries": recentSeries,
             "customers": self.customers,
         })

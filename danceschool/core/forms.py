@@ -1258,18 +1258,9 @@ class RegistrationTransferForm(forms.ModelForm):
 
 class EmailContactForm(forms.Form):
 
-    EMAIL_SENDTOSET_CHOICES = (
-        ('series', _('All students in one or more series')),
-        ('month', _('All Students in a given month'))
-    )
     RICH_TEXT_CHOICES = (
         ('plain', _('Plain text email')),
         ('HTML', _('HTML rich text email'))
-    )
-
-    sendToSet = forms.ChoiceField(
-        label=_('This email is for:'), widget=forms.RadioSelect,
-        choices=EMAIL_SENDTOSET_CHOICES, required=False, initial='series'
     )
 
     template = forms.ModelChoiceField(
@@ -1290,9 +1281,8 @@ class EmailContactForm(forms.Form):
     from_name = forms.CharField(max_length=50, initial=get_defaultEmailName)
     from_address = forms.EmailField(max_length=100, initial=get_defaultEmailFrom)
     cc_myself = forms.BooleanField(label=_('CC Myself:'), initial=True, required=False)
-    month = forms.ChoiceField(
-        label=_('Email all students registered in month:'), initial='',
-        required=False
+    include_staff = forms.BooleanField(
+        label=_('Email Event Staff'), initial=False, required=False
     )
     series = forms.MultipleChoiceField(
         label=_('Email all students registered in a current/recent series:'),
@@ -1305,7 +1295,6 @@ class EmailContactForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        months = kwargs.pop('months', [])
         recentseries = kwargs.pop('recentseries', [])
         customers = kwargs.pop('customers', [])
 
@@ -1319,15 +1308,13 @@ class EmailContactForm(forms.Form):
                 choices=[(x.id, '%s <%s>' % (x.fullName, x.email)) for x in customers]
             )
             self.fields['customers'].initial = [x.id for x in customers]
-            self.fields.pop('month', None)
             self.fields.pop('series', None)
-            self.fields.pop('sendToSet', None)
+            self.fields.pop('include_staff', None)
 
             # Move the customer list to the top of the form
             self.fields.move_to_end('customers', last=False)
 
         else:
-            self.fields['month'].choices = months
             self.fields['series'].choices = recentseries
 
         if user:
@@ -1337,18 +1324,15 @@ class EmailContactForm(forms.Form):
 
     def clean(self):
         # Custom cleaning ensures email is only sent to one of
-        # a series, a month, or a set of customers
+        # a set of events or a set of customers
         super().clean()
-
-        sendToSet = self.cleaned_data.get('sendToSet')
-        customers = self.cleaned_data.get('customers')
 
         # We set to None and don't pop the keys out to prevent
         # KeyError issues with the subsequent view
-        if sendToSet == 'series' or customers:
-            self.cleaned_data['month'] = None
-        if sendToSet == 'month' or customers:
+        customers = self.cleaned_data.get('customers')
+        if customers:
             self.cleaned_data['series'] = None
+            self.cleaned_data['include_staff'] = None
 
         # If this is an HTML email, then ignore the plain text content
         # and replace it with plain text generated from the HTML.
@@ -1365,7 +1349,7 @@ class EmailContactForm(forms.Form):
         return self.cleaned_data
 
     class Media:
-        js = ('js/emailcontact_sendToSet.js', 'js/emailcontact_ajax.js')
+        js = ('js/emailcontact_ajax.js',)
 
 
 class SeriesTeacherChoiceField(forms.ModelChoiceField):

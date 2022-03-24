@@ -1666,7 +1666,7 @@ class EventRole(models.Model):
         verbose_name_plural = _('Event dance roles')
 
 
-class EventStaffMember(models.Model):
+class EventStaffMember(EmailRecipientMixin, models.Model):
     '''
     Events have staff members of various types.  Instructors and
     substitute teachers are defaults, which have their own proxy
@@ -1759,6 +1759,29 @@ class EventStaffMember(models.Model):
         else:
             return sum([x.duration for x in self.occurrences.filter(cancelled=False)])
     netHours.fget.short_description = _('Net hours')
+
+    def get_default_recipients(self):
+        ''' Overrides EmailRecipientMixin '''
+        this_email = getattr(self.staffMember, 'privateEmail', None)
+        return [this_email, ] if this_email else []
+
+    def get_email_context(self, **kwargs):
+        ''' Overrides EmailRecipientMixin '''
+
+        includeName = kwargs.pop('includeName', True)
+        includeEvent = kwargs.pop('includeEvent', True)
+        context = super().get_email_context(**kwargs)
+
+        if includeName:
+            context.update({
+                'first_name': self.staffMember.firstName,
+                'last_name': self.staffMember.lastName,
+            })
+
+        if includeEvent:
+            context['event'] = self.event.get_email_context()
+
+        return context
 
     def __str__(self):
         replacements = {
