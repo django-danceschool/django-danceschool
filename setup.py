@@ -39,6 +39,7 @@ setup(
         'django-filer>=1.7.0',
         'django-ical>=1.4',
         'django-imagekit>=3.3',
+        'django-multi-email-field>=0.6.2',
         'django-multiselectfield>=0.1.5',
         'django-polymorphic>=3.0.0',
         'django-sekizai>=0.10.0',

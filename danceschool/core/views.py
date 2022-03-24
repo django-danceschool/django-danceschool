@@ -934,6 +934,8 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         series = self.form_data.pop('series')
         include_staff = self.form_data.pop('include_staff')
         customers = self.form_data.pop('customers', [])
+        additional_cc = self.form_data.pop('additional_cc', [])
+        additional_bcc = self.form_data.pop('additional_bcc', [])
 
         email_kwargs = {
             'from_name': self.form_data['from_name'],
@@ -970,22 +972,27 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
                 regs = s
                 emails = [x.email for x in s]
 
-            email_kwargs['cc'] = []
+            email_kwargs['cc'] = additional_cc
             if cc_myself:
                 email_kwargs['cc'].append(email_kwargs['from_address'])
 
-            email_kwargs['bcc'] = [email_kwargs['from_address'] or getConstant('email__defaultEmailFrom'), ]
+            email_kwargs['bcc'] = (
+                additional_bcc +
+                [email_kwargs['from_address'] or getConstant('email__defaultEmailFrom'), ]
+            )
 
             if testemail:
                 message = str(_('Test email from %s to be sent to: ' % email_kwargs['from_address'])) + '\n\n'
                 message += ', '.join(email_kwargs['bcc']) + ', '.join(emails) + '\n\n'
                 message += str(_('Email body:')) + '\n\n' + message
                 email_kwargs['bcc'] = []
+                email_kwargs['cc'] = [email_kwargs['from_address'],]
+                emails = []
 
             # If there are no context tags, then this can be sent as a single bulk email.
             # Otherwise, send a separate email for each event registration
             has_tags = re.search(r'\{\{.+\}\}', message)
-            if not has_tags:
+            if (not has_tags) or testemail:
                 email_kwargs['bcc'] += emails
                 # Avoid duplicate emails
                 email_kwargs['bcc'] = list(set(email_kwargs['bcc']))
@@ -1014,6 +1021,8 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         from_address = self.form_data['from_address']
         cc_myself = self.form_data['cc_myself']
         include_staff = self.form_data['include_staff']
+        additional_cc = self.form_data.get('additional_cc', [])
+        additional_bcc = self.form_data.get('additional_bcc', [])
 
         events_to_send = []
         if series not in [None, '', [], ['']]:
@@ -1037,10 +1046,10 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             [r.staffMember.privateEmail for r in staff if r.staffMember.privateEmail] +
             [r.email for r in customerSet]
         )
-        cc = []
+        cc = additional_cc
         if cc_myself:
             cc.append(from_address)
-        bcc = [getConstant('email__defaultEmailFrom')]
+        bcc = additional_bcc + [getConstant('email__defaultEmailFrom')]
 
         context.update({
             'events_to_send': events_to_send,
@@ -1056,7 +1065,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
 class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
     form_class = EmailContactForm
     permission_required = 'core.send_email'
-    template_name = 'cms/forms/display_form_classbased_admin.html'
+    template_name = 'cms/forms/display_crispy_form_classbased_admin.html'
 
     def dispatch(self, request, *args, **kwargs):
         ''' If a list of customers or groups was passed, then parse it '''

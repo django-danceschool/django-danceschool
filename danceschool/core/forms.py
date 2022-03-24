@@ -18,6 +18,7 @@ import json
 import logging
 from django_addanother.widgets import AddAnotherWidgetWrapper
 from djangocms_text_ckeditor.widgets import TextEditorWidget
+from multi_email_field.forms import MultiEmailField
 
 from .models import (
     EventStaffMember, SubstituteTeacher, Event, EventOccurrence,
@@ -1281,16 +1282,26 @@ class EmailContactForm(forms.Form):
     from_name = forms.CharField(max_length=50, initial=get_defaultEmailName)
     from_address = forms.EmailField(max_length=100, initial=get_defaultEmailFrom)
     cc_myself = forms.BooleanField(label=_('CC Myself:'), initial=True, required=False)
-    include_staff = forms.BooleanField(
-        label=_('Email Event Staff'), initial=False, required=False
-    )
     series = forms.MultipleChoiceField(
         label=_('Email all students registered in a current/recent series:'),
         initial='', required=False
     )
+    include_staff = forms.BooleanField(
+        label=_('Include Event Staff'), initial=False, required=False
+    )
     testemail = forms.BooleanField(
         label=_('Test email:'), help_text=_('Send a test email to myself only.'),
         initial=False, required=False
+    )
+
+    additional_cc = MultiEmailField(
+        label=_('Additional Addresses to CC'), help_text=_('One email per line'),
+        required=False
+    )
+
+    additional_bcc = MultiEmailField(
+        label=_('Additional Addresses to BCC'), help_text=_('One email per line'),
+        required=False
     )
 
     def __init__(self, *args, **kwargs):
@@ -1300,6 +1311,8 @@ class EmailContactForm(forms.Form):
 
         super().__init__(*args, **kwargs)
 
+        self.helper = FormHelper()
+
         if customers:
             self.fields['customers'] = forms.MultipleChoiceField(
                 required=True,
@@ -1308,19 +1321,53 @@ class EmailContactForm(forms.Form):
                 choices=[(x.id, '%s <%s>' % (x.fullName, x.email)) for x in customers]
             )
             self.fields['customers'].initial = [x.id for x in customers]
-            self.fields.pop('series', None)
-            self.fields.pop('include_staff', None)
 
-            # Move the customer list to the top of the form
-            self.fields.move_to_end('customers', last=False)
+            customer_section = Div('customers')
+            series_section = Div()
 
         else:
             self.fields['series'].choices = recentseries
+            customer_section = Div()
+            series_section = Div('series', 'include_staff')
 
         if user:
             self.fields['template'].queryset = EmailTemplate.objects.filter(
                 Q(groupRequired__isnull=True) | Q(groupRequired__in=user.groups.all())
             ).filter(hideFromForm=False)
+
+        cc_section = Div(
+            Div(
+                HTML(
+                    '<a data-toggle="collapse" href="#collapse_cc">' +
+                    ('%s</a> (%s)' % (
+                        _('Add CC/BCC recipients'), _('click to expand')
+                    ))
+                ),
+                css_class='card-header'
+            ),
+            Div(
+                'additional_cc', 'additional_bcc',
+                css_class='card-body collapse',
+                id='collapse_cc',
+            ),
+            css_class='card my-4'
+        )
+
+        self.helper.layout = Layout(
+            customer_section,
+            'template',
+            'richTextChoice',
+            'subject',
+            'message',
+            'html_message',
+            'from_name',
+            'from_address',
+            series_section,
+            'cc_myself',
+            'testemail',
+            cc_section,
+            Submit('submit', _('Submit')),
+        )
 
     def clean(self):
         # Custom cleaning ensures email is only sent to one of
