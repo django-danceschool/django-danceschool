@@ -1033,7 +1033,7 @@ def prepareStatementByEvent(paginate=True, **kwargs):
         )
 
         total_allocated_venue = sum([
-            x.getAllocationForEvent(event) * x.total
+            x.getAllocationForEvents([event,]) * x.total
             for x in allocated_venue_expenses
         ])
 
@@ -1044,7 +1044,7 @@ def prepareStatementByEvent(paginate=True, **kwargs):
         )
 
         total_allocated_staff = sum([
-            x.getAllocationForEvent(event) * x.total
+            x.getAllocationForEvents([event,]) * x.total
             for x in allocated_staff_expenses
         ])
 
