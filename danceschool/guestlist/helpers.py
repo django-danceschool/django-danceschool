@@ -45,6 +45,13 @@ def getList(
         )
 
     queryset = []
+    if not applicable_lists:
+        return GuestListName.objects.annotate(
+            first=F('firstName'), last=F('lastName'), contact=F('email'),
+            modelType=Value(None, output_field=CharField()),
+            guestListId=Value(None, output_field=IntegerField()),
+            guestType=Value(None, output_field=CharField()),
+        ).none()
 
     for this_list in applicable_lists:
         if not queryset:
