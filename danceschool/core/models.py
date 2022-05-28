@@ -921,7 +921,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         name for describing the event.
         '''
         if self.startTime:
-            return _('Event, begins %s' % (self.startTime.strftime('%a., %B %d, %Y, %I:%M %p')))
+            return _('Event, begins %s' % (ensure_localtime(self.startTime).strftime('%a., %B %d, %Y, %I:%M %p')))
         else:
             return _('Event #%s' % (self.id))
     name.fget.short_description = _('Name')

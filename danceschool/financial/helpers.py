@@ -432,11 +432,14 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
         # Loop through EventStaffMembers for which there are not already
         # directly allocated expenses under this rule, and create new
         # ExpenseItems for them depending on whether the rule requires hourly
-        # expenses or non-hourly ones to be generated.
+        # expenses or non-hourly ones to be generated. Note: we don't prefetch
+        # the event on purpose, because this ends up being a non-polymorphic
+        # linkage, which means that subclass properties (like name) are not
+        # correctly handled.
         staffers = EventStaffMember.objects.filter(
             eventstaff_filter & event_timefilters
         ).exclude(Q(related_expenses__item__expenseRule=rule)).select_related(
-            'staffMember', 'event',
+            'staffMember',
         ).prefetch_related('occurrences').distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
