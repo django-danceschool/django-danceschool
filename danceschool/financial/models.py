@@ -16,7 +16,7 @@ from filer.fields.file import FilerFileField
 from filer.models import Folder
 import math
 from calendar import day_name
-from datetime import time, timedelta
+from datetime import time, timedelta, datetime
 from dateutil.relativedelta import relativedelta
 from intervaltree import IntervalTree
 
@@ -26,6 +26,9 @@ from danceschool.core.models import (
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.utils.timezone import ensure_localtime
+
+
+EVENTSTAFFMEMBER_CT = ContentType.objects.get_for_model(EventStaffMember).id
 
 
 def ordinal(n):
@@ -1059,14 +1062,30 @@ class ExpenseItem(models.Model):
                     }
                 )[0]
 
-        # Set the accrual date.  The method for events ensures that the accrualDate month
-        # is the same as the reported month of the series/event by accruing to the end date of the last
-        # class or occurrence in that month.
+        # Set the accrual date.  The method for events is based on the end of
+        # the event, unless the event was associated with staffing for specific
+        # occurrences, in which case the accrual date is the end of those
+        # occurrences.
+
         if not self.accrualDate:
-            if self.event and self.event.month:
-                self.accrualDate = self.event.eventoccurrence_set.order_by('endTime').filter(
-                    endTime__month=self.event.month
-                ).last().endTime
+            if self.event:
+                staff_purpose = self.expensepurpose_set.filter(
+                    content_type_id=EVENTSTAFFMEMBER_CT
+                )
+                last_end = datetime.min.replace(tzinfo=timezone.utc)
+
+                for s in staff_purpose:
+                    last_end = max(
+                        last_end,
+                        getattr(
+                            s.purpose.occurrences.order_by('endTime').last(),
+                            'endTime', self.event.endTime
+                        )
+                    )
+
+                if last_end == datetime.min.replace(tzinfo=timezone.utc):
+                    last_end = self.event.endTime
+                self.accrualDate = last_end
             elif self.submissionDate:
                 self.accrualDate = self.submissionDate
             else:
@@ -1340,22 +1359,18 @@ class RevenueItem(models.Model):
             if self.received and not self.receivedDate and not self.__receivedDate:
                 self.receivedDate = timezone.now()
 
-        # Set the accrual date.  The method for series/events ensures that the accrualDate month
-        # is the same as the reported month of the event/series by accruing to the start date of the first
-        # occurrence in that month.
+        # Set the accrual date. For series/event registrations, the accrualDate
+        # is set based on the first occurrence of the event (or the first
+        # occurrence associated with the registration for drop-ins.
         if not self.accrualDate:
             if self.invoiceItem and getattr(self.invoiceItem, 'eventRegistration', None):
-                min_event_time = (
-                    self.invoiceItem.eventRegistration.event.eventoccurrence_set.filter(
-                        startTime__month=self.invoiceItem.eventRegistration.event.month
-                    ).first().startTime
+                er = self.invoiceItem.eventRegistration
+                self.accrualDate = (
+                    getattr(er.occurrences.order_by('startTime').first(), 'startTime', None) or
+                    er.event.startTime
                 )
-                self.accrualDate = min_event_time
             elif self.event:
-                self.accrualDate = getattr(
-                    self.event.eventoccurrence_set.order_by('startTime').filter(
-                        startTime__month=self.event.month
-                    ).last(), 'startTime', None)
+                self.accrualDate = self.event.startTime
 
             if not self.accrualDate and self.invoiceItem:
                 self.accrualDate = self.invoiceItem.invoice.creationDate
