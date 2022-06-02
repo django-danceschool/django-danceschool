@@ -86,32 +86,13 @@ class EventStaffMemberInlineForm(ModelForm):
         )
 
 
-class SeriesTeacherInlineForm(ModelForm):
+class SeriesTeacherInlineForm(EventStaffMemberInlineForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.fields['staffMember'].label = _('Instructor')
         self.fields['category'].initial = getConstant('general__eventStaffCategoryInstructor').id
-
-        # Impose restrictions on new records, but not on existing ones.
-        if not kwargs.get('instance', None):
-            # Filter out retired teachers
-            self.fields['staffMember'].queryset = StaffMember.objects.filter(
-                instructor__isnull=False,
-            ).exclude(
-                instructor__status__in=[
-                    Instructor.InstructorStatus.retired,
-                    Instructor.InstructorStatus.hidden,
-                    Instructor.InstructorStatus.retiredGuest
-                ]
-            )
-        else:
-            self.fields['staffMember'].queryset = StaffMember.objects.all()
-
-        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by(
-            'instructor__status', 'firstName', 'lastName'
-        )
 
     class Meta:
         widgets = {
@@ -132,7 +113,7 @@ class SeriesTeacherInline(admin.StackedInline):
         obj.save()
 
 
-class SubstituteTeacherInlineForm(ModelForm):
+class SubstituteTeacherInlineForm(EventStaffMemberInlineForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -140,22 +121,6 @@ class SubstituteTeacherInlineForm(ModelForm):
         self.fields['staffMember'].label = _('Instructor')
         self.fields['replacedStaffMember'].required = True
         self.fields['category'].initial = getConstant('general__eventStaffCategorySubstitute').id
-
-        # Impose restrictions on new records, but not on existing ones.
-        if not kwargs.get('instance', None):
-            # Filter out retired teachers
-            self.fields['staffMember'].queryset = StaffMember.objects.exclude(
-                instructor__status__in=[
-                    Instructor.InstructorStatus.retired,
-                    Instructor.InstructorStatus.hidden
-                ]
-            )
-        else:
-            self.fields['staffMember'].queryset = StaffMember.objects.all()
-
-        self.fields['staffMember'].queryset = self.fields['staffMember'].queryset.order_by(
-            'instructor__status', 'firstName', 'lastName'
-        )
 
     class Meta:
         widgets = {
