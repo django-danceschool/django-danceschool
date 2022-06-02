@@ -79,7 +79,8 @@ class ProcessSquarePaymentView(View):
                         '<p>{}</p><ul><li>{}</li></ul>',
                         str(_('ERROR: Error with Square checkout transaction attempt.')),
                         str(_('Invalid amount passed.'))
-                    )
+                    ),
+                    extra_tags='square-error'
                 )
                 return HttpResponseRedirect(sourceUrl)
 
@@ -114,7 +115,8 @@ class ProcessSquarePaymentView(View):
                         '<p>{}</p><ul><li>{}</li></ul>',
                         str(_('ERROR: Error with Square checkout transaction attempt.')),
                         str(_('Insufficient information passed to createSquarePayment view.'))
-                    )
+                    ),
+                    extra_tags='square-error'
                 )
                 return HttpResponseRedirect(sourceUrl)
             else:
@@ -146,7 +148,8 @@ class ProcessSquarePaymentView(View):
                         'createSquarePayment view: (%s, %s)' % (
                             invoice_id, amount
                         )
-                    ))
+                    )),
+                    extra_tags='square-error'
                 )
             )
             return HttpResponseRedirect(sourceUrl)
@@ -189,7 +192,8 @@ class ProcessSquarePaymentView(View):
                     '<p>{}</p><ul>{}</ul>',
                     str(_('ERROR: Error with Square checkout transaction attempt.')),
                     mark_safe(response.errors),
-                )
+                ),
+                extra_tags='square-error'
             )
             return HttpResponseRedirect(sourceUrl)
         else:
@@ -242,9 +246,11 @@ class ProcessPointOfSalePaymentView(View):
 
         if not serverTransId and not clientTransId:
             logger.error('An unknown error has occurred with Square point of sale transaction attempt.')
-            messages.error(self.request, _(
-                'ERROR: An unknown error has occurred with Square point of sale transaction attempt.'
-            ))
+            messages.error(
+                self.request,
+                _('ERROR: An unknown error has occurred with Square point of sale transaction attempt.'),
+                extra_tags='square-error'
+            )
             return
 
         location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
@@ -273,7 +279,8 @@ class ProcessPointOfSalePaymentView(View):
                 messages.error(
                     request,
                     str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
-                    str(response.errors)
+                    str(response.errors),
+                    extra_tags='square-error'
                 )
             else:
                 payment_list = [x.get('id') for x in response.body.get(response_key, {}).get('tenders', [])]
@@ -282,7 +289,10 @@ class ProcessPointOfSalePaymentView(View):
                     logger.debug(f'Successfully retrieved payment based on server transaction identifier {serverTransId}')
                 else:
                     logger.error('Returned client transaction ID not found.')
-                    messages.error(request, _('ERROR: Returned client transaction ID not found.'))
+                    messages.error(
+                        request, _('ERROR: Returned client transaction ID not found.'),
+                        extra_tags='square-error'
+                    )
 
         if clientTransId and not payment:
             # Try to find the payment in the 50 most recent payments
@@ -294,7 +304,8 @@ class ProcessPointOfSalePaymentView(View):
                 messages.error(
                     request,
                     str(_('ERROR: Unable to find Square transaction by client ID:' )) +
-                    str(response.errors)
+                    str(response.errors),
+                    extra_tags='square-error'
                 )
             else:
                 payment_list = [x for x in response.body.get('payments', []) if x.get('order_id') == clientTransId]
@@ -303,7 +314,10 @@ class ProcessPointOfSalePaymentView(View):
                     logger.debug(f'Successfully retrieved payment based on client transaction identifier {clientTransId}')
                 else:
                     logger.error('Returned client transaction ID not found.')
-                    messages.error(request, _('ERROR: Returned client transaction ID not found.'))
+                    messages.error(
+                        request, _('ERROR: Returned client transaction ID not found.'),
+                        extra_tags='square-error'
+                    )
 
         return payment
 
@@ -331,7 +345,8 @@ class ProcessPointOfSalePaymentView(View):
                         '<p>{}</p><ul><li><strong>CODE:</strong> {}</li><li><strong>DESCRIPTION:</strong> {}</li></ul>',
                         str(_('ERROR: Error with Square point of sale transaction attempt.')),
                         str(_('Invalid metadata passed from Square app.')),
-                    )
+                    ),
+                    extra_tags='square-error'
                 )
                 return HttpResponseRedirect(reverse('showRegSummary'))
 
@@ -371,7 +386,8 @@ class ProcessPointOfSalePaymentView(View):
                         '<p>{}</p><ul><li><strong>CODE:</strong> {}</li><li><strong>DESCRIPTION:</strong> {}</li></ul>',
                         str(_('ERROR: Error with Square point of sale transaction attempt.')),
                         str(_('Invalid metadata passed from Square app.')),
-                    )
+                    ),
+                    extra_tags='square-error'
                 )
                 return HttpResponseRedirect(reverse('showRegSummary'))
 
@@ -402,7 +418,8 @@ class ProcessPointOfSalePaymentView(View):
                 format_html(
                     '<p>{}</p><ul><li><strong>CODE:</strong> {}</li><li><strong>DESCRIPTION:</strong> {}</li></ul>',
                     str(_('ERROR: Error with Square point of sale transaction attempt.')), errorCode, errorDescription
-                )
+                ),
+                extra_tags='square-error'
             )
             return HttpResponseRedirect(sourceUrl)
 
@@ -441,7 +458,8 @@ class ProcessPointOfSalePaymentView(View):
                 logger.error('Invalid invoice ID passed: %s' % metadata.get('invoice'))
                 messages.error(
                     request,
-                    str(_('ERROR: Invalid invoice ID passed')) + ': %s' % metadata.get('invoice')
+                    str(_('ERROR: Invalid invoice ID passed')) + ': %s' % metadata.get('invoice'),
+                    extra_tags='square-error'
                 )
                 return HttpResponseRedirect(sourceUrl)
         else:
