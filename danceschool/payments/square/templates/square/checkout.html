@@ -185,7 +185,7 @@
       const statusContainer = document.getElementById(
         'payment-status-container'
       );
-      statusContainer.textContent = '';
+      statusContainer.innerHTML = '';
       statusContainer.style.visibility = 'hidden';
 
       if (status==='error') {
@@ -198,7 +198,7 @@
         statusContainer.classList.add('alert-info');
       }
 
-      statusContainer.textContent = message;
+      statusContainer.innerHTML = message;
       statusContainer.style.visibility = 'visible';
     }
 

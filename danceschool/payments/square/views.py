@@ -191,14 +191,14 @@ class ProcessSquarePaymentView(View):
             this_invoice.save()
             errors_string = ''
             for err in response.errors:
-                errors_string += '<li><strong>CODE:</strong> %s, %s</li>' % (
+                errors_string += '<li><strong>{}:</strong> {}</li>'.format(
                     err.get('code', str(_('Unknown'))), err.get('detail', str(_('Unknown')))
                 )
             return SquareCheckoutErrorResponse(
                 format_html(
                     '<p>{}</p><ul>{}</ul>',
                     str(_('ERROR: Error with Square checkout transaction attempt.')),
-                    mark_safe(response.errors),
+                    format_html(errors_string),
                 )
             )
         else:
