@@ -25,7 +25,7 @@
         <div id="card-container"></div>
         <button id="card-button" class="btn btn-lg btn-primary" type="button">Submit Payment</button>
       </form>
-      <div id="payment-status-container"></div>
+      <div role="alert" class="alert" id="payment-status-container" style="visibility: hidden"></div>
     </div>
 </div>
 
@@ -110,13 +110,11 @@
           cardButton.disabled = true;
           const token = await tokenize(paymentMethod);
           const paymentResults = await createPayment(token);
-          displayPaymentResults('SUCCESS');
-
-          console.debug('Payment Success', paymentResults);
+          cardButton.disabled = false;
+          displayPaymentMessage(paymentResults.message, paymentResults.status);
         } catch (e) {
           cardButton.disabled = false;
-          displayPaymentResults('FAILURE');
-          console.error(e.message);
+          displayPaymentMessage(e.message);
         }
       }
 
@@ -159,8 +157,8 @@
       if (paymentResponse.redirected) {
         window.location.href = paymentResponse.url;
       }
-      const errorBody = await paymentResponse.text();
-      throw new Error(errorBody);
+      const responseJson = await paymentResponse.json();
+      return responseJson;
     }
 
     // This function tokenizes a payment method. 
@@ -183,22 +181,26 @@
       }
     }
 
-    // Helper method for displaying the Payment Status on the screen.
-    // status is either SUCCESS or FAILURE;
-    function displayPaymentResults(status) {
+    function displayPaymentMessage(message, status='error') {
       const statusContainer = document.getElementById(
         'payment-status-container'
       );
-      if (status === 'SUCCESS') {
-        statusContainer.classList.remove('is-failure');
-        statusContainer.classList.add('is-success');
-      } else {
-        statusContainer.classList.remove('is-success');
-        statusContainer.classList.add('is-failure');
+      statusContainer.textContent = '';
+      statusContainer.style.visibility = 'hidden';
+
+      if (status==='error') {
+        statusContainer.classList.remove('alert-success');
+        statusContainer.classList.add('alert-danger');
+
+      }
+      else {
+        statusContainer.classList.remove('alert-danger');
+        statusContainer.classList.add('alert-info');
       }
 
+      statusContainer.textContent = message;
       statusContainer.style.visibility = 'visible';
-    }    
+    }
 
 </script>
 {% endaddtoblock %}

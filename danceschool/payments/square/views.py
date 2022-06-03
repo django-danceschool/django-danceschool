@@ -1,4 +1,6 @@
-from django.http import HttpResponseRedirect, HttpResponseBadRequest
+from django.http import (
+HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
+)
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
@@ -9,6 +11,7 @@ from django.contrib import messages
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.generic import View
+
 
 import uuid
 from square.client import Client
@@ -30,6 +33,20 @@ from .tasks import updateSquareFees
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+class SquareCheckoutErrorResponse(JsonResponse):
+
+    def __init__(self, message, **kwargs):
+        data = {
+            'status': 'error',
+            'message': message,
+        }
+        if kwargs.get('redirect_url'):
+            data['redirect_url'] = kwargs.pop('redirect_url', None)
+
+        return super.__init__(data, **kwargs)
+
 
 class ProcessSquarePaymentView(View):
     '''
@@ -73,16 +90,13 @@ class ProcessSquarePaymentView(View):
                 amount = float(amount)
             except ValueError:
                 logger.error('Invalid amount passed')
-                messages.error(
-                    request,
+                return SquareCheckoutErrorResponse(
                     format_html(
                         '<p>{}</p><ul><li>{}</li></ul>',
                         str(_('ERROR: Error with Square checkout transaction attempt.')),
                         str(_('Invalid amount passed.'))
-                    ),
-                    extra_tags='square-error'
+                    )
                 )
-                return HttpResponseRedirect(sourceUrl)
 
         # Parse if a specific submission user is indicated
         submissionUser = None
@@ -109,16 +123,13 @@ class ProcessSquarePaymentView(View):
             # All other transactions require both a transaction type and an amount to be specified
             elif not transactionType or not amount:
                 logger.error('Insufficient information passed to createSquarePayment view.')
-                messages.error(
-                    request,
+                return SquareCheckoutErrorResponse(
                     format_html(
                         '<p>{}</p><ul><li>{}</li></ul>',
                         str(_('ERROR: Error with Square checkout transaction attempt.')),
                         str(_('Insufficient information passed to createSquarePayment view.'))
-                    ),
-                    extra_tags='square-error'
+                    )
                 )
-                return HttpResponseRedirect(sourceUrl)
             else:
                 # Gift certificates automatically get a nicer invoice description
                 if transactionType == 'Gift Certificate':
@@ -138,8 +149,7 @@ class ProcessSquarePaymentView(View):
                 'Invalid invoice/amount information passed to createSquarePayment ' +
                 'view: (%s, %s)' % (invoice_id, amount)
             )
-            messages.error(
-                request,
+            return SquareCheckoutErrorResponse(
                 format_html(
                     '<p>{}</p><ul><li>{}</li></ul>',
                     str(_('ERROR: Error with Square checkout transaction attempt.')),
@@ -148,11 +158,9 @@ class ProcessSquarePaymentView(View):
                         'createSquarePayment view: (%s, %s)' % (
                             invoice_id, amount
                         )
-                    )),
-                    extra_tags='square-error'
+                    ))
                 )
             )
-            return HttpResponseRedirect(sourceUrl)
 
         if this_invoice.status == Invoice.PaymentStatus.preliminary:
             this_invoice.status = Invoice.PaymentStatus.unpaid
@@ -186,16 +194,13 @@ class ProcessSquarePaymentView(View):
                 errors_string += '<li><strong>CODE:</strong> %s, %s</li>' % (
                     err.get('code', str(_('Unknown'))), err.get('detail', str(_('Unknown')))
                 )
-            messages.error(
-                request,
+            return SquareCheckoutErrorResponse(
                 format_html(
                     '<p>{}</p><ul>{}</ul>',
                     str(_('ERROR: Error with Square checkout transaction attempt.')),
                     mark_safe(response.errors),
-                ),
-                extra_tags='square-error'
+                )
             )
-            return HttpResponseRedirect(sourceUrl)
         else:
             logger.info('Square charge successfully created.')
 

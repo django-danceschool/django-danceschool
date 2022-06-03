@@ -5,6 +5,13 @@
 
 {% block content %}
 
+{# Display any warning or error messages associated with the previous form submission #}
+<div id="message-alerts">
+{% for message in messages %}
+    <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+{% endfor %}
+</div>
+
 <div class="regsummary">
 	{% block summary %}
 
@@ -105,17 +112,6 @@
 		 	<p>
 			 {% trans "In order to complete your registration you must click on the button below to make a payment." %}
 			</p>
-
-			<div id="message-alerts">
-				{% for message in messages %}
-				<div role="alert"
-					class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% else %}alert-info{% endif %}{% if message.tags %}{{ message.tags }}{% endif %}"
-				><strong>{% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}{% trans "ERROR" %}{% else %}{% trans "NOTE" %}{% endif %}:</strong> {{ message }}</div>
-				{% empty %}
-						<div class="alert alert-info">There should be no messages here.</div>
-						<div class="alert alert-info">Test {{ messages }}</div>
-				{% endfor %}
-			</div>
 
 		 	{% if payAtDoor %}
 				{% static_placeholder "registration_payatdoor_placeholder" %}
