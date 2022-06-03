@@ -45,7 +45,7 @@ class SquareCheckoutErrorResponse(JsonResponse):
         if kwargs.get('redirect_url'):
             data['redirect_url'] = kwargs.pop('redirect_url', None)
 
-        return super.__init__(data, **kwargs)
+        return super().__init__(data, **kwargs)
 
 
 class ProcessSquarePaymentView(View):
