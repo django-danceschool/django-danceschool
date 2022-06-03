@@ -25,7 +25,7 @@
         <div id="card-container"></div>
         <button id="card-button" class="btn btn-lg btn-primary" type="button">Submit Payment</button>
       </form>
-      <div role="alert" class="alert" id="payment-status-container" style="visibility: hidden"></div>
+      <div role="alert" class="alert mt-4" id="payment-status-container" style="visibility: hidden"></div>
     </div>
 </div>
 
@@ -78,6 +78,19 @@
         return cookieValue;
     }
 
+    function e1() {
+        var u='',i=0;
+        while(i++<36) {
+            var c='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'[i-1],r=Math.random()*16|0,v=c=='x'?r:(r&0x3|0x8);
+            u+=(c=='-'||c=='4')?c:v.toString(16)
+        }
+        return u;
+    }
+
+    function updateIdempotencyKey() {
+        squareCheckoutParams.transaction_details.idempotency_key = e1();
+    }
+
     async function initializeCard(payments) {
       const card = await payments.card();
       await card.attach('#card-container'); 
@@ -112,9 +125,11 @@
           const paymentResults = await createPayment(token);
           cardButton.disabled = false;
           displayPaymentMessage(paymentResults.message, paymentResults.status);
+          updateIdempotencyKey();
         } catch (e) {
           cardButton.disabled = false;
           displayPaymentMessage(e.message);
+          updateIdempotencyKey();
         }
       }
 
