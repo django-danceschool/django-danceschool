@@ -1,5 +1,6 @@
 {% load sekizai_tags static i18n tz %}
 {% get_current_timezone as TIME_ZONE %}
+{% get_current_language as LANGUAGE_CODE %}
 
 <div id="calendarbox">&nbsp;</div>
 <!-- Modal -->
@@ -49,6 +50,7 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
 	<script src='{% static 'fullcalendar/fullcalendar.min.js' %}'></script>
+    <script src='{% static 'fullcalendar/locale-all.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 	<script type="text/javascript">
@@ -60,6 +62,7 @@
 	        // put your options and callbacks here
 	        events: "{% url 'jsonCalendarFeed' %}",
 	        timezone: "{{ TIME_ZONE }}",
+            locale: "{{ LANGUAGE_CODE }}",
 	        height: "auto",
 	        eventTextColor: '#ffffff',
 	        eventColor: '#477087',
