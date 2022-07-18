@@ -15,13 +15,14 @@ from danceschool.core.models import (
 from danceschool.core.constants import getConstant
 from danceschool.core.signals import get_eventregistration_data
 
-from .models import ExpenseItem, RevenueItem, RepeatedExpenseRule
+from .models import RevenueItem, RepeatedExpenseRule, TransactionParty
 
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
 
 
+@receiver(post_save, sender=EventStaffMember)
 @receiver(m2m_changed, sender=EventStaffMember.occurrences.through)
 def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
     if 'loaddata' in sys.argv or ('raw' in kwargs and kwargs['raw']):
@@ -31,20 +32,29 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
 
     logger.debug('ExpenseItem signal fired for EventStaffMember %s.' % instance.pk)
 
-    staff_expenses = [
-        x.item for x in instance.related_expenses.all() if
-        x.item.expenseRule == RepeatedExpenseRule.RateRuleChoices.hourly
-    ]
+    new_payTo = TransactionParty.objects.get_or_create(
+        staffMember=instance.staffMember,
+        defaults={'name': getattr(instance.staffMember, 'fullName', '')}
+    )
+
+    staff_expenses = [x.item for x in instance.related_expenses.all()]
 
     if staff_expenses:
-        logger.debug('Updating existing hourly expense item for event staff member.')
+        logger.debug('Updating existing expense item for event staff member.')
         # Fill in the updated hours and the updated total.  Set the expense item
         # to unapproved.
         for expense in staff_expenses:
             logger.debug('Updating expense item %s.' % expense.id)
-            expense.hours = instance.netHours
-            expense.total = expense.hours * expense.wageRate
-            expense.approved = None
+
+            if expense.expenseRule == RepeatedExpenseRule.RateRuleChoices.hourly:
+                expense.hours = instance.netHours
+                expense.total = expense.hours * expense.wageRate
+                expense.approved = None
+
+            # Update who the expense should be paid to if the identity of the
+            # staff member has changed and the expense is not already paid.
+            if not expense.paid:
+                expense.payTo = new_payTo
             expense.save()
 
     if hasattr(instance.replacedStaffMember, 'staffMember'):
