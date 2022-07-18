@@ -90,3 +90,6 @@ ENV/
 
 # Visual Studio Code settings
 .vscode/
+
+# Pycharm settings
+.idea/

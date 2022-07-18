@@ -1,6 +1,7 @@
 {% extends "cms/admin_home.html" %}
 {% load sekizai_tags static i18n tz %}
 {% get_current_timezone as TIME_ZONE %}
+{% get_current_language as LANGUAGE_CODE %}
 
 {% block content %}
 
@@ -118,6 +119,7 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
     <script src='{% static 'fullcalendar/fullcalendar.min.js' %}'></script>
+    <script src='{% static 'fullcalendar/locale-all.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
@@ -144,6 +146,7 @@ $(document).ready(function() {
         // put your options and callbacks here
         eventTextColor: '#ffffff',
         timezone: "{{ TIME_ZONE }}",
+        locale: "{{ LANGUAGE_CODE }}",
         height: "auto",
         aspectRatio: 1,
         header: {right: 'month,agendaWeek,listMonth prev,next today'},

@@ -1,5 +1,6 @@
 {% extends "cms/home.html" %}
 {% load sekizai_tags static crispy_forms_tags i18n %}
+{% get_current_language as LANGUAGE_CODE %}
 
 {% block extra_head %}{{ block.super }}
 {{ creation_form.media }}
@@ -126,6 +127,7 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
     <script src="{% static 'fullcalendar/fullcalendar.min.js' %}"></script>
+    <script src='{% static 'fullcalendar/locale-all.js' %}'></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
@@ -170,6 +172,7 @@ $(document).ready(function() {
                 {url: "{% url 'jsonPrivateLessonAvailabilityFeed' %}" + {{ instructor.id }} + "/"},
         ],
         eventTextColor: '#ffffff',
+        locale: "{{ LANGUAGE_CODE }}",
         height: 500,
         aspectRatio: 1,
         defaultView: 'agendaWeek',
