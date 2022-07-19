@@ -1035,28 +1035,34 @@ class EventAutocompleteForm(forms.Form):
     registrations), but it has no other fields by default.
     '''
 
-    event = forms.ModelChoiceField(
-        queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),
-        label=_('Search for an Event'),
-        required=True,
-        widget=autocomplete.ModelSelect2(
-            url='autocompleteEvent',
-            attrs={
-                # This will set the input placeholder attribute:
-                'data-placeholder': _('Enter event title, year, or month'),
-                # This will set the yourlabs.Autocomplete.minimumCharacters
-                # options, the naming conversion is handled by jQuery
-                'data-minimum-input-length': 0,
-                'data-max-results': 10,
-                'class': 'modern-style',
-                'data-html': True,
-            }
-        )
-    )
-
     def __init__(self, *args, **kwargs):
+        is_multi = kwargs.pop('multi', False)
+        field_class, widget_class = (
+            (forms.ModelMultipleChoiceField, autocomplete.ModelSelect2Multiple)
+            if is_multi else
+            (forms.ModelChoiceField, autocomplete.ModelSelect2)
+        )
 
         super().__init__(*args, **kwargs)
+
+        self.fields['event'] = field_class(
+            queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),
+            label=_('Search for an Event'),
+            required=True,
+            widget=widget_class(
+                url='autocompleteEvent',
+                attrs={
+                    # This will set the input placeholder attribute:
+                    'data-placeholder': _('Enter event title, year, or month'),
+                    # This will set the yourlabs.Autocomplete.minimumCharacters
+                    # options, the naming conversion is handled by jQuery
+                    'data-minimum-input-length': 0,
+                    'data-max-results': 10,
+                    'class': 'modern-style',
+                    'data-html': True,
+                }
+            )
+        )
 
         self.helper = FormHelper()
         self.helper.layout = Layout(
@@ -1282,9 +1288,22 @@ class EmailContactForm(forms.Form):
     from_name = forms.CharField(max_length=50, initial=get_defaultEmailName)
     from_address = forms.EmailField(max_length=100, initial=get_defaultEmailFrom)
     cc_myself = forms.BooleanField(label=_('CC Myself:'), initial=True, required=False)
-    series = forms.MultipleChoiceField(
-        label=_('Email all students registered in a current/recent series:'),
-        initial='', required=False
+    events = forms.ModelMultipleChoiceField(
+        label=_('Email all students registered for a current/recent event:'),
+        queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),
+        required=False, widget=autocomplete.ModelSelect2Multiple(
+            url='autocompleteEvent',
+            attrs={
+                # This will set the input placeholder attribute:
+                'data-placeholder': _('Enter event title, year, or month'),
+                # This will set the yourlabs.Autocomplete.minimumCharacters
+                # options, the naming conversion is handled by jQuery
+                'data-minimum-input-length': 0,
+                'data-max-results': 10,
+                'class': 'modern-style',
+                'data-html': True,
+            }
+        )
     )
     include_staff = forms.BooleanField(
         label=_('Include Event Staff'), initial=False, required=False
@@ -1306,7 +1325,6 @@ class EmailContactForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        recentseries = kwargs.pop('recentseries', [])
         customers = kwargs.pop('customers', [])
 
         super().__init__(*args, **kwargs)
@@ -1323,12 +1341,11 @@ class EmailContactForm(forms.Form):
             self.fields['customers'].initial = [x.id for x in customers]
 
             customer_section = Div('customers')
-            series_section = Div()
+            events_section = Div()
 
         else:
-            self.fields['series'].choices = recentseries
             customer_section = Div()
-            series_section = Div('series', 'include_staff')
+            events_section = Div('events', 'include_staff')
 
         if user:
             self.fields['template'].queryset = EmailTemplate.objects.filter(
@@ -1362,7 +1379,7 @@ class EmailContactForm(forms.Form):
             'html_message',
             'from_name',
             'from_address',
-            series_section,
+            events_section,
             'cc_myself',
             'testemail',
             cc_section,
@@ -1378,7 +1395,7 @@ class EmailContactForm(forms.Form):
         # KeyError issues with the subsequent view
         customers = self.cleaned_data.get('customers')
         if customers:
-            self.cleaned_data['series'] = None
+            self.cleaned_data['events'] = None
             self.cleaned_data['include_staff'] = None
 
         # If this is an HTML email, then ignore the plain text content

@@ -931,7 +931,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         richTextChoice = self.form_data.pop('richTextChoice')
         cc_myself = self.form_data.pop('cc_myself')
         testemail = self.form_data.pop('testemail')
-        series = self.form_data.pop('series')
+        events = self.form_data.pop('events')
         include_staff = self.form_data.pop('include_staff')
         customers = self.form_data.pop('customers', [])
         additional_cc = self.form_data.pop('additional_cc', [])
@@ -949,12 +949,12 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             })
 
         items_to_send = []
-        if series not in [None, '', [], ['']]:
-            items_to_send += list(Event.objects.filter(id__in=series))
+        if events not in [None, '', [], ['']]:
+            items_to_send += list(Event.objects.filter(id__in=events))
         if customers:
             items_to_send.append(list(Customer.objects.filter(id__in=customers)))
 
-        # We always call one email per series so that the series-level tags
+        # We always call one email per event so that the event-level tags
         # can be passed.  The entire list of customers is also a single item
         # in the items_to_send list, because they can be processed all at once.
         for s in items_to_send:
@@ -1016,7 +1016,7 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         context = super().get_context_data(**kwargs)
         context.update(self.form_data)
 
-        series = self.form_data['series']
+        events = self.form_data['events']
         customers = self.form_data.get('customers')
         from_address = self.form_data['from_address']
         cc_myself = self.form_data['cc_myself']
@@ -1025,10 +1025,10 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         additional_bcc = self.form_data.get('additional_bcc', [])
 
         events_to_send = []
-        if series not in [None, '', [], ['']]:
-            events_to_send += [Event.objects.get(id=x) for x in series]
+        if events not in [None, '', [], ['']]:
+            events_to_send += [Event.objects.get(id=x) for x in events]
 
-        # We always call one email per series so that the series-level tags
+        # We always call one email per event so that the event-level tags
         # can be passed.
         regs = EventRegistration.objects.select_related('customer').filter(
             event__in=events_to_send
@@ -1091,18 +1091,11 @@ class SendEmailView(PermissionRequiredMixin, UserFormKwargsMixin, FormView):
 
     def get_form_kwargs(self, **kwargs):
         '''
-        Get the list of recent events to pass to the form.
+        Pass the list of customers to the form if applicable.
         '''
 
-        cutoff = timezone.now() - timedelta(days=120)
-        allEvents = Event.objects.filter(startTime__gte=cutoff).order_by('-startTime')
-        recentSeries = [('', 'None')] + [(x.id, '%s %s: %s' % (month_name[x.month], x.year, x.name)) for x in allEvents]
-
         kwargs = super().get_form_kwargs(**kwargs)
-        kwargs.update({
-            "recentseries": recentSeries,
-            "customers": self.customers,
-        })
+        kwargs['customers'] = self.customers
         return kwargs
 
     def get_initial(self):
