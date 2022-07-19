@@ -1,0 +1,12 @@
+{% extends "cms/home.html" %}
+{% load danceschool_tags sekizai_tags cms_tags i18n %}
+
+{% block title %}{% trans "Payment cancelled" %}{% endblock %}
+
+{% block content %}
+    <section class="section">
+        <div class="container text-left">
+            <h4>{% trans "Your payment was cancelled." %}</h4>
+        </div>
+    </section>
+{% endblock %}
