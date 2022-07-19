@@ -305,7 +305,7 @@ def create_checkout_session(request):
                 client_reference_id=request.user.id if request.user.is_authenticated else None,
                 success_url=domain_url + successUrl,
                 cancel_url=domain_url + '/registration/summary/',
-                payment_method_types=['card', 'p24'],
+                payment_method_types=['card'],
                 mode='payment',
                 customer_email=stripeEmail,
                 metadata=metadata,
