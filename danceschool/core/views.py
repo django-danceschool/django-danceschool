@@ -9,6 +9,7 @@ from django.views.generic import (
     RedirectView, View
 )
 from django.db.models import Min, Q, Count, F, Case, When, BooleanField
+from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -949,8 +950,11 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             })
 
         items_to_send = []
-        if events not in [None, '', [], ['']]:
+        if isinstance(events, QuerySet):
+            items_to_send += list(events)
+        elif events not in [None, '', [], ['']]:
             items_to_send += list(Event.objects.filter(id__in=events))
+
         if customers:
             items_to_send.append(list(Customer.objects.filter(id__in=customers)))
 
