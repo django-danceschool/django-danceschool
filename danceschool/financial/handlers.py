@@ -54,6 +54,9 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
             # Update who the expense should be paid to if the identity of the
             # staff member has changed and the expense is not already paid.
             if not expense.paid:
+                expense.description = expense.description.replace(
+                    expense.payTo.name, getattr(instance.staffMember, 'fullName', '')
+                )
                 expense.payTo = new_payTo
             expense.save()
 
