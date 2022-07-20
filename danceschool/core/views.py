@@ -1029,8 +1029,10 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
         additional_bcc = self.form_data.get('additional_bcc', [])
 
         events_to_send = []
-        if events not in [None, '', [], ['']]:
-            events_to_send += [Event.objects.get(id=x) for x in events]
+        if isinstance(events, QuerySet):
+            events_to_send += list(events)
+        elif events not in [None, '', [], ['']]:
+            events_to_send += list(Event.objects.filter(id__in=events))
 
         # We always call one email per event so that the event-level tags
         # can be passed.
