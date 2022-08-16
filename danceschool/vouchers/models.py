@@ -261,7 +261,7 @@ class Voucher(models.Model):
             if self.classvoucher_set.exists():
                 for s in events:
                     if not self.classvoucher_set.filter(
-                        classDescription=s.classDescription
+                        classDescription=getattr(s, 'classDescription', None)
                     ).exists():
                         errors.append(
                             ValidationError(
@@ -272,7 +272,7 @@ class Voucher(models.Model):
             if self.dancetypevoucher_set.exists():
                 for s in events:
                     if not self.dancetypevoucher_set.filter(
-                        danceTypeLevel=s.classDescription.danceTypeLevel
+                        danceTypeLevel=getattr(getattr(s, 'classDescription', None), 'danceTypeLevel', None)
                     ).exists():
                         errors.append(
                             ValidationError(
@@ -282,7 +282,9 @@ class Voucher(models.Model):
                         )
             if self.seriescategoryvoucher_set.exists():
                 for s in events:
-                    if not self.seriescategoryvoucher_set.filter(seriesCategory=s.category).exists():
+                    if not self.seriescategoryvoucher_set.filter(
+                        seriesCategory=getattr(s, 'category', None)
+                    ).exists():
                         errors.append(
                             ValidationError(
                                 _('This voucher can be only used for specific classes.'),
@@ -292,7 +294,7 @@ class Voucher(models.Model):
             if self.publiceventcategoryvoucher_set.exists():
                 for s in events:
                     if not self.publiceventcategoryvoucher_set.filter(
-                        publicEventCategory=s.category
+                        publicEventCategory=getattr(s, 'category', None)
                     ).exists():
                         errors.append(
                             ValidationError(
@@ -302,7 +304,9 @@ class Voucher(models.Model):
                         )
             if self.sessionvoucher_set.exists():
                 for s in events:
-                    if not self.sessionvoucher_set.filter(session=s.session).exists():
+                    if not self.sessionvoucher_set.filter(
+                        session=getattr(s, 'session', None)
+                    ).exists():
                         errors.append(
                             ValidationError(
                                 _('This voucher can be only used for specific classes or events.'),
@@ -343,7 +347,10 @@ class Voucher(models.Model):
                             code='customer_invalid'
                         )
                     )
-                elif cgvs.exists() and not cgvs.filter(group__in=customer.groups.all()).exists():
+                elif cgvs.exists() and (
+                    not customer or
+                    not cgvs.filter(group__in=customer.groups.all()).exists()
+                ):
                     errors.append(
                         ValidationError(
                             _('This voucher is associated with a specific customer group.'),
