@@ -102,6 +102,7 @@ class EventStaffMemberInline(admin.TabularInline):
                 field.queryset = EventOccurrence.objects.filter(event=request._obj_)
                 if not getattr(self, 'pk', None):
                     field.initial = field.queryset
+                    field.required = True
             else:
                 field.queryset = field.queryset.none()
         return field
