@@ -18,7 +18,7 @@ def get_method_list():
     if (
         'financial_expenseitem' in connection.introspection.table_names() and
         'financial_revenueitem' in connection.introspection.table_names() and not
-        isPreliminaryRun
+        isPreliminaryRun()
     ):
         methods += ExpenseItem.objects.order_by().values_list('paymentMethod', flat=True).distinct()
         methods += RevenueItem.objects.order_by().values_list('paymentMethod', flat=True).distinct()
@@ -35,7 +35,7 @@ def get_approval_status_list():
     Include 'Approved' as an option by default.
     '''
     statuses = [str(_('Approved')), ]
-    if 'financial_expenseitem' in connection.introspection.table_names() and not isPreliminaryRun:
+    if 'financial_expenseitem' in connection.introspection.table_names() and not isPreliminaryRun():
         statuses += ExpenseItem.objects.order_by().values_list('approved', flat=True).distinct()
     status_list = list(set(statuses))
 
