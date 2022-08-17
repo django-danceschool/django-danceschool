@@ -5,7 +5,7 @@ from django.utils import timezone
 from datetime import datetime
 from braces.views import PermissionRequiredMixin
 
-from danceschool.core.models import Instructor, SeriesTeacher, Customer
+from danceschool.core.models import Instructor, Customer
 from danceschool.core.utils.timezone import ensure_timezone
 
 

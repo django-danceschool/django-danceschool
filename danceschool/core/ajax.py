@@ -13,10 +13,11 @@ from braces.views import PermissionRequiredMixin
 import json
 
 from .models import (
-    Event, EventOccurrence, SeriesTeacher, EventRegistration, EmailTemplate,
+    Event, EventOccurrence, EventStaffMember, EventRegistration, EmailTemplate,
     EventCheckIn, Invoice
 )
 from .utils.timezone import ensure_localtime
+from .constants import getConstant
 
 
 class UserAccountInfo(View):
@@ -67,24 +68,43 @@ def updateSeriesAttributes(request):
     is chosen on the Substitute Teacher reporting form.
     '''
     if request.method == 'POST' and request.POST.get('event'):
-        series_option = request.POST.get('event') or None
-        seriesClasses = EventOccurrence.objects.filter(event__id=series_option)
-        seriesTeachers = SeriesTeacher.objects.filter(event__id=series_option)
+        event_id = request.POST.get('event') or None
+        occurrence_filters = Q(event__id=event_id)
+        staff_filters = Q(event__id=event_id)
     else:
         # Only return attributes for valid requests
         return JsonResponse({})
 
-    outClasses = {}
-    for option in seriesClasses:
-        outClasses[str(option.id)] = option.__str__()
+    category_id = request.POST.get('category')
+    if category_id == getConstant('general__eventStaffCategorySubstitute').id:
+        staff_filters &= (
+            Q(category__id=getConstant('general__eventStaffCategoryInstructor')) | 
+            Q(category__id=getConstant('general__eventStaffCategoryAssistant'))
+        )
+    elif category_id:
+        staff_filters &= Q(category__id=category_id)
 
-    outTeachers = {}
-    for option in seriesTeachers:
-        outTeachers[str(option.id)] = option.__str__()
+    occurrence_ids = request.POST.get('occurrences')
+    if occurrence_ids:
+        occurrence_filters &= Q(id__in=occurrence_ids)
+        # The staff members must match all occurrences.
+        for occ in occurrence_ids:
+            staff_filters &= Q(occurrences=occ)
+    else:
+        # Don't return staff unless occurrences are specified.
+        staff_filters = Q(pk__in=[])
+
+    outOccurrences = {}
+    for option in EventOccurrence.objects.filter(occurrence_filters):
+        outOccurrences[str(option.id)] = option.__str__()
+
+    outStaff = {}
+    for option in EventStaffMember.objects.filter(staff_filters):
+        outStaff[str(option.id)] = option.__str__()
 
     return JsonResponse({
-        'id_occurrences': outClasses,
-        'id_replacedStaffMember': outTeachers,
+        'id_occurrences': outOccurrences,
+        'id_replacedStaffMember': outStaff,
     })
 
 

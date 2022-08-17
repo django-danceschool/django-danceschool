@@ -22,7 +22,7 @@ from multi_email_field.forms import MultiEmailField
 
 from .models import (
     EventStaffMember, SubstituteTeacher, Event, EventOccurrence,
-    Series, SeriesTeacher, Instructor, StaffMember, EmailTemplate, Location,
+    Series, StaffMember, EmailTemplate, Location,
     Customer, Invoice, Registration, DanceRole, get_defaultEmailName,
     get_defaultEmailFrom
 )
@@ -1416,9 +1416,9 @@ class EmailContactForm(forms.Form):
         js = ('js/emailcontact_ajax.js',)
 
 
-class SeriesTeacherChoiceField(forms.ModelChoiceField):
+class StaffChoiceField(forms.ModelChoiceField):
     '''
-    This exists so that the validators for substitute teaching are not
+    This exists so that the validators for substitute staffing are not
     thrown off by the fact that the initial query is blank.
     '''
 
@@ -1427,7 +1427,7 @@ class SeriesTeacherChoiceField(forms.ModelChoiceField):
             value = super().to_python(value)
         except (ValueError, ValidationError):
             key = self.to_field_name or 'pk'
-            value = SeriesTeacher.objects.filter(**{key: value})
+            value = EventStaffMember.objects.filter(**{key: value})
             if not value.exists():
                 raise ValidationError(self.error_messages['invalid_choice'], code='invalid_choice')
             else:
@@ -1435,7 +1435,7 @@ class SeriesTeacherChoiceField(forms.ModelChoiceField):
         return value
 
 
-class SeriesClassesChoiceField(forms.ModelMultipleChoiceField):
+class OccurrenceChoiceField(forms.ModelMultipleChoiceField):
     '''
     This exists so that the validators for substitute teaching are not
     thrown off by the fact that the initial query is blank.
@@ -1503,22 +1503,46 @@ class SubstituteReportingForm(forms.ModelForm):
             })
 
         super().__init__(*args, **kwargs)
-        self.fields['event'] = forms.ModelChoiceField(queryset=Series.objects.order_by('-startTime'))
-        self.fields['staffMember'] = forms.ModelChoiceField(queryset=StaffMember.objects.filter(
-                instructor__isnull=False,
-            ).exclude(
-                instructor__status__in=[
-                    Instructor.InstructorStatus.hidden,
-                    Instructor.InstructorStatus.retired,
-                    Instructor.InstructorStatus.retiredGuest
-                ]
-            ).order_by('instructor__status', 'lastName', 'firstName'))
-        self.fields['replacedStaffMember'] = SeriesTeacherChoiceField(
-            queryset=SeriesTeacher.objects.none()
+        self.fields['event'] = forms.ModelChoiceField(
+            queryset=Event.objects.filter(Q(publicevent__isnull=False) | Q(series__isnull=False)),
+            label=_('Event'),
+            required=True,
+            widget=autocomplete.ModelSelect2(
+                url='autocompleteEvent',
+                attrs={
+                    # This will set the input placeholder attribute:
+                    'data-placeholder': _('Enter event title, year, or month'),
+                    # This will set the yourlabs.Autocomplete.minimumCharacters
+                    # options, the naming conversion is handled by jQuery
+                    'data-minimum-input-length': 0,
+                    'data-max-results': 10,
+                    'class': 'modern-style',
+                    'data-html': True,
+                }
+            )
         )
-        self.fields['occurrences'] = SeriesClassesChoiceField(queryset=EventOccurrence.objects.none())
+
+        self.fields['staffMember'] = forms.ModelChoiceField(
+            queryset=StaffMember.objects.all(),
+            widget=autocomplete.ModelSelect2(
+                url='autocompleteStaffMember',
+                attrs={
+                    # This will set the input placeholder attribute:
+                    'data-placeholder': _('Enter a staff member name'),
+                    # This will set the yourlabs.Autocomplete.minimumCharacters
+                    # options, the naming conversion is handled by jQuery
+                    'data-minimum-input-length': 1,
+                    'data-max-results': 10,
+                    'class': 'modern-style',
+                },
+            )
+        )
+
+        self.fields['replacedStaffMember'] = StaffChoiceField(
+            queryset=EventStaffMember.objects.none()
+        )
+        self.fields['occurrences'] = OccurrenceChoiceField(queryset=EventOccurrence.objects.none())
         self.fields['submissionUser'].widget = forms.HiddenInput()
-        self.fields['category'].widget = forms.HiddenInput()
 
     def clean(self):
         '''
@@ -1528,10 +1552,9 @@ class SubstituteReportingForm(forms.ModelForm):
         '''
         super().clean()
 
+        category = self.cleaned_data.get('category')
         occurrences = self.cleaned_data.get('occurrences', [])
-        staffMember = self.cleaned_data.get('staffMember')
         replacementFor = self.cleaned_data.get('replacedStaffMember', [])
-        event = self.cleaned_data.get('event')
 
         for occ in occurrences:
             for this_sub in occ.eventstaffmember_set.all():
@@ -1539,24 +1562,25 @@ class SubstituteReportingForm(forms.ModelForm):
                     self.add_error(
                         'occurrences',
                         ValidationError(_(
-                            'One or more classes you have selected already ' +
-                            'has a substitute teacher for that class.'
+                            'The staff member you selected has already ' +
+                            'been reported as replaced for one or more occurrences.'
                         ), code='invalid')
                     )
 
-        if event and staffMember:
-            if staffMember in [
-                x.staffMember for x in
-                event.eventstaffmember_set.filter(
-                    category__in=[
-                        getConstant('general__eventStaffCategoryAssistant'),
-                        getConstant('general__eventStaffCategoryInstructor')
-                    ]
-                )
-            ]:
-                self.add_error('event', ValidationError(_(
-                    'You cannot substitute teach for a class in which you were an instructor.'
-                ), code='invalid'))
+        if replacementFor and not (
+            category == replacementFor.category or
+            (
+                category == getConstant('general__eventStaffCategorySubstitute') and
+                replacementFor.category in [
+                    getConstant('general__eventStaffCategoryAssistant'),
+                    getConstant('general__eventStaffCategoryInstructor')
+                ]
+            )
+        ):
+            self.add_error('replacedStaffMember', ValidationError(_(
+                'Replaced staff member was not scheduled for this category of staffing.'
+            ), code='invalid'))        
+
 
     def validate_unique(self):
         '''
@@ -1568,14 +1592,14 @@ class SubstituteReportingForm(forms.ModelForm):
 
     def save(self, commit=True):
         '''
-        If a staff member is reporting substitute teaching for a second time, then we should update
+        If a staff member is reporting substitution for a second time, then we should update
         the list of occurrences for which they are a substitute on their existing EventStaffMember
         record, rather than creating a new record and creating database issues.
         '''
         existing_record = EventStaffMember.objects.filter(
             staffMember=self.cleaned_data.get('staffMember'),
             event=self.cleaned_data.get('event'),
-            category=getConstant('general__eventStaffCategorySubstitute'),
+            category=self.cleaned_data.get('category'),
             replacedStaffMember=self.cleaned_data.get('replacedStaffMember'),
         )
         if existing_record.exists():

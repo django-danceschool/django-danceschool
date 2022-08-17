@@ -14,7 +14,7 @@ from datetime import datetime
 
 from danceschool.core.models import (
     Customer, Series, EventOccurrence, Registration, EventRegistration,
-    DanceTypeLevel, Location, DanceRole, SeriesTeacher, Instructor
+    DanceTypeLevel, Location, DanceRole, EventStaffMember, Instructor
 )
 from danceschool.core.utils.requests import getDateTimeFromGet
 from danceschool.core.utils.timezone import ensure_timezone
@@ -923,8 +923,9 @@ def getBestCustomersJSON(request):
         'eventregistration__registration__final': True
     }).annotate(Count('eventregistration')).order_by('-eventregistration__count')[:10]
 
-    mostActiveTeachersThisYear = SeriesTeacher.objects.filter(
-        event__year=timezone.now().year
+    mostActiveTeachersThisYear = EventStaffMember.objects.filter(
+        event__year=timezone.now().year,
+        category=getConstant('general__eventStaffCategoryInstructor')
     ).exclude(
         staffMember__instructor__status=Instructor.InstructorStatus.guest
     ).values_list(

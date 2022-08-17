@@ -40,11 +40,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	    }
 	});
 
-
 	$('#id_event').change(function(event){
 		event.preventDefault();
 
-		var formData = {event: $('#id_event').val()};
+		var formData = {
+			event: $('#id_event').val(),
+			category: $('#id_category').val(),
+		};
 
 		$.ajax({
 			url: "/staff/substitute/filter/",
@@ -65,8 +67,43 @@ document.addEventListener("DOMContentLoaded", function(event) {
 					);
 				});
 				$('#id_occurrences').parent('p').show();
-				$('#id_replacedStaffMember').parent('p').show();
 				$('#id_occurrences').attr('disabled',false);
+
+				if (data['id_replacedStaffMember'].length !== 0) {
+					$('#id_replacedStaffMember').parent('p').show();
+					$('#id_replacedStaffMember').attr('disabled',false);
+				}
+
+			},
+			failure: function() {
+				console.log('Failed to retrieve dropdown data using AJAX.');
+			},
+		});
+	});
+
+	$('#id_category, #id_occurrences').change(function(event){
+		event.preventDefault();
+
+		var formData = {
+			event: $('#id_event').val(),
+			category: $('#id_category').val(),
+			occurrences: $('#id_occurrences').val(),
+		};
+
+		$.ajax({
+			url: "/staff/substitute/filter/",
+			type: "POST",
+			data: formData,
+			success: function(data, textStatus, jqXHR) {
+				$('#id_replacedStaffMember').empty();
+
+				$.each(data['id_replacedStaffMember'], function(index,text) {
+					$('#id_replacedStaffMember').append(
+						$('<option></option>').val(index).html(text)
+					);
+				});
+
+				$('#id_replacedStaffMember').parent('p').show();
 				$('#id_replacedStaffMember').attr('disabled',false);
 			},
 			failure: function() {

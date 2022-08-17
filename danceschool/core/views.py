@@ -1532,14 +1532,14 @@ class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, Use
     template_name = 'cms/forms/display_form_classbased_admin.html'
     form_class = SubstituteReportingForm
     permission_required = 'core.report_substitute_teaching'
-    success_message = _('Substitute teaching reported successfully.')
+    success_message = _('Substitution reported successfully.')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         context.update({
-            'form_title': _('Report Substitute Teaching'),
-            'form_description': _('Use this form to report substitute teaching.'),
+            'form_title': _('Report Substitution'),
+            'form_description': _('Use this form to report substitute teaching or other staff substitutions.'),
         })
         return context
 

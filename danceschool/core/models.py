@@ -1,3 +1,4 @@
+from xml.etree.ElementInclude import include
 from django.db import models
 from django.contrib.auth.models import User, Group
 from django.urls import reverse
@@ -37,10 +38,7 @@ from .signals import (
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
 from .utils.timezone import ensure_localtime
-from .managers import (
-    InvoiceManager, SeriesTeacherManager, SubstituteTeacherManager,
-    EventDJManager, SeriesStaffManager
-)
+from .managers import InvoiceManager
 
 
 # Define logger for this file
@@ -1747,7 +1745,7 @@ class EventStaffMember(EmailRecipientMixin, models.Model):
     def netHours(self):
         '''
         For regular event staff, this is the net hours worked for financial purposes.
-        For Instructors, netHours is caclulated net of any substitutes.
+        For Instructors, netHours is calculated net of any substitutes.
         '''
         if self.specifiedHours is not None:
             return self.specifiedHours
@@ -1827,16 +1825,18 @@ class Series(Event):
     )
 
     def getTeachers(self, includeSubstitutes=False):
-        seriesTeachers = SeriesTeacher.objects.filter(event=self)
-        seriesTeachers = set([t.staffMember for t in seriesTeachers])
-
+        staff_categories = [
+            getConstant('general__eventStaffCategoryInstructor')
+        ]
         if includeSubstitutes:
-            for c in self.eventoccurrence_set:
-                sts = SubstituteTeacher.objects.filter(classes=c)
-                for s in sts:
-                    seriesTeachers.add(s.staffMember)
+            staff_categories.append(
+                getConstant('general__eventStaffCategorySubstitute')
+            )
 
-        return list(seriesTeachers)
+        return StaffMember.objects.filter(
+            eventstaffmember__event=self,
+            eventstaffmember__category__in=staff_categories
+        ).distinct()
 
     teachers = property(fget=getTeachers)
     teachers.fget.short_description = _('Instructors')
@@ -1970,40 +1970,13 @@ class Series(Event):
         verbose_name_plural = _('Class series')
 
 
-class SeriesTeacher(EventStaffMember):
-    '''
-    A proxy model that provides staff member properties specific to
-    keeping track of series teachers.
-    '''
-    objects = SeriesTeacherManager()
-
-    @property
-    def netHours(self):
-        '''
-        For regular event staff, this is the net hours worked for financial purposes.
-        For Instructors, netHours is calculated net of any substitutes.
-        '''
-        if self.specifiedHours is not None:
-            return self.specifiedHours
-        return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
-    netHours.fget.short_description = _('Net hours taught')
-
-    def __str__(self):
-        return str(self.staffMember) + " - " + str(self.event)
-
-    class Meta:
-        proxy = True
-        verbose_name = _('Series instructor')
-        verbose_name_plural = _('Series instructors')
-
-
 class SubstituteTeacher(EventStaffMember):
     '''
-    Keeps track of substitute teaching.  The series and seriesTeacher fields are
-    both needed, because this allows the substitute teaching inline to be
-    displayed for each series.
+    This proxy model is used when keeping track of substitute teaching/staffing.
+    The model may be used for all types of staff, but we use the proxy model
+    for substitute reporting because this allows the possibility of adding
+    additional validation on substitutes only.
     '''
-    objects = SubstituteTeacherManager()
 
     def __str__(self):
         replacements = {
@@ -2024,53 +1997,15 @@ class SubstituteTeacher(EventStaffMember):
     def clean(self):
         ''' Ensures no SubstituteTeacher without indicating who they replaced. '''
         if not self.replacedStaffMember:
-            raise ValidationError(_('Must indicate which Instructor was replaced.'))
+            raise ValidationError(_('Must indicate which staff member was replaced.'))
 
     class Meta:
         proxy = True
         permissions = (
-            ('report_substitute_teaching', _('Can access the substitute teaching reporting form')),
+            ('report_substitute_teaching', _('Can access the substitute reporting form')),
         )
-        verbose_name = _('Substitute instructor')
-        verbose_name_plural = _('Substitute instructors')
-
-
-class EventDJ(EventStaffMember):
-    '''
-    A proxy model that provides staff member properties specific to
-    keeping track of series teachers.
-    '''
-    objects = EventDJManager()
-
-    @property
-    def netHours(self):
-        '''
-        For regular event staff, this is the net hours worked for financial purposes.
-        For Instructors, netHours is calculated net of any substitutes.
-        '''
-        return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
-    netHours.fget.short_description = _('Net hours taught')
-
-    def __str__(self):
-        return str(self.staffMember) + " - " + str(self.event)
-
-    class Meta:
-        proxy = True
-        verbose_name = _('Event DJ')
-        verbose_name_plural = _('Event DJs')
-
-
-class SeriesStaffMember(EventStaffMember):
-    '''
-    A proxy model with a custom manager that excludes SeriesTeachers and
-    SubstituteTeachers for easier admin integration.
-    '''
-    objects = SeriesStaffManager()
-
-    class Meta:
-        proxy = True
-        verbose_name = _('Series staff member')
-        verbose_name_plural = _('Series staff members')
+        verbose_name = _('Substitute staff member')
+        verbose_name_plural = _('Substitute staff members')
 
 
 class PublicEvent(Event):
@@ -2145,7 +2080,10 @@ class PublicEvent(Event):
         '''
         Returns the list of DJs
         '''
-        return EventDJ.objects.filter(event=self)
+        return EventStaffMember.objects.filter(
+            event=self,
+            category=getConstant('general__eventStaffCategoryDJ')
+        )
     djs.fget.short_description = _('DJs')
 
     @property

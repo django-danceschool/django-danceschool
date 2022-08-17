@@ -24,10 +24,10 @@ from dal import autocomplete
 
 from .models import (
     EventSession, Event, PublicEventCategory, Series, SeriesCategory,
-    PublicEvent, EventOccurrence, SeriesTeacher, StaffMember, Instructor,
-    SubstituteTeacher, Registration, EventRegistration, ClassDescription,
+    PublicEvent, EventOccurrence, StaffMember, Instructor,
+    Registration, EventRegistration, ClassDescription,
     CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType,
-    DanceTypeLevel, EmailTemplate, EventStaffMember, SeriesStaffMember,
+    DanceTypeLevel, EmailTemplate, EventStaffMember,
     EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 )
 from .constants import getConstant
@@ -86,81 +86,6 @@ class EventStaffMemberInlineForm(ModelForm):
         )
 
 
-class SeriesTeacherInlineForm(EventStaffMemberInlineForm):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields['staffMember'].label = _('Instructor')
-        self.fields['category'].initial = getConstant('general__eventStaffCategoryInstructor').id
-
-    class Meta:
-        widgets = {
-            'category': HiddenInput(),
-        }
-
-
-class SeriesTeacherInline(admin.StackedInline):
-    model = SeriesTeacher
-    form = SeriesTeacherInlineForm
-    exclude = ('replacedStaffMember', 'occurrences', 'submissionUser')
-    extra = 1
-
-    def save_model(self, request, obj, form, change):
-        obj.replacedStaffMember = None
-        obj.occurrences = obj.event.eventoccurrence_set.all()
-        obj.submissionUser = request.user
-        obj.save()
-
-
-class SubstituteTeacherInlineForm(EventStaffMemberInlineForm):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields['staffMember'].label = _('Instructor')
-        self.fields['replacedStaffMember'].required = True
-        self.fields['category'].initial = getConstant('general__eventStaffCategorySubstitute').id
-
-    class Meta:
-        widgets = {
-            'category': HiddenInput(),
-        }
-
-
-class SubstituteTeacherInline(admin.StackedInline):
-    model = SubstituteTeacher
-    form = SubstituteTeacherInlineForm
-    exclude = ('submissionUser', )
-    extra = 0
-
-    def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
-        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-        if db_field.name == 'replacedStaffMember':
-            if request._obj_ is not None:
-                # set the query set to whatever you like
-                field.queryset = SeriesTeacher.objects.filter(event=request._obj_)
-            else:
-                field.queryset = field.queryset.none()
-        return field
-
-    def formfield_for_manytomany(self, db_field, request=None, **kwargs):
-        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-        if db_field.name == 'occurrences':
-            if request._obj_ is not None:
-                # set the query set to whatever you like
-                field.queryset = EventOccurrence.objects.filter(event=request._obj_)
-            else:
-                field.queryset = field.queryset.none()
-        return field
-
-    def save_model(self, request, obj, form, change):
-        obj.submissionUser = request.user
-        obj.save()
-
-
 class EventStaffMemberInline(admin.TabularInline):
     model = EventStaffMember
     exclude = ('submissionUser', 'replacedStaffMember')
@@ -175,6 +100,8 @@ class EventStaffMemberInline(admin.TabularInline):
             if request._obj_ is not None:
                 # set the query set to whatever you like
                 field.queryset = EventOccurrence.objects.filter(event=request._obj_)
+                if not getattr(self, 'pk', None):
+                    field.initial = field.queryset
             else:
                 field.queryset = field.queryset.none()
         return field
@@ -182,11 +109,6 @@ class EventStaffMemberInline(admin.TabularInline):
     def save_model(self, request, obj, form, change):
         obj.submissionUser = request.user
         obj.save()
-
-
-class SeriesStaffMemberInline(EventStaffMemberInline):
-    ''' Use the proxy model to exclude SeriesTeachers and SubstituteTeachers. '''
-    model = SeriesStaffMember
 
 
 class EventRegistrationInline(admin.StackedInline):
@@ -978,8 +900,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     show_in_index = True
 
     inlines = [
-        EventRoleInline, EventOccurrenceInline, SeriesTeacherInline,
-        SubstituteTeacherInline, SeriesStaffMemberInline
+        EventRoleInline, EventOccurrenceInline, EventStaffMemberInline
     ]
     list_display = (
         'name', 'series_month', 'location', 'class_time', 'status',
