@@ -1527,7 +1527,7 @@ class RepeatEventsView(SuccessMessageMixin, AdminSuccessURLMixin, PermissionRequ
 class SubstituteReportingView(AdminSuccessURLMixin, PermissionRequiredMixin, UserFormKwargsMixin,
                               SuccessMessageMixin, CreateView):
     '''
-    This view is used to report substitute teaching.
+    This view is used to report substitute teaching or other staff substitutions.
     '''
     template_name = 'cms/forms/display_form_classbased_admin.html'
     form_class = SubstituteReportingForm

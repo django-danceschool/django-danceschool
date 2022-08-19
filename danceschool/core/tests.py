@@ -320,7 +320,11 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
         self.assertEqual(response.status_code, 200)
 
         ajax_response = self.client.post(
-            reverse('ajaxhandler_submitsubstitutefilter'), {'event': s.id}
+            reverse('ajaxhandler_submitsubstitutefilter'),
+            {
+                'event': s.id, 'occurrences[]': s.eventoccurrence_set.values_list('id', flat=True),
+                'category': getConstant('general__eventStaffCategorySubstitute').id,
+            }
         )
         self.assertEqual(ajax_response.status_code, 200)
         self.assertIn(
@@ -345,8 +349,8 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('substituteTeacherForm'), post_data)
         self.assertEqual(response.status_code, 200)
         self.assertIn(
-            'You cannot substitute teach for a class in which you were an instructor.',
-            response.context_data['form'].errors.get('event')
+            'Staffers cannot substitute for themselves.',
+            response.context_data['form'].errors.get('replacedStaffMember')
         )
 
         # Post with no replacedStaffMember and not staffMember and ensure it fails
@@ -372,8 +376,8 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
         response = self.client.post(reverse('substituteTeacherForm'), post_data)
         self.assertEqual(response.status_code, 200)
         self.assertIn(
-            'One or more classes you have selected already has a substitute teacher for that class.',
-            response.context_data['form'].errors.get('occurrences')
+            'Select a valid choice. That choice is not one of the available choices.',
+            response.context_data['form'].errors.get('replacedStaffMember')
         )
 
 

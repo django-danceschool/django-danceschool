@@ -206,7 +206,7 @@ class StaffMemberToolbar(CMSToolbar):
 
         if self.request.user.has_perm('core.report_substitute_teaching'):
             menu = self.toolbar.get_or_create_menu('core-staffmember', _('Staff'))
-            menu.add_link_item(_('Report Substitute Teaching'), url=reverse('substituteTeacherForm'))
+            menu.add_link_item(_('Report Staff Substitution'), url=reverse('substituteTeacherForm'))
             addBreak = True
 
         if addBreak:

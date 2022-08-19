@@ -1437,7 +1437,7 @@ class StaffChoiceField(forms.ModelChoiceField):
 
 class OccurrenceChoiceField(forms.ModelMultipleChoiceField):
     '''
-    This exists so that the validators for substitute teaching are not
+    This exists so that the validators for staff substitutions are not
     thrown off by the fact that the initial query is blank.
     '''
 
@@ -1554,7 +1554,17 @@ class SubstituteReportingForm(forms.ModelForm):
 
         category = self.cleaned_data.get('category')
         occurrences = self.cleaned_data.get('occurrences', [])
+        staffMember = self.cleaned_data.get('staffMember', [])
         replacementFor = self.cleaned_data.get('replacedStaffMember', [])
+
+        if getattr(replacementFor, 'staffMember', []) == staffMember:
+            self.add_error(
+                'replacedStaffMember',
+                ValidationError(
+                    _('Staffers cannot substitute for themselves.'),
+                    code='invalid'
+                )
+            )
 
         for occ in occurrences:
             for this_sub in occ.eventstaffmember_set.all():
@@ -1596,20 +1606,31 @@ class SubstituteReportingForm(forms.ModelForm):
         the list of occurrences for which they are a substitute on their existing EventStaffMember
         record, rather than creating a new record and creating database issues.
         '''
+        replaced = self.cleaned_data.get('replacedStaffMember')
+        occs = self.cleaned_data.get('occurrences')
+
         existing_record = EventStaffMember.objects.filter(
             staffMember=self.cleaned_data.get('staffMember'),
             event=self.cleaned_data.get('event'),
             category=self.cleaned_data.get('category'),
             replacedStaffMember=self.cleaned_data.get('replacedStaffMember'),
         )
+
         if existing_record.exists():
             record = existing_record.first()
-            for x in self.cleaned_data.get('occurrences'):
+            for x in occs:
                 record.occurrences.add(x)
             record.save()
-            return record
         else:
-            return super().save()
+            record = super().save()
+
+        # Remove the substituted occurrences from the replaced staff member. If
+        # there are no occurrences left, then drop the staffer entirely.
+        for x in occs:
+            replaced.occurrences.remove(x)
+        if replaced.occurrences.count() == 0:
+            replaced.delete()
+        return record
 
     class Meta:
         model = SubstituteTeacher

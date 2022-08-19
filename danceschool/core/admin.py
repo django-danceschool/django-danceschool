@@ -89,7 +89,7 @@ class EventStaffMemberInlineForm(ModelForm):
 class EventStaffMemberInline(admin.TabularInline):
     model = EventStaffMember
     exclude = ('submissionUser', 'replacedStaffMember')
-    fields = ('staffMember', 'category', 'specifiedHours', 'occurrences')
+    fields = ('staffMember', 'category', 'occurrences', 'specifiedHours')
     extra = 0
     form = EventStaffMemberInlineForm
 
@@ -945,7 +945,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     )
 
     # This allows us to save the obj reference in order to process related
-    # objects in an inline (substitute teachers)
+    # objects in an inline (staff substitutions)
     def get_form(self, request, obj=None, **kwargs):
         # just save obj reference for future processing in Inline
         request._obj_ = obj
@@ -1059,7 +1059,7 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     )
 
     # This allows us to save the obj reference in order to process related
-    # objects in an inline (substitute teachers)
+    # objects in an inline (staff substitutions)
     def get_form(self, request, obj=None, **kwargs):
         # just save obj reference for future processing in Inline
         request._obj_ = obj

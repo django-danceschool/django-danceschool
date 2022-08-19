@@ -1667,8 +1667,8 @@ class EventRole(models.Model):
 class EventStaffMember(EmailRecipientMixin, models.Model):
     '''
     Events have staff members of various types.  Instructors and
-    substitute teachers are defaults, which have their own proxy
-    models and managers.  However, other types may be created by
+    substitute teachers are defaults, and substitution has its own proxy
+    model as well.  However, other types may be created by
     overriding StaffType.
     '''
     category = models.ForeignKey(
@@ -2751,7 +2751,9 @@ class Invoice(EmailRecipientMixin, models.Model):
             )
 
         total_aggregation = {
-            k: Coalesce(Sum(k2), 0) for k,k2 in [
+            k: Coalesce(
+                Sum(k2, output_field=models.FloatField()), 0, output_field=models.FloatField()
+            ) for k,k2 in [
                 ('grossTotal', 'oldGrossTotal'), ('total', 'oldTotal'),
                 ('taxes', 'oldTaxes'), ('adjustments', 'oldAdjustments'),
                 ('fees', 'oldFees'),
@@ -2799,7 +2801,12 @@ class Invoice(EmailRecipientMixin, models.Model):
         })
 
         items = items.annotate(**pretax_annotations)
-        new_totals['taxes'] = items.aggregate(newTaxes__sum=Coalesce(Sum('newTaxes'), 0)).get('newTaxes__sum')
+        new_totals['taxes'] = items.aggregate(
+            newTaxes__sum=Coalesce(
+                Sum('newTaxes', output_field=models.FloatField()),
+                0, output_field=models.FloatField()
+            )
+        ).get('newTaxes__sum')
 
         posttax_annotations = {}
 

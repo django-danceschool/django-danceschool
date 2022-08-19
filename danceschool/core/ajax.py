@@ -65,7 +65,7 @@ class UserAccountInfo(View):
 def updateSeriesAttributes(request):
     '''
     This function handles the filtering of available series classes and seriesteachers when a series
-    is chosen on the Substitute Teacher reporting form.
+    is chosen on the Substitute reporting form.
     '''
     if request.method == 'POST' and request.POST.get('event'):
         event_id = request.POST.get('event') or None
@@ -76,17 +76,19 @@ def updateSeriesAttributes(request):
         return JsonResponse({})
 
     category_id = request.POST.get('category')
-    if category_id == getConstant('general__eventStaffCategorySubstitute').id:
+    if (
+        category_id and category_id.isdigit() and
+        int(category_id) == getConstant('general__eventStaffCategorySubstitute').id
+    ):
         staff_filters &= (
-            Q(category__id=getConstant('general__eventStaffCategoryInstructor')) | 
-            Q(category__id=getConstant('general__eventStaffCategoryAssistant'))
+            Q(category=getConstant('general__eventStaffCategoryInstructor')) | 
+            Q(category=getConstant('general__eventStaffCategoryAssistant'))
         )
     elif category_id:
         staff_filters &= Q(category__id=category_id)
 
-    occurrence_ids = request.POST.get('occurrences')
+    occurrence_ids = request.POST.getlist('occurrences[]')
     if occurrence_ids:
-        occurrence_filters &= Q(id__in=occurrence_ids)
         # The staff members must match all occurrences.
         for occ in occurrence_ids:
             staff_filters &= Q(occurrences=occ)
