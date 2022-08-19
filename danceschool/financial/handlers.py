@@ -32,7 +32,7 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
 
     logger.debug('ExpenseItem signal fired for EventStaffMember %s.' % instance.pk)
 
-    new_payTo = TransactionParty.objects.get_or_create(
+    new_payTo, created = TransactionParty.objects.get_or_create(
         staffMember=instance.staffMember,
         defaults={'name': getattr(instance.staffMember, 'fullName', '')}
     )
