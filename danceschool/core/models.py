@@ -2511,7 +2511,10 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         For adding 'View on Site' links to the admin
         '''
-        return reverse('viewInvoice', args=[self.id, ])
+        return '{}?v={}'.format(
+            reverse('viewInvoice', args=[self.id, ]),
+            self.validationString
+        )
 
     def get_default_recipients(self):
         '''
