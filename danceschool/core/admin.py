@@ -338,7 +338,9 @@ class InvoiceAdmin(admin.ModelAdmin):
         if obj.id:
             change_url = reverse('viewInvoice', args=(obj.id, ))
             return mark_safe(
-                '<a href="%s">%s</a>' % (change_url, gettext('View'))
+                '<a href="%s?v=%s">%s</a>' % (
+                    change_url, obj.validationString, gettext('View')
+                )
             )
     viewInvoiceLink.allow_tags = True
     viewInvoiceLink.short_description = _('Invoice')
