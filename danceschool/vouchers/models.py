@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Sum
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, FlatValuesListIterable
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.translation import gettext_lazy as _
@@ -210,7 +210,10 @@ class Voucher(models.Model):
             raise ValueError(_('Invalid customer.'))
 
         # Assume that a non-queryset is a list of IDs.
-        if not isinstance(events, QuerySet):
+        if (
+            (not isinstance(events, QuerySet)) or
+            issubclass(getattr(events, '_iterable_class', int), FlatValuesListIterable)
+        ):
             events = Event.objects.filter(id__in=events)
 
         if self.hasExpired:
