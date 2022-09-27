@@ -804,6 +804,12 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             data_changed_flag = False
 
+            # Will only be set to True if true for every item.
+            regSession["student"] = (
+                False not in
+                [x.get('student', False) for x in item_post]
+            )
+
             # Will only be set to False if every event has a set value of
             # requireFull, and if all of them are False.
             requireFullRegistration = (
@@ -1833,6 +1839,10 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         })
 
         return context_data
+
+    def get_initial(self):
+        ''' The initial value of the student field can be populated from session data. '''
+        return {'student': self.request.session[REG_VALIDATION_STR].get('student', False)}
 
     def get_form_kwargs(self, **kwargs):
         ''' Pass along the request data to the form '''
