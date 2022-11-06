@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.admin.widgets import RelatedFieldWidgetWrapper
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.forms import (
     ModelForm, SplitDateTimeField, HiddenInput, RadioSelect,
@@ -21,13 +20,14 @@ from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 import json
 import six
 from dal import autocomplete
+from adminsortable2.admin import SortableInlineAdminMixin, SortableAdminMixin
 
 from .models import (
     EventSession, Event, PublicEventCategory, Series, SeriesCategory,
     PublicEvent, EventOccurrence, StaffMember, Instructor,
     Registration, EventRegistration, ClassDescription,
     CustomerGroup, Customer, Location, PricingTier, DanceRole, DanceType,
-    DanceTypeLevel, EmailTemplate, EventStaffMember,
+    DanceTypeLevel, EmailTemplate, EventStaffMember, EventAddOn,
     EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 )
 from .constants import getConstant
@@ -110,6 +110,14 @@ class EventStaffMemberInline(admin.TabularInline):
     def save_model(self, request, obj, form, change):
         obj.submissionUser = request.user
         obj.save()
+
+
+class EventAddOnInline(SortableInlineAdminMixin, admin.TabularInline):
+    model = EventAddOn
+    extra = 0
+    autocomplete_fields = ['addOnEvent',]
+    fk_name = 'event'
+    classes = ['collapse']
 
 
 class EventRegistrationInline(admin.StackedInline):
@@ -1018,7 +1026,9 @@ class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
 
 
 @admin.register(PublicEvent)
-class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
+class PublicEventAdmin(
+    SortableAdminMixin, FrontendEditableAdminMixin, EventChildAdmin
+):
     base_model = PublicEvent
     form = PublicEventAdminForm
     show_in_index = True
@@ -1036,7 +1046,10 @@ class PublicEventAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     search_fields = ('name', )
     ordering = ('-endTime', )
     prepopulated_fields = {'slug': ('title', )}
-    inlines = [EventRoleInline, EventOccurrenceInline, EventStaffMemberInline]
+    inlines = [
+        EventRoleInline, EventOccurrenceInline, EventStaffMemberInline,
+        EventAddOnInline
+    ]
 
     fieldsets = (
         (None, {
@@ -1087,6 +1100,7 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
     list_filter = (PolymorphicChildModelFilter, 'status', 'registrationOpen', 'location')
     list_editable = ('status', )
     polymorphic_list = True
+    search_fields = ('name', )
 
     actions = [repeat_events, ]
 

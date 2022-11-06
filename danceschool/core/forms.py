@@ -2,7 +2,9 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db.models import Q, F, Count
+from django.db.models import (
+    Q, F, Count, Case, When, ExpressionWrapper, BooleanField, IntegerField
+)
 from django.utils.encoding import force_str
 from django.forms.widgets import mark_safe, Select
 from django.utils.html import format_html
@@ -303,7 +305,7 @@ class ClassChoiceForm(forms.Form):
             ):
                 event_field_type = forms.BooleanField
 
-            self.fields[event.polymorphic_ctype.model + '_' + str(event.id)] = EventChoiceField(
+            self.fields[event.fieldPrefix + '_' + str(event.id)] = EventChoiceField(
                 event=event, label=event.name, required=False, user=user,
                 regClosed=(event in closedEvents), interval=interval,
                 field_type=event_field_type
@@ -320,7 +322,9 @@ class ClassChoiceForm(forms.Form):
         payAtDoor = cleaned_data.get('payAtDoor', False)
 
         for key, value in cleaned_data.items():
-            if key.split('_')[0] in ['event', 'series', 'publicevent', 'privatelessonevent']:
+            if key.split('_')[0] in [
+                'event', 'series', 'publicevent', 'privatelessonevent',
+            ]:
                 reg_list = []
                 dropin_list = []
 
@@ -339,7 +343,7 @@ class ClassChoiceForm(forms.Form):
                             (getConstant('registration__multiRegSeriesRule') == 'N') or
                             (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
                         )) or (
-                        'publicevent_' in key and (
+                        ('publicevent_' in key) and (
                             (getConstant('registration__multiRegPublicEventRule') == 'N') or
                             (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
                         ))
@@ -820,18 +824,33 @@ class MultiRegCustomerNameForm(RegistrationForm):
         # Hold information needed to lay out additional name fields
         reg_name_fields = []
 
-        initial = self._registration.eventregistration_set.select_related(
-            'customer', 'event', 'role'
+        # Make this an attribute of the class instance so that we can use the
+        # same queryset in form validation.
+        self.event_regs = self._registration.eventregistration_set.select_related(
+            'invoiceItem', 'customer', 'event', 'role'
         ).annotate(
+            child=ExpressionWrapper(
+                Q(invoiceItem__parent_item__isnull=False),
+                output_field=BooleanField()
+            ),
+            base_id=Case(
+                When(
+                    invoiceItem__parent_item__eventRegistration__isnull=False,
+                    then=F('invoiceItem__parent_item__eventRegistration__id')
+                ),
+                default=F('id'),
+                output_field=IntegerField(),
+            ),
             firstName=F('customer__first_name'),
             lastName=F('customer__last_name'),
             email=F('customer__email'),
-        ).order_by('event__startTime', 'event__id', 'id')
+        ).order_by('base_id', 'child', 'event__startTime', 'event__id', 'id')
 
-        last_event_id = None
-        for er in initial:
-            first_of_event = (er.event.id != last_event_id)
-            last_event_id = er.event.id
+        prior_event_ids = []
+
+        for er in self.event_regs:
+            first_of_event = (er.event.id not in prior_event_ids) and not er.child
+            prior_event_ids.append(er.event.id)
 
             this_event_details = er.event.get_real_instance().name
             if er.role:
@@ -843,41 +862,42 @@ class MultiRegCustomerNameForm(RegistrationForm):
                 'Begins %s' % (ensure_localtime(er.event.startTime).strftime('%a., %B %d, %Y, %I:%M %p'))
             )
 
-            self.fields.update({
-                'er_%s_isMe' % er.id: forms.BooleanField(
-                    label=_('This is me'), required=False,
-                    initial=first_of_event
-                ),
-                'er_%s_firstName' % er.id: forms.CharField(
-                    label=False, required=True, initial=er.firstName
-                ),
-                'er_%s_lastName' % er.id: forms.CharField(
-                    label=False, required=True, initial=er.lastName
-                ),
-                'er_%s_email' % er.id: forms.EmailField(
-                    label=False, required=True, initial=er.email
-                ),
-            })
+            if not er.child:
+                self.fields.update({
+                    'er_%s_isMe' % er.id: forms.BooleanField(
+                        label=_('This is me'), required=False,
+                        initial=first_of_event
+                    ),
+                    'er_%s_firstName' % er.id: forms.CharField(
+                        label=False, required=True, initial=er.firstName
+                    ),
+                    'er_%s_lastName' % er.id: forms.CharField(
+                        label=False, required=True, initial=er.lastName
+                    ),
+                    'er_%s_email' % er.id: forms.EmailField(
+                        label=False, required=True, initial=er.email
+                    ),
+                })
 
-            field_names = [
-                ('er_%s_isMe' % er.id, ''),
-                ('er_%s_firstName' % er.id, _('First Name')),
-                ('er_%s_lastName' % er.id, _('Last Name')),
-                ('er_%s_email' % er.id, _('Email')),
-            ]
+                field_names = [
+                    ('er_%s_isMe' % er.id, ''),
+                    ('er_%s_firstName' % er.id, _('First Name')),
+                    ('er_%s_lastName' % er.id, _('Last Name')),
+                    ('er_%s_email' % er.id, _('Email')),
+                ]
 
-            if getConstant('registration__addStudentField'):
-                self.fields['er_%s_student' % er.id] = forms.BooleanField(
-                    label=getConstant('registration__studentFieldLabel'),
-                    required=False, initial=er.student
-                )
-                field_names.append(('er_%s_student' % er.id, ''))
+                if getConstant('registration__addStudentField') and not er.child:
+                    self.fields['er_%s_student' % er.id] = forms.BooleanField(
+                        label=getConstant('registration__studentFieldLabel'),
+                        required=False, initial=er.student
+                    )
+                    field_names.append(('er_%s_student' % er.id, ''))
 
-            reg_name_fields.append({
-                'event_details': this_event_details,
-                'event_date': this_event_date,
-                'field_names': field_names,
-            })       
+                reg_name_fields.append({
+                    'event_details': this_event_details,
+                    'event_date': this_event_date,
+                    'field_names': field_names,
+                })
 
         self.helper.layout = Layout(
             self.get_top_layout(),
@@ -893,6 +913,7 @@ class MultiRegCustomerNameForm(RegistrationForm):
         Fields for additional names as needed when there are multiple
         EventRegistrations for the same event.
         '''
+
         rows = [
             Div(
                 Div(
@@ -921,14 +942,14 @@ class MultiRegCustomerNameForm(RegistrationForm):
         # First, populate a list of all names for each EventRegistration,
         # indexed by the ID of each EventRegistration.
         names = {}
-        for er in self._registration.eventregistration_set.all():
+        for er in self.event_regs:            
             names[er.id] = {
-                'firstName': self.cleaned_data.get('er_%s_firstName' % er.id),
-                'lastName': self.cleaned_data.get('er_%s_lastName' % er.id),
-                'email': self.cleaned_data.get('er_%s_email' % er.id),
+                'firstName': self.cleaned_data.get('er_%s_firstName' % er.base_id),
+                'lastName': self.cleaned_data.get('er_%s_lastName' % er.base_id),
+                'email': self.cleaned_data.get('er_%s_email' % er.base_id),
             }
 
-        for er in self._registration.eventregistration_set.all():
+        for er in self.event_regs:
             this_name_ids = [k for k,x in names.items() if x == names[er.id]]
 
             self.check_customer(
@@ -948,6 +969,18 @@ class MultiRegCustomerNameForm(RegistrationForm):
                 registration=self._registration,
                 invoice=self._invoice,
             )
+
+        # We didn't create name information fields for the child eventregistrations
+        # so now we add them to the cleaned data as if the person filled in the
+        # same name for all child registrations as for the parent.
+        for er in self.event_regs.filter(child=True):
+            self.cleaned_data.update({
+                'er_%s_firstName' % er.id: self.cleaned_data.get('er_%s_firstName' % er.base_id),
+                'er_%s_lastName' % er.id: self.cleaned_data.get('er_%s_lastName' % er.base_id),
+                'er_%s_email' % er.id: self.cleaned_data.get('er_%s_email' % er.base_id),
+                'er_%s_phone' % er.id: self.cleaned_data.get('er_%s_phone' % er.base_id, None),
+                'er_%s_student' % er.id: self.cleaned_data.get('er_%s_studetn' % er.base_id, False),
+            })
 
         return self.cleaned_data
 

@@ -7,74 +7,7 @@
 
 {% block content %}
 	{% block summary %}
-		<div class="card card-body bg-light pb-0">
-			<h5 class="card-title">{% trans "You've selected:" %}</h5>
-
-			<table class="table">
-			<tbody>
-			{% for item in invoice.invoiceitem_set.all %}
-				<tr>
-					{% if item.eventRegistration %}
-						<td>{% if item.eventRegistration.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.eventRegistration.event.name }}{% if item.eventRegistration.role %} - {{ item.eventRegistration.role.name }}{% endif %}</td>
-					{% else %}
-					<td>{{ item.description }}</td>
-					{% endif %}
-					<td>{{ currencySymbol }}{{ item.grossTotal|floatformat:2 }}</td>
-				</tr>
-			{% endfor %}
-			</tbody>
-			{% if addonItems %}
-			<tbody>
-				{% for addon in addonItems %}
-				<tr class="addons">
-					<td><strong>{% trans "Free Add-On" %}:</strong> {{ addon }}</td><td></td>
-				</tr>
-				{% endfor %}
-			</tbody>
-			{% endif %}
-			{% if discount_code_amount > 0 %}
-			<tbody>
-				{% for code in discount_codes %}
-					<tr>
-						<td><strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}</td>
-						<td>-{{ currencySymbol }}{{ code.2|floatformat:2 }}</td>
-					</tr>
-				{% endfor %}
-			</tbody>
-			{% endif %}
-			{% if voucher and voucher.beforeTax %}
-			<tbody>
-				<tr>
-					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
-					<td>-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
-				</tr>
-			</tbody>
-			{% endif %}
-			{% if invoice.taxes and invoice.buyerPaysSalesTax %}
-			<tbody>
-				<tr>
-					<th><em>{% trans "Taxes" %}</em></th>
-					<th>{{ currencySymbol }}{{ invoice.taxes|floatformat:2 }}</th>
-				</tr>
-			</tbody>
-			{% endif %}
-			{% if voucher and not voucher.beforeTax %}
-			<tbody>
-				<tr>
-					<td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
-					<td>-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
-				</tr>
-			</tbody>
-			{% endif %}
-			<tbody>
-				<tr style="font-size: 1.2em;">
-					<th><em>{% trans "Subtotal" %}:</em></th>
-					<th>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:2 }}</th>
-				</tr>
-			</tbody>
-
-			</table>
-		</div>
+		{% include 'core/base/base_summary_block.html' %}
 	{% endblock %}
 
 	{# Display any warning or error messages associated with the previous form submission #}

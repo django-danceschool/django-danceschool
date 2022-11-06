@@ -1,0 +1,123 @@
+{% load sekizai_tags i18n %}
+
+<div class="card card-body bg-light pb-0">
+    <h5 class="card-title">{% trans "You've selected:" %}</h5>
+
+    <table class="table">
+    <tbody>
+    {% for item in invoice.parent_items %}
+        <tr>
+            {% if item.eventRegistration %}
+                <td>
+                    {% if item.eventRegistration.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ item.eventRegistration.event.name }}{% if item.eventRegistration.role %} - {{ item.eventRegistration.role.name }}{% endif %}
+                </td>
+            {% else %}
+            <td>{{ item.description }}</td>
+            {% endif %}
+            <td>{{ currencySymbol }}{{ item.grossTotalWithAllocation|floatformat:2 }}</td>
+        </tr>
+        {% if item.child_items.all %}
+            <tr class="child-items">
+                <td>
+                    <strong>{% trans "Includes" %}:</strong>
+                    <ul>
+                        {% for child_item in item.child_items.all %}
+                            <li>
+                                {% if child_item.eventRegistration %}
+                                    {{ child_item.eventRegistration.event.name }}{% if child_item.eventRegistration.role %} - {{ child_item.eventRegistration.role.name }}{% endif %}
+                                {% else %}
+                                    {{ child_item.description }}
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </td>
+                <td></td>
+            </tr>
+            {% if item.netAllocationAdjustment != 0 %}
+            <tr class="child-items">
+                <td><strong>{% trans "Net Savings" %}:</strong></td>
+                <td class="price-adjustment">{{ currencySymbol }}{{ item.netAllocationAdjustment|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+    </tbody>
+    {% if addonItems %}
+    <tbody>
+        {% for addon in addonItems %}
+        <tr class="addons">
+            <td><strong>{% trans "Free Add-On" %}:</strong> {{ addon }}</td><td></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    {% endif %}
+    {% if discount_code_amount > 0 %}
+    <tbody>
+        {% for code in discount_codes %}
+            <tr>
+                <td><strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}</td>
+                <td class="price-adjustment">-{{ currencySymbol }}{{ code.2|floatformat:2 }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    {% endif %}
+    {% if voucher and voucher.beforeTax %}
+    <tbody>
+        <tr>
+            <td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
+            <td class="price-adjustment">-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+        </tr>
+    </tbody>
+    {% endif %}
+    {% if invoice.taxes and invoice.buyerPaysSalesTax %}
+    <tbody>
+        <tr>
+            <th><em>{% trans "Taxes" %}</em></th>
+            <th>{{ currencySymbol }}{{ invoice.taxes|floatformat:2 }}</th>
+        </tr>
+    </tbody>
+    {% endif %}
+    {% if voucher and not voucher.beforeTax %}
+    <tbody>
+        <tr>
+            <td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
+            <td class="price-adjustment">-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+        </tr>
+    </tbody>
+    {% endif %}
+    <tbody>
+        <tr class="item-subtotal">
+            <th><em>{% trans "Subtotal" %}:</em></th>
+            <th>{{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:2 }}</th>
+        </tr>
+    </tbody>
+
+    </table>
+</div>
+
+{% addtoblock "css" %}
+    <style>
+        .item-subtotal {
+            font-size: 1.2em;
+        }
+
+        .child-items td {
+            border-top: 0;
+            margin-top: 0;
+            padding-top: 0;
+        }
+        tr.child-items td:first-child {
+            padding-left: 3em;
+        }
+
+        .price-adjustment {
+            font-style: italic;
+        }
+
+        .child-items .price-adjustment {
+            color: #900;
+        }
+
+    </style>
+{% endaddtoblock %}

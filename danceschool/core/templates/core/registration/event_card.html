@@ -72,7 +72,7 @@
       <div class="col-lg-4 col-md-6 ml-md-auto mt-4 mt-md-0 reg-event-register">
         {% if event.registrationOpen %}
           {# if event registration is still open then show the registration form#}
-          {% get_field_for_object event.polymorphic_ctype.model event.id form as field %}
+          {% get_field_for_object event.fieldPrefix event.id form as field %}
           {{ field }}
           {% if validationStr %}
             <div class="alert alert-danger">
@@ -98,7 +98,7 @@
           <div class="col-auto">
             {# Include the front desk admin button #}
 
-            {% get_field_for_object event.polymorphic_ctype.model event.id form as field %}
+            {% get_field_for_object event.fieldPrefix event.id form as field %}
             {{ field }}
             {% if validationStr %}
               <div class="alert alert-danger">

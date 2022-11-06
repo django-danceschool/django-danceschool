@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             id: null, // Invoice ID, if passed
             payAtDoor: regParams.payAtDoor, // Used for registration pricing
             grossTotal: 0, // Total before discounts or vouchers
+            initialTotal: 0, // Total after allocations from add-on events, but before discounts or vouchers
             total: 0, // Total after discounts and vouchers have been applied
             taxes: 0, // Any applicable taxes
             adjustments: 0, // Any applicable adjustments
@@ -73,6 +74,13 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
         // Then, add items based on regData
         $.each(regData.items, function() {
+
+            // Continue to the next iteration of the loop for child items that
+            // we wish to remain in regData but which we do not wish to display.
+            if (this.child_item === true) {
+                return;
+            }
+
             this_data_string = 'data-choice-id="' + this.choiceId + '" ';
             this_name = this.description;
 
@@ -90,7 +98,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 this_data_string += 'data-item-variant="' + this.variantId +
                     '" data-order-item="' + this.itemId + '"';
             }
-            var this_price = parseFloat(this.grossTotal).toFixed(2);
+            var this_price = parseFloat(this.displayTotal).toFixed(2);
     
             // Add item to the shopping cart
             $('#cartItems').append(
@@ -155,7 +163,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             );
         }
 
-        // If there are discounts, vouchers, or add-ons, add a subtotal line (grossTotal)
+        // If there are discounts, vouchers, or add-ons, add a subtotal line (initialTotal)
         if (
             $('#discountList').text() !== '' ||
             $('#preTaxVoucherList').text() !== '' ||
@@ -164,7 +172,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
             $('#taxInfo').text() !== ''
         ) {
             $('#subtotalLine').append(
-                '<tr class="subtotal"><th>' + regParams.subtotalString + ':</th><th>' + regParams.currencySymbol + parseFloat(regData.grossTotal).toFixed(2) + '</th></tr>'
+                '<tr class="subtotal"><th>' + regParams.subtotalString + ':</th><th>' + regParams.currencySymbol + parseFloat(regData.initialTotal).toFixed(2) + '</th></tr>'
             );
         }
 
@@ -385,7 +393,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 }
              }
         }
-        
         submitData(prior=old_regData, redirect=false);
     });
 
@@ -460,8 +467,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 data: JSON.stringify(ajaxData),
                 success: function(response){
     
-                    console.log(response);
-
                     $('#customerInfoTable').removeClass('d-none');
 
                     $.each(response, function() {
@@ -532,8 +537,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 data: JSON.stringify(ajaxData),
                 success: function(response){
                     $('#guestInfoTable').removeClass('d-none');
-
-                    console.log(response);
 
                     $.each(response.events, function() {
                         $('#guestInfoExample tr').clone().appendTo($('#guestInfoTable tbody'));

@@ -1345,12 +1345,28 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         Accepts a DanceRole object and responds if the number of registrations for that
         role exceeds the capacity for that role at this event.
         '''
-        return self.numRegisteredForRole(
-            role, includeTemporaryRegs=includeTemporaryRegs) >= (self.capacityForRole(role) or 0)
+        base_sold_out = (
+            self.numRegisteredForRole(role, includeTemporaryRegs=includeTemporaryRegs) >=
+            (self.capacityForRole(role) or 0)
+        )
+        if base_sold_out:
+            return True
+        for x in self.eventaddon_set.all():
+            if (
+                role in x.addOnEvent.availableRoles and
+                x.addOnEvent.soldOutForRole(role, includeTemporaryRegs=includeTemporaryRegs)
+            ):
+                return True
+        return False
 
     @property
     def soldOut(self):
-        return self.numRegistered >= (self.capacity or 0)
+        base_sold_out = (self.numRegistered >= (self.capacity or 0))
+        if base_sold_out:
+            return True
+        return (
+            True in [x.addOnEvent.soldOut for x in self.eventaddon_set.all()]
+        )
     soldOut.fget.short_description = _('Sold Out')
 
     @property
@@ -1366,6 +1382,15 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         This is needed for the creation of calendar feeds.
         '''
         return self.url
+
+    @property
+    def fieldPrefix(self):
+        '''
+        This property is usually the name of the model type for events
+        (series, public event, etc.), which operates as a prefix for form fields
+        in the registration process.
+        '''
+        return self.polymorphic_ctype.model
 
     def updateTimes(self, saveMethod=False):
         '''
@@ -1483,6 +1508,62 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             self.save(fromUpdateRegistrationStatus=True)
         logger.debug('Returning value: %s' % open)
         return (modified, open)
+
+    def getAllocatedTotals(self, **kwargs):
+        '''
+        This method handles the allocation of a parent event's base price across
+        its add-ons, including the possibility of a residual total.
+        '''
+
+        base_price = self.getBasePrice(**kwargs)
+
+        add_ons = self.eventaddon_set.all()
+        if (not add_ons) or (kwargs.get('dropIns', 0) > 0):
+            return {self.id: base_price}
+        
+        explicit_add_ons = add_ons.exclude(
+            allocationType=EventAddOn.AllocationType.residual
+        ).order_by('order')
+        residual_add_ons = add_ons.filter(
+            allocationType=EventAddOn.AllocationType.residual
+        )
+
+        allocation = {}
+        remaining = base_price
+
+        # Always handle explicit allocations first. If the allocation runs out
+        # of money to allocate, then subsequent add-ons get no allocation, but
+        # are still included in the return value to denote that they are still
+        # added on even if no revenue is allocated.
+        for a in explicit_add_ons:
+            if remaining <= 0:
+                this_allocation = 0
+            elif a.allocationType == EventAddOn.AllocationType.fixed:
+                this_allocation = min(remaining, a.allocationAmount)
+            else:
+                this_allocation = min(1, a.allocationAmount/100)*remaining
+
+            allocation[a.addOnEvent.id] = this_allocation
+            remaining -= this_allocation
+
+        # Now that explicit add-ons have been handled, we can allocate remaining
+        # value among the reisdual add-ons in proportion to their base prices.
+        # Note the 'or 1' on sum base price to avoid division by zero issues
+        # when all remaining events are free.
+        base_prices = {
+            x.addOnEvent.id: x.addOnEvent.getBasePrice(**kwargs)
+            for x in residual_add_ons
+        }
+        sum_base_price = sum(base_prices.values())
+        pre_residual_remaining = remaining
+
+        for k, v in base_prices.items():
+            this_allocation = min(v, pre_residual_remaining*(v / (sum_base_price or 1)))
+            allocation[k] = this_allocation
+            remaining -= this_allocation
+
+        allocation[self.id] = remaining
+        return allocation
 
     def clean(self):
         if (
@@ -2147,6 +2228,77 @@ class PublicEvent(Event):
         verbose_name_plural = _('Public events')
 
 
+class EventAddOn(models.Model):
+    '''
+    An event add-on is a rule that indicates that a registration for a
+    particular event will also automatically include registration for one or
+    more additional events. The add-on also includes an allocation rule for net
+    revenue associated for registration to this event, which may in the form of
+    a fixed amount of revenue allocation, a defined percentage of the total
+    revenue allocation, or a residual revenue allocation based on the prices
+    of the individual add-on components. Event add-ons are designed for all-in
+    passes and similar functionality, where registering for a single event
+    (the all-in pass) should actually be signing one up for multiple events
+    simultaneously. Using add-ons not only ensures that revenue is allocated as
+    desired, it ensures that check-in capabilities for individual events are
+    preserved, and that capacity restrictions may remain enforceable, etc.
+    '''
+
+    # Choices of Discount Types
+    class AllocationType(models.TextChoices):
+        fixed = ('F', _('Fixed dollar allocation'))
+        percent = ('P', _('Fixed percentage allocation'))
+        residual = ('R', _('Allocation based on individual event default prices'))
+
+    event = models.ForeignKey(
+        Event, verbose_name=_('Event'), on_delete=models.CASCADE
+    )
+
+    addOnEvent = models.ForeignKey(
+        Event, verbose_name=_('Event'), on_delete=models.CASCADE,
+        related_name='addon_of',
+    )
+
+    order = models.PositiveIntegerField(default=0, blank=False, null=False)
+
+    allocationType = models.CharField(
+        _('Revenue allocation type'), max_length=1,
+        help_text=_(
+            'How is registration revenue allocated to this event?'
+        ),
+        choices=AllocationType.choices, default=AllocationType.fixed
+    )
+
+    allocationAmount = models.FloatField(
+        _('Allocation amount'),
+        null=True, blank=True, default=0, validators=[MinValueValidator(0)],
+        help_text=_(
+            'Enter the fixed amount or percentage (out of 100) of revenue that '
+            'will be allocated to this event. This field is ignored if '
+            'allocation is based on event default prices.'
+        )
+    )
+
+    def __str__(self):
+        return _(f'Add-on for event %s: %s') % (self.event.name, self.addOnEvent.name)
+
+    class Meta:
+        ordering = ('order',)
+        verbose_name = _('Event add-on')
+        verbose_name_plural = _('Event add-ons')    
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=['event', 'addOnEvent'],
+                name='unique_addon_per_event',
+            ),
+            models.CheckConstraint(
+                check=~Q(addOnEvent=F('event')),
+                name='no_self_addons',
+            )
+        ]
+
+
 class CustomerGroup(EmailRecipientMixin, models.Model):
     '''
     A customer group can be used to send emails and to define group-specific
@@ -2456,6 +2608,10 @@ class Invoice(EmailRecipientMixin, models.Model):
     refundsAllocated.fget.short_description = _('All refunds are allocated')
 
     @property
+    def initialTotal(self):
+        return sum([x.initialTotal for x in self.invoiceitem_set.all()])
+
+    @property
     def netRevenue(self):
         net = self.total - self.fees + self.adjustments
         if not self.buyerPaysSalesTax:
@@ -2492,6 +2648,10 @@ class Invoice(EmailRecipientMixin, models.Model):
         '''
         return self.get_status_display()
     statusLabel.fget.short_description = _('Status')
+
+    @property
+    def parent_items(self):
+        return self.invoiceitem_set.filter(parent_item__isnull=True)
 
     @property
     def url(self):
@@ -2636,7 +2796,7 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def updateTotals(
         self, save=True, forceSave=False, allocateAmounts={},
-        allocateWeights={}, prior_queryset=None
+        allocateWeights={}, prior_queryset=None, setAdjustmentsFlag=True
     ):
         '''
         This method recalculates the totals from the invoice items associated
@@ -2691,7 +2851,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         }
 
         # If the invoice has previously been saved with adjustments
-        # (in RegistrationSummaryView), but it is still a preliminary invoice,
+        # but it is still a preliminary invoice,
         # then we need to un-apply those previous adjustments by starting with
         # the total equal to grossTotal and with adjustments equal to 0.  This
         # prevents the duplicate application of discounts and vouchers by
@@ -2699,16 +2859,35 @@ class Invoice(EmailRecipientMixin, models.Model):
         # data is set later in updateTotals() whenever the invoice is saved.
         saved_adjustments = self.data.pop('saved_adjustments', False)
         if (saved_adjustments and self.status == self.PaymentStatus.preliminary):
-            self.total = self.grossTotal
-            self.adjustments = 0
-            self.save(sendSignals=False)
             prior_queryset = self.invoiceitem_set.all()
-            prior_queryset.update(total=F('grossTotal'), adjustments=0)
+            prior_queryset.update(
+                total=Case(
+                    When(
+                        data___initial_total__isnull=False,
+                        then=F('data___initial_total')
+                    ),
+                    default=F('grossTotal'),
+                    output_field=models.FloatField()
+                ),
+                adjustments=Case(
+                    When(
+                        data___initial_adjustments__isnull=False,
+                        then=F('data___initial_adjustments')
+                    ),
+                    default=0,
+                    output_field=models.FloatField()
+                )
+            )
+            aggregates = prior_queryset.aggregate(Sum('total'), Sum('adjustments'))
+            self.adjustments = aggregates.get('adjustments__sum', 0) or 0
+            self.total = aggregates.get('total__sum', 0) or 0
+            self.save(sendSignals=False)
 
         # before going any further, we need to ensure that the queryset to be
         # handled begins with the same format, which means that all the "old"
         # values must be put into annotations to avoid name conflicts.
         items = prior_queryset or self.invoiceitem_set.all()
+
         if 'newGrossTotal' in items.query.annotations:
             items = items.annotate(
                 oldGrossTotal=F('newGrossTotal'),
@@ -2725,7 +2904,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 oldAdjustments=F('adjustments'),
                 oldFees=F('fees'),
             )
-        
+
         # Now, construct the allocation weights, which can be applied either
         # pre-tax or post-tax, but not both.
         if allocateWeights:
@@ -2865,7 +3044,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 changed_invoice = True
 
         if (changed_invoice and save) or forceSave:
-            if changed_invoice:
+            if changed_invoice and setAdjustmentsFlag:
                 self.data['saved_adjustments'] = True
             self.save()
 
@@ -3038,6 +3217,12 @@ class InvoiceItem(models.Model):
         _('Invoice item number'), primary_key=True, default=uuid.uuid4, editable=False
     )
     invoice = models.ForeignKey(Invoice, verbose_name=_('Invoice'), on_delete=models.CASCADE)
+
+    parent_item = models.ForeignKey(
+        'self', on_delete=models.CASCADE, related_name='child_items',
+        null=True, blank=True
+    )
+
     description = models.CharField(_('Description'), max_length=300, null=True, blank=True)
 
     grossTotal = models.FloatField(
@@ -3061,6 +3246,75 @@ class InvoiceItem(models.Model):
     fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
 
     data = models.JSONField(_('Additional data'), blank=True, default=dict)
+
+    @property
+    def grossTotalWithAllocation(self):
+        ''' 
+        Items that are parent items to other items will have a gross total line
+        that does not reflect the value of the collection of items. This
+        property adds the sum over the child items as well.
+        '''
+        return (
+            self.grossTotal +
+            (self.child_items.aggregate(Sum('grossTotal')).get('grossTotal__sum',0) or 0)
+        )
+
+    @property
+    def initialTotal(self):
+        return self.data.get('_initial_total', self.grossTotal)
+
+    @property
+    def initialTotalWithAllocation(self):
+        return (
+            self.grossTotal +
+            (self.child_items.annotate(
+                initial_total=Case(
+                    When(
+                        data___initial_total__isnull=False,
+                        then=F('data___initial_total')
+                    ),
+                    default=F('grossTotal'),
+                    output_field=models.FloatField()
+                )
+            ).aggregate(Sum('initial_total')).get('initial_total__sum',0) or 0)
+        )
+
+    @property
+    def totalWithAllocation(self):
+        return (
+            self.total +
+            (self.child_items.aggregate(Sum('total')).get('total__sum',0) or 0)
+        )
+
+    @property
+    def taxesWithAllocation(self):
+        return (
+            self.taxes +
+            (self.child_items.aggregate(Sum('taxes')).get('taxes__sum',0) or 0)
+        )
+
+    @property
+    def feesWithAllocation(self):
+        return (
+            self.fees +
+            (self.child_items.aggregate(Sum('fees')).get('fees__sum',0) or 0)
+        )
+
+    @property
+    def adjustmentsWithAllocation(self):
+        return (
+            self.adjustments +
+            (self.child_items.aggregate(Sum('adjustments')).get('adjustments__sum',0) or 0)
+        )
+
+    @property
+    def netAllocationAdjustment(self):
+        '''
+        This is the difference in allocated gross and net totals before discounts
+        are applied. So, for example, this represents the savings from purchasing
+        an all-in pass rather than the individual items it contains.
+        '''
+        return self.initialTotalWithAllocation - self.grossTotalWithAllocation
 
     @property
     def netRevenue(self):
@@ -3129,6 +3383,7 @@ class InvoiceItem(models.Model):
             if updateTotals:
                 self.invoice.updateTotals()
 
+
     def delete(self, *args, **kwargs):
         restrictStatus = kwargs.pop('restrictStatus', True)
         updateTotals = kwargs.pop('updateInvoiceTotals', True)
@@ -3144,6 +3399,13 @@ class InvoiceItem(models.Model):
     class Meta:
         verbose_name = _('Invoice item')
         verbose_name_plural = _('Invoice items')
+
+        constraints = [
+            models.CheckConstraint(
+                check=~Q(parent_item=F('id')),
+                name='no_self_parent_items',
+            )
+        ]
 
 
 class Registration(EmailRecipientMixin, models.Model):
@@ -3762,25 +4024,41 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
         grossTotal = kwargs.pop('grossTotal', None)
         total = kwargs.pop('total', None)
-        
-        if grossTotal is None:
-            grossTotal = self.event.getBasePrice(**kwargs)
-        if total is None:
-            total = grossTotal
 
         if not getattr(self, 'invoiceItem', None):
+
+            if grossTotal is None:
+                grossTotal = self.event.getBasePrice(**kwargs)
+            if total is None:
+                total = grossTotal
+
             new_item = InvoiceItem(
                 invoice=invoice, fees=0, grossTotal=grossTotal, total=total,
                 taxRate=getConstant('registration__salesTaxRate') or 0
             )
+
+            # Attach the new invoice item to its parent if the event registration
+            # id associated with the parent has been passed.
+            parent_id = kwargs.pop('parent_id', None)
+            if parent_id:
+                new_item.parent_item = EventRegistration.objects.get(id=parent_id).invoiceItem
 
             # If there are no items but already fees, apply those
             # fees to this item.
             if invoice.grossTotal == 0 and invoice.fees:
                 new_item.fees = invoice.fees
 
+            # The Invoice's updateTotals method needs to be able to revert the invoice
+            # and its items back to a 'clean' state in order to re-apply discounts
+            # and avoid applying them twice through back button behavior, etc.
+            # It looks for this initial_total key, and if it finds it, then it uses
+            # that as the reset point. Otherwise, it automatically uses the grossTotal
+            # line as the reset point.
+            if total != grossTotal:
+                new_item.data['_initial_total'] = total
+
             new_item.calculateTaxes()
-            new_item.save()
+            new_item.save(updateInvoiceTotals=False)
             self.invoiceItem = new_item
 
         return self.invoiceItem
@@ -3794,6 +4072,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         link_kwargs = {
             'grossTotal': kwargs.pop('grossTotal', None),
             'total': kwargs.pop('total', None),
+            'parent_id': kwargs.pop('parent_id', None),
             'payAtDoor': kwargs.pop('payAtDoor', False),
             'dropIns': kwargs.pop('dropIns', 0),
         }

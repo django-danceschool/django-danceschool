@@ -92,10 +92,7 @@ def getBestDiscount(sender, **kwargs):
 
     student = getattr(eligible_list.first(), 'student', False)
 
-    ineligible_total = sum(
-        [x.event.getBasePrice(payAtDoor=payAtDoor) for x in ineligible_list.exclude(dropIn=True)] +
-        [x.event.getBasePrice(dropIns=1) for x in ineligible_list.filter(dropIn=True)]
-    )
+    ineligible_total = sum([x.invoiceItem.initialTotal for x in ineligible_list])
 
     # Get the applicable discounts and sort them in ascending category order
     # so that the best discounts are always listed in the order that they will
@@ -112,7 +109,7 @@ def getBestDiscount(sender, **kwargs):
     # are allocated across individual events.
     best_discounts = OrderedDict()
 
-    initial_prices = [x.event.getBasePrice(payAtDoor=payAtDoor) for x in eligible_list]
+    initial_prices = [x.invoiceItem.grossTotal for x in eligible_list]
     initial_total = sum(initial_prices)
 
     if discountCodesApplicable:

@@ -1,0 +1,141 @@
+{% load sekizai_tags danceschool_tags i18n %}
+
+<h2>
+	{% blocktrans with name=invoice.firstName|default_if_none:"Friend" %}
+	Hi {{ name }}!
+	{% endblocktrans %}
+</h2>
+
+<p>{% trans "You have selected the following" %}:</p>
+
+<table class="table classregsummary">
+	<tr>
+		<th>{% trans "Description" %}</th>
+		<th>{% trans "Date(s)" %}</th>
+		<th>{% trans "Time" %}</th>
+		<th>{% trans "Role" %}</th>
+		<th>{% trans "Price" %}</th>
+	</tr>
+
+	{% for item in invoice.parent_items %}
+	<tr>
+		{% with item.eventRegistration as er %}
+		{% if er %}
+			<td>{% if er.dropIn %}{% trans "DROP IN" %}: {% endif %}{{ er.event.name }}</td>
+			<td>
+			{% if er.event.eventoccurrence_set.count == 4 and not er.event.series.special %}
+				{% blocktrans with weekday=er.event.startTime|date:"l" month=er.event.month|readable_month startTime=er.event.startTime|date:"F jS" %}
+				{{ weekday }}s in {{ month }}, starting {{ startTime }}
+				{% endblocktrans %}
+			{% else %}
+				{% for occ in er.event.eventoccurrence_set.all reversed %}
+					{{ occ.startTime|date:"D. F jS" }}{% if not forloop.last %}, {% endif %}
+				{% endfor %}
+			{% endif %}
+            </td>
+			<td>{{ er.event.startTime|date:"P" }}</td>
+			<td>{{ er.role.name|default:"N/A" }}</td>
+		{% else %}
+			<td>{{ item.description }}</td>
+			<td></td>
+			<td></td>
+			<td></td>
+		{% endif %}
+		{% endwith %}
+		<td>{{ currencySymbol }}{{ item.grossTotalWithAllocation|floatformat:"-2" }}</td>
+	</tr>
+		{% if item.child_items.all %}
+		{% for child_item in item.child_items.all %}
+			<tr class="child-items">
+				{% with child_item.eventRegistration as er %}
+				{% if er %}
+					<td>{{ er.event.name }}</td>
+					<td>
+					{% for occ in er.event.eventoccurrence_set.all reversed %}
+						{{ occ.startTime|date:"D. F jS" }}{% if not forloop.last %}, {% endif %}
+					{% endfor %}
+					</td>
+					<td>{{ er.event.startTime|date:"P" }}</td>
+					<td>{{ er.role.name|default:"N/A" }}</td>
+				{% else %}
+					<td>{{ child_item.description }}</td>
+					<td></td>
+					<td></td>
+					<td></td>
+				{% endif %}
+				{% endwith %}
+				<td></td>
+			</tr>
+
+		{% endfor %}
+		{% if item.netAllocationAdjustment != 0 %}
+		<tr class="child-items">
+			<td><strong>{% trans "Net Savings" %}:</strong></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td>{{ currencySymbol }}{{ item.netAllocationAdjustment|floatformat:2 }}</td>
+		</tr>	
+		{% endif %}
+		{% endif %}
+	{% endfor %}
+</table>
+
+{% if addonItems %}
+<p>
+	{% for addon in addonItems %}
+		<strong>{% trans "Free Add-On" %}:</strong>&nbsp;{{ addon.name }}
+	{% endfor %}
+</p>
+{% endif %}
+
+<p>
+	{% if total_discount_amount > 0 %}
+		{% for code in discount_codes %}
+			<strong>{% trans "Discount Code Applied" %}:</strong> {{ code.0 }}, {{ currencySymbol }}{{ code.2|floatformat:"-2" }}<br />
+		{% endfor %}
+		{% if discount_codes %}<br />{% endif %}
+
+		{% if vouchers.items %}
+			<strong>{% trans "Vouchers Applied" %}:</strong>
+			{% for v in vouchers.items %}
+				{{ v.name }}{% if not forloop.last %}, {% endif %}
+			{% endfor %}<br /><br />
+		{% endif %}
+
+		<strong>{% trans "Total Discounts Applied" %}:</strong> {{ currencySymbol }}{{ total_discount_amount|floatformat:"-2" }} <br /><br />
+	{% endif %}
+
+	{# Add taxes if they are not included in the published price #}
+	{% if invoice.adjustments or invoice.amountPaid or invoice.taxes and invoice.buyerPaysSalesTax %}
+		<strong>{% trans "Subtotal" %}:</strong> {{ currencySymbol }}{{ invoice.total|floatformat:"-2" }}<br>			
+	{% endif  %}
+	{% if invoice.taxes %}
+		<strong>{% trans "Taxes" %}:</strong> {{ currencySymbol }}{{ invoice.taxes|floatformat:"-2" }}<br>
+	{% endif %}
+	{% if invoice.amountPaid %}
+		<strong>{% trans "Previous Payments" %}:</strong> -&nbsp;{{ currencySymbol }}{{ invoice.amountPaid|floatformat:"-2" }}<br>
+	{% endif %}
+
+	<div class="item-subtotal"><strong><em>{% trans "Total" %}:</em></strong> {{ currencySymbol }}{{ invoice.outstandingBalance|floatformat:"-2" }}</div>
+</p>
+
+
+{% addtoblock "css" %}
+    <style>
+        .item-subtotal {
+            font-size: 1.2em;
+        }
+        .child-items td {
+            border-top: 0;
+            margin-top: 0;
+            padding-top: 0;
+			font-style: italic;
+			color: #999;
+		}
+        tr.child-items td:first-child {
+            padding-left: 3em;
+        }
+
+    </style>
+{% endaddtoblock %}

@@ -13,6 +13,8 @@ from allauth.account.forms import LoginForm, SignupForm
 from datetime import timedelta
 import json
 from braces.views import PermissionRequiredMixin
+import uuid
+from copy import deepcopy
 
 from .models import (
     Event, Series, PublicEvent, Invoice, InvoiceItem, Customer,
@@ -145,7 +147,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         # These are prefixes that may be used for events in the form.  Each one
         # corresponds to a polymorphic content type (PublicEvent, Series, etc.)
-        event_types = ['event', 'publicevent', 'series', 'privatelessonevent']
+        event_types = [
+            'event', 'publicevent', 'series', 'privatelessonevent',
+        ]
 
         try:
             event_listing = {}
@@ -183,7 +187,19 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
             form.add_error(None, ValidationError(_('Invalid event information passed.'), code='invalid'))
             return self.form_invalid(form)
 
-        associated_events = Event.objects.filter(id__in=[k for k in event_listing.keys()])
+        # Ensure that all associated events are in the queryset, including those
+        # that are only add-ons of another event, but are not themselve in the
+        # registration form.
+        associated_events = Event.objects.filter(
+            id__in=[k for k in event_listing.keys()]
+        ).prefetch_related('eventaddon_set__addOnEvent')
+        add_ids = associated_events.exclude(eventaddon__isnull=True).values_list(
+            'eventaddon__addOnEvent__id', flat=True
+        )
+        associated_events = Event.objects.filter(
+            Q(id__in=[k for k in event_listing.keys()]) |
+            Q(id__in=add_ids)
+        )
 
         # Include the submission user if the user is authenticated
         if self.request.user.is_authenticated:
@@ -209,6 +225,9 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
         for key, eventRegs in event_listing.items():
             this_event = associated_events.get(id=key)
+            this_child_events = associated_events.filter(
+                id__in=this_event.eventaddon_set.values_list('addOnEvent__id', flat=True) 
+            )
 
             for value in eventRegs:
                 # Check if registration is still feasible based on both completed registrations
@@ -239,59 +258,87 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
 
                 dropInList = value.get('occurrences', []) if value.get('dropIn', False) else []
 
-                # If nothing is sold out, then proceed to create Registration and
-                # EventRegistration objects for the items selected by this form.  The
-                # expiration date is set to be identical to that of the session.
+                # Drop-ins are only permissable for events that do not have
+                # event add-ons. This should also be enforced in the form
+                # construction, but it is enforced here.
+                if len(dropInList) > 0 and len(this_child_events) > 0:
+                    form.add_error(None, ValidationError(
+                        _(
+                            'You cannot register as a drop-in to ' % this_event.name +
+                            'because it includes one or more add-on events.'
+                        ), code='invalid')
+                    )
+                    return self.form_invalid(form)
+
+                base_price_kwargs = {
+                    'payAtDoor': reg.payAtDoor,
+                    'dropIns': len(dropInList)
+                }
+                
+                # Use the Event model's method to allocated prices across the
+                # event itself and its children.
+                allocated_base_prices = this_event.getAllocatedTotals(
+                    **base_price_kwargs
+                )
+                parent_initial_price = this_event.getBasePrice(
+                    **base_price_kwargs
+                )
+
+                # Since non-child events allow drop-ins, we need to adjust the
+                # price to reflect drop-ins before creating any temporary
+                # registrations.
+                parent_price = allocated_base_prices.get(this_event.id)
+                if len(dropInList) > 0:
+                    parent_price = parent_initial_price
 
                 logger.debug('Creating temporary event registration for: %s' % key)
-                if len(dropInList) > 0:
-                    this_price = this_event.getBasePrice(dropIns=len(dropInList))
-                    tr = EventRegistration(
-                        event=this_event, dropIn=True,
-                    )
-                else:
-                    this_price = this_event.getBasePrice(payAtDoor=reg.payAtDoor)
-                    tr = EventRegistration(
-                        event=this_event, role_id=this_role_id
-                    )
-                # If it's possible to store additional data and such data exist, then store them.
-                tr.data = {k: v for k, v in value.items() if k not in ['role', 'dropIn', 'occurrences']}
-                if dropInList:
-                    tr.data['__dropInOccurrences'] = dropInList
-
-                checkin_rule = getConstant('registration__doorCheckInRule')
-                if reg.payAtDoor and checkin_rule == 'E':
-                    # Check into the full event
-                    tr.data['__checkInEvent'] = True
-                elif reg.payAtDoor and checkin_rule == 'O' and dropInList:
-                    # Check into the first upcoming drop-in occurrence
-                    best_occ = tr.event.eventoccurrence_set.filter(
-                        id__in=dropInList,
-                        startTime__gte=ensure_localtime(timezone.now()) - timedelta(minutes=45)
-                    ).first()
-                    tr.data['__checkInOccurrence'] = getattr(best_occ, 'id', None)
-                elif reg.payAtDoor and checkin_rule == 'O':
-                    # Check into the next upcoming occurrence (45 min. grace period)
-                    tr.data['__checkInOccurrence'] = getattr(
-                        tr.event.getNextOccurrence(
-                            ensure_localtime(timezone.now()) - timedelta(minutes=45)
-                        ),
-                        'id',
-                        None
-                    )
-
-                tr.data['__price'] = this_price
+                tr = self.create_event_registration(
+                    event=this_event, reg=reg, field_value=value,
+                    price=parent_price,
+                    gross_price=min(parent_price, parent_initial_price)
+                )
                 self.event_registrations.append(tr)
+
+                for child_event in this_child_events:
+                    self.event_registrations.append(self.create_event_registration(
+                        event=child_event, reg=reg, field_value=value,
+                        price=allocated_base_prices.get(child_event.id),
+                        parent_id=tr.data.get('__uuid')
+                    ))
 
         # If we got this far with no issues, then save
         invoice = reg.link_invoice(expirationDate=expiry)
         reg.save()
 
+        uuid_to_id_reference = {}
+
         for er in self.event_registrations:
             # Saving the event registration automatically creates an InvoiceItem.
+            # Note that in the event of add-ons, the parent event registration
+            # is always saved first, so that the link_invoice_item method can
+            # find the associated parent invoice item using the uuid key in
+            # the data.
             er.registration = reg
-            this_price = er.data.pop('__price')
-            er.save(grossTotal=this_price, total=this_price)
+
+            save_kwargs = {
+                'grossTotal': er.data.pop('__grossTotal'),
+                'total': er.data.pop('__total'),
+            }
+
+            own_uuid = er.data.pop('__uuid', None)
+            parent_uuid = er.data.pop('__addon__parent__uuid', None)
+
+            if not own_uuid:
+                save_kwargs['parent_id'] = uuid_to_id_reference.get(parent_uuid)
+
+            er.save(**save_kwargs)
+
+            if own_uuid:
+                uuid_to_id_reference[own_uuid] = er.id
+
+        # This ensures that the total lines for the invoice reflect the sum of
+        # the lines for the underlying items.
+        invoice.updateTotals(setAdjustmentsFlag=False)
 
         # Put these in a property in case the get_success_url() method needs them.
         self.registration = reg
@@ -307,6 +354,61 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                 'status': 'success', 'redirect': self.get_success_url()
             })
         return HttpResponseRedirect(self.get_success_url())
+
+    def create_event_registration(
+        self, event, reg, field_value, price=None, gross_price=None, parent_id=None
+    ):
+
+        dropInList = field_value.get('occurrences', []) if field_value.get('dropIn', False) else []
+        role_id = field_value.get('role', None)
+
+        if role_id and role_id not in [x.id for x in event.availableRoles]:
+            role_id = None
+
+        tr = EventRegistration(
+            event=event, dropIn=(len(dropInList) > 0),
+            role_id=role_id
+        )
+
+        # If it's possible to store additional data and such data exist, then store them.
+        tr.data = {k: v for k, v in field_value.items() if k not in ['role', 'dropIn', 'occurrences']}
+        if dropInList:
+            tr.data['__dropInOccurrences'] = dropInList
+
+        checkin_rule = getConstant('registration__doorCheckInRule')
+        if reg.payAtDoor and checkin_rule == 'E':
+            # Check into the full event
+            tr.data['__checkInEvent'] = True
+        elif reg.payAtDoor and checkin_rule == 'O' and dropInList:
+            # Check into the first upcoming drop-in occurrence
+            best_occ = tr.event.eventoccurrence_set.filter(
+                id__in=dropInList,
+                startTime__gte=ensure_localtime(timezone.now()) - timedelta(minutes=45)
+            ).first()
+            tr.data['__checkInOccurrence'] = getattr(best_occ, 'id', None)
+        elif reg.payAtDoor and checkin_rule == 'O':
+            # Check into the next upcoming occurrence (45 min. grace period)
+            tr.data['__checkInOccurrence'] = getattr(
+                tr.event.getNextOccurrence(
+                    ensure_localtime(timezone.now()) - timedelta(minutes=45)
+                ),
+                'id',
+                None
+            )
+
+        if parent_id:
+            tr.data['__addon__parent__uuid'] = parent_id
+        else:
+            tr.data['__uuid'] = uuid.uuid4().__str__()
+
+        tr.data['__grossTotal'] = (
+            event.getBasePrice(payAtDoor=reg.payAtDoor) if gross_price is None else gross_price
+        )
+        tr.data['__total'] = (
+            event.getBasePrice(payAtDoor=reg.payAtDoor) if price is None else price
+        )
+
+        return tr
 
     def get_success_url(self):
         return reverse('getStudentInfo')
@@ -393,6 +495,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
     '''
 
     permission_required = 'core.ajax_registration'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.related_events = []
 
     def dispatch(self, request, *args, **kwargs):
         '''
@@ -593,7 +699,13 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # by signal handlers that are called to process each item in the cart.
         items_response = []
 
-        for i in item_post:
+        # We use a while loop with a counter rather than a for loop here because
+        # it allows the code inside the loop to add items to item_post which
+        # are then processed in subsequent iterations of the same loop.
+        counter = 0
+        while counter < len(item_post):
+            i = item_post[counter]
+            counter += 1
 
             if i.get('id', None):
                 try:
@@ -655,6 +767,13 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                         errors.append(error) if error not in errors else errors
                 this_item_response.update(signal_response.get('response',{}))
 
+                # Add any new child items onto the end of the list that is being
+                # looped through, so that they may be treated as if they were
+                # passed even in the first iteration that they are created.
+                item_post.extend(
+                    signal_response.get('response',{}).get('child_items', [])
+                )
+
             signal_responses = get_invoice_item_related.send(
                 sender=AjaxClassRegistrationView,
                 item=this_item, item_data=i, post_data=post_data,
@@ -690,22 +809,36 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             if isinstance(key, str) and key.startswith('__relateditem'):
                 value.save()
         for i in response.get('items', []):
-            this_invoice_item = i.pop('__item', None)
+            this_invoice_item = i.get('__item', None)
             if isinstance(this_invoice_item, InvoiceItem):
+                if i.get('register_uuid', None) and i.get('child_item', False):
+                    parent_item_response = [
+                        x for x in response.get('items', []) if
+                        x.get('register_uuid', None) == i['register_uuid'] and
+                        not x.get('child_item', False)
+                    ]
+                    if parent_item_response:
+                        this_invoice_item.parent_item = parent_item_response[0].get('__item')
                 this_invoice_item.save(updateInvoiceTotals=False)
                 i.update({
                     'id': str(this_invoice_item.id),
                     'grossTotal': this_invoice_item.grossTotal,
+                    'initialTotal': this_invoice_item.initialTotal,
+                    'displayTotal': i.pop('__displayTotal', this_invoice_item.initialTotalWithAllocation),
                 })
             for key, value in i.items():
                 if isinstance(key, str) and key.startswith('__relateditem'):
-                    value.save()
+                    value.save()        
+
+        # Remove the response key that holds actual invoice items, as they
+        # cannot be passed in JSON.
+        [i.pop('__item', None) for i in response.get('items', [])]
 
         # Delete any items that are no longer in the POST data and ensure that
         # the Invoice totals are kept in sync.
         invoice.invoiceitem_set.filter(id__in=unmatched_item_ids).delete()
-        items_queryset = invoice.updateTotals()
 
+        items_queryset = invoice.updateTotals()
         # If a transaction is associated with event registration, then process
         # discount, addons, and vouchers
         reg = response.pop('__relateditem_registration', None)
@@ -784,12 +917,13 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         response.update({
             'id': str(invoice.id),
             'grossTotal': invoice.grossTotal,
+            'initialTotal': invoice.initialTotal,
             'total': invoice.total,
             'adjustments': invoice.adjustments,
             'taxes': invoice.taxes,
             'outstandingBalance': invoice.outstandingBalance,
             'buyerPaysSalesTax': invoice.buyerPaysSalesTax,
-            'itemCount': len(response.get('items', []))
+            'itemCount': len([x for x in response.get('items', []) if not x.get('child_item', False)])
         })
 
         # Format the response for return to the page that called this view 
@@ -877,11 +1011,11 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         # Most transactions involve signing up for classes and events.  If so,
         # then we need to ensure that there is a Registration instance
         # associated with this invoice.
-        response = {
-            '__related_events': Event.objects.filter(
+        self.related_events.extend(
+            list(Event.objects.filter(
                 id__in=[x.get('event') for x in eventreg_items if x.get('event', None)]
-            ),
-        }
+            ))
+        )
 
         try:
             reg = Registration.objects.get(invoice=invoice)
@@ -907,7 +1041,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             # Create a new Registration (not finalized)
             reg = Registration(**reg_defaults)
-        response['__relateditem_registration'] = reg
+        response = {'__relateditem_registration': reg}
         return {'status': 'success', 'response': response}
 
     def linkEventRegistration(self, item, item_data, post_data, prior_response, request):
@@ -918,7 +1052,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         errors = []
         response = {'type': 'eventRegistration'}
 
-        events = prior_response.get('__related_events', Event.objects.none())
+        # Make a local copy of post data to be able to check against what was
+        # initially passed (avoiding pass by reference-like issues).
+        initial_items_data = deepcopy(post_data.get('items', []))
+
         registration = prior_response.get('__relateditem_registration')
 
         if not registration:
@@ -927,29 +1064,120 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'message': _('No registration set to link registration-related items.'),
             })
 
-        try:
-            this_event = events.get(id=item_data.get('event', None))
-            response.update({
-                'event': this_event.id,
-                'description': this_event.name,
-            })
-        except ObjectDoesNotExist:
-            errors.append({
-                'code': 'invalid_event_id',
-                'message': _('Invalid event ID passed.'),
-            })
-            this_event = None
+        this_event = next(
+            (x for x in self.related_events if x.id == item_data.get('event', None)),
+            None
+        )
+        if not this_event:
+            try:
+                this_event = Event.objects.get(id=item_data.get('event', None))
+                self.related_events.append(this_event)
+            except ObjectDoesNotExist:
+                errors.append({
+                    'code': 'invalid_event_id',
+                    'message': _('Invalid event ID passed.'),
+                })
+                this_event = None
+
+        parent_event_id = item_data.get('parent_event', None) or getattr(this_event, 'id', None)
+        parent_event = next(
+            (x for x in self.related_events if parent_event_id and x.id == parent_event_id),
+            None
+        )
+        if not parent_event:
+            try:
+                parent_event = Event.objects.get(id=parent_event_id)
+                self.related_events.append(parent_event)
+            except ObjectDoesNotExist:
+                errors.append({
+                    'code': 'invalid_event_id',
+                    'message': _('Invalid parent event ID passed.'),
+                })
+                parent_event = None
 
         if errors:
             return {'status': 'failure', 'errors': errors}
+
+        response.update({
+            'event': this_event.id,
+            'description': this_event.name,
+        })
+
+        # These allocated totals are accessed for all prices below.
+        allocated_totals = parent_event.getAllocatedTotals(
+            payAtDoor=registration.payAtDoor
+        )
+
+        # Ensure that the parent item has a unique identifier, which is then
+        # referenced by the children to preserve the linkage and prevent
+        # duplicate records.
+        item_data['register_uuid'] = item_data.get(
+            'register_uuid',
+            uuid.uuid4().__str__()
+        )
+
+        # If there are add-on items associated with this event, then for each
+        # add-on item we need to create a child item that will be appended to
+        # the post data within the loop, so that all checks happen just as if it
+        # were part of the passed data.
+        response['child_items'] = []
+        for addOn in this_event.eventaddon_set.all():
+
+            child_item_data = item_data.copy()            
+
+            # Start by checking the full item_post to see if this register UUID
+            # is already in the submitted data. If so, then don't add the
+            # child items again.
+            existing_items = [
+                x for x in initial_items_data if
+                x.get('register_uuid', None) == child_item_data['register_uuid']
+            ]
+            if existing_items:
+                break
+
+            # Ensure that this item is not displayed in the register as if it
+            # were a non-add-on item.
+            child_item_data['child_item'] = True
+
+            # These properties cannot be set on the child items because the
+            # button does not contain any information on them for the child events,
+            # or because the information will be populated when the loop gets to
+            # this item.
+            for v in [
+                'dropIn','dropInOccurrence', 'checkInType', 'checkInOccurrence',
+                'description', 'id'
+            ]:
+                child_item_data.pop('v', None)
+
+            child_item_data['event'] = addOn.addOnEvent.id
+            child_item_data['parent_event'] = parent_event_id
+            child_item_data['grossTotal'] = 0
+
+            if (
+                child_item_data.get('roleId') not in
+                [x.id for x in addOn.addOnEvent.availableRoles]
+            ):
+                child_item_data.pop('roleId', None)
+                child_item_data.pop('roleName', None)
+
+            response['child_items'].append(child_item_data)
 
         # Before continuing, we enforce rules on duplicate registrations, etc.
         # To do this, we need to know the drop-in status of the registration as
         # well as the associated role.
         response['dropIn'] = item_data.get('dropIn', False)
 
+        # Preserve information used to determine unique register items, hide
+        # child items from visibility in the register, and prevent duplicate
+        # entries.
+        response['register_uuid'] = item_data.get('register_uuid', None)
+        response['child_item'] = item_data.get('child_item', False)
+        response['parent_event'] = item_data.get('parent_event', None)
+
         # Pass back information about how automatic check-in should proceed.
-        for v in ['dropInOccurrence', 'checkInType', 'checkInOccurrence']:
+        for v in [
+            'dropInOccurrence', 'checkInType', 'checkInOccurrence',
+        ]:
             response[v] = item_data.get(v, None)
 
         this_role = None
@@ -969,7 +1197,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
         # Check the other eventregistrations in POST data to ensure
         # that this is the only one for this event.
-        same_event = [x for x in post_data.get('items',[]) if x.get('event', None) == this_event.id]
+        same_event = [x for x in initial_items_data if x.get('event', None) == this_event.id]
 
         if len(same_event) > 1 and ((
             this_event.polymorphic_ctype.model == 'series' and not response['dropIn'] and (
@@ -1134,7 +1362,15 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 this_eventreg.data['__dropInOccurrences'] = [item_data['dropInOccurrence'],]
         else:
             this_eventreg.dropIn = False
-            item.grossTotal = this_event.getBasePrice(payAtDoor=registration.payAtDoor)
+            item.data['_initial_total'] = allocated_totals[this_event.id]
+
+            if response.get('child_item', False):
+                item.grossTotal = this_event.getBasePrice(payAtDoor=registration.payAtDoor)
+                response['__displayTotal'] = item.grossTotal
+            else:
+                item.grossTotal = allocated_totals[this_event.id]
+                response['__displayTotal'] = sum([v for v in allocated_totals.values()])
+
             this_eventreg.role = this_role
 
         if item_data.get('student', False):
@@ -1146,7 +1382,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         elif item_data.get('checkInType') == 'F':
             this_eventreg.data['__checkInEvent'] = True
 
-        item.total = item.grossTotal
+        item.total = item.data.get('_initial_total', item.grossTotal)
         item.taxRate = getConstant('registration__salesTaxRate') or 0
         item.calculateTaxes()
 
@@ -1598,7 +1834,9 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
 
         self.multiReg = (
             self.registration and
-            self.registration.eventregistration_set.count() > 1
+            self.registration.eventregistration_set.filter(
+                invoiceItem__parent_item__isnull=True
+            ).count() > 1
         )
 
         if not self.registration or not self.multiReg:
@@ -1759,7 +1997,9 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
         self.multiReg = (
             self.registration and
-            self.registration.eventregistration_set.count() > 1 and
+            self.registration.eventregistration_set.filter(
+                invoiceItem__parent_item__isnull=True
+            ).count() > 1 and
             (
                 multiRegRule == 'Y' or
                 (multiRegRule == 'O' and not self.registration.payAtDoor)

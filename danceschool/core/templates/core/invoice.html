@@ -84,14 +84,14 @@
 	</tr>
 </thead>
 <tbody>
-{% for item in object.invoiceitem_set.all %}
+{% for item in object.parent_items %}
 	<tr>
 		<td>{{ item.name }}</td>
-		<td>{{ currencySymbol }}{{ item.grossTotal|floatformat:"2" }}</td>
-		<td>{{ currencySymbol }}{{ item.total|floatformat:"2" }}</td>
-		<td>{{ currencySymbol }}{{ item.taxes|floatformat:"2" }}</td>
-		<td>{{ currencySymbol }}{{ item.fees|floatformat:"2" }}</td>
-		<td>{{ currencySymbol }}{{ item.adjustments|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.grossTotalWithAllocation|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.totalWithAllocation|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.taxesWithAllocation|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.feesWithAllocation|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.adjustmentsWithAllocation|floatformat:"2" }}</td>
 		{% if 'financial.change_revenueitem' in perms %}
 			<td>
 				{% if item.revenueitem %}
@@ -100,6 +100,23 @@
 			</td>
 		{% endif %}
 	</tr>
+	{% for child_item in item.child_items.all %}
+		<tr class="child-items">
+			<td>{{ child_item.name }}</td>
+			<td>{{ currencySymbol }}{{ child_item.grossTotal|floatformat:"2" }}</td>
+			<td></td>
+			<td></td>
+			<td></td>
+			<td></td>
+			{% if 'financial.change_revenueitem' in perms %}
+				<td>
+					{% if item.revenueitem %}
+						<a class="btn btn-outline-secondary btn-sm" href="{% url 'admin:financial_revenueitem_change' item.revenueitem.id %}">{% trans "Rev. Item" %}</a>
+					{% endif %}
+				</td>
+			{% endif %}
+		</tr>
+	{% endfor %}
 {% endfor %}
 <tbody>
 </table>
@@ -152,5 +169,20 @@
 {% if returnPage.url %}
 	<p class="my-4 clearfix"><a class="btn btn-outline-secondary float-right" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
 {% endif %}
+
+{% addtoblock "css" %}
+    <style>
+        .child-items td {
+            border-top: 0;
+			font-style: italic;
+			color: #999;
+			margin-top: 0;
+			padding-top: 0;
+        }
+        tr.child-items td:first-child {
+            padding-left: 3em;
+        }
+    </style>
+{% endaddtoblock %}
 
 {% endblock %}
