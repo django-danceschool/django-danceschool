@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import (
     Q, Sum, F, Case, When, Value, Count, DurationField, ExpressionWrapper
 )
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, Cast
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.apps import apps
@@ -2861,21 +2861,13 @@ class Invoice(EmailRecipientMixin, models.Model):
         if (saved_adjustments and self.status == self.PaymentStatus.preliminary):
             prior_queryset = self.invoiceitem_set.all()
             prior_queryset.update(
-                total=Case(
-                    When(
-                        data___initial_total__isnull=False,
-                        then=F('data___initial_total')
-                    ),
-                    default=F('grossTotal'),
-                    output_field=models.FloatField()
+                total=Coalesce(
+                    Cast('data___initial_total', models.FloatField()),
+                    'grossTotal'
                 ),
-                adjustments=Case(
-                    When(
-                        data___initial_adjustments__isnull=False,
-                        then=F('data___initial_adjustments')
-                    ),
-                    default=0,
-                    output_field=models.FloatField()
+                adjustments=Coalesce(
+                    Cast('data___initial_adjustments', models.FloatField()),
+                    0, output_field=models.FloatField()
                 )
             )
             aggregates = prior_queryset.aggregate(Sum('total'), Sum('adjustments'))
@@ -3268,13 +3260,9 @@ class InvoiceItem(models.Model):
         return (
             self.grossTotal +
             (self.child_items.annotate(
-                initial_total=Case(
-                    When(
-                        data___initial_total__isnull=False,
-                        then=F('data___initial_total')
-                    ),
-                    default=F('grossTotal'),
-                    output_field=models.FloatField()
+                initial_total=Coalesce(
+                    Cast('data___initial_total', models.FloatField()),
+                    'grossTotal'
                 )
             ).aggregate(Sum('initial_total')).get('initial_total__sum',0) or 0)
         )
