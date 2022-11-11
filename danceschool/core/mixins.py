@@ -46,6 +46,9 @@ class EmailRecipientMixin(object):
 
         email_kwargs = {}
 
+        # Optionally delay the email (argument is in seconds).
+        delay = kwargs.pop('delay', 0)
+
         for list_arg in [
             'to', 'cc', 'bcc',
         ]:
@@ -74,11 +77,12 @@ class EmailRecipientMixin(object):
             getConstant('email__defaultEmailFrom')
 
         # Add the object's default recipients if they are provided
-        default_recipients = self.get_default_recipients() or []
-        if isinstance(default_recipients, string_types):
-            default_recipients = [default_recipients, ]
+        if kwargs.pop('add_default_recipients', True):
+            default_recipients = self.get_default_recipients() or []
+            if isinstance(default_recipients, string_types):
+                default_recipients = [default_recipients, ]
 
-        email_kwargs['bcc'] += default_recipients
+            email_kwargs['bcc'] += default_recipients
 
         if not (email_kwargs['bcc'] or email_kwargs['cc'] or email_kwargs['to']):
             raise ValueError(_('Email must have a recipient.'))
@@ -89,7 +93,10 @@ class EmailRecipientMixin(object):
         if not has_tags and not email_kwargs.get('html_content'):
             t = Template(content)
             rendered_content = t.render(Context(kwargs))
-            sendEmail(subject, rendered_content, **email_kwargs)
+            sendEmail.schedule(
+                args=(subject, rendered_content), kwargs=email_kwargs,
+                delay=delay
+            )
             return
 
         # Otherwise, get the object-specific email context and email
@@ -116,7 +123,10 @@ class EmailRecipientMixin(object):
             t = Template(html_content)
             email_kwargs['html_content'] = t.render(Context(template_context))
 
-        sendEmail(subject, rendered_content, **email_kwargs)
+        sendEmail.schedule(
+            args=(subject, rendered_content), kwargs=email_kwargs,
+            delay=delay
+        )
 
     def get_email_context(self, **kwargs):
         '''
