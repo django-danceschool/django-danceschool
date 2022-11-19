@@ -2643,8 +2643,8 @@ class Invoice(EmailRecipientMixin, models.Model):
     @property
     def itemTotalMismatch(self):
         item_totals = self.invoiceitem_set.aggregate(
-            grossTotal=Coalesce(Sum('grossTotal'), 0),
-            total=Coalesce(Sum('total'), 0),
+            grossTotal=Coalesce(Sum('grossTotal'), 0, output_field=models.FloatField()),
+            total=Coalesce(Sum('total'), 0, output_field=models.FloatField()),
         )
         return (
             self.grossTotal != item_totals.get('grossTotal') or
