@@ -327,11 +327,11 @@ class MerchOrder(models.Model):
                 'invoiceItem', flat=True
             )
         ).aggregate(
-            grossTotal=Coalesce(Sum('grossTotal'), 0),
-            total=Coalesce(Sum('total'), 0),
-            adjustments=Coalesce(Sum('adjustments'), 0),
-            taxes=Coalesce(Sum('taxes'), 0),
-            fees=Coalesce(Sum('fees'), 0),
+            grossTotal=Coalesce(Sum('grossTotal'), 0, output_field=models.FloatField()),
+            total=Coalesce(Sum('total'), 0, output_field=models.FloatField()),
+            adjustments=Coalesce(Sum('adjustments'), 0, output_field=models.FloatField()),
+            taxes=Coalesce(Sum('taxes'), 0, output_field=models.FloatField()),
+            fees=Coalesce(Sum('fees'), 0, output_field=models.FloatField()),
         )
 
     def link_invoice(self, update=True, save=True, **kwargs):
