@@ -25,9 +25,15 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=EventStaffMember)
 @receiver(m2m_changed, sender=EventStaffMember.occurrences.through)
 def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
+
     if 'loaddata' in sys.argv or ('raw' in kwargs and kwargs['raw']):
         return
-    if kwargs.get('action', None) != 'post_add':
+
+    changed = False
+    for prop in ['category', 'staffMember', 'replacedStaffMember', 'specifiedHours']:
+        if getattr(instance, prop, None) != getattr(instance, f'__original_{prop}', None):
+            changed = True
+    if not (kwargs.get('action', None) in ['post_add', 'post_remove'] or changed == True):
         return
 
     logger.debug('ExpenseItem signal fired for EventStaffMember %s.' % instance.pk)
@@ -44,9 +50,10 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
         # Fill in the updated hours and the updated total.  Set the expense item
         # to unapproved.
         for expense in staff_expenses:
-            logger.debug('Updating expense item %s.' % expense.id)
 
-            if expense.expenseRule == RepeatedExpenseRule.RateRuleChoices.hourly:
+            if getattr(
+                expense.expenseRule, 'applyRateRule', None
+            ) == RepeatedExpenseRule.RateRuleChoices.hourly:
                 expense.hours = instance.netHours
                 expense.total = expense.hours * expense.wageRate
                 expense.approved = None
@@ -54,28 +61,34 @@ def modifyExistingExpenseItemsForEventStaff(sender, instance, **kwargs):
             # Update who the expense should be paid to if the identity of the
             # staff member has changed and the expense is not already paid.
             if not expense.paid:
+                logger.debug('Updating expense item %s.' % expense.id)
+
                 expense.description = expense.description.replace(
                     expense.payTo.name, getattr(instance.staffMember, 'fullName', '')
                 )
                 expense.payTo = new_payTo
-            expense.save()
+                expense.save()
 
     if hasattr(instance.replacedStaffMember, 'staffMember'):
         logger.debug('Adjusting totals for replaced event staff member.')
 
         replaced_expenses = [
             x.item for x in instance.replacedStaffMember.related_expenses.all() if
-            x.item.expenseRule == RepeatedExpenseRule.RateRuleChoices.hourly
+            getattr(
+                x.item.expenseRule, 'applyRateRule', None
+            ) == RepeatedExpenseRule.RateRuleChoices.hourly
         ]
 
         # Fill in the updated hours and the updated total.  Set the expense item
         # to unapproved.
         for expense in replaced_expenses:
-            logger.debug('Updating expense item %s' % expense.id)
             expense.hours = instance.replacedStaffMember.netHours
             expense.total = expense.hours * expense.wageRate
             expense.approved = None
-            expense.save()
+
+            if not expense.paid:
+                logger.debug('Updating expense item %s' % expense.id)
+                expense.save()
 
 
 @receiver(post_save, sender=EventOccurrence)

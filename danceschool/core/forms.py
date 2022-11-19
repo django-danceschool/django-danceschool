@@ -1622,8 +1622,7 @@ class SubstituteReportingForm(forms.ModelForm):
         ):
             self.add_error('replacedStaffMember', ValidationError(_(
                 'Replaced staff member was not scheduled for this category of staffing.'
-            ), code='invalid'))        
-
+            ), code='invalid'))
 
     def validate_unique(self):
         '''
@@ -1639,6 +1638,7 @@ class SubstituteReportingForm(forms.ModelForm):
         the list of occurrences for which they are a substitute on their existing EventStaffMember
         record, rather than creating a new record and creating database issues.
         '''
+
         replaced = self.cleaned_data.get('replacedStaffMember')
         occs = self.cleaned_data.get('occurrences')
 

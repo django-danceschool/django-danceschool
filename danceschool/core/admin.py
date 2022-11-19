@@ -21,6 +21,7 @@ import json
 import six
 from dal import autocomplete
 from adminsortable2.admin import SortableInlineAdminMixin, SortableAdminMixin
+from functools import partialmethod
 
 from .models import (
     EventSession, Event, PublicEventCategory, Series, SeriesCategory,
@@ -79,6 +80,20 @@ class EventStaffMemberInlineForm(ModelForm):
         )
     )
 
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        return super().__init__(*args, **kwargs)
+
+    def save(self, commit=True):
+        '''
+        Assume that the staffing applies to all occurrences if none were
+        otherwise supplied.
+        '''
+        if not self.cleaned_data.get('occurrences', None):
+            self.cleaned_data['occurrences'] = self.instance.event.eventoccurrence_set.all()
+        self.instance.submissionUser = self.user
+        return super().save(commit=commit)
+
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
@@ -94,7 +109,7 @@ class EventStaffMemberInline(admin.TabularInline):
     form = EventStaffMemberInlineForm
 
     def formfield_for_manytomany(self, db_field, request=None, **kwargs):
-        field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        field = super().formfield_for_manytomany(db_field, request, **kwargs)
 
         if db_field.name == 'occurrences':
             if request._obj_ is not None:
@@ -107,9 +122,13 @@ class EventStaffMemberInline(admin.TabularInline):
                 field.queryset = field.queryset.none()
         return field
 
-    def save_model(self, request, obj, form, change):
-        obj.submissionUser = request.user
-        obj.save()
+    def get_formset(self, request, obj, **kwargs):
+        ''' Add the request to the formset kwargs '''
+        formset = super().get_formset(request, obj, **kwargs)
+        formset._construct_form = partialmethod(
+            formset._construct_form, user=request.user
+        )
+        return formset
 
 
 class EventAddOnInline(SortableInlineAdminMixin, admin.TabularInline):

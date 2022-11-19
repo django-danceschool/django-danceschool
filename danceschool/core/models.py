@@ -1830,13 +1830,12 @@ class EventStaffMember(EmailRecipientMixin, models.Model):
         '''
         if self.specifiedHours is not None:
             return self.specifiedHours
-        elif self.category in [
-            getConstant('general__eventStaffCategoryAssistant'),
-            getConstant('general__eventStaffCategoryInstructor')
-        ]:
-            return self.event.duration - sum([sub.netHours for sub in self.replacementFor.all()])
-        else:
+        
+        occurrences = self.occurrences.filter(cancelled=False)
+        if occurrences:
             return sum([x.duration for x in self.occurrences.filter(cancelled=False)])
+        
+        return self.event.duration
     netHours.fget.short_description = _('Net hours')
 
     def get_default_recipients(self):
@@ -1862,14 +1861,26 @@ class EventStaffMember(EmailRecipientMixin, models.Model):
 
         return context
 
+    def __init__(self, *args, **kwargs):
+        '''
+        Cache some initial properties to make it easier for signal handlers in
+        other apps to detect changes.        
+        '''
+        super().__init__(*args, **kwargs)
+        if self.pk:
+            for prop in [
+                'category', 'staffMember', 'replacedStaffMember', 'specifiedHours'
+            ]:
+                setattr(self, f'__original_{prop}', self.__dict__.get(prop, None))
+
     def __str__(self):
         replacements = {
             'type': _('Event Staff'),
-            'name': self.staffMember.fullName,
+            'name': getattr(getattr(self, 'staffMember', None), 'fullName', _('Unknown')),
             'as': _('as'),
-            'category': self.category.name,
+            'category': getattr(getattr(self, 'category', None), 'name', _('Unknown')),
             'for': _('for'),
-            'eventName': self.event.name,
+            'eventName': getattr(getattr(self, 'event', None), 'name', _('Unknown')),
         }
         return '%(type)s: %(name)s %(as)s %(category)s %(for)s %(eventName)s' % replacements
 

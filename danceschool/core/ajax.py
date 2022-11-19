@@ -88,11 +88,7 @@ def updateSeriesAttributes(request):
         staff_filters &= Q(category__id=category_id)
 
     occurrence_ids = request.POST.getlist('occurrences[]')
-    if occurrence_ids:
-        # The staff members must match all occurrences.
-        for occ in occurrence_ids:
-            staff_filters &= Q(occurrences=occ)
-    else:
+    if not occurrence_ids:
         # Don't return staff unless occurrences are specified.
         staff_filters = Q(pk__in=[])
 
@@ -101,8 +97,11 @@ def updateSeriesAttributes(request):
         outOccurrences[str(option.id)] = option.__str__()
 
     outStaff = {}
-    for option in EventStaffMember.objects.filter(staff_filters):
-        outStaff[str(option.id)] = option.__str__()
+    for option in EventStaffMember.objects.filter(
+        staff_filters
+    ).prefetch_related('occurrences'):
+        if option.occurrences.filter(id__in=occurrence_ids).count() == len(occurrence_ids):
+            outStaff[str(option.id)] = option.__str__()
 
     return JsonResponse({
         'id_occurrences': outOccurrences,
