@@ -532,8 +532,26 @@ class Location(models.Model):
 
     @property
     def address_string(self):
-        return self.address + ', ' + self.city + ', ' + self.state + ' ' + self.zip
+        commasep_fields = [self.address, self.city, self.state]
+        return ' '.join([
+            ', '.join([x for x in commasep_fields if x]),
+            self.zip
+        ])
     address_string.fget.short_description = _('Address')
+
+    @property
+    def address_string_multiline(self):
+        retval = ''
+
+        if self.address:
+            retval += f'{self.address}\n'
+        commasep_fields = [self.city, self.state]
+        retval += ' '.join([
+            ', '.join([x for x in commasep_fields if x]),
+            self.zip
+        ])
+        return retval
+    address_string_multiline.fget.short_description = _('Address')
 
     @property
     def jsonCalendarFeed(self):
@@ -3443,11 +3461,6 @@ class Registration(EmailRecipientMixin, models.Model):
     # expect, so you will need to hook into the registration system to ensure
     # that any extra information that you want to use is not discarded.
     data = models.JSONField(_('Additional data'), default=dict, blank=True)
-
-    @property
-    def fullName(self):
-        return ' '.join([self.firstName or '', self.lastName or '']).strip()
-    fullName.fget.short_description = _('Name')
 
     @property
     def invoiceDetails(self):
