@@ -81,8 +81,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='instructoravailabilityslot',
-            name='temporaryEventRegistration',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.TemporaryEventRegistration', verbose_name='Temporary event registration'),
+            name='eventRegistration',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.EventRegistration', verbose_name='Temporary event registration'),
         ),
         migrations.AlterUniqueTogether(
             name='privatelessoncustomer',

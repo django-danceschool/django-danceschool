@@ -41,11 +41,7 @@ class AvailabilityFeedItem(object):
         self.className = ['availabilitySlot', 'availabilitySlot-%s' % object.status]
 
         if object.location:
-            self.location = (
-                object.location.name + '\n' + object.location.address + '\n' +
-                object.location.city + ', ' + object.location.state + ' ' +
-                object.location.zip
-            )
+            self.location = f'{object.location.name}\n{object.location.address_string_multiline}'
             self.location_id = object.location.id
         else:
             self.location = None
@@ -107,7 +103,7 @@ def json_availability_feed(request, instructor_id=None):
             datetime.strptime(endDate, '%Y-%m-%d')
         ) + timedelta(days=1)
 
-    this_instructor = Instructor.objects.get(id=instructor_id)
+    this_instructor = Instructor.objects.get(staffMember_id=instructor_id)
 
     availability = InstructorAvailabilitySlot.objects.filter(
         instructor=this_instructor,

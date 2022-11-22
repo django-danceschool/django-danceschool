@@ -132,7 +132,7 @@ class PrivateLessonEvent(Event):
         '''
         return Customer.objects.filter(
             Q(privatelessoncustomer__lesson=self) |
-            Q(registration__eventregistration__event=self)
+            Q(eventregistration__event=self)
         ).distinct()
     customers.fget.short_description = _('Customers')
 
@@ -156,7 +156,10 @@ class PrivateLessonEvent(Event):
         if self.customers:
             customerNames = ' ' + ' and '.join([x.fullName for x in self.customers])
         elif self.eventregistration_set.all():
-            names = ' and '.join([x.registration.fullName for x in self.eventregistration_set.all()])
+            names = ' and '.join([
+                x.customer.fullName for x in
+                self.eventregistration_set.filter(customer__isnull=False)
+            ])
             customerNames = ' ' + names if names else ''
         else:
             customerNames = ''
@@ -298,11 +301,11 @@ class InstructorAvailabilitySlot(models.Model):
         Some instructors only offer private lessons for certain roles, so we should only allow booking
         for the roles that have been selected for the instructor.
         '''
-        if not hasattr(self.instructor, 'instructorprivatelessondetails'):
+        if not hasattr(self.instructor.staffMember, 'instructorprivatelessondetails'):
             return []
         return [
-            [x.id, x.name] for x in
-            self.instructor.instructorprivatelessondetails.roles.all()
+            (x.id, x.name) for x in
+            self.instructor.staffMember.instructorprivatelessondetails.roles.all()
         ]
 
     def checkIfAvailable(self, dateTime=timezone.now()):
@@ -343,7 +346,7 @@ class InstructorAvailabilitySlot(models.Model):
         return str(self.name)
 
     class Meta:
-        ordering = ('-startTime', 'instructor__lastName', 'instructor__firstName')
+        ordering = ('-startTime', 'instructor__staffMember__lastName', 'instructor__staffMember__firstName')
         verbose_name = _('Private lesson availability slot')
         verbose_name_plural = _('Private lesson availability slots')
 

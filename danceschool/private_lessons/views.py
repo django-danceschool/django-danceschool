@@ -134,7 +134,8 @@ class BookPrivateLessonView(FormView):
         context = super().get_context_data(**kwargs)
         context.update({
             'instructor_list': Instructor.objects.filter(
-                availableForPrivates=True, instructorprivatelessondetails__isnull=False
+                availableForPrivates=True,
+                staffMember__instructorprivatelessondetails__isnull=False
             ),
             'defaultLessonLength': getConstant('privateLessons__defaultLessonLength'),
         })
@@ -175,8 +176,8 @@ class BookPrivateLessonView(FormView):
         # Check that passed role is valid
         try:
             role = DanceRole.objects.filter(
-                instructorprivatelessondetails__instructor=thisSlot.instructor,
-            ).get(id=int(form.cleaned_data.pop('role')))
+                instructorprivatelessondetails__instructor=thisSlot.instructor.staffMember,
+            ).get(id=getattr(form.cleaned_data.pop('role'), 'id', None))
         except (ValueError, ObjectDoesNotExist):
             form.add_error(None, ValidationError(_('Invalid dance role.'), code='invalid'))
             return self.form_invalid(form)
@@ -202,7 +203,7 @@ class BookPrivateLessonView(FormView):
         # registrations attached to it.
         existingEvents = PrivateLessonEvent.objects.filter(
             instructoravailabilityslot__id__in=[x.id for x in affectedSlots]
-        ).distinct()
+        )
 
         if existingEvents.filter(
             Q(eventregistration__isnull=False) |
@@ -237,7 +238,7 @@ class BookPrivateLessonView(FormView):
             event=lesson,
             category=getConstant('privateLessons__eventStaffCategoryPrivateLesson'),
             submissionUser=submissionUser,
-            staffMember=thisSlot.instructor,
+            staffMember=thisSlot.instructor.staffMember,
         )
 
         lesson_occurrence = EventOccurrence.objects.create(
@@ -306,7 +307,7 @@ class BookPrivateLessonView(FormView):
 
             # Load the invoice ID into session data like a regular registration
             # and redirect to Step 2 as usual.
-            regSession["invoiceId"] = invoice.id
+            regSession["invoiceId"] = invoice.id.__str__()
             regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
             self.request.session[REG_VALIDATION_STR] = regSession
             return HttpResponseRedirect(reverse('getStudentInfo'))

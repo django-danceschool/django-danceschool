@@ -23,7 +23,7 @@ urlpatterns = [
         json_lesson_feed, name='jsonOwnPrivateLessonFeed'
     ),
     path(
-        'scheduled/feed/json/<int:location_id>/<int:room_id>/all/$',
+        'scheduled/feed/json/<int:location_id>/<int:room_id>/all/',
         json_lesson_feed, {'show_others': True}, name='jsonPrivateLessonFeed'
     ),
     path('scheduled/feed/json/<int:location_id>/', json_lesson_feed, name='jsonOwnPrivateLessonFeed'),

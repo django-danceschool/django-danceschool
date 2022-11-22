@@ -19,11 +19,11 @@ class InstructorPrivateLessonDetailsInline(admin.TabularInline):
 
     # Prevents adding new voucher uses without going through
     # the standard registration process
-    def has_add_permission(self, request, obj=None):
-        return False
+    # def has_add_permission(self, request, obj=None):
+    #    return False
 
-    def has_delete_permission(self, request, obj=None):
-        return False
+    # def has_delete_permission(self, request, obj=None):
+    #     return False
 
 
 @admin.register(InstructorAvailabilitySlot)
