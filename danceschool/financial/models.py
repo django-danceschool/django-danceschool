@@ -881,13 +881,13 @@ class ExpenseItem(models.Model):
                 F('endTime') - F('startTime'), output_field=DurationField()
             ),
         )
-        sum_dur = sum([x.dur.seconds for x in occurrences])
+        sum_dur = sum([x.dur.total_seconds() for x in occurrences])
 
         return {
             (x.id, x.event.id): {
-                'allocation': x.dur.seconds/sum_dur,
+                'allocation': x.dur.total_seconds()/sum_dur,
                 'total_duration': sum_dur,
-                'duration': x.dur.seconds,
+                'duration': x.dur.total_seconds(),
             }
             for x in occurrences
         }
@@ -924,13 +924,13 @@ class ExpenseItem(models.Model):
                     F('endTime') - F('startTime'), output_field=DurationField()
                 ),
             )
-            sum_dur = sum([x.dur.seconds for x in occurrences])
+            sum_dur = sum([x.dur.total_seconds() for x in occurrences])
 
             return {
                 (x.id, x.event.id): {
-                    'allocation': x.dur.seconds/sum_dur,
+                    'allocation': x.dur.total_seconds()/sum_dur,
                     'total_duration': sum_dur,
-                    'duration': x.dur.seconds,
+                    'duration': x.dur.total_seconds(),
                 }
                 for x in occurrences
             }
@@ -1314,13 +1314,13 @@ class RevenueItem(models.Model):
                 F('endTime') - F('startTime'), output_field=DurationField()
             ),
         )
-        sum_dur = sum([x.dur.seconds for x in occurrences])
+        sum_dur = sum([x.dur.total_seconds() for x in occurrences])
 
         return {
             (x.id, x.event.id): {
-                'allocation': x.dur.seconds/sum_dur,
+                'allocation': x.dur.total_seconds()/sum_dur,
                 'total_duration': sum_dur,
-                'duration': x.dur.seconds,
+                'duration': x.dur.total_seconds(),
             }
             for x in occurrences
         }

@@ -1666,7 +1666,7 @@ class EventOccurrence(models.Model):
         '''
         Returns the duration, in hours, for this occurrence
         '''
-        return (self.endTime - self.startTime).seconds / 3600
+        return (self.endTime - self.startTime).total_seconds() / 3600
     duration.fget.short_description = _('Duration')
 
     def allDayForDate(self, this_date, timeZone=None):
@@ -1826,15 +1826,15 @@ class EventStaffMember(EmailRecipientMixin, models.Model):
                 ),
             )
         )
-        sum_dur = sum([x.dur.seconds for x in occurrences])
+        sum_dur = sum([x.dur.total_seconds() for x in occurrences])
         total_dur = (self.specifiedHours or 0)*3600 or sum_dur
 
         return {
             (x.id, x.event.id): {
-                'allocation': x.dur.seconds/sum_dur,
+                'allocation': x.dur.total_seconds()/sum_dur,
                 'total_duration': total_dur,
                 'duration': (
-                    (x.dur.seconds/sum_dur) * total_dur
+                    (x.dur.total_seconds()/sum_dur) * total_dur
                 )
             }
             for x in occurrences
