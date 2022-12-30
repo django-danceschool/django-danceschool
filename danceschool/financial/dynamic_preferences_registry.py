@@ -81,6 +81,19 @@ class GenerateRegistrationRevenuesWindow(IntegerPreference):
 
 
 @global_preferences_registry.register
+class GenerateEventExpensesWindow(IntegerPreference):
+    section = financial
+    name = 'autoGenerateEventExpensesWindow'
+    verbose_name = _('Event expenses autogeneration window (days)')
+    help_text = _(
+        'Set how many days back back from the date of execution to ' +
+        'autogenerate expense items for old events in the financial ' +
+        'app (based on the end time of the event).'
+    )
+    default = 30
+
+
+@global_preferences_registry.register
 class ClassInstructionCat(ModelChoicePreference):
     section = financial
     name = 'classInstructionExpenseCat'

@@ -169,6 +169,11 @@ def addEventTimeFilters(
     if not event_timefilters:
         event_timefilters = Q()
 
+    c = getConstant('financial__autoGenerateEventExpensesWindow') or 30
+    event_timefilters = event_timefilters & Q(
+        event__endTime__gte=(timezone.now() - timedelta(days=c))
+    )
+
     if datetimeTuple and len(datetimeTuple) == 2:
         timelist = list(datetimeTuple)
         timelist.sort()
