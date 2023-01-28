@@ -15,6 +15,7 @@ from django.views.generic import View
 
 import uuid
 from square.client import Client
+from square.exceptions.api_exception import APIException
 import logging
 from datetime import timedelta
 import json
@@ -269,22 +270,30 @@ class ProcessPointOfSalePaymentView(View):
         if serverTransId:
             # Added to avoid errors associated with Square API not being up to date.
             sleep(1)
-            response = client.transactions.retrieve_transaction(
-                transaction_id=serverTransId, location_id=location_id
-            )
-            response_key = 'transaction'
-            if response.is_error():
-                response = client.orders.retrieve_order(serverTransId)
-                response_key = 'order'
+            try:
+                response = client.transactions.retrieve_transaction(
+                    transaction_id=serverTransId, location_id=location_id
+                )
+                response_key = 'transaction'
 
-            if response.is_error():
+                if response.is_error():
+                    response = client.orders.retrieve_order(serverTransId)
+                    response_key = 'order'
+
+                if response.is_error():
+                    response_key = 'error'
+            except APIException:
+                response = None
+                response_key = 'error'
+
+            if response_key == 'error':
                 logger.error('Unable to find Square transaction for %s by server ID: %s' % (
                     serverTransId, response.errors
                 ))
                 messages.error(
                     request,
                     str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
-                    str(response.errors),
+                    str(getattr(response, 'errors', None)),
                     extra_tags='square-error'
                 )
             else:
