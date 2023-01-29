@@ -20,6 +20,7 @@ from six import string_types
 import re
 from datetime import timedelta
 import logging
+from rest_framework import generics, renderers
 
 from .constants import getConstant, REG_VALIDATION_STR
 from .tasks import sendEmail
@@ -747,3 +748,35 @@ class ReferralInfoMixin(object):
             self.request.session[REG_VALIDATION_STR] = regSession
 
         return super().get(request, *args, **kwargs)
+
+
+class BrowsableRestMixin(object):
+    ''' Add Browsable API renderer if user is superuser only '''
+
+    def get_renderers(self):
+        rends = self.renderer_classes
+        if self.request.user and self.request.user.is_superuser:
+            rends.append(renderers.BrowsableAPIRenderer)
+        return [renderer() for renderer in rends]
+
+
+class CSVRestMixin(object):
+    '''
+    Disable pagination when downloading CSVs, and use the default ordering
+    from the serializer class.
+    '''
+
+    def list(self, request, *args, **kwargs):
+        if request.accepted_renderer.format == 'csv':
+            self.pagination_class = None
+        return super().list(request, *args, **kwargs)
+
+    def get_renderer_context(self):
+        context = super().get_renderer_context()
+        meta_fields = getattr(getattr(
+            self.get_serializer_class(),'Meta',None
+        ),'fields', None)
+
+        if meta_fields:
+            context['header'] = meta_fields
+        return context

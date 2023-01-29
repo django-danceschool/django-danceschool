@@ -1,7 +1,8 @@
 from django.views.generic import DetailView, TemplateView, CreateView, View, FormView
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, Http404, HttpResponseBadRequest, HttpResponseRedirect
-from django.db.models import Q, Sum, F, Min
+from django.db.models import Q, Sum, F, Min, FloatField
+from django.db.models.functions import Coalesce
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
@@ -13,7 +14,6 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.forms.models import model_to_dict
 
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
 import unicodecsv as csv
 from calendar import month_name
 from urllib.parse import unquote_plus
@@ -21,6 +21,9 @@ from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin, UserFo
 from collections import OrderedDict
 from itertools import chain
 import re
+from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
+
 
 from danceschool.core.models import (
     Location, Event, StaffMember, EventStaffCategory, EventStaffMember,
@@ -28,14 +31,16 @@ from danceschool.core.models import (
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import (
-    StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin
+    StaffMemberObjectMixin, FinancialContextMixin, AdminSuccessURLMixin,
+    BrowsableRestMixin, CSVRestMixin
 )
+from danceschool.core.permissions import DjangoModelPermissions, BaseRequiredPermission
 from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
 
 from .models import (
     ExpenseItem, RevenueItem, ExpenseCategory, RevenueCategory,
-    RepeatedExpenseRule, StaffMemberWageInfo
+    RepeatedExpenseRule, StaffMemberWageInfo, TransactionParty
 )
 from .helpers import (
     prepareFinancialStatement, prepareFinancialDetails, getExpenseItemsCSV,
@@ -49,6 +54,19 @@ from .forms import (
     ExpenseDuplicationForm, ExpenseDuplicationFormset
 )
 from .constants import EXPENSE_BASES
+from .serializers import (
+    ExpenseItemSerializer, RevenueItemSerializer, TransactionPartySerializer
+)
+from .filters import (
+    ExpenseItemFilter, RevenueItemFilter, TransactionPartyFilter
+)
+
+
+class ExportPermission(BaseRequiredPermission):
+    """
+    Check if the user has permission to export financial data
+    """
+    permission_required = 'financial.export_financial_data'
 
 
 class ExpenseReportingView(
@@ -846,6 +864,38 @@ class ExpenseRuleGenerationView(AdminSuccessURLMixin, PermissionRequiredMixin, F
         )
         messages.success(self.request, success_message)
         return HttpResponseRedirect(self.get_success_url())
+
+
+class FinancialPagination(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+    ordering = '-accrualDate'
+
+
+class ExpenseItemViewSet(BrowsableRestMixin, CSVRestMixin, viewsets.ModelViewSet):
+    queryset = ExpenseItem.objects.all().order_by('-accrualDate')
+    serializer_class = ExpenseItemSerializer
+    permission_classes = [DjangoModelPermissions&ExportPermission]
+    filterset_class = ExpenseItemFilter
+    pagination_class = FinancialPagination
+
+
+class RevenueItemViewSet(BrowsableRestMixin, CSVRestMixin, viewsets.ModelViewSet):
+    queryset = RevenueItem.objects.all().order_by('-accrualDate')
+    serializer_class = RevenueItemSerializer
+    permission_classes = [DjangoModelPermissions&ExportPermission]
+    filterset_class = RevenueItemFilter
+    pagination_class = FinancialPagination
+
+
+class TransactionPartyViewSet(
+    BrowsableRestMixin, CSVRestMixin, viewsets.ReadOnlyModelViewSet
+):
+    queryset = TransactionParty.objects.all().order_by('name')
+    serializer_class = TransactionPartySerializer
+    permission_classes = [DjangoModelPermissions&ExportPermission]
+    filterset_class = TransactionPartyFilter
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):

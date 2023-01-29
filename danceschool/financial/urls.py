@@ -1,11 +1,13 @@
 from django.urls import path, re_path
 
+from rest_framework import routers
+
 from .views import (
     StaffMemberPaymentsView, OtherStaffMemberPaymentsView, FinancesByMonthView,
     FinancesByDateView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV,
     FinancialDetailView, ExpenseReportingView, RevenueReportingView,
     CompensationRuleUpdateView, CompensationRuleResetView, ExpenseRuleGenerationView,
-    ExpenseDuplicationView
+    ExpenseDuplicationView, ExpenseItemViewSet, RevenueItemViewSet, TransactionPartyViewSet
 )
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import (
@@ -13,6 +15,11 @@ from .autocomplete_light_registry import (
     ApprovalStatusAutoComplete
 )
 
+
+router = routers.DefaultRouter()
+router.register(r'financial/expenseitem', ExpenseItemViewSet)
+router.register(r'financial/revenueitem', RevenueItemViewSet)
+router.register(r'financial/transactionparty', TransactionPartyViewSet)
 
 urlpatterns = [
     path('staff-payments/', StaffMemberPaymentsView.as_view(), name='staffMemberPayments'),

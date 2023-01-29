@@ -173,7 +173,7 @@ class PrivateLessonEvent(Event):
             customerNames,
             (
                 (', ' if (teacherNames or customerNames) else '') +
-                self.startTime.strftime('%Y-%m-%d')
+                (self.startTime.strftime('%Y-%m-%d') if self.startTime else '')
             ) if withDate else ''
         ))
 

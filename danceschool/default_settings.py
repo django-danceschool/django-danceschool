@@ -123,6 +123,27 @@ HUEY = SqliteHuey(
 # pool = ConnectionPool(host='localhost', port=6379, max_connections=20)
 # HUEY = RedisHuey('danceschool',connection_pool=pool)
 
+# For Django REST Framework, allow only session-based authentication
+# (and require authentication) by default.
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'danceschool.core.permissions.DjangoModelPermissions'
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework_csv.renderers.CSVRenderer'
+    ),
+    'DATETIME_FORMAT': "%Y-%m-%d %H:%M:%S",
+}
+
 # For Crispy forms Bootstrap templates
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 CRISPY_FAIL_SILENTLY = True
