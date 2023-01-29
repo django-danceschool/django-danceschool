@@ -58,12 +58,16 @@ class TransactionPartyFilter(rest_filters.FilterSet):
                 expenseFilters[f'{name}__lte'] = value.stop
                 revFilters[f'{rev_name}__lte'] = value.stop
 
-        expenseTotals = ExpenseItem.objects.filter(**expenseFilters).annotate(
+        expenseTotals = ExpenseItem.objects.filter(**expenseFilters).values(
+            'payTo__pk'
+        ).annotate(
             paidTotal=Sum('total', filter=Q(paid=True)),
             unpaidTotal=Sum('total', filter=Q(paid=False)),
             reimbursementTotal=Sum('total', filter=Q(reimbursement=True)),
         )
-        revenueTotals = RevenueItem.objects.filter(**revFilters).annotate(
+        revenueTotals = RevenueItem.objects.filter(**revFilters).values(
+            'receivedFrom__pk'
+        ).annotate(
             receivedTotal=Sum('total', filter=Q(received=True)),
         )
 
