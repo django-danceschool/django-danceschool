@@ -51,6 +51,11 @@ def getNetAmountPaid(**kwargs):
         for x in getPayments(**kwargs)
     ])
 
+def getNetRefund(**kwargs):
+    return sum([
+        x.get('refunded_money', {}).get('amount', 0) / 100
+        for x in getPayments(**kwargs)
+    ])
 
 def getNetFees(**kwargs):
     client = kwargs.get('client', getClient())

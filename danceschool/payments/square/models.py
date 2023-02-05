@@ -13,7 +13,7 @@ import uuid
 from danceschool.core.models import PaymentRecord
 from .tasks import updateSquareFees
 from .helpers import (
-    getClient, getPayments, getRefunds, getNetAmountPaid, getNetFees
+    getClient, getPayments, getRefunds, getNetAmountPaid, getNetRefund, getNetFees
 )
 
 
@@ -55,6 +55,10 @@ class SquarePaymentRecord(PaymentRecord):
     @property
     def netAmountPaid(self):
         return getNetAmountPaid(order_id=self.orderId)
+
+    @property
+    def netRefund(self):
+        return getNetRefund(order_id=self.orderId)
 
     @property
     def netFees(self):
