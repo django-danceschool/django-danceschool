@@ -54,15 +54,26 @@ class TransactionPartySerializer(serializers.ModelSerializer):
 
 class EventFinancialSerializer(serializers.ModelSerializer):
 
-    class Meta:
-        model = Event
-        fields = [
-            'id', 'name', 'description', 'startTime', 'endTime', 'location',
-            'room', 'session', 'status', 'registrationOpen',
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for f in [
             'revenue_total', 'revenue_adjustments', 'revenue_fees', 'revenue_taxes',
             'cash_received_total', 'cash_received_adjustments',
             'cash_received_taxes', 'cash_received_fees', 'other_received_total',
             'other_received_adjustments', 'other_received_taxes', 'other_received_fees',
             'expense_total', 'expense_paid_total',
-            'eventcheckin_set.count'
+        ]:
+            setattr(self, f, serializers.FloatField(read_only=True))
+            self.fields.update({f: getattr(self, f)})
+
+        for f in ['event_checkins', 'occurrence_checkins']:
+            setattr(self, f, serializers.IntegerField(read_only=True))
+            self.fields.update({f: getattr(self, f)})
+
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'name', 'startTime', 'endTime', 'location',
+            'room', 'session', 'status', 'registrationOpen',
         ]

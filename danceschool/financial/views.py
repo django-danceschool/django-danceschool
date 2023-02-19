@@ -936,7 +936,7 @@ class EventFinancialViewSet(
         event_checkins = checkins.filter(checkInType='E').values('event').annotate(count=Count('pk'))
         occurrence_checkins = checkins.filter(checkInType='O').values('event').annotate(count=Count('pk'))
 
-        qs = getattr(self, 'queryset', Event.objects.all())
+        qs = super().get_queryset() or Event.objects.all()
         return qs.annotate(
             revenue_total=Subquery(revs_agg.values('sum_total')),
             revenue_adjustments=Subquery(revs_agg.values('sum_adjustments')),
