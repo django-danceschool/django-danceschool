@@ -906,6 +906,7 @@ class EventFinancialViewSet(
     serializer_class = EventFinancialSerializer
     permission_classes = [DjangoModelPermissions&ExportPermission]
     filterset_class = EventFinancialFilter
+    queryset = Event.objects.all().order_by('-startTime')
 
     def get_queryset(self):
         revs = RevenueItem.objects.filter(event=OuterRef('pk'))
@@ -935,7 +936,8 @@ class EventFinancialViewSet(
         event_checkins = checkins.filter(checkInType='E').values('event').annotate(count=Count('pk'))
         occurrence_checkins = checkins.filter(checkInType='O').values('event').annotate(count=Count('pk'))
 
-        return Event.objects.annotate(
+        qs = getattr(self, 'queryset', Event.objects.all())
+        return qs.annotate(
             revenue_total=Subquery(revs_agg.values('sum_total')),
             revenue_adjustments=Subquery(revs_agg.values('sum_adjustments')),
             revenue_taxes=Subquery(revs_agg.values('sum_taxes')),
