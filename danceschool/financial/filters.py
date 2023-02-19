@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django_filters import rest_framework as rest_filters
 from django_filters import CharFilter, DateFromToRangeFilter
 
+from danceschool.core.models import Event
 from .models import ExpenseItem, RevenueItem, TransactionParty
 
 

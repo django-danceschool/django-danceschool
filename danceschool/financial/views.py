@@ -27,7 +27,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from danceschool.core.models import (
     Location, Event, StaffMember, EventStaffCategory, EventStaffMember,
-    EventOccurrence
+    EventOccurrence, EventCheckIn
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.mixins import (
