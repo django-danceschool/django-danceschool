@@ -89,3 +89,14 @@ class TransactionPartyFilter(rest_filters.FilterSet):
     class Meta:
         model = TransactionParty
         fields = []
+
+
+class EventFinancialFilter(rest_filters.FilterSet):
+    startTime = DateFromToRangeFilter()
+    endTime = DateFromToRangeFilter()
+
+    class Meta:
+        model = Event
+        fields = [
+            'location', 'session', 'status', 'registrationOpen'
+        ]

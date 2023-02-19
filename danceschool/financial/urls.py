@@ -7,7 +7,8 @@ from .views import (
     FinancesByDateView, FinancesByEventView, AllExpensesViewCSV, AllRevenuesViewCSV,
     FinancialDetailView, ExpenseReportingView, RevenueReportingView,
     CompensationRuleUpdateView, CompensationRuleResetView, ExpenseRuleGenerationView,
-    ExpenseDuplicationView, ExpenseItemViewSet, RevenueItemViewSet, TransactionPartyViewSet
+    ExpenseDuplicationView, ExpenseItemViewSet, RevenueItemViewSet,
+    TransactionPartyViewSet, EventFinancialViewSet
 )
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import (
@@ -20,6 +21,7 @@ router = routers.DefaultRouter()
 router.register(r'financial/expenseitem', ExpenseItemViewSet)
 router.register(r'financial/revenueitem', RevenueItemViewSet)
 router.register(r'financial/transactionparty', TransactionPartyViewSet)
+router.register(r'financial/event', EventFinancialViewSet)
 
 urlpatterns = [
     path('staff-payments/', StaffMemberPaymentsView.as_view(), name='staffMemberPayments'),

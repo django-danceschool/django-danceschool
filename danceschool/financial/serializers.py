@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 
+from danceschool.core.models import Event
 from .models import ExpenseItem, RevenueItem, TransactionParty
 
 
@@ -48,4 +49,20 @@ class TransactionPartySerializer(serializers.ModelSerializer):
             'id', 'name', 'user', 'staffMember', 'staffMember', 'location',
             'revenueReceivedTotal', 'expensePaidTotal',
             'expenseUnpaidTotal', 'reimbursementTotal'
+        ]
+
+
+class EventFinancialSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'name', 'description', 'startTime', 'endTime', 'location',
+            'room', 'session', 'status', 'registrationOpen',
+            'revenue_total', 'revenue_adjustments', 'revenue_fees', 'revenue_taxes',
+            'cash_received_total', 'cash_received_adjustments',
+            'cash_received_taxes', 'cash_received_fees', 'other_received_total',
+            'other_received_adjustments', 'other_received_taxes', 'other_received_fees',
+            'expense_total', 'expense_paid_total',
+            'eventcheckin_set.count'
         ]

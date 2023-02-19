@@ -1,7 +1,7 @@
 from django.views.generic import DetailView, TemplateView, CreateView, View, FormView
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, Http404, HttpResponseBadRequest, HttpResponseRedirect
-from django.db.models import Q, Sum, F, Min, FloatField
+from django.db.models import Q, Sum, F, Min, FloatField, Subquery, OuterRef, Count
 from django.db.models.functions import Coalesce
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -55,10 +55,12 @@ from .forms import (
 )
 from .constants import EXPENSE_BASES
 from .serializers import (
-    ExpenseItemSerializer, RevenueItemSerializer, TransactionPartySerializer
+    ExpenseItemSerializer, RevenueItemSerializer, TransactionPartySerializer,
+    EventFinancialSerializer
 )
 from .filters import (
-    ExpenseItemFilter, RevenueItemFilter, TransactionPartyFilter
+    ExpenseItemFilter, RevenueItemFilter, TransactionPartyFilter,
+    EventFinancialFilter
 )
 
 
@@ -896,6 +898,65 @@ class TransactionPartyViewSet(
     serializer_class = TransactionPartySerializer
     permission_classes = [DjangoModelPermissions&ExportPermission]
     filterset_class = TransactionPartyFilter
+
+
+class EventFinancialViewSet(
+    BrowsableRestMixin, CSVRestMixin, viewsets.ReadOnlyModelViewSet
+):
+    serializer_class = EventFinancialSerializer
+    permission_classes = [DjangoModelPermissions&ExportPermission]
+    filterset_class = EventFinancialFilter
+
+    def get_queryset(self):
+        revs = RevenueItem.objects.filter(event=OuterRef('pk'))
+        expenses = ExpenseItem.objects.filter(event=OuterRef('pk'))
+
+        revs_agg = revs.values('event').annotate(
+            sum_total=Sum('total'), sum_adjustments=Sum('adjustments'),
+            sum_taxes=Sum('taxes'), sum_fees=Sum('fees')            
+        )
+
+        cash_revs = revs.filter(
+            paymentMethod__iexact='cash', received=True
+        ).values('paymentMethod').annotate(
+            sum_total=Sum('total'), sum_adjustments=Sum('adjustments'),
+            sum_taxes=Sum('taxes'), sum_fees=Sum('fees')
+        )
+        other_revs = revs.filter(received=True).exclude(
+            paymentMethod__iexact='cash'
+        ).values('event').annotate(
+            sum_total=Sum('total'), sum_adjustments=Sum('adjustments'),
+            sum_taxes=Sum('taxes'), sum_fees=Sum('fees')
+        )
+
+        checkins = EventCheckIn.objects.filter(
+            event=OuterRef('pk'), cancelled=False
+        )
+        event_checkins = checkins.filter(checkInType='E').values('event').annotate(count=Count('pk'))
+        occurrence_checkins = checkins.filter(checkInType='O').values('event').annotate(count=Count('pk'))
+
+        return Event.objects.annotate(
+            revenue_total=Subquery(revs_agg.values('sum_total')),
+            revenue_adjustments=Subquery(revs_agg.values('sum_adjustments')),
+            revenue_taxes=Subquery(revs_agg.values('sum_taxes')),
+            revenue_fees=Subquery(revs_agg.values('sum_fees')),
+            cash_received_total=Subquery(cash_revs.values('sum_total')),
+            cash_received_adjustments=Subquery(cash_revs.values('sum_adjustments')),
+            cash_received_taxes=Subquery(cash_revs.values('sum_taxes')),
+            cash_received_fees=Subquery(cash_revs.values('sum_fees')),
+            other_received_total=Subquery(other_revs.values('sum_total')),
+            other_received_adjustments=Subquery(other_revs.values('sum_adjustments')),
+            other_received_taxes=Subquery(other_revs.values('sum_taxes')),
+            other_received_fees=Subquery(other_revs.values('sum_fees')),
+            expense_total=Subquery(expenses.values('event').annotate(
+                sum_total=Sum('total')
+            ).values('sum_total')),
+            expense_paid_total=Subquery(expenses.filter(paid=True).values('event').annotate(
+                sum_total=Sum('total')
+            ).values('sum_total')),
+            event_checkins=Subquery(event_checkins.values('count')),
+            occurrence_checkins=Subquery(occurrence_checkins.values('count')),
+        ).order_by('-startTime')
 
 
 class AllExpensesViewCSV(PermissionRequiredMixin, View):
