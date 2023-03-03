@@ -38,7 +38,7 @@ from .signals import (
 from .mixins import EmailRecipientMixin
 from .utils.emails import get_text_for_html
 from .utils.timezone import ensure_localtime
-from .managers import InvoiceManager
+from .managers import InvoiceManager, InvoiceItemManager
 
 
 # Define logger for this file
@@ -2587,7 +2587,8 @@ class Invoice(EmailRecipientMixin, models.Model):
     data = models.JSONField(_('Additional data'), blank=True, default=dict)
 
     # This custom manager prevents deletion of Invoices that are not preliminary,
-    # even using queryset methods.
+    # even using queryset methods. It also adds a net annotation so net revenue
+    # is calculated consistently.
     objects = InvoiceManager()
 
     @property
@@ -2642,9 +2643,11 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     @property
     def netRevenue(self):
-        net = self.total - self.fees + self.adjustments
-        if not self.buyerPaysSalesTax:
-            net -= self.taxes
+        net = getattr(self, 'net', None)
+        if net is None:
+            net = self.total - self.fees + self.adjustments
+            if not self.buyerPaysSalesTax:
+                net -= self.taxes
         return net
     netRevenue.fget.short_description = _('Net revenue')
 
@@ -3268,6 +3271,10 @@ class InvoiceItem(models.Model):
 
     data = models.JSONField(_('Additional data'), blank=True, default=dict)
 
+    # This custom manager adds a net annotation so net revenue is calculated
+    # consistently.
+    objects = InvoiceItemManager()
+
     @property
     def grossTotalWithAllocation(self):
         ''' 
@@ -3335,9 +3342,11 @@ class InvoiceItem(models.Model):
 
     @property
     def netRevenue(self):
-        net = self.total - self.fees + self.adjustments
-        if not self.invoice.buyerPaysSalesTax:
-            net -= self.taxes
+        net = getattr(self, 'net', None)
+        if net is None:
+            net = self.total - self.fees + self.adjustments
+            if not self.invoice.buyerPaysSalesTax:
+                net -= self.taxes
         return net
     netRevenue.fget.short_description = _('Net revenue')
 

@@ -867,7 +867,7 @@ def prepareStatementByPeriod(**kwargs):
         paged_periods = paginator.page(paginator.num_pages)
 
     # Define common annotations used repeatedly in queries.
-    sum_annotations = (Sum('total'), Sum('adjustments'), Sum('fees'))
+    sum_annotations = (Sum('total'), Sum('adjustments'), Sum('fees'), Sum('net'))
 
     # Get everything by month in one query each, then pull from this.
     totalExpensesByPeriod = expenseitems.values(*values).annotate(
@@ -920,9 +920,7 @@ def prepareStatementByPeriod(**kwargs):
             '''
             if not isinstance(this_dict, dict):
                 this_dict = {}
-            return this_dict.get('total__sum', 0) + \
-                this_dict.get('adjustments__sum', 0) - \
-                this_dict.get('fees__sum', 0)
+            return this_dict.get('net__sum') or 0
 
         thisPeriodStatement['revenues'] = get_net(
             totalRevenuesByPeriod.filter(basisDate=this_period).first()
@@ -1018,7 +1016,7 @@ def prepareStatementByEvent(paginate=True, **kwargs):
         # done in models.py via model methods.  Any discounts are applied
         # equally to each event.
         event_revs = event.revenueitem_set.aggregate(
-            Sum('grossTotal'), Sum('total'), Sum('adjustments'), Sum('fees')
+            Sum('grossTotal'), Sum('total'), Sum('adjustments'), Sum('fees'), Sum('net')
         )
 
         this_event_statement['revenues'] = {
@@ -1026,12 +1024,8 @@ def prepareStatementByEvent(paginate=True, **kwargs):
             'netOfDiscounts': event_revs['total__sum'] or 0,
             'adjustments': event_revs['adjustments__sum'] or 0,
             'fees': event_revs['fees__sum'] or 0,
+            'net': event_revs['net__sum'] or 0,
         }
-        this_event_statement['revenues']['net'] = sum([
-            this_event_statement['revenues']['netOfDiscounts'],
-            this_event_statement['revenues']['adjustments'],
-            -1 * this_event_statement['revenues']['fees']
-        ])
 
         allocated_venue_expenses = ExpenseItem.objects.filter(
             event__isnull=True,
@@ -1127,7 +1121,7 @@ def prepareFinancialDetails(**kwargs):
         if events:
             timeFilters['event__in'] = events
             if not occurrences:
-                context['rangeTitle'] += '; '.join([x.name for x in events])
+                context['rangeTitle'] += '; '.join([str(x.name) for x in events])
     
         if occurrences:
             timeFilters['event__eventoccurrence__in'] = occurrences
@@ -1201,11 +1195,9 @@ def prepareFinancialDetails(**kwargs):
                 rev_timeFilters.pop('%s__lt' % basis, None)
 
         expenseItems = ExpenseItem.objects.filter(**timeFilters).annotate(
-            net=F('total') + F('adjustments') + F('fees'),
             basisDate=Min(basis)
         ).order_by(basis)
         revenueItems = RevenueItem.objects.filter(**rev_timeFilters).annotate(
-            net=F('total') + F('adjustments') - F('fees'),
             basisDate=Min(rev_basis)
         ).order_by(rev_basis)
 
@@ -1235,7 +1227,6 @@ def prepareFinancialDetails(**kwargs):
                     expensepurpose__object_id__in=purpose_occurrences,
                     payTo__location__isnull=False
                 ).annotate(
-                    net=F('total') + F('adjustments') + F('fees'),
                     basisDate=Min(basis)
                 ).order_by(basis),
                 'allocatedStaffExpenseItems': ExpenseItem.objects.filter(
@@ -1243,7 +1234,6 @@ def prepareFinancialDetails(**kwargs):
                 expensepurpose__content_type=eventstaffmember_ct,
                 expensepurpose__object_id__in=purpose_staff,
                 ).annotate(
-                    net=F('total') + F('adjustments') + F('fees'),
                     basisDate=Min(basis)
                 ).order_by(basis),
             })

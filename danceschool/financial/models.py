@@ -26,6 +26,7 @@ from danceschool.core.models import (
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.utils.timezone import ensure_localtime
+from .managers import ExpenseItemManager, RevenueItemManager
 
 
 EVENTSTAFFMEMBER_CT = ContentType.objects.get_for_model(EventStaffMember).id
@@ -735,6 +736,8 @@ class ExpenseItem(models.Model):
     Expenses may be associated with EventStaff or with Events, or they may be associated with nothing
     '''
 
+    objects = ExpenseItemManager()
+
     submissionUser = models.ForeignKey(
         User,
         verbose_name=_('Submission user'),
@@ -845,7 +848,10 @@ class ExpenseItem(models.Model):
 
     @property
     def netExpense(self):
-        return self.total + self.adjustments + self.fees
+        net = getattr(self, 'net', None)
+        if net is None:
+            net = self.total + self.adjustments + self.fees
+        return net
     netExpense.fget.short_description = _('Net expense')
 
     @property
@@ -1174,6 +1180,9 @@ class RevenueItem(models.Model):
     should have an associated RevenueItem
     '''
 
+    # Custom model manager to add net annotation.
+    objects = RevenueItemManager()
+
     submissionUser = models.ForeignKey(
         User, null=True, blank=True, related_name='revenuessubmittedby',
         verbose_name=_('Submission user'), on_delete=models.SET_NULL,)
@@ -1294,9 +1303,12 @@ class RevenueItem(models.Model):
 
     @property
     def netRevenue(self):
-        net = (self.total or 0) + self.adjustments - self.fees
-        if not self.buyerPaysSalesTax:
-            net -= self.taxes
+        ''' Use the database annotation where possible. '''
+        net = getattr(self, 'net', None)
+        if net is None:
+            net = (self.total or 0) + self.adjustments - self.fees
+            if not self.buyerPaysSalesTax:
+                net -= self.taxes
         return net
     netRevenue.fget.short_description = _('Net revenue')
 

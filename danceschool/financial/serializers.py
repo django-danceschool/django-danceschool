@@ -14,10 +14,10 @@ class ExpenseItemSerializer(serializers.ModelSerializer):
         model = ExpenseItem
         fields = [
             'id', 'description', 'category', 'hours', 'wageRate', 'total',
-            'adjustments', 'fees', 'paymentMethod', 'comments', 'event',
-            'expenseRule', 'periodStart', 'periodEnd', 'payTo', 'reimbursement',
-            'approved', 'paid', 'approvalDate', 'paymentDate', 'accrualDate',
-            'submissionUser', 'submissionDate',
+            'adjustments', 'fees', 'netExpense', 'paymentMethod', 'comments',
+            'event', 'expenseRule', 'periodStart', 'periodEnd', 'payTo',
+            'reimbursement', 'approved', 'paid', 'approvalDate', 'paymentDate',
+            'accrualDate', 'submissionUser', 'submissionDate',
         ]
 
 

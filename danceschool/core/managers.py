@@ -2,6 +2,7 @@
 This file contains custom managers and querysets for various core models.
 '''
 from django.db import models
+from django.db.models import Case, When, Q, F
 
 from danceschool.core.constants import getConstant
 
@@ -27,4 +28,20 @@ class InvoiceQuerySet(models.QuerySet):
 class InvoiceManager(models.Manager):
     ''' Use InvoiceQuerySet to allow deletion only of preliminary invoices. '''
     def get_queryset(self):
-        return InvoiceQuerySet(self.model, using=self._db)
+        return InvoiceQuerySet(self.model, using=self._db).annotate(
+            net = (
+                F('total') + F('adjustments') - F('fees') -
+                Case(When(Q(buyerPaysSalesTax=False), then=F('taxes')), default=0.0)
+            )
+        )
+
+
+class InvoiceItemManager(models.Manager):
+    ''' Add net annotation '''
+    def get_queryset(self):
+        return super().get_queryset().select_related('invoice').annotate(
+            net = (
+                F('total') + F('adjustments') - F('fees') -
+                Case(When(Q(invoice__buyerPaysSalesTax=False), then=F('taxes')), default=0.0)
+            )
+        )
