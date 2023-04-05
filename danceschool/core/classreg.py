@@ -1309,7 +1309,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 not request.user.has_perm('core.register_dropins') or
                 (
                     not this_event.allowDropins and not
-                    request.user.has_perm('override_register_dropins')
+                    request.user.has_perm('core.override_register_dropins')
                 )
         )):
             errors.append({
