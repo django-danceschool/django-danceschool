@@ -599,7 +599,7 @@ class GenericRepeatedExpenseAdminForm(ModelForm):
         index = [x[0] for x in updatedChoices].index('D')
         updatedChoices = (
             updatedChoices[:index] +
-            (('D', _('Per day')), ) +
+            [('D', _('Per day')), ] +
             updatedChoices[index + 1:]
         )
         self.fields.get('applyRateRule').choices = updatedChoices
