@@ -99,7 +99,7 @@ def getBestDiscount(sender, **kwargs):
     # be applied.
     discountCodesApplicable = getApplicableDiscountCombos(
         eligible_list, newCustomer, student, customer=customer, addOn=False,
-        cannotCombine=False, dateTime=reg.dateTime
+        cannotCombine=False, dateTime=reg.dateTime, payAtDoor=payAtDoor,
     )
     discountCodesApplicable.sort(key=lambda x: x.code.category.order)
 
@@ -162,7 +162,8 @@ def getBestDiscount(sender, **kwargs):
     # only one code will potentially be applied.
     uncombinedCodesApplicable = getApplicableDiscountCombos(
         eligible_list, newCustomer, student,
-        customer=customer, addOn=False, cannotCombine=True, dateTime=reg.dateTime
+        customer=customer, addOn=False, cannotCombine=True, dateTime=reg.dateTime,
+        payAtDoor=payAtDoor,
     )
 
     for discount in uncombinedCodesApplicable:
@@ -263,7 +264,8 @@ def getAddonItems(sender, **kwargs):
 
     availableAddons = getApplicableDiscountCombos(
         cart_object_list, newCustomer, student,
-        customer=customer, addOn=True, dateTime=reg.dateTime
+        customer=customer, addOn=True, dateTime=reg.dateTime,
+        payAtDoor=reg.payAtDoor
     )
     return [x.code.name for x in availableAddons]
 

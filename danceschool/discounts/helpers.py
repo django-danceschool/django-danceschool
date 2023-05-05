@@ -8,7 +8,7 @@ from .models import DiscountCombo, PointGroup
 
 def getApplicableDiscountCombos(
     cart_object_list, newCustomer=True, student=False, customer=None,
-    addOn=False, cannotCombine=False, dateTime=None
+    addOn=False, cannotCombine=False, dateTime=None, payAtDoor=False,
 ):
 
     # First, identify the set of discounts that could potentially be satisfied
@@ -47,6 +47,11 @@ def getApplicableDiscountCombos(
         ).exclude(
             expirationDate__lte=timezone.now()
         ).distinct()
+
+    if payAtDoor:
+        availableDiscountCodes = availableDiscountCodes.exclude(availableAtDoor=False)
+    else:
+        availableDiscountCodes = availableDiscountCodes.exclude(availableOnline=False)
 
     if not newCustomer:
         availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)

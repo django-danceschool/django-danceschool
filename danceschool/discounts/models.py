@@ -136,6 +136,22 @@ class DiscountCombo(models.Model):
         help_text=_('Leave blank for no expiration.')
     )
 
+    availableAtDoor = models.BooleanField(
+        _('Available for at-the-door registrations'), default=True,
+        help_text=_(
+            'Uncheck this to prevent individuals who register at the door ' +
+            'from receiving this discount'
+        )
+    )
+
+    availableOnline = models.BooleanField(
+        _('Available for online pre-registrations'), default=True,
+        help_text=_(
+            'Uncheck this to prevent individuals who register in advance ' +
+            'from receiving this discount'
+        )
+    )
+
     studentsOnly = models.BooleanField(
         verbose_name=_('Discount for HS/college/university students only'),
         default=False, help_text=_('Check this box to create student discounts.')

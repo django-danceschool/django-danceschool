@@ -93,7 +93,8 @@ class DiscountComboAdmin(admin.ModelAdmin):
         'restrictions'
     )
     list_filter = (
-        'category', 'discountType', 'active', 'newCustomersOnly', 'expirationDate'
+        'category', 'discountType', 'active', 'availableOnline',
+        'availableAtDoor', 'newCustomersOnly', 'expirationDate'
     )
     ordering = ('name', )
     actions = ['enableDiscount', 'disableDiscount']
@@ -103,8 +104,9 @@ class DiscountComboAdmin(admin.ModelAdmin):
             'fields': (
                 'name', 'category',
                 ('active', 'expirationDate'),
-                'newCustomersOnly', 'studentsOnly', 'daysInAdvanceRequired',
-                'firstXRegistered', 'customerMatchRequired', 'discountType',
+                'availableOnline', 'availableAtDoor', 'newCustomersOnly',
+                'studentsOnly', 'daysInAdvanceRequired', 'firstXRegistered',
+                'customerMatchRequired', 'discountType',
             )
         }),
         (_('Flat-Price Discount (in default currency)'), {
@@ -123,6 +125,10 @@ class DiscountComboAdmin(admin.ModelAdmin):
 
     def restrictions(self, obj):
         text = []
+        if obj.availableOnline is False:
+            text.append(_('Not available in advance'))
+        if obj.availableAtDoor is False:
+            text.append(_('Not available at the door'))
         if obj.studentsOnly:
             text.append(_('Students only'))
         if obj.newCustomersOnly:
