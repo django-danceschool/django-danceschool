@@ -36,6 +36,11 @@ if apps.is_installed('danceschool.guestlist'):
 if apps.is_installed('danceschool.register'):
     app_patterns.append(path('register/', include('danceschool.register.urls')),)
 
+if apps.is_installed('danceschool.merch'):
+    merch_urls = import_module('danceschool.merch.urls')
+    router.registry.extend(merch_urls.router.registry)
+    app_patterns.append(path('merch/', include('danceschool.merch.urls')),)
+
 if apps.is_installed('danceschool.prerequisites'):
     app_patterns.append(path('prerequisites/', include('danceschool.prerequisites.urls')),)
 

@@ -27,3 +27,6 @@ class BaseRequiredPermission(permissions.BasePermission):
         if user:
             return user.has_perm(self.permission_required)
         return False
+
+class CoreExportPermission(BaseRequiredPermission):
+    permission_required = 'core.export_invoice_data'

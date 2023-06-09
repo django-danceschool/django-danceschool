@@ -3219,6 +3219,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             ('view_all_invoices', _('Can view invoices without passing the validation string.')),
             ('send_invoices', _('Can send invoices to students requesting payment')),
             ('process_refunds', _('Can refund customers for registrations and other invoice payments.')),
+            ('export_invoice_data', _('Can export data related to invoices and their items')),
         )
 
 
