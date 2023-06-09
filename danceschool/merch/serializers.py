@@ -25,9 +25,9 @@ class MerchItemSerializer(serializers.ModelSerializer):
 
 class MerchOrderItemSerializer(serializers.ModelSerializer):
     item = serializers.StringRelatedField()
-    item_sku = serializers.RelatedField(source='item', read_only=True)
-    invoiceItem = serializers.StringRelatedField()
-    order_creationDate = serializers.RelatedField(source='order', read_only=True)
+    item_sku = serializers.SlugRelatedField(source='item', slug_field='sku', read_only=True)
+    invoiceItem = serializers.StringRelatedField(read_only=True)
+    order_creationDate = serializers.SlugRelatedField(source='order', slug_field='creationDate', read_only=True)
 
     class Meta:
         model = MerchOrderItem
@@ -43,5 +43,6 @@ class MerchOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = MerchOrder
         fields = [
-            'invoice', 'grossTotal', 'status', 'creationDate', 'lastModified'
+            'invoice', 'grossTotal', 'status', 'creationDate', 'lastModified',
+            'items'
         ]
