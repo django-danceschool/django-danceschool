@@ -101,7 +101,7 @@ CHECKING STRIPE INTEGRATION
                     ('registration_payatdoor_placeholder', 'at-the-door payments')
                 ]
 
-                for p in in placeholders:
+                for p in placeholders:
                     stripe_sp = StaticPlaceholder.objects.get_or_create(code=p[0])
                     stripe_p_draft = stripe_sp[0].draft
                     stripe_p_public = stripe_sp[0].public
