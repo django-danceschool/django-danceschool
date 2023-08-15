@@ -31,7 +31,7 @@ class StripeGiftCertificateFormPlugin(CMSPluginBase):
 class StripePaymentFormPlugin(CMSPluginBase):
     model = StripeChargeFormModel
     name = _('Stripe Checkout Form')
-    render_template = "stripe/checkout.html"
+    render_template = "stripe/checkout_redirect.html"
     cache = False
     module = 'Stripe'
 
