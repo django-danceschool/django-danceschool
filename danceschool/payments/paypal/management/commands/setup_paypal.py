@@ -106,7 +106,7 @@ CHECKING PAYPAL INTEGRATION
                     ('registration_payatdoor_placeholder', 'at-the-door payments')
                 ]
 
-                for p in in placeholders:
+                for p in placeholders:
                     paynow_sp = StaticPlaceholder.objects.get_or_create(code=p[0])
                     paynow_p_draft = paynow_sp[0].draft
                     paynow_p_public = paynow_sp[0].public
