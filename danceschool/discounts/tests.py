@@ -40,6 +40,8 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
             percentDiscount=kwargs.get('percentDiscount', 50),
             percentUniversallyApplied=kwargs.get('percentUniversallyApplied', False),
             active=kwargs.get('active', True),
+            availableOnline=kwargs.get('availableOnline', True),
+            availableAtDoor=kwargs.get('availableAtDoor', True),
             newCustomersOnly=kwargs.get('newCustomersOnly', False),
             daysInAdvanceRequired=kwargs.get('daysInAdvanceRequired', None),
             expirationDate=kwargs.get('expirationDate', None),
@@ -54,7 +56,7 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         )
         return (test_combo, test_component)
 
-    def register_to_check_discount(self, series, expected_amount=None):
+    def register_to_check_discount(self, series, expected_amount=None, payAtDoor=False):
         '''
         This method makes it easy to determine whether discounts are working
         correctly for a single class registration
@@ -69,9 +71,13 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         # Sign up for the series, and check that we proceed to the student information page.
         # Because of the way that roles are encoded on this form, we just grab the value to pass
         # from the form itself.
-        post_data = {'series_%s_%s' % (
-            s.id, response.context_data['form'].fields['series_%s' % s.id].field_choices[0].get('value')
-        ): [1,]}
+        post_data = {
+            'series_%s_%s' % (
+                s.id, response.context_data['form'].fields['series_%s' % s.id].field_choices[0].get('value')
+            ): [1,],
+        }
+        if payAtDoor:
+            post_data['payAtDoor'] = 'on'
 
         response = self.client.post(reverse('registration'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
@@ -85,7 +91,7 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
 
         # Check that the student info page lists the correct subtotal with
         # the discount applied
-        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(invoice.grossTotal, s.getBasePrice(payAtDoor=payAtDoor))
         if expected_amount is not None:
             self.assertEqual(response.context_data.get('invoice').total, expected_amount)
 
@@ -201,6 +207,57 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         )
 
         response = self.register_to_check_discount(s, s.getBasePrice())
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(
+            invoice.total, invoice.grossTotal
+        )
+        self.assertEqual(response.context_data.get('zero_balance'), False)
+        self.assertEqual(response.context_data.get('total_discount_amount'), 0)
+        self.assertFalse(response.context_data.get('addonItems'))
+        self.assertFalse(response.context_data.get('discount_codes'))
+
+    def test_preregonly(self):
+        '''
+        Create a discount that only can be used for pre-registration and ensure
+        that it does not work at the door.
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(availableAtDoor=False)
+        s = self.create_series(
+            pricingTier=self.defaultPricing,
+            startTime=timezone.now() + timedelta(days=1)
+        )
+
+        self.client.login(username=self.superuser.username, password='pass')
+        response = self.register_to_check_discount(s, s.getBasePrice(payAtDoor=True), True)
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        self.assertEqual(invoice.grossTotal, s.getBasePrice(payAtDoor=True))
+        self.assertEqual(
+            invoice.total, invoice.grossTotal
+        )
+        self.assertEqual(response.context_data.get('zero_balance'), False)
+        self.assertEqual(response.context_data.get('total_discount_amount'), 0)
+        self.assertFalse(response.context_data.get('addonItems'))
+        self.assertFalse(response.context_data.get('discount_codes'))
+
+    def test_dooronly(self):
+        '''
+        Create a discount that only can be used at the door and ensure
+        that it does not work in advance.
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(availableOnline=False)
+        s = self.create_series(
+            pricingTier=self.defaultPricing,
+            startTime=timezone.now() + timedelta(days=1)
+        )
+
+        response = self.register_to_check_discount(s, s.getBasePrice(), False)
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
