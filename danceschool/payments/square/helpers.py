@@ -25,11 +25,13 @@ def getPayments(order_id=None, order=None, client=None):
     ]
 
 
-def getRefunds(order_id=None, order=None, client=None):
+def getRefunds(order_id=None, order=None, client=None, payments=None):
+
     if not client:
         client = getClient()
+    if not payments:
+        payments = getPayments(order_id, order, client)
 
-    payments = getPayments(order_id=order_id, order=order, client=client)
     refunds = []
 
     for x in payments:
@@ -45,23 +47,29 @@ def getRefunds(order_id=None, order=None, client=None):
 
 
 def getNetAmountPaid(**kwargs):
+    payments = kwargs.pop('payments', None) or getPayments(**kwargs)
+
     return sum([
         x.get('amount_money', {}).get('amount', 0) / 100 -
         x.get('refunded_money', {}).get('amount', 0) / 100
-        for x in getPayments(**kwargs)
+        for x in payments
     ])
 
+
 def getNetRefund(**kwargs):
+    payments = kwargs.pop('payments', None) or getPayments(**kwargs)
+
     return sum([
         x.get('refunded_money', {}).get('amount', 0) / 100
-        for x in getPayments(**kwargs)
+        for x in payments
     ])
 
 def getNetFees(**kwargs):
-    client = kwargs.get('client', getClient())
 
-    payments = getPayments(**kwargs)
-    refunds = getRefunds(**kwargs)
+    # Note that we pop refunds before payments so there is no need to look up
+    # payments twice.
+    refunds = kwargs.pop('refunds', None) or getRefunds(**kwargs)
+    payments = kwargs.pop('payments', None) or getPayments(**kwargs)
 
     fees = 0
 

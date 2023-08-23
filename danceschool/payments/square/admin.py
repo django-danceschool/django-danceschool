@@ -36,6 +36,10 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
         (_('Dates'), {
             'fields': ('creationDate', 'modifiedDate'),
         }),
+        (_('Additional Data'), {
+            'classes': ('collapse', ),
+            'fields': ('data',),
+        }),
     )
 
 

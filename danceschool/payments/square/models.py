@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models import CheckConstraint, Q
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from cms.models.pluginmodel import CMSPlugin
 from cms.models.fields import PageField
@@ -11,6 +12,7 @@ from square.client import Client
 import uuid
 
 from danceschool.core.models import PaymentRecord
+from danceschool.core.utils.timezone import ensure_localtime
 from .tasks import updateSquareFees
 from .helpers import (
     getClient, getPayments, getRefunds, getNetAmountPaid, getNetRefund, getNetFees
@@ -37,6 +39,8 @@ class SquarePaymentRecord(PaymentRecord):
     locationId = models.CharField(_('Square Location ID'), max_length=100)
     payerEmail = models.EmailField(_('Associated email'), null=True, blank=True)
 
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
+
     @property
     def methodName(self):
         return 'Square Checkout'
@@ -54,15 +58,24 @@ class SquarePaymentRecord(PaymentRecord):
 
     @property
     def netAmountPaid(self):
-        return getNetAmountPaid(order_id=self.orderId)
+        return getNetAmountPaid(
+            order_id=self.orderId, client=self.client,
+            payments=self.getPayments()
+        )
 
     @property
     def netRefund(self):
-        return getNetRefund(order_id=self.orderId)
+        return getNetRefund(
+            order_id=self.orderId, client=self.client,
+            payments=self.getPayments(),
+        )
 
     @property
     def netFees(self):
-        return getNetFees(order_id=self.orderId)
+        return getNetFees(
+            order_id=self.orderId, client=self.client,
+            payments=self.getPayments(), refunds=self.getRefunds()
+        )
 
     @property
     def netRevenue(self):
@@ -71,23 +84,57 @@ class SquarePaymentRecord(PaymentRecord):
     def getClient(self):
         return getClient()
 
-    def getPayments(self, client=None):
+    def getPayments(
+        self, client=None, use_cache=True, update_cache=True, commit=True
+    ):
+
+        cached = self.data.get('apiPaymentResponse', None)
+        if use_cache and cached is not None:
+                return cached
+
         if not client:
-            client = self.getClient()
+            client = self.client
 
         if self.paymentId:
-            return [client.payments.get_payment(self.paymentId).body.get('payment', {}),]
+            response = [client.payments.get_payment(self.paymentId).body.get('payment', {}),]
         else:
-            return getPayments(order_id=self.orderId, client=client)
+            response = getPayments(order_id=self.orderId, client=client)
 
-    def getRefunds(self, client=None):
-        return getRefunds(order_id=self.orderId, client=client)
+        if (update_cache is True) and (response != cached):
+            self.data['apiPaymentResponse'] = response
+            self.data['apiPaymentResponseDate'] = ensure_localtime(timezone.now()).isoformat()
+            if commit:
+                self.save()
+        return response
+
+    def getRefunds(
+            self, client=None, use_cache=True, update_cache=True, payments=None,
+            commit=True
+    ):
+
+        cached = self.data.get('apiRefundResponse', None)
+        if use_cache and cached is not None:
+                return cached
+
+        if not payments:
+            payments = self.getPayments(client, use_cache, update_cache, commit)
+
+        response = getRefunds(
+            order_id=self.orderId, client=client, payments=payments
+        )
+
+        if update_cache and response != cached:
+            self.data['apiRefundResponse'] = response
+            self.data['apiRefundResponseDate'] = ensure_localtime(timezone.now()).isoformat()
+            if commit:
+                self.save()
+        return response
 
     def getPayerEmail(self):
         return self.payerEmail
 
     def refund(self, amount=None):
-        client = self.getClient()
+        client = self.client
 
         payments = self.getPayments(client=client)
         if not payments:
@@ -157,6 +204,11 @@ class SquarePaymentRecord(PaymentRecord):
             updateSquareFees.schedule(args=(self, ), delay=60)
 
         return refundData
+
+    def __init__(self, *args, **kwargs):
+        client = kwargs.pop('client', None)
+        super().__init__(*args, **kwargs)
+        self.client = client or self.getClient()
 
     class Meta:
         permissions = (
