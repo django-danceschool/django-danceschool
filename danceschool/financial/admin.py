@@ -147,6 +147,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
         'approved', 'paid', 'reimbursement',
         ('paymentMethod', DropdownFilter),
         ('payTo', RelatedDropdownFilter),
+        ('event', RelatedDropdownFilter),
         ('accrualDate', DateRangeFilter),
         ('paymentDate', DateRangeFilter),
         ('submissionDate', DateRangeFilter),
@@ -315,6 +316,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         ('category', RelatedDropdownFilter),
         'received',
         ('paymentMethod', DropdownFilter),
+        ('event', RelatedDropdownFilter),
         ('receivedDate', DateRangeFilter),
         ('accrualDate', DateRangeFilter),
         ('submissionDate', DateRangeFilter)
