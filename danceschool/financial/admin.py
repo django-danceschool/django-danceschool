@@ -138,7 +138,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
         'paymentMethod'
     )
     list_editable = ('approved', 'paid', 'paymentMethod')
-    search_fields = ('description', 'comments', '=category__name', '=payTo__name')
+    search_fields = ('description', 'comments', 'category__name', 'payTo__name')
     list_filter = (
         'category', 'approved', 'paid', 'paymentMethod', 'reimbursement',
         'payTo',
@@ -305,7 +305,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         'receivedDate', 'invoiceLink'
     )
     list_editable = ('received', )
-    search_fields = ('description', 'comments', 'invoiceItem__id', 'invoiceItem__invoice__id')
+    search_fields = ('description', 'comments', 'invoiceItem__id', 'invoiceItem__invoice__id', 'receivedFrom__name')
     list_filter = (
         'category', 'received', 'paymentMethod',
         ('receivedDate', DateRangeFilter),
