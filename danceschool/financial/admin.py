@@ -152,6 +152,7 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
         ('paymentDate', DateRangeFilter),
         ('submissionDate', DateRangeFilter),
         ('expenseRule', RelatedDropdownFilter),
+        ('attachment', admin.EmptyFieldListFilter),
     )
     readonly_fields = (
         'eventLink', 'duplicateLink', 'submissionUser', 'expenseRule',
@@ -319,7 +320,8 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         ('event', RelatedDropdownFilter),
         ('receivedDate', DateRangeFilter),
         ('accrualDate', DateRangeFilter),
-        ('submissionDate', DateRangeFilter)
+        ('submissionDate', DateRangeFilter),
+        ('attachment', admin.EmptyFieldListFilter),
     )
     readonly_fields = (
         'netRevenue', 'submissionUserLink', 'relatedRevItemsLink', 'eventLink',
