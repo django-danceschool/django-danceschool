@@ -2,6 +2,9 @@ from django.contrib import admin
 from django.forms import ModelForm, HiddenInput
 from django.utils.translation import gettext_lazy as _
 
+from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
+from rangefilter.filter import DateRangeFilter
+
 from .models import (
     InstructorPrivateLessonDetails, InstructorAvailabilitySlot,
     PrivateLessonEvent, PrivateLessonCustomer
@@ -116,7 +119,12 @@ class PrivateLessonEventAdmin(EventChildAdmin):
     show_in_index = True
 
     list_display = ('teacherNames', 'customerNames', 'startTime', 'durationMinutes', 'location', 'pricingTier')
-    list_filter = ('location', 'room', 'startTime', 'pricingTier')
+    list_filter = (
+        ('location', RelatedDropdownFilter),
+        ('room', RelatedDropdownFilter),
+        ('startTime', DateRangeFilter),
+        ('pricingTier', RelatedDropdownFilter),
+    )
 
     fieldsets = (
         (None, {'fields': (('location', 'room'), 'pricingTier', 'participants', 'comments', )}),

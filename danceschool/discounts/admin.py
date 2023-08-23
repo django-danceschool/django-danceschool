@@ -3,6 +3,10 @@ from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
 from dal import autocomplete
+from django_admin_listfilter_dropdown.filters import (
+    ChoiceDropdownFilter, RelatedDropdownFilter
+)
+from rangefilter.filter import DateRangeFilter
 
 from .models import (
     DiscountCategory, DiscountCombo, DiscountComboComponent,
@@ -93,8 +97,10 @@ class DiscountComboAdmin(admin.ModelAdmin):
         'restrictions'
     )
     list_filter = (
-        'category', 'discountType', 'active', 'availableOnline',
-        'availableAtDoor', 'newCustomersOnly', 'expirationDate'
+        ('category', RelatedDropdownFilter),
+        ('discountType', ChoiceDropdownFilter),
+        'active', 'availableOnline', 'availableAtDoor', 'newCustomersOnly',
+        ('expirationDate', DateRangeFilter),
     )
     ordering = ('name', )
     actions = ['enableDiscount', 'disableDiscount']

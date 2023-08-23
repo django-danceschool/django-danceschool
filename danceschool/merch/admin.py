@@ -4,6 +4,8 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
+from django_admin_listfilter_dropdown.filters import ChoiceDropdownFilter
+from rangefilter.filter import DateRangeFilter
 
 from .models import (
     MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem,
@@ -131,7 +133,11 @@ class MerchOrderAdmin(admin.ModelAdmin):
     list_editable = ('status',)
     search_fields = ('items__name', 'items__description',)
     readonly_fields = ('invoiceLink', 'creationDate', 'lastModified')
-    list_filter = ('status', 'creationDate', 'lastModified',)
+    list_filter = (
+        ('status', ChoiceDropdownFilter),
+        ('creationDate', DateRangeFilter),
+        ('lastModified', DateRangeFilter),
+    )
 
     fieldsets = (
         (None, {

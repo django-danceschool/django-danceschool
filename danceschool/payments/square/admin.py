@@ -3,6 +3,8 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
+from rangefilter.filter import DateRangeFilter
+
 from .models import SquarePaymentRecord
 
 
@@ -23,7 +25,11 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     invoiceLink.short_description = _('Registration invoice')
 
     list_display = ['paymentId', 'orderId', 'invoiceLink']
-    list_filter = ['creationDate', 'modifiedDate', 'locationId']
+    list_filter = [
+        ('creationDate', DateRangeFilter),
+        ('modifiedDate', DateRangeFilter),
+        'locationId'
+    ]
     search_fields = ['paymentId', 'orderId', 'invoice__id']
 
     ordering = ['-modifiedDate', ]

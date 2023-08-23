@@ -24,6 +24,7 @@ setup(
         'beautifulsoup4>=4.11.1',
         'Django>=3.2.16,<4.0',
         'django-addanother>=2.2.2',
+        'django-admin-list-filter-dropdown>=1.0.3',
         'django-admin-rangefilter>=0.9.0',
         'django-admin-sortable2>=1.0.4',
         'django-allauth>=0.51.0',

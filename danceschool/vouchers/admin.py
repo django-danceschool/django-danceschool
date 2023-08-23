@@ -5,6 +5,8 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from dal import autocomplete
+from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
+from rangefilter.filter import DateRangeFilter
 
 from danceschool.core.models import Customer, Invoice
 from danceschool.core.admin import CustomerAdmin
@@ -173,7 +175,9 @@ class VoucherAdmin(admin.ModelAdmin):
         'isEnabled', 'restrictions'
     ]
     list_filter = [
-        'category', 'expirationDate', 'disabled', 'forFirstTimeCustomersOnly',
+        ('category', RelatedDropdownFilter),
+        ('expirationDate', DateRangeFilter),
+        'disabled', 'forFirstTimeCustomersOnly',
         'forPreviousCustomersOnly', 'doorOnly', 'beforeTax',
     ]
     search_fields = ['voucherId', 'name', 'description']

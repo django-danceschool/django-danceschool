@@ -11,6 +11,9 @@ from django.utils.translation import gettext_lazy as _
 from django.http import HttpResponseRedirect
 
 from dal import autocomplete
+from django_admin_listfilter_dropdown.filters import (
+    DropdownFilter, RelatedDropdownFilter
+)
 from rangefilter.filter import DateRangeFilter
 from polymorphic.admin import (
     PolymorphicParentModelAdmin, PolymorphicChildModelAdmin,
@@ -140,12 +143,14 @@ class ExpenseItemAdmin(EventLinkMixin, admin.ModelAdmin):
     list_editable = ('approved', 'paid', 'paymentMethod')
     search_fields = ('description', 'comments', 'category__name', 'payTo__name')
     list_filter = (
-        'category', 'approved', 'paid', 'paymentMethod', 'reimbursement',
-        'payTo',
+        ('category', RelatedDropdownFilter),
+        'approved', 'paid', 'reimbursement',
+        ('paymentMethod', DropdownFilter),
+        ('payTo', RelatedDropdownFilter),
         ('accrualDate', DateRangeFilter),
         ('paymentDate', DateRangeFilter),
         ('submissionDate', DateRangeFilter),
-        'expenseRule'
+        ('expenseRule', RelatedDropdownFilter),
     )
     readonly_fields = (
         'eventLink', 'duplicateLink', 'submissionUser', 'expenseRule',
@@ -307,7 +312,9 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
     list_editable = ('received', )
     search_fields = ('description', 'comments', 'invoiceItem__id', 'invoiceItem__invoice__id', 'receivedFrom__name')
     list_filter = (
-        'category', 'received', 'paymentMethod',
+        ('category', RelatedDropdownFilter),
+        'received',
+        ('paymentMethod', DropdownFilter),
         ('receivedDate', DateRangeFilter),
         ('accrualDate', DateRangeFilter),
         ('submissionDate', DateRangeFilter)

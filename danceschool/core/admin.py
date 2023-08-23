@@ -12,10 +12,14 @@ from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponseRedirect
 
 from calendar import month_name
+from django_admin_listfilter_dropdown.filters import (
+    ChoiceDropdownFilter, RelatedDropdownFilter
+)
 from polymorphic.admin import (
     PolymorphicParentModelAdmin, PolymorphicChildModelAdmin,
     PolymorphicChildModelFilter
 )
+from rangefilter.filter import DateRangeFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 import json
 import six
@@ -299,7 +303,12 @@ class InvoiceAdmin(admin.ModelAdmin):
         'id', 'recipientInfo', 'status', 'outstandingBalance',
         'modifiedDate', 'links'
     ]
-    list_filter = ['status', 'paidOnline', 'creationDate', 'modifiedDate']
+    list_filter = [
+        ('status', ChoiceDropdownFilter),
+        'paidOnline',
+        ('creationDate', DateRangeFilter),
+        ('modifiedDate', DateRangeFilter)
+    ]
     search_fields = ['id', 'comments']
     ordering = ['-modifiedDate', ]
     readonly_fields = [
@@ -429,7 +438,7 @@ class InvoiceAdmin(admin.ModelAdmin):
 class RegistrationAdmin(admin.ModelAdmin):
     inlines = [EventRegistrationInline]
     list_display = ['invoice_name', 'final', 'dateTime', 'total',]
-    list_filter = ['final', 'dateTime', 'invoice__paidOnline']
+    list_filter = ['final', ('dateTime', DateRangeFilter), 'invoice__paidOnline']
     search_fields = [
         'invoice__firstName', 'invoice__lastName', 'invoice__email',
     ]
@@ -482,7 +491,7 @@ class ClassDescriptionAdminForm(ModelTemplateMixin, ModelForm):
 @admin.register(ClassDescription)
 class ClassDescriptionAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
     list_display = ['title', 'danceTypeLevel', ]
-    list_filter = ('danceTypeLevel', )
+    list_filter = (('danceTypeLevel', RelatedDropdownFilter),)
     search_fields = ('title', 'description',)
     prepopulated_fields = {"slug": ("title", )}
     form = ClassDescriptionAdminForm
@@ -632,7 +641,7 @@ class EventSessionAdmin(admin.ModelAdmin):
     list_display = ('name', 'startTime', 'endTime')
     ordering = ('startTime', 'name')
     readonly_fields = ('startTime', 'endTime')
-    list_filter = ('startTime', 'endTime')
+    list_filter = (('startTime', DateRangeFilter), ('endTime', DateRangeFilter))
     prepopulated_fields = {'slug': ('name', )}
 
     fields = ('name', 'description', 'slug', ('startTime', 'endTime'))
@@ -810,7 +819,11 @@ class StaffMemberAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
     )
     list_display_links = ('fullName', )
     list_editable = ('privateEmail', )
-    list_filter = ('categories', 'instructor__status', 'instructor__availableForPrivates')
+    list_filter = (
+        ('categories', RelatedDropdownFilter),
+        'instructor__status',
+        'instructor__availableForPrivates'
+    )
     search_fields = ('=firstName', '=lastName', 'publicEmail', 'privateEmail')
     ordering = ('lastName', 'firstName')
     inlines = [InstructorInline, ]
@@ -938,8 +951,12 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     )
     list_editable = ('status', 'category', 'session')
     list_filter = (
-        'location', 'status', 'registrationOpen', 'category',
-        'session', 'pricingTier'
+        ('location', RelatedDropdownFilter),
+        ('status', ChoiceDropdownFilter),
+        'registrationOpen',
+        ('category', RelatedDropdownFilter),
+        ('session', RelatedDropdownFilter),
+        ('pricingTier', RelatedDropdownFilter),
     )
     search_fields = ('classDescription__title',)
     autocomplete_fields = ['classDescription', ]
@@ -1058,8 +1075,12 @@ class PublicEventAdmin(
         'session', 'numRegistered'
     )
     list_filter = (
-        'location', 'status', 'registrationOpen',
-        'pricingTier', 'category', 'session'
+        ('location', RelatedDropdownFilter),
+        ('status', ChoiceDropdownFilter),
+        'registrationOpen',
+        ('pricingTier', RelatedDropdownFilter),
+        ('category', RelatedDropdownFilter),
+        ('session', RelatedDropdownFilter),
     )
     list_editable = ('status', 'category', 'session')
     search_fields = ('name', )
