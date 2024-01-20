@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse
 
-from easy_pdf.views import PDFTemplateView
+from django_weasyprint import WeasyTemplateView
 import re
 import logging
 import random
@@ -138,8 +138,9 @@ class GiftCertificateCustomizeView(FormView):
         return HttpResponseRedirect(self.get_success_url())
 
 
-class GiftCertificatePDFView(PDFTemplateView):
+class GiftCertificatePDFView(WeasyTemplateView):
     template_name = 'vouchers/pdf/giftcertificate_template.html'
+    pdf_filename = 'gift_certificate.pdf'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -17,8 +17,6 @@ from .autocomplete_light_registry import (
     EventAutoComplete, ClassDescriptionAutoComplete
 )
 
-admin.autodiscover()
-
 urlpatterns = [
     # These URLs are for Ajax and autocomplete functionality
     path('staff/substitute/filter/', updateSeriesAttributes, name='ajaxhandler_submitsubstitutefilter'),

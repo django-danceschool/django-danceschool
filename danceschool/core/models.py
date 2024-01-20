@@ -1,5 +1,6 @@
 from xml.etree.ElementInclude import include
 from django.db import models
+from django.forms import MultipleChoiceField
 from django.contrib.auth.models import User, Group
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -20,7 +21,6 @@ from datetime import datetime, timedelta
 from collections import Counter
 from filer.fields.image import FilerImageField
 from colorful.fields import RGBColorField
-from multiselectfield import MultiSelectField
 from calendar import month_name, day_name
 from math import ceil
 from itertools import accumulate
@@ -1417,7 +1417,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         on its occcurrences.
         '''
         changed = False
-        occurrences = self.eventoccurrence_set.all()
+        occurrences = self.eventoccurrence_set.all() if self.pk else None
 
         if occurrences:
             new_year, new_month = self.getYearAndMonth()
@@ -1457,11 +1457,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         startTime = (
             ensure_localtime(self.startTime) or
-            getattr(self.eventoccurrence_set.order_by('startTime').first(), 'startTime', None)
+            (getattr(self.eventoccurrence_set.order_by('startTime').first(), 'startTime', None) if self.pk else None)
         )
         endTime = (
             ensure_localtime(self.endTime) or
-            getattr(self.eventoccurrence_set.order_by('-endTime').first(), 'endTime', None)
+            (getattr(self.eventoccurrence_set.order_by('-endTime').first(), 'endTime', None) if self.pk else None)
         )
 
         # If set to these codes, then registration will be held closed
@@ -4474,10 +4474,10 @@ class StaffMemberListPluginModel(CMSPlugin):
         status = ('status', _('Instructor Status'))
         random = ('random', _('Randomly Ordered'))
 
-    statusChoices = MultiSelectField(
-        verbose_name=_('Limit to Instructors with Status'),
+    statusChoices = MultipleChoiceField(
+        label=_('Limit to Instructors with Status'),
         choices=Instructor.InstructorStatus.choices,
-        default=[
+        initial=[
             Instructor.InstructorStatus.roster,
             Instructor.InstructorStatus.assistant,
             Instructor.InstructorStatus.guest
