@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, connection
 from django.db.models import (
     Q, F, ExpressionWrapper, DurationField, Case, When, Sum
 )
@@ -28,9 +28,10 @@ from danceschool.core.constants import getConstant
 from danceschool.core.utils.timezone import ensure_localtime
 from .managers import ExpenseItemManager, RevenueItemManager
 
-
-EVENTSTAFFMEMBER_CT = ContentType.objects.get_for_model(EventStaffMember).id
-
+if 'django_content_type' in connection.introspection.table_names():
+    EVENTSTAFFMEMBER_CT = ContentType.objects.get_for_model(EventStaffMember).id
+else:
+    EVENTSTAFFMEMBER_CT = None
 
 def ordinal(n):
     ''' This is just used to populate ordinal day of the month choices '''
