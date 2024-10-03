@@ -208,8 +208,13 @@ class GuestList(models.Model):
                 component_filters = component_filters | self.getComponentFilters(component, dateTime=timezone.now())
 
         # Add all event staff if that box is checked (no need for separate components)
-        if self.includeStaff and events and self.appliesToEvents(events):
-            component_filters = component_filters | Q(eventstaffmember__event__in=events)
+        if self.includeStaff and events:
+            if self.appliesToEvents(events):
+                component_filters = component_filters | Q(eventstaffmember__event__in=events)
+            else:
+                for event in events:
+                    if self.appliesToEvents([event,]):
+                        component_filters = component_filters | Q(eventstaffmember__event=event)
 
         return StaffMember.objects.filter(component_filters).annotate(
             first=F('firstName'), last=F('lastName'), contact=F('privateEmail'),
