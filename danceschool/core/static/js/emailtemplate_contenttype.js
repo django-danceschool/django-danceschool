@@ -6,11 +6,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	function checkRichTextChoice() {
 		var richTextChoice = $('#id_richTextChoice input:checked').val();
 
-		if (CKEDITOR.instances['id_html_content']) {
-			window.initial_CKEditor_config = CKEDITOR.instances['id_html_content'].config;
-			CKEDITOR.instances['id_html_content'].destroy();		
-		}
-
 		if (richTextChoice == "plain") {
 			$('#id_content').parents('fieldset').first().removeClass('collapsed');
 			$('#id_content').parents('fieldset').first().find('h2').show();
@@ -24,7 +19,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 			$('#id_html_content').parents('fieldset').first().removeClass('collapsed');
 			$('#id_html_content').parents('fieldset').first().find('h2').show();
-			CKEDITOR.replace('id_html_content', window.initial_CKEditor_config);
 		}
 	}
 
