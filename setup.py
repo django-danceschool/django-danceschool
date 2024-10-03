@@ -46,6 +46,7 @@ setup(
         'django-polymorphic>=3.1.0',
         'django-sekizai>=3.0.1',
         'django-utils-six>=2.0',
+        'django-weasyprint>=2.2.2',
         'djangocms-admin-style>=3.2.0',
         'djangocms_bootstrap4>=3.0.0',
         'djangocms_icon>=2.0.0',
