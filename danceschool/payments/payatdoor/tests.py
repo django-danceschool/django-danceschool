@@ -51,7 +51,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         s = self.create_series()
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s.__repr__(), ])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s.__repr__(), ])
 
         # Since the superuser is logged in, check that there is an option to 
         # register at the door
@@ -164,7 +164,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         s = self.create_series()
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s.__repr__(), ])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s.__repr__(), ])
 
         # Since no one is logged in, check that there is not an option to
         # pay at the door

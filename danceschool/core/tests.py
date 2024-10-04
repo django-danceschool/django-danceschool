@@ -30,8 +30,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         # are no open or closed series on the registration page.
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
         # Check that the Add a class series page loads for the superuser
         self.client.login(username=self.superuser.username, password='pass')
@@ -48,8 +48,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertEqual(s.registrationOpen, True)
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s, ])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
     def test_past_series(self):
         '''
@@ -60,8 +60,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         s = self.create_series()
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s, ])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
         # Modify the existing class series to set the only eventoccurrence
         # in the past, and check that it now longer shows up at all
@@ -73,8 +73,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertEqual(s.registrationOpen, False)
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
         self.assertEqual(s.status, Event.RegStatus.enabled)
 
     def test_closed_series(self):
@@ -104,8 +104,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertEqual(s.registrationOpen, False)
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [s, ])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [s, ])
         self.assertEqual(s.status, Event.RegStatus.enabled)
 
         # Delete the old occurrence, and check that registration opens back up
@@ -114,8 +114,8 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertEqual(s.registrationOpen, True)
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s, ])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
     def test_individual_class_page_visibility(self):
         '''
@@ -139,12 +139,12 @@ class RegistrationTest(DefaultSchoolTestCase):
 
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
         response = self.client.get(reverse('singleClassRegistration', args=(str(s.uuid),)))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
 
         response = self.client.get(reverse('classView', args=(s.year, month_name[s.month], s.slug)))
         self.assertEqual(response.status_code, 404)
@@ -156,8 +156,8 @@ class RegistrationTest(DefaultSchoolTestCase):
 
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerysetEqual(response.context_data['regClosedSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
         response = self.client.get(reverse('singleClassRegistration', args=(str(s.uuid),)))
         self.assertEqual(response.status_code, 404)
@@ -176,7 +176,7 @@ class RegistrationTest(DefaultSchoolTestCase):
 
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerysetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
 
         # Since this is an anonymous user, check that there is no option to register
         # at-the-door

@@ -199,3 +199,8 @@ CMS_PLACEHOLDER_CONF = {
 DJANGOCMS_PICTURE_TEMPLATES = [
     ('splash_image', 'Front Page Splash Image'),
 ]
+
+CMS_CONFIRM_VERSION4 = True
+
+# Needed for Django CMS
+X_FRAME_OPTIONS = "SAMEORIGIN"
