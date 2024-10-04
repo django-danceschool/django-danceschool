@@ -15,7 +15,6 @@ class FinancialAppConfig(AppConfig):
             Event, SubstituteTeacher, Invoice, InvoiceItem, EventStaffMember,
             EventOccurrence
         )
-        from danceschool.core.constants import getConstant
 
         from .models import ExpensePurpose
 

@@ -4,6 +4,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
@@ -26,12 +27,18 @@ from danceschool.core.models import (
 )
 from danceschool.core.constants import getConstant
 from danceschool.core.utils.timezone import ensure_localtime
+from danceschool.core.utils.sys import isPreliminaryRun
 from .managers import ExpenseItemManager, RevenueItemManager
 
-if 'django_content_type' in connection.introspection.table_names():
-    EVENTSTAFFMEMBER_CT = ContentType.objects.get_for_model(EventStaffMember).id
-else:
-    EVENTSTAFFMEMBER_CT = None
+
+def get_eventStaffMember_ct():
+    if isPreliminaryRun():
+        return None
+    return cache.get_or_set(
+        "EVENTSTAFFMEMBER_CT",
+        ContentType.objects.get_for_model(EventStaffMember).id, None
+    )
+
 
 def ordinal(n):
     ''' This is just used to populate ordinal day of the month choices '''
@@ -1077,7 +1084,7 @@ class ExpenseItem(models.Model):
         if not self.accrualDate:
             if self.event:
                 staff_purpose = self.expensepurpose_set.filter(
-                    content_type_id=EVENTSTAFFMEMBER_CT
+                    content_type_id=get_eventStaffMember_ct()
                 )
                 last_end = datetime.min.replace(tzinfo=timezone.utc)
 

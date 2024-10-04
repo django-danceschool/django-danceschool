@@ -40,7 +40,7 @@ def clearExpiredInvoices():
     Every hour, look for unfinished invoices that have expired and delete them.
     To ensure that there are no issues that arise from slight differences between
     session expiration dates and invoice expiration dates, only
-    delete instances that have been expired for one minute.
+    delete instances that have been expired for a specific length of time.
     '''
     from .models import Invoice
 
@@ -50,7 +50,10 @@ def clearExpiredInvoices():
     if getConstant('registration__deleteExpiredInvoices'):
         Invoice.objects.filter(
             status=Invoice.PaymentStatus.preliminary,
-            expirationDate__lte=timezone.now() - timedelta(minutes=1)
+            expirationDate__lte=(
+                timezone.now() -
+                timedelta(minutes=getConstant('registration__retainExpiredInvoicesMinutes'))
+            )
         ).delete()
         call_command('clearsessions')
 

@@ -647,6 +647,20 @@ class DeleteExpiredInvoices(BooleanPreference):
     )
     default = True
 
+@global_preferences_registry.register
+class RetainExpiredInvoicesMinutes(IntegerPreference):
+    section = registration
+    name = 'retainExpiredInvoicesMinutes'
+    verbose_name = _(
+        'Retain preliminary invoice and session data after expiration for ' +
+        'this many minutes.'
+    )
+    help_text = _(
+        'Setting this value can prevent callback issues with some payment ' +
+        'processor APIs. Default is one day.'
+    )
+    default = 1440
+
 
 ############################
 # Email Preferences
