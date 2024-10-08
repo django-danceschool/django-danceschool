@@ -1,6 +1,5 @@
 from xml.etree.ElementInclude import include
 from django.db import models
-from django.forms import MultipleChoiceField
 from django.contrib.auth.models import User, Group
 from django.urls import reverse
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -21,6 +20,7 @@ from datetime import datetime, timedelta
 from collections import Counter
 from filer.fields.image import FilerImageField
 from colorful.fields import RGBColorField
+from multiselectfield import MultiSelectField
 from calendar import month_name, day_name
 from math import ceil
 from itertools import accumulate
@@ -4474,14 +4474,14 @@ class StaffMemberListPluginModel(CMSPlugin):
         status = ('status', _('Instructor Status'))
         random = ('random', _('Randomly Ordered'))
 
-    statusChoices = MultipleChoiceField(
-        label=_('Limit to Instructors with Status'),
+    statusChoices = MultiSelectField(
+        verbose_name=_('Limit to Instructors with Status'),
         choices=Instructor.InstructorStatus.choices,
-        initial=[
+        default=[
             Instructor.InstructorStatus.roster,
             Instructor.InstructorStatus.assistant,
             Instructor.InstructorStatus.guest
-        ]
+        ],
     )
     orderChoice = models.CharField(_('Order By'), max_length=10, choices=OrderChoices.choices)
     imageThumbnail = models.ForeignKey(
