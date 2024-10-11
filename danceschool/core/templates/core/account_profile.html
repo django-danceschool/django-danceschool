@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load danceschool_tags sekizai_tags cms_tags i18n %}
+{% load danceschool_tags sekizai_tags djangocms_alias_tags i18n %}
 
 {% block content %}
 
@@ -33,8 +33,8 @@
 	{% endif %}
 </div>
 
-{% if staffmember or perms.cms.change_static_placeholder %}
-	{% static_placeholder 'staffmember_profile_placeholder' %}
+{% if staffmember or perms.djangocms_alias.change_alias %}
+	{% static_alias 'staffmember_profile_placeholder' %}
 {% endif %}
 
 {% if staffmember %}
@@ -69,8 +69,8 @@
 
 {% endif %}
 
-{% if customer or perms.cms.change_static_placeholder %}
-	{% static_placeholder 'customer_profile_placeholder' %}
+{% if customer or perms.djangocms_alias.change_alias %}
+	{% static_alias 'customer_profile_placeholder' %}
 {% endif %}
 
 {% if customer %}

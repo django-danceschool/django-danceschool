@@ -1,5 +1,5 @@
-{% extends "cms/site_base.html" %}
-{% load static sekizai_tags cms_tags menu_tags %}
+{% extends "base.html" %}
+{% load static sekizai_tags djangocms_alias_tags menu_tags %}
 
 {% block extra_head %}
 
@@ -51,7 +51,7 @@
 {% block footer %}
 <footer class="py-5 bg-dark">
   <div class="container">
-	  {% static_placeholder "footer" %}
+	  {% static_alias "footer" %}
   </div>
   <!-- /.container -->
 </footer>

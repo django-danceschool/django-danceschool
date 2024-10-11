@@ -1,5 +1,5 @@
-{% extends "cms/site_base.html" %}
-{% load static sekizai_tags cms_tags %}
+{% extends "base.html" %}
+{% load static sekizai_tags djangocms_alias_tags %}
 
 {% block extra_head %}
 
@@ -19,4 +19,4 @@
 
 {% endblock %}
 
-{% block footer %}{% static_placeholder "footer" %}{% endblock %}
+{% block footer %}{% static_alias "footer" %}{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "cms/admin_home.html" %}
-{% load cms_tags i18n %}
+{% load djangocms_alias_tags i18n %}
 
 {% block content %}
 
@@ -22,7 +22,7 @@
   </table>
 </div>
 
-{% static_placeholder 'stats_graphs' %}
+{% static_alias 'stats_graphs' %}
 
 <hr />
 

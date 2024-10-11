@@ -20,9 +20,48 @@ try:
 except ImportError:
     pass
 
+class SetupMixin(object):
+    '''
+    Adds capabilities to set up commands for getting the initial user,
+    language, and site, as well as for input handling.
+    '''
 
-class Command(BaseCommand):
-    help = 'Easy-install setup script for new dance schools'
+    def get_setup_user(self):
+        this_user = User.objects.filter(is_superuser=True).first()
+        if not this_user:
+            self.stdout.write(
+                self.style.ERROR(
+                    'ERROR: Superuser has not yet been created.  Please run ' +
+                    '\'python manage.py createsuperuser\' before proceeding.'
+                )
+            )
+            return None
+
+    def get_setup_language(self):
+        try:
+            lang = settings.LANGUAGES[0][0]
+        except IndexError:
+            lang = getattr(settings, 'LANGUAGE_CODE', 'en')
+        return lang
+
+    def get_setup_site(self):
+        return Site.objects.get_current()
+
+    def get_alias(self, code, language=None, site=None):
+        from danceschool.core.management.commands.migrate_static_placeholders import (
+            _get_or_create_alias_category, _get_or_create_alias, _get_or_create_alias_content
+        )
+        cat = _get_or_create_alias_category()
+
+        if not language:
+            language=self.get_setup_language()
+
+        if not site:
+            site = self.get_setup_site()
+
+        alias = _get_or_create_alias(cat, code, site)
+        alias_content = _get_or_create_alias_content(alias, code, language, self.get_setup_user())
+        return (alias, alias_content)
 
     def boolean_input(self, question, default=None):
         '''
@@ -85,11 +124,15 @@ class Command(BaseCommand):
                     float_result = None
         return float_result
 
+
+class Command(SetupMixin, BaseCommand):
+    help = 'Easy-install setup script for new dance schools'
+
     def handle(self, *args, **options):
 
         from cms.api import create_page, add_plugin, publish_page
         from cms.constants import VISIBILITY_ANONYMOUS, VISIBILITY_USERS
-        from cms.models import Page, StaticPlaceholder
+        from cms.models import Page
 
         prefs = global_preferences_registry.manager()
 
@@ -111,15 +154,7 @@ class Command(BaseCommand):
                 )
                 return None
 
-        this_user = User.objects.filter(is_superuser=True).first()
-        if not this_user:
-            self.stdout.write(
-                self.style.ERROR(
-                    'ERROR: Superuser has not yet been created.  Please run ' +
-                    '\'python manage.py createsuperuser\' before proceeding.'
-                )
-            )
-            return None
+        this_user = self.get_setup_user()
 
         if Page.objects.count() > 0:
             self.stdout.write(
@@ -158,7 +193,7 @@ BASIC SETUP:
             default='localhost:8000',
             pattern='^[^/\\ ]+$'
         )
-        this_site = Site.objects.get_current()
+        this_site = self.get_setup_site()
         this_site.name = current_domain
         this_site.domain = current_domain
         this_site.save()
@@ -452,16 +487,10 @@ Remember, all page settings and content can be changed later via the admin inter
             """
         )
 
-        try:
-            initial_language = settings.LANGUAGES[0][0]
-        except IndexError:
-            initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
+        initial_language = self.get_setup_language()
+        alias, alias_content = self.get_alias('footer', initial_language, this_site)
 
-        # First, add the footer if no footer exists
-        sp = StaticPlaceholder.objects.get_or_create(code='footer')
-        sp_draft = sp[0].draft
-        sp_public = sp[0].public
-        if not sp_public.cmsplugin_set.all():
+        if not alias.cms_plugins.all():
             address_string = '{}{}{}, {} {}<br />'.format(
                 school_address1 + '<br />\n' if school_address1 else '',
                 school_address2 + '<br />\n' if school_address2 else '',
@@ -471,8 +500,7 @@ Remember, all page settings and content can be changed later via the admin inter
             initial_footer = '<p class="text-center"><strong>%s</strong><br />\n%s\n%s</p>' % (
                 school_name, address_string, email_string
             )
-            add_plugin(sp_draft, 'TextPlugin', initial_language, body=initial_footer)
-            add_plugin(sp_public, 'TextPlugin', initial_language, body=initial_footer)
+            add_plugin(alias_content.placeholder, 'TextPlugin', initial_language, body=initial_footer)
 
         registration_first = self.boolean_input(
             'Perform a "registration-only" setup with registration on the home page? [y/N]',
@@ -614,9 +642,8 @@ Remember, all page settings and content can be changed later via the admin inter
                 stats_page = create_page(
                     'School Performance Stats', 'cms/admin_home.html', initial_language,
                     menu_title='Stats', slug='stats', apphook='StatsApphook', in_navigation=False, published=False)
-                sp = StaticPlaceholder.objects.get_or_create(code='stats_graphs')
-                stats_placeholder = sp[0].draft
-                stats_placeholder_public = sp[0].public
+
+                alias, alias_content = self.get_alias('stats_graphs', initial_language, this_site)
 
                 template_list = [
                     'stats/schoolstats_timeseriesbymonth.html',
@@ -628,8 +655,7 @@ Remember, all page settings and content can be changed later via the admin inter
                     'stats/schoolstats_bestcustomers.html',
                 ]
                 for template in template_list:
-                    add_plugin(stats_placeholder, 'StatsGraphPlugin', initial_language, template=template)
-                    add_plugin(stats_placeholder_public, 'StatsGraphPlugin', initial_language, template=template)
+                    add_plugin(alias_content.placeholder, 'StatsGraphPlugin', initial_language, template=template)
                 publish_page(stats_page, this_user, initial_language)
                 self.stdout.write('School performance stats page added.\n')
 

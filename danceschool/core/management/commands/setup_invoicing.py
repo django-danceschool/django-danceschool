@@ -1,38 +1,17 @@
 from django.core.management.base import BaseCommand
 from django.apps import apps
-from django.conf import settings
 
-from six.moves import input
-
-try:
-    import readline
-except ImportError:
-    pass
+from danceschool.core.management.commands.setupschool import SetupMixin
 
 
-class Command(BaseCommand):
+class Command(SetupMixin, BaseCommand):
     help = 'Create necessary placeholders for staff members to generate and email invoices for registrations'
-
-    def boolean_input(self, question, default=None):
-        '''
-        Method for yes/no boolean inputs
-        '''
-        result = input("%s: " % question)
-        if not result and default is not None:
-            return default
-        while len(result) < 1 or result[0].lower() not in "yn":
-            result = input("Please answer yes or no: ")
-        return result[0].lower() == "y"
 
     def handle(self, *args, **options):
 
         from cms.api import add_plugin
-        from cms.models import Page, StaticPlaceholder
-
-        try:
-            initial_language = settings.LANGUAGES[0][0]
-        except IndexError:
-            initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
+ 
+        initial_language = self.get_setup_language()
 
         # Do some sanity checks to ensure that necessary apps are listed in INSTALLED_APPS
         # before proceeding
@@ -64,17 +43,12 @@ CHECKING INVOICE GENERATION FUNCTIONALITY
             True
         )
         if add_invoicing:
-            invoice_sp = StaticPlaceholder.objects.get_or_create(code='registration_invoice_placeholder')
-            invoice_p_draft = invoice_sp[0].draft
-            invoice_p_public = invoice_sp[0].public
+            alias, alias_content = self.get_alias('registration_invoice_placeholder', initial_language)
 
-            if invoice_p_public.get_plugins().filter(plugin_type='CreateInvoicePlugin').exists():
+            if alias.cms_plugins.filter(plugin_type='CreateInvoicePlugin').exists():
                 self.stdout.write('Invoice generation form already present.')
             else:
                 add_plugin(
-                    invoice_p_draft, 'CreateInvoicePlugin', initial_language,
-                )
-                add_plugin(
-                    invoice_p_public, 'CreateInvoicePlugin', initial_language,
+                    alias_content.placeholder, 'CreateInvoicePlugin', initial_language,
                 )
                 self.stdout.write('Invoice generation form added.')

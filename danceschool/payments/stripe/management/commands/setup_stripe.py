@@ -2,40 +2,21 @@ from django.core.management.base import BaseCommand
 from django.apps import apps
 from django.conf import settings
 
-from six.moves import input
-
-try:
-    import readline
-except ImportError:
-    pass
+from danceschool.core.management.commands.setupschool import SetupMixin
 
 
-class Command(BaseCommand):
+class Command(SetupMixin, BaseCommand):
     help = (
         'Check Stripe settings and created necessary placeholders ' +
         'for Stripe Checkout integration.'
     )
 
-    def boolean_input(self, question, default=None):
-        '''
-        Method for yes/no boolean inputs
-        '''
-        result = input("%s: " % question)
-        if not result and default is not None:
-            return default
-        while len(result) < 1 or result[0].lower() not in "yn":
-            result = input("Please answer yes or no: ")
-        return result[0].lower() == "y"
-
     def handle(self, *args, **options):
 
         from cms.api import add_plugin
-        from cms.models import Page, StaticPlaceholder
+        from cms.models import Page
 
-        try:
-            initial_language = settings.LANGUAGES[0][0]
-        except IndexError:
-            initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
+        initial_language = self.get_setup_language()
 
         # Do some sanity checks to ensure that necessary apps are listed in INSTALLED_APPS
         # before proceeding
@@ -102,19 +83,13 @@ CHECKING STRIPE INTEGRATION
                 ]
 
                 for p in placeholders:
-                    stripe_sp = StaticPlaceholder.objects.get_or_create(code=p[0])
-                    stripe_p_draft = stripe_sp[0].draft
-                    stripe_p_public = stripe_sp[0].public
+                    alias, alias_content = self.get_alias(p[0], initial_language)
 
-                    if stripe_p_public.get_plugins().filter(plugin_type='StripePaymentFormPlugin').exists():
+                    if alias.cms_plugins.filter(plugin_type='StripePaymentFormPlugin').exists():
                         self.stdout.write('Stripe Checkout button already present for %s.' % p[1])
                     else:
                         add_plugin(
-                            stripe_p_draft, 'StripePaymentFormPlugin', initial_language,
-                            successPage=home_page,
-                        )
-                        add_plugin(
-                            stripe_p_public, 'StripePaymentFormPlugin', initial_language,
+                            alias_content.placeholder, 'StripePaymentFormPlugin', initial_language,
                             successPage=home_page,
                         )
                         self.stdout.write('Stripe checkout link added for %s.' % p[1])

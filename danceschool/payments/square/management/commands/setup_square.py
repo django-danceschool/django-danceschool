@@ -2,41 +2,21 @@ from django.core.management.base import BaseCommand
 from django.apps import apps
 from django.conf import settings
 from django.urls import reverse
-from django.contrib.sites.models import Site
 
-from six.moves import input
-
-try:
-    import readline
-except ImportError:
-    pass
+from danceschool.core.management.commands.setupschool import SetupMixin
 
 
-class Command(BaseCommand):
+class Command(SetupMixin, BaseCommand):
     help = 'Check Square settings and create necessary placeholders for Square Checkout integration.'
-
-    def boolean_input(self, question, default=None):
-        '''
-        Method for yes/no boolean inputs
-        '''
-        result = input("%s: " % question)
-        if not result and default is not None:
-            return default
-        while len(result) < 1 or result[0].lower() not in "yn":
-            result = input("Please answer yes or no: ")
-        return result[0].lower() == "y"
 
     def handle(self, *args, **options):
 
         from cms.api import add_plugin
-        from cms.models import Page, StaticPlaceholder
+        from cms.models import Page
 
         foundErrors = False
 
-        try:
-            initial_language = settings.LANGUAGES[0][0]
-        except IndexError:
-            initial_language = getattr(settings, 'LANGUAGE_CODE', 'en')
+        initial_language = self.get_setup_language()
 
         # Do some sanity checks to ensure that necessary apps are listed in INSTALLED_APPS
         # before proceeding
@@ -113,6 +93,8 @@ CHECKING SQUARE INTEGRATION
                 self.stdout.write(self.style.ERROR('Required squareup app not installed.'))
                 foundErrors = True
 
+        this_site = self.get_setup_site()
+
         add_square_checkout = self.boolean_input(
             'Add Square Checkout form to the registration summary view to ' +
             'allow students to pay [Y/n]', True
@@ -127,21 +109,13 @@ CHECKING SQUARE INTEGRATION
                 ))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(
-                    code='registration_payment_placeholder'
-                )
-                checkout_p_draft = checkout_sp[0].draft
-                checkout_p_public = checkout_sp[0].public
+                alias, alias_content = self.get_alias('registration_payment_placeholder', initial_language)
 
-                if checkout_p_public.get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
+                if alias.cms_plugins.filter(plugin_type='SquareCheckoutFormPlugin').exists():
                     self.stdout.write('Square checkout form already present.')
                 else:
                     add_plugin(
-                        checkout_p_draft, 'SquareCheckoutFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    add_plugin(
-                        checkout_p_public, 'SquareCheckoutFormPlugin', initial_language,
+                        alias_content.placeholder, 'SquareCheckoutFormPlugin', initial_language,
                         successPage=home_page,
                     )
                     self.stdout.write('Square Checkout form added.')
@@ -180,26 +154,16 @@ Notes for Checkout integration
                 ))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(
-                    code='registration_payatdoor_placeholder'
-                )
-                checkout_p_draft = checkout_sp[0].draft
-                checkout_p_public = checkout_sp[0].public
+                alias, alias_content = self.get_alias('registration_payatdoor_placeholder', initial_language)
 
-                if checkout_p_public.get_plugins().filter(
-                    plugin_type='SquarePointOfSalePlugin'
-                ).exists():
+                if alias.cms_plugins.filter(plugin_type='SquarePointOfSalePlugin').exists():
                     self.stdout.write('Square point of sale button already present.')
                 else:
                     add_plugin(
-                        checkout_p_draft, 'SquarePointOfSalePlugin', initial_language,
+                        alias_content.placeholder, 'SquarePointOfSalePlugin', initial_language,
                         successPage=home_page,
                     )
-                    add_plugin(
-                        checkout_p_public, 'SquarePointOfSalePlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    self.stdout.write('Square Checkout form added.')
+                    self.stdout.write('Square point of sale button added.')
                     self.stdout.write(
                         """
 
@@ -238,7 +202,7 @@ Notes for point-of-sale integration
   of sale transaction without logging into this account, your transaction
   will fail with an error.
 
-                        """ % (Site.objects.get_current().domain, reverse('processSquarePointOfSale'))
+                        """ % (this_site.domain, reverse('processSquarePointOfSale'))
                     )
 
         add_square_checkout_atdoor = self.boolean_input(
@@ -254,28 +218,18 @@ Notes for point-of-sale integration
                 ))
                 foundErrors = True
             else:
-                checkout_sp = StaticPlaceholder.objects.get_or_create(
-                    code='registration_payatdoor_placeholder'
-                )
-                checkout_p_draft = checkout_sp[0].draft
-                checkout_p_public = checkout_sp[0].public
+                alias, alias_content = self.get_alias('registration_payatdoor_placeholder', initial_language)
 
-                if checkout_p_public.get_plugins().filter(
-                    plugin_type='SquareCheckoutFormPlugin'
-                ).exists():
+                if alias.cms_plugins.filter(plugin_type='SquareCheckoutFormPlugin').exists():
                     self.stdout.write(
                         'Square checkout form already present for at-the-door transactions.'
                     )
                 else:
                     add_plugin(
-                        checkout_p_draft, 'SquareCheckoutFormPlugin', initial_language,
+                        alias_content.placeholder, 'SquareCheckoutFormPlugin', initial_language,
                         successPage=home_page,
                     )
-                    add_plugin(
-                        checkout_p_public, 'SquareCheckoutFormPlugin', initial_language,
-                        successPage=home_page,
-                    )
-                    self.stdout.write('Square Checkout form added for at-the-door transcations.')
+                    self.stdout.write('Square Checkout form added for at-the-door transactions.')
 
         if not foundErrors:
             self.stdout.write(self.style.SUCCESS('Square setup complete.'))

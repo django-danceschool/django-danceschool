@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load cms_tags danceschool_tags sekizai_tags static i18n %}
+{% load djangocms_alias_tags danceschool_tags sekizai_tags static i18n %}
 
 {% block content %}
 
@@ -17,7 +17,7 @@
 
     <div class="col-md-12 top-col">
       {% block top %}
-        {% static_placeholder 'registration_top' %}
+        {% static_alias 'registration_top' %}
       {% endblock %}
     </div>
 

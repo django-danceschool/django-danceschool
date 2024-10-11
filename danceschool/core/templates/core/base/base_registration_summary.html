@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load danceschool_tags crispy_forms_tags cms_tags i18n %}
+{% load danceschool_tags crispy_forms_tags djangocms_alias_tags i18n %}
 
 {% block title %}{% trans "Complete Your Registration" %}{% endblock %}
 
@@ -28,17 +28,17 @@
 			</p>
 
 		 	{% if payAtDoor %}
-				{% static_placeholder "registration_payatdoor_placeholder" %}
-				{% static_placeholder "registration_invoice_placeholder" %}
+				{% static_alias "registration_payatdoor_placeholder" %}
+				{% static_alias "registration_invoice_placeholder" %}
 			{% else %}
-				{% static_placeholder "registration_payment_placeholder" %}
+				{% static_alias "registration_payment_placeholder" %}
 			{% endif %}
 	    {% endif %}
 
 	{% endblock %}
 
 	{% block disclaimer %}
-		{% static_placeholder "registration_summary_disclaimer" %}
+		{% static_alias "registration_summary_disclaimer" %}
 	{% endblock %}
 
 </div>

@@ -219,6 +219,7 @@ class CreateInvoicePlugin(CMSPluginBase):
         })
 
 
+plugin_pool.register_plugin(CreateInvoicePlugin)
 plugin_pool.register_plugin(StaffMemberListPlugin)
 plugin_pool.register_plugin(LocationPlugin)
 plugin_pool.register_plugin(LocationListPlugin)

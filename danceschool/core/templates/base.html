@@ -1,0 +1,109 @@
+{% load cms_tags menu_tags sekizai_tags static %}
+{% comment 'README' %}
+  This is the basic template that is used for all public-facing and non-public-facing pages.  It is recommended not to use or to edit this template directly, but rather to extend this template as needed, or to use the included templates home.html and admin_home.html, which are children of this template.
+{% endcomment %}
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+
+    {# Using UTF-8 for non-breaking spaces and other stuff #}
+    <meta content="text/html; charset=UTF-8" http-equiv="content-type" />
+
+    {# Viewport definition #}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+
+    {# Fix for Windows Phones #}
+    <meta http-equiv="X-UA-Compatible" content="IE=9; IE=8; IE=7; IE=EDGE, chrome=1" />
+
+    <title>{% block title %}{% page_attribute "page_title" %}{% endblock %}</title>
+
+    {# Javascript Includes: Jquery and bootstrap go at the top to avoid issues with included scripts #}
+    <script type="text/javascript" src="{% static 'admin/js/vendor/jquery/jquery.min.js' %}"></script>
+    {# Used inline by certain admin page scripts #}
+    <script type="text/javascript" src="{% static 'admin/js/jquery.init.js' %}"></script>
+    <script type="text/javascript">
+      // To prevent errors for Select2 JS
+      var $ = django.jQuery;
+      var jQuery = django.jQuery;
+    </script>
+    <script type="text/javascript" src="{% static 'popper/popper.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
+
+    {% block extra_head %}
+
+        {# Favicon #}
+        {% block favicon %}<link rel="icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}" />{% endblock %}
+
+        {# Meta tags for SEO #}
+        <meta name="title" content="{% block meta_title %}{% page_attribute 'page_title' %}{% endblock %}" />
+        <meta name="description" content="{% block meta_description %}{% page_attribute 'meta_description' %}{% endblock %}" />
+        <meta name="keywords" content="{% block meta_keywords %}{% endblock %}" />
+        <meta name="category" content="{% block meta_category %}Recreation &amp; Sport{% endblock %}" />
+        <meta name="copyright" content="{% block meta_copyright %}{% endblock %}" />
+        <meta name="rating" content="{% block meta_rating %}Safe for kids{% endblock %}" />
+
+        {# Facebook Open Graph Tags #}
+        <meta property="og:title" content="{% block facebook_og_title %}{% page_attribute 'page_title' %}{% endblock %}" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="{{ site }}" />
+        <meta property="og:description" content="{% block facebook_og_description %}{% page_attribute 'meta_description' %}{% endblock %}" />
+        <meta property="og:image" content="{% block facebook_og_image %}{% endblock %}" />
+
+    {% endblock %}
+
+    {% render_block "meta" %}
+    {% block extra_meta %}{% endblock %}
+
+    {# Bootstrap and Related Files #}
+    {% addtoblock "css" %}
+      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
+    {% endaddtoblock %}
+    {% addtoblock "css" %}
+      <link rel="stylesheet" type="text/css" href="{% static 'bootstrap/css/bootstrap.min.css' %}" />
+    {% endaddtoblock %}
+
+    {% render_block "css" %}
+    {% block extra_css %}{% endblock %}
+
+  </head>
+
+  <body>
+    <span itemscope itemtype="http://schema.org/LocalBusiness">
+
+      {% cms_toolbar %}
+
+      {% block body %}
+
+      {% block navbar %}
+          {% show_menu 0 100 100 100 "cms/navbar.html" %}
+      {% endblock %}
+
+      <div class="container my-4" id="wrapper">
+
+          {% block main %}
+            {# Default to a single column page #}
+            {% block content %}
+            <div class="row">
+            <div class="col-md-11 content-col">
+            {% placeholder "content" %}
+            </div>
+            </div>
+            {% endblock %}
+
+            {% block footer %}{% endblock %}
+
+          {% endblock %}
+
+      </div>
+
+      {% endblock %}
+    </span>
+
+  {% render_block "js" %}
+  {% block extra_js %}{% endblock %}
+
+  </body>
+
+</html>
