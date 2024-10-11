@@ -387,6 +387,8 @@ class AdminTest(TestCase):
     superusers.
     '''
 
+    REDIRECT_ADMIN_OBJECTS = ['AliasContentVersion', 'PageContentVersion']
+
     @classmethod
     def setUpTestData(cls):
         cls.superuser = User.objects.create_superuser(
@@ -413,7 +415,9 @@ class AdminTest(TestCase):
         self.assertNotEqual(app_list, [])
 
         for model in chain(*[x.get('models', []) for x in app_list]):
-            if model.get('admin_url'):
+            if model.get('admin_url') and (
+                model.get('object_name') not in self.REDIRECT_ADMIN_OBJECTS
+            ):
                 response = self.client.get(model['admin_url'])
                 self.assertEqual(response.status_code, 200)
             if model.get('add_url'):
