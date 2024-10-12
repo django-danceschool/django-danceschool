@@ -48,6 +48,7 @@ setup(
         'django-sekizai>=4.1.0',
         'django-utils-six>=2.0',
         'django-weasyprint>=2.3.0',
+        'djangocms-4-migration==0.0.2',
         'djangocms-admin-style>=3.3.1',
         'djangocms-alias>=2.0.1',
         'djangocms-attributes-field>=3.0.0',
