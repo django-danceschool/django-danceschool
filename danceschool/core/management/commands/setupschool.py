@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.apps import apps
@@ -29,13 +30,10 @@ class SetupMixin(object):
     def get_setup_user(self):
         this_user = User.objects.filter(is_superuser=True).first()
         if not this_user:
-            self.stdout.write(
-                self.style.ERROR(
-                    'ERROR: Superuser has not yet been created.  Please run ' +
-                    '\'python manage.py createsuperuser\' before proceeding.'
-                )
+            raise ObjectDoesNotExist(
+                'ERROR: Superuser has not yet been created.  Please run ' +
+                '\'python manage.py createsuperuser\' before proceeding.'
             )
-            return None
         return this_user
 
     def get_setup_language(self):
