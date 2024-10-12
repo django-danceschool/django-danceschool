@@ -34,7 +34,7 @@
 </div>
 
 {% if staffmember or perms.djangocms_alias.change_alias %}
-	{% static_alias 'staffmember_profile_placeholder' %}
+	{% static_alias 'staffmember_profile_placeholder' site %}
 {% endif %}
 
 {% if staffmember %}
@@ -70,7 +70,7 @@
 {% endif %}
 
 {% if customer or perms.djangocms_alias.change_alias %}
-	{% static_alias 'customer_profile_placeholder' %}
+	{% static_alias 'customer_profile_placeholder' site %}
 {% endif %}
 
 {% if customer %}
