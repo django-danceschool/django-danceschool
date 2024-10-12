@@ -647,6 +647,7 @@ class DeleteExpiredInvoices(BooleanPreference):
     )
     default = True
 
+
 @global_preferences_registry.register
 class RetainExpiredInvoicesMinutes(IntegerPreference):
     section = registration
