@@ -103,11 +103,13 @@ class MerchItem(models.Model):
 
     @property
     def soldOut(self):
-        return self.item_variant.exclude(soldOut=True).exists()
+        qs = self.item_variant if self.pk else MerchItemVariant.objects.none()
+        return qs.exclude(soldOut=True).exists()
 
     @property
     def numVariants(self):
-        return self.item_variant.count()
+        qs = self.item_variant if self.pk else MerchItemVariant.objects.none()
+        return qs.count()
     numVariants.fget.short_description = _('# Variants')
 
     def __str__(self):
@@ -174,15 +176,18 @@ class MerchItemVariant(models.Model):
 
     @property
     def fullName(self):
-        return '{}: {}'.format(self.item.name, self.name)
+        return '{}: {}'.format(getattr(getattr(self,'item',None),'name',''), self.name)
 
     @property
     def currentInventory(self):
+        qs = self.orders if self.pk else MerchOrder.objects.none()
+        qs_adjust = self.quantity_adjustments if self.pk else MerchQuantityAdjustment.objects.none()
+
         return (
             (self.originalQuantity or 0) +
-            (self.quantity_adjustments.aggregate(total=Sum('amount')).get('total', 0) or 0) -
+            (qs_adjust.aggregate(total=Sum('amount')).get('total', 0) or 0) -
             (
-                self.orders.exclude(
+                qs.exclude(
                     order__status__in=[
                         MerchOrder.OrderStatus.unsubmitted,
                         MerchOrder.OrderStatus.cancelled,
@@ -258,7 +263,7 @@ class MerchQuantityAdjustment(models.Model):
 
     def __str__(self):
         return str(_('Inventory adjustment for {itemName}, {submissionDate}'.format(
-            itemName=self.variant.fullName, submissionDate=self.submissionDate)
+            itemName=getattr(getattr(self,'variant',None),'fullName',''), submissionDate=self.submissionDate)
         ))
 
 
@@ -299,7 +304,9 @@ class MerchOrder(models.Model):
 
     @property
     def grossTotal(self):
-        return self.items.annotate(
+
+        qs = self.items if self.pk else MerchOrderItem.objects.none()
+        return qs.annotate(
             unitPrice=Case(
                 When(item__price__isnull=True, then=F('item__item__defaultPrice')),
                 default=F('item__price'), output_field=models.FloatField()
@@ -320,7 +327,7 @@ class MerchOrder(models.Model):
         items on the invoice associated with this order.
         '''
 
-        if not getattr(self, 'invoice', None):
+        if not getattr(self, 'invoice', None) or not self.pk:
             return {}
         return self.invoice.invoiceitem_set.exclude(
             id__in=self.items.values_list(
