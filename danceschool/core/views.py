@@ -461,7 +461,7 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         ).filter(dropInFilters).select_related(
             'registration', 'event', 'customer',
             'invoiceItem', 'role', 'registration__invoice',
-        ).order_by('registration__firstName', 'registration__lastName')
+        ).order_by('customer__first_name', 'customer__last_name')
         return registrations
 
 
