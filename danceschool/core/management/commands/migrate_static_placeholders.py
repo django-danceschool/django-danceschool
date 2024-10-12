@@ -81,8 +81,8 @@ def _get_or_create_alias_content(alias, name, language, user, state=PUBLISHED):
     content_ct = ContentType.objects.get_for_model(AliasContent)
 
     version, version_created = Version.objects.get_or_create(
-        content_type=content_ct, object_id=alias_content.id, created_by=user,
-        state=state
+        content_type=content_ct, object_id=alias_content.id,
+        defaults={'state': state, 'created_by': user}
     )
 
     if created:
