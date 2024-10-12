@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
 from django_admin_listfilter_dropdown.filters import ChoiceDropdownFilter
-from rangefilter.filter import DateRangeFilter
+from rangefilter.filters import DateRangeFilter
 
 from .models import (
     MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem,

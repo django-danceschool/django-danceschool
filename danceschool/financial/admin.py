@@ -14,7 +14,7 @@ from dal import autocomplete
 from django_admin_listfilter_dropdown.filters import (
     DropdownFilter, RelatedDropdownFilter
 )
-from rangefilter.filter import DateRangeFilter
+from rangefilter.filters import DateRangeFilter
 from polymorphic.admin import (
     PolymorphicParentModelAdmin, PolymorphicChildModelAdmin,
     PolymorphicChildModelFilter

@@ -3,7 +3,7 @@ from django.forms import ModelForm, HiddenInput
 from django.utils.translation import gettext_lazy as _
 
 from django_admin_listfilter_dropdown.filters import RelatedDropdownFilter
-from rangefilter.filter import DateRangeFilter
+from rangefilter.filters import DateRangeFilter
 
 from .models import (
     InstructorPrivateLessonDetails, InstructorAvailabilitySlot,

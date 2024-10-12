@@ -6,7 +6,7 @@ from dal import autocomplete
 from django_admin_listfilter_dropdown.filters import (
     ChoiceDropdownFilter, RelatedDropdownFilter
 )
-from rangefilter.filter import DateRangeFilter
+from rangefilter.filters import DateRangeFilter
 
 from .models import (
     DiscountCategory, DiscountCombo, DiscountComboComponent,

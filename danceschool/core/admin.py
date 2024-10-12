@@ -19,7 +19,7 @@ from polymorphic.admin import (
     PolymorphicParentModelAdmin, PolymorphicChildModelAdmin,
     PolymorphicChildModelFilter
 )
-from rangefilter.filter import DateRangeFilter
+from rangefilter.filters import DateRangeFilter
 from cms.admin.placeholderadmin import FrontendEditableAdminMixin
 import json
 import six
