@@ -50,6 +50,7 @@ setup(
         'django-weasyprint>=2.3.0',
         'djangocms-admin-style>=3.3.1',
         'djangocms-alias>=2.0.1',
+        'djangocms-attributes-field>=3.0.0',
         'djangocms-frontend>=1.3.4',
         'djangocms_icon>=2.1.0',
         'djangocms-link>=4.0.0',
