@@ -70,7 +70,7 @@ CHECKING STRIPE INTEGRATION
             'allow students to pay [Y/n]', True
         )
         if add_stripe_checkout:
-            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR(
                     'Cannot add Stripe checkout link because a home page has ' +

@@ -55,7 +55,7 @@ CHECKING AT-THE-DOOR PAYMENTS INTEGRATION
                 True
             )
             if add_willpayatdoor:
-                home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
+                home_page = Page.objects.filter(is_home=True).first()
                 if not home_page:
                     self.stdout.write(self.style.ERROR(
                         'Cannot add at-the-door payments checkbox because a ' +

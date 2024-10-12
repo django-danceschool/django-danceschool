@@ -100,9 +100,7 @@ CHECKING SQUARE INTEGRATION
             'allow students to pay [Y/n]', True
         )
         if add_square_checkout:
-            home_page = Page.objects.filter(
-                is_home=True, publisher_is_draft=False
-            ).first()
+            home_page = Page.objects.filter(is_home=True).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR(
                     'Cannot add Square Checkout form because a home page has not yet been set.'
@@ -146,7 +144,7 @@ Notes for Checkout integration
             'allow students to pay [Y/n]', True
         )
         if add_square_pos:
-            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR(
                     'Cannot add Square point-of-sale button because a home ' +
@@ -210,7 +208,7 @@ Notes for point-of-sale integration
             'point-of-sale is not working [y/N]', False
         )
         if add_square_checkout_atdoor:
-            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR(
                     'Cannot add Square Checkout form because a home page ' +

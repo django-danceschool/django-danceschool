@@ -78,7 +78,7 @@ CHECKING PAYPAL INTEGRATION
             'allow students to pay [Y/n]', True
         )
         if add_paypal_paynow:
-            home_page = Page.objects.filter(is_home=True, publisher_is_draft=False).first()
+            home_page = Page.objects.filter(is_home=True).first()
             if not home_page:
                 self.stdout.write(self.style.ERROR('Cannot add Pay Now link because a home page has not yet been set.'))
             else:
