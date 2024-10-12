@@ -6,6 +6,7 @@ import re
 from itertools import chain
 
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.core.management.base import BaseCommand
 
 from cms.models import CMSPlugin, Placeholder, StaticPlaceholder
@@ -77,7 +78,12 @@ def _get_or_create_alias_content(alias, name, language, user, state=PUBLISHED):
         language=language,
     )
 
-    Version.objects.create(content=alias_content, created_by=user, state=state)
+    content_ct = ContentType.objects.get_for_model(AliasContent)
+
+    version, version_created = Version.objects.get_or_create(
+        content_type=content_ct, object_id=alias_content.id, created_by=user,
+        state=state
+    )
 
     if created:
         logger.info(f'Created AliasContent {alias_content}')
