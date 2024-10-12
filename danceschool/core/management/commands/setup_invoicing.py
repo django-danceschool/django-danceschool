@@ -45,7 +45,7 @@ CHECKING INVOICE GENERATION FUNCTIONALITY
         if add_invoicing:
             alias, alias_content = self.get_alias('registration_invoice_placeholder', initial_language)
 
-            if alias.cms_plugins.filter(plugin_type='CreateInvoicePlugin').exists():
+            if alias..get_placeholder().get_plugins().filter(plugin_type='CreateInvoicePlugin').exists():
                 self.stdout.write('Invoice generation form already present.')
             else:
                 add_plugin(
