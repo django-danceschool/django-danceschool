@@ -42,7 +42,7 @@ setup(
         'django-filter>=24.3',
         'django-ical>=1.9.2',
         'django-imagekit>=5.0.0',
-        'django-multi-email-field>=0.7.0',
+        'git+https://github.com/fle/django-multi-email-field.git@b41318abe81f8a4062136650871135ec49747944',
         'django-multiselectfield>=0.1.13',
         'django-polymorphic>=3.1.0',
         'django-sekizai>=4.1.0',
