@@ -84,7 +84,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Series staff member',
                 'verbose_name_plural': 'Series staff members',
                 'proxy': True,
-                'indexes': [],
             },
             bases=('core.eventstaffmember',),
         ),

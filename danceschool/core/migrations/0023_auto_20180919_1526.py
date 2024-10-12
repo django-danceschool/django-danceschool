@@ -54,7 +54,6 @@ class Migration(migrations.Migration):
                 'verbose_name': 'Event DJ',
                 'verbose_name_plural': 'Event DJs',
                 'proxy': True,
-                'indexes': [],
             },
             bases=('core.eventstaffmember',),
         ),
