@@ -85,7 +85,7 @@ CHECKING STRIPE INTEGRATION
                 for p in placeholders:
                     alias, alias_content = self.get_alias(p[0], initial_language)
 
-                    if alias.cms_plugins.filter(plugin_type='StripePaymentFormPlugin').exists():
+                    if alias.get_placeholder().get_plugins().filter(plugin_type='StripePaymentFormPlugin').exists():
                         self.stdout.write('Stripe Checkout button already present for %s.' % p[1])
                     else:
                         add_plugin(

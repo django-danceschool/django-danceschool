@@ -28,17 +28,17 @@
 			</p>
 
 		 	{% if payAtDoor %}
-				{% static_alias "registration_payatdoor_placeholder" %}
-				{% static_alias "registration_invoice_placeholder" %}
+				{% static_alias "registration_payatdoor_placeholder" site %}
+				{% static_alias "registration_invoice_placeholder" site %}
 			{% else %}
-				{% static_alias "registration_payment_placeholder" %}
+				{% static_alias "registration_payment_placeholder" site %}
 			{% endif %}
 	    {% endif %}
 
 	{% endblock %}
 
 	{% block disclaimer %}
-		{% static_alias "registration_summary_disclaimer" %}
+		{% static_alias "registration_summary_disclaimer" site %}
 	{% endblock %}
 
 </div>

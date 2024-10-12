@@ -90,7 +90,7 @@ CHECKING PAYPAL INTEGRATION
                 for p in placeholders:
                     alias, alias_content = self.get_alias(p[0], initial_language)
 
-                    if alias.cms_plugins.filter(plugin_type='CartPaymentFormPlugin').exists():
+                    if alias.get_placeholder().get_plugins().filter(plugin_type='CartPaymentFormPlugin').exists():
                         self.stdout.write('Paypal Pay Now button already present for %s.' % p[1])
                     else:
                         add_plugin(

@@ -41,7 +41,7 @@ CHECKING AT-THE-DOOR PAYMENTS INTEGRATION
         if add_payatdoor:
             alias, alias_content = self.get_alias('registration_payatdoor_placeholder', initial_language)
 
-            if alias.cms_plugins.filter(plugin_type='PayAtDoorFormPlugin').exists():
+            if alias.get_placeholder().get_plugins().filter(plugin_type='PayAtDoorFormPlugin').exists():
                 self.stdout.write('At-the-door payment processing form already present.')
             else:
                 add_plugin(
@@ -64,7 +64,7 @@ CHECKING AT-THE-DOOR PAYMENTS INTEGRATION
                 else:
                     alias, alias_content = self.get_alias('registration_payment_placeholder', initial_language)
 
-                    if alias.cms_plugins.filter(plugin_type='WillPayAtDoorFormPlugin').exists():
+                    if alias.get_placeholder().get_plugins().filter(plugin_type='WillPayAtDoorFormPlugin').exists():
                         self.stdout.write('At-the-door payments checkbox already present.')
                     else:
                         add_plugin(
