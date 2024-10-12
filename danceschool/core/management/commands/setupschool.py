@@ -36,6 +36,7 @@ class SetupMixin(object):
                 )
             )
             return None
+        return this_user
 
     def get_setup_language(self):
         try:
