@@ -22,7 +22,7 @@ setup(
     author_email='lee.c.tucker@gmail.com',
     install_requires=[
         'beautifulsoup4>=4.12.3',
-        'Django>=5.1.1,<6.0',
+        'Django>=5.0.9,<5.1',
         'django-addanother>=2.2.2',
         'django-admin-list-filter-dropdown>=1.0.3',
         'django-admin-rangefilter>=0.13.2',
