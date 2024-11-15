@@ -437,7 +437,7 @@ class RepeatedExpenseRule(PolymorphicModel):
         endTime = tree.end()
 
         if remove_existing_overlaps:
-            if startTime and endTime:
+            if startTime and endTime and self.pk:
                 overlapping = self.expenseitem_set.filter(
                     (Q(periodStart__lte=endTime) & Q(periodStart__gte=startTime)) |
                     (Q(periodEnd__gte=startTime) & Q(periodEnd__lte=endTime)) |
@@ -448,7 +448,7 @@ class RepeatedExpenseRule(PolymorphicModel):
                 if payTo:
                     overlapping = overlapping.filter(payTo=payTo)
             else:
-                overlapping = self.expenseitem_set.none()
+                overlapping = ExpenseItem.objects.none()
 
             for item in overlapping:
                 tree.chop(item.periodStart, item.periodEnd)
@@ -887,7 +887,7 @@ class ExpenseItem(models.Model):
         Provide a default allocation across event occurrences that is solely
         based on the duration of all occurrences of the event.
         '''
-        if not self.event:
+        if not getattr(getattr(self, 'event', None), 'pk', None):
             return {}
 
         occurrences = self.event.eventoccurrence_set.annotate(
@@ -915,8 +915,10 @@ class ExpenseItem(models.Model):
         allocation across each occurrence that is associated with the expense.
         '''
 
-       # First, ensure that this expense is allocated across only one content
+        # First, ensure that this expense is allocated across only one content
         # type. Otherwise, the expense is currently inallocable.
+        if not self.pk:
+            return self.getDefaultOccurrenceAllocation()
         content_types = list(set(self.expensepurpose_set.values_list('content_type', flat=True)))
         if len(content_types) != 1:
             return self.getDefaultOccurrenceAllocation()
@@ -1083,19 +1085,21 @@ class ExpenseItem(models.Model):
 
         if not self.accrualDate:
             if self.event:
-                staff_purpose = self.expensepurpose_set.filter(
-                    content_type_id=get_eventStaffMember_ct()
-                )
                 last_end = datetime.min.replace(tzinfo=timezone.utc)
 
-                for s in staff_purpose:
-                    last_end = max(
-                        last_end,
-                        getattr(
-                            s.purpose.occurrences.order_by('endTime').last(),
-                            'endTime', self.event.endTime
-                        )
+                if self.pk:
+                    staff_purpose = self.expensepurpose_set.filter(
+                        content_type_id=get_eventStaffMember_ct()
                     )
+
+                    for s in staff_purpose:
+                        last_end = max(
+                            last_end,
+                            getattr(
+                                s.purpose.occurrences.order_by('endTime').last(),
+                                'endTime', self.event.endTime
+                            )
+                        )
 
                 if last_end == datetime.min.replace(tzinfo=timezone.utc):
                     last_end = self.event.endTime
@@ -1305,7 +1309,7 @@ class RevenueItem(models.Model):
         If this item is associated with a registration, then return all other items associated with
         the same registration.
         '''
-        if self.registration:
+        if getattr(getattr(self,'registration', None), 'pk', None):
             return self.registration.revenueitem_set.exclude(pk=self.pk)
     relatedItems.fget.short_description = _('Related items')
 
@@ -1326,7 +1330,7 @@ class RevenueItem(models.Model):
         Provide a default allocation across event occurrences that is solely
         based on the duration of all occurrences of the event.
         '''
-        if not self.event:
+        if not getattr(getattr(self, 'event', None), 'pk', None):
             return {}
 
         occurrences = self.event.eventoccurrence_set.annotate(
