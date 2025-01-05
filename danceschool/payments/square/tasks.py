@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from huey.contrib.djhuey import db_task, db_periodic_task
 from huey import crontab
