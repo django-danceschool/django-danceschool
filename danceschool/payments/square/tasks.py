@@ -115,7 +115,7 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
 
     # Get the local records associated with these updated API records. Their
     # JSON data will be updated to reflect the API responses.
-    existing_records = SquarePaymentRecords.objects.filter(
+    existing_records = SquarePaymentRecord.objects.filter(
         paymentId__in=(
             [x.get('id') for x in remaining_payments] +
             [x.get('payment_id') for x in all_refunds]
