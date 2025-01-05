@@ -168,18 +168,22 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
     # a revenue item, meaning that financial reports will not yet be in sync
     # with actual payments received. Nonetheless, adding them to the database
     # here allows a user to generate an invoice later, or to associate these
-    # payments with an existing invoice, an event, etc.
-    SquarePaymentRecord.objects.bulk_create([
-        SquarePaymentRecord(
-            paymentId=x.get('id'),
-            orderId=x.get('order_id'),
-            locationId=x.get('location_id'),
-            data={
-                'apiPaymentResponse': x,
-                'apiPaymentResponseDate': update_time
-            }
-        )
-        for x in remaining_payments
-    ])
+    # payments with an existing invoice, an event, etc. Note that the
+    # bulk_create method is not available here because this model is
+    # polymorphic, so we loop through records and create one at a time.
+    created_objects = []
 
-    logger.info(f'Created {len(remaining_payments)} new SquarePaymentRecords.')
+    for x in remaining_payments:
+        created_objects.append(
+            SquarePaymentRecord.objects.create(
+                paymentId=x.get('id'),
+                orderId=x.get('order_id'),
+                locationId=x.get('location_id'),
+                data={
+                    'apiPaymentResponse': x,
+                    'apiPaymentResponseDate': update_time
+                }
+            )
+        )
+
+    logger.info(f'Created {len(created_objects)} new SquarePaymentRecords.')
