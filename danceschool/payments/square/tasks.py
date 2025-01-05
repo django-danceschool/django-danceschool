@@ -128,7 +128,7 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
         # that the data are popped from the full list, so that what will
         # remain after this loop are the set of API payments that still lack a
         # SquarePaymentRecord.
-        payment_response = pop_by_key_value(remaining_payments, 'id', record.PaymentId)
+        payment_response = pop_by_key_value(remaining_payments, 'id', record.paymentId)
         if payment_response:
             record.data.update({
                 'apiPaymentResponse': payment_response,
