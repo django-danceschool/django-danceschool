@@ -74,7 +74,7 @@ setup(
         'redis>=5.1.1',
         'requests>=2.32.3',
         'six>=1.16.0',
-        'squareup>=38.1.0.20240919',
+        'squareup>=39.1.0.20241218',
         'stripe>=11.1.0',
         'unicodecsv>=0.14.1',
     ],
