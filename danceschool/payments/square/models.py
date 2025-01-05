@@ -1,6 +1,4 @@
 from django.db import models
-from django.db.models import CheckConstraint, Q
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
@@ -8,15 +6,12 @@ from cms.models.pluginmodel import CMSPlugin
 from cms.models.fields import PageField
 
 import logging
-from square.client import Client
 import uuid
 
 from danceschool.core.models import PaymentRecord
 from danceschool.core.utils.timezone import ensure_localtime
 from .tasks import updateSquareFees
-from .helpers import (
-    getClient, getPayments, getRefunds, getNetAmountPaid, getNetRefund, getNetFees
-)
+from .api_client import api_client
 
 
 # Define logger for this file
@@ -29,12 +24,12 @@ class SquarePaymentRecord(PaymentRecord):
     using the REST API.
     '''
 
+    paymentId = models.CharField(
+        _('Square Payment ID'), max_length=100, unique=True
+    )
     orderId = models.CharField(
         _('Square Order ID'), max_length=100, unique=True, null=True,
         db_column='transactionId',
-    )
-    paymentId = models.CharField(
-        _('Square Payment ID'), max_length=100, unique=True, null=True
     )
     locationId = models.CharField(_('Square Location ID'), max_length=100)
     payerEmail = models.EmailField(_('Associated email'), null=True, blank=True)
@@ -54,37 +49,46 @@ class SquarePaymentRecord(PaymentRecord):
         '''
         Payment methods should override this if they keep their own unique identifiers.
         '''
-        return self.paymentId or self.orderId
+        return self.paymentId
 
     @property
     def netAmountPaid(self):
-        return getNetAmountPaid(
-            order_id=self.orderId, client=self.client,
-            payments=self.getPayments()
+        payment = self.getPayment()
+        return (
+            payment.get('amount_money', {}).get('amount', 0) / 100 -
+            payment.get('refunded_money', {}).get('amount', 0) / 100
         )
 
     @property
     def netRefund(self):
-        return getNetRefund(
-            order_id=self.orderId, client=self.client,
-            payments=self.getPayments(),
+        payment = self.getPayment()
+        return (
+            payment.get('refunded_money', {}).get('amount', 0) / 100
         )
 
     @property
     def netFees(self):
-        return getNetFees(
-            order_id=self.orderId, client=self.client,
-            payments=self.getPayments(), refunds=self.getRefunds()
-        )
+        payment = self.getPayment()
+        refunds = self.getRefunds(payment=payment)
+
+        fees = payment.get('processing_fee', []).get('amount_money', {}).get('amount', 0) / 100
+
+        for r in refunds:
+            fees += sum([
+                f.get('amount_money', {}).get('amount', 0) / 100
+                for f in r.get('processing_fee', [])
+            ])
+
+        return fees
 
     @property
     def netRevenue(self):
         return self.netAmountPaid - self.netFees
 
     def getClient(self):
-        return getClient()
+        return api_client
 
-    def getPayments(
+    def getPayment(
         self, client=None, use_cache=True, update_cache=True, commit=True
     ):
 
@@ -95,10 +99,7 @@ class SquarePaymentRecord(PaymentRecord):
         if not client:
             client = self.client
 
-        if self.paymentId:
-            response = [client.payments.get_payment(self.paymentId).body.get('payment', {}),]
-        else:
-            response = getPayments(order_id=self.orderId, client=client)
+        response = client.payments.get_payment(self.paymentId).body.get('payment', {})
 
         if (update_cache is True) and (response != cached):
             self.data['apiPaymentResponse'] = response
@@ -108,7 +109,7 @@ class SquarePaymentRecord(PaymentRecord):
         return response
 
     def getRefunds(
-            self, client=None, use_cache=True, update_cache=True, payments=None,
+            self, client=None, use_cache=True, update_cache=True, payment=None,
             commit=True
     ):
 
@@ -116,12 +117,22 @@ class SquarePaymentRecord(PaymentRecord):
         if use_cache and cached is not None:
                 return cached
 
-        if not payments:
-            payments = self.getPayments(client, use_cache, update_cache, commit)
+        if not client:
+            client = self.client
 
-        response = getRefunds(
-            order_id=self.orderId, client=client, payments=payments
-        )
+        if not payment:
+            payment = self.getPayment(client, use_cache, update_cache, commit)
+
+        response = []
+
+        if payment.get('refund_ids', []):
+            for y in payment['refund_ids']:
+                refund_response = client.refunds.get_payment_refund(y)
+                if refund_response.is_error():
+                    continue
+                r = refund_response.body.get('refund', {})
+                if r:
+                    response.append(r)
 
         if update_cache and response != cached:
             self.data['apiRefundResponse'] = response
@@ -134,56 +145,46 @@ class SquarePaymentRecord(PaymentRecord):
         return self.payerEmail
 
     def refund(self, amount=None):
-        client = self.client
-
-        payments = self.getPayments(client=client)
-        if not payments:
+        # Start by ensuring that we have the most recent information on the
+        # payment and what remains to be refunded.
+        payment = self.getPayment(use_cache=False, commit=False)
+        if not payment:
             return {
                 'status': 'error', 'errors': [
-                    {'code': 'no_payments', 'message': _('Unable to retrieve Square payments from record.')},
+                    {'code': 'no_payment', 'message': _('Unable to retrieve Square payment from record.')},
                 ]
-
             }
 
-        # For both partial and full refunds, we loop through the tenders and refund
-        # them as much as possible until we've refunded all that we want to refund.
-        if not amount:
-            amount = sum([
-                x.get('amount_money', {}).get('amount', 0) / 100 -
-                x.get('refunded_money', {}).get('amount', 0) / 100
-                for x in payments
-            ])
+        # SquarePaymentRecords used to potentially reference multiple tenders,
+        # but they are now associated with a single payment that can be refunded
+        # up to the allowable amount directly.
+        amount_remaining = (
+            payment.get('amount_money', {}).get('amount', 0) / 100 -
+            payment.get('refunded_money', {}).get('amount', 0) / 100
+        )
+
+        if amount:
+            amount_to_refund = min(amount, amount_remaining)
+        else:
+            amount_to_refund = amount_remaining
 
         refundData = []
+        idempotency_key = str(uuid.uuid1())
 
-        remains_to_refund = amount
-        tender_index = 0
-        while remains_to_refund > 0:
-            idempotency_key = str(uuid.uuid1())
-
-            this_tender = payments[tender_index]
-            this_tender_remaining = (
-                this_tender.get('amount_money', {}).get('amount', 0) / 100 -
-                this_tender.get('refunded_money', {}).get('amount', 0) / 100
-            )
-            
-            to_refund = min(this_tender_remaining, remains_to_refund)
-
-            body = {
-                'idempotency_key': idempotency_key,
-                'payment_id': this_tender.get('id'),
-                'amount_money': {
-                    'amount': int(to_refund * 100),
-                    'currency': this_tender.get('amount_money', {}).get('currency')
-                }
+        body = {
+            'idempotency_key': idempotency_key,
+            'payment_id': payment.get('id'),
+            'amount_money': {
+                'amount': int(amount_to_refund * 100),
+                'currency': payment.get('amount_money', {}).get('currency')
             }
+        }
 
-            response = client.refunds.refund_payment(body)
-            if response.is_error():
-                logger.error('Error in providing Square refund: %s' % response.errors)
-                refundData.append({'status': 'error', 'errors': response.errors})
-                break
-
+        response = client.refunds.refund_payment(body)
+        if response.is_error():
+            logger.error('Error in providing Square refund: %s' % response.errors)
+            refundData.append({'status': 'error', 'errors': response.errors})
+        else:
             this_refund = response.body.get('refund', {})
 
             # Note that fees are often 0 or missing here, but we enqueue the task
@@ -194,9 +195,6 @@ class SquarePaymentRecord(PaymentRecord):
                 'refundAmount': float(this_refund.get('amount_money', {}).get('amount', 0)) / 100,
                 'fees': float(this_refund.get('app_fee_money', {}).get('amount', 0)) / 100,
             })
-
-            remains_to_refund -= to_refund
-            tender_index += 1
 
             # Once the refund process is complete, fees will be calculated,
             # so schedule a task to get them and update records one minute
@@ -216,12 +214,6 @@ class SquarePaymentRecord(PaymentRecord):
         )
         verbose_name = _('Square payment record')
         verbose_name_plural = _('Payment records')
-        constraints = (
-            CheckConstraint(
-                name='order_or_payment_specified',
-                check=(Q(orderId__isnull=False) | Q(paymentId__isnull=False))
-            ),
-        )
 
 
 class SquareCheckoutFormModel(CMSPlugin):
