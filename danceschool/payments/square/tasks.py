@@ -33,7 +33,7 @@ def updateSquareFees(paymentRecord):
 
 
 @db_periodic_task(crontab(hour='*'))
-def updateSquarePaymentRecords(update_all=False):
+def updateSquarePaymentRecords(update_all=False, begin_time=None):
     '''
     To keep the Square records on the server in sync with those reported by
     Square, this task pulls down any recent updates to the Square payment
@@ -59,7 +59,7 @@ def updateSquarePaymentRecords(update_all=False):
     refund_api_kwargs = {}
 
     # Use the database to determine how recent the most recent updates are.
-    if not update_all:
+    if not update_all and not begin_time:
         last_updated = SquarePaymentRecord.objects.filter(
             data__apiPaymentResponseDate__isnull=False
         ).order_by(
@@ -69,6 +69,9 @@ def updateSquarePaymentRecords(update_all=False):
         if last_updated:
             api_kwargs['updated_at_begin_time'] = last_updated
             refund_api_kwargs['begin_time'] = last_updated
+    elif begin_time:
+            api_kwargs['updated_at_begin_time'] = begin_time.isoformat()
+            refund_api_kwargs['begin_time'] = begin_time.isoformat()
 
     # Set the time of this update to associate with all records just before we
     # call the API.
@@ -99,7 +102,7 @@ def updateSquarePaymentRecords(update_all=False):
     all_refunds = []
 
     while has_next_page:
-        refunds_page = client.refunds.list_refunds(
+        refunds_page = client.refunds.list_payment_refunds(
             location_id=settings.SQUARE_LOCATION_ID,
             cursor=cursor,
             **refund_api_kwargs
