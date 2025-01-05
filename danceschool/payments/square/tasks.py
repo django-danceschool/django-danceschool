@@ -95,6 +95,13 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
         if payments_page.errors or cursor is None:
             has_next_page = False
 
+    # We only want completed payments to be included in our database, but the
+    # API cannot filter, so we fgilter the response list here before further
+    # processing.
+    remaining_payments = [
+        x for x in remaining_payments if x.get('status') == 'COMPLETED'
+    ]
+
     # Now, apply a similar procedure to collect refund information so that we
     # can update associated payment records.
     cursor = None
