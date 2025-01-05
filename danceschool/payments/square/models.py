@@ -180,7 +180,7 @@ class SquarePaymentRecord(PaymentRecord):
             }
         }
 
-        response = client.refunds.refund_payment(body)
+        response = self.client.refunds.refund_payment(body)
         if response.is_error():
             logger.error('Error in providing Square refund: %s' % response.errors)
             refundData.append({'status': 'error', 'errors': response.errors})
