@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -24,7 +25,17 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     invoiceLink.allow_tags = True
     invoiceLink.short_description = _('Registration invoice')
 
-    list_display = ['paymentId', 'orderId', 'invoiceLink']
+    def receiptLink(self, item):
+        return mark_safe(
+            f'<a href="{item.receiptUrl}">{item.receiptNumber}</a>'
+        )
+    receiptLink.allow_tags = True
+    receiptLink.short_description = _('Square Receipt')
+
+    list_display = [
+        'paymentId', 'orderId', 'creationDate', 'netAmountPaid', 'netFees',
+        'invoiceLink', 'receiptLink'
+    ]
     list_filter = [
         ('creationDate', DateRangeFilter),
         ('modifiedDate', DateRangeFilter),
@@ -32,15 +43,27 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     ]
     search_fields = ['paymentId', 'orderId', 'invoice__id']
 
-    ordering = ['-modifiedDate', ]
-    readonly_fields = ['paymentId', 'orderId', 'locationId', 'creationDate', 'modifiedDate', 'invoiceLink']
+    ordering = ['-modifiedDate', '-creationDate']
+    readonly_fields = [
+        'paymentId', 'orderId', 'locationId',
+        'creationDate', 'modifiedDate',
+        'netAmountPaid', 'netFees',
+        'invoiceLink', 'receiptLink'
+    ]
 
     fieldsets = (
         (_('Basic Information'), {
-            'fields': ('paymentId', 'orderId', 'locationId', 'invoiceLink'),
+            'fields': (
+                'paymentId', 'orderId',
+                'netAmountPaid', 'netFees',
+                'invoiceLink', 'receiptLink'
+            ),
         }),
         (_('Dates'), {
-            'fields': ('creationDate', 'modifiedDate'),
+            'fields': (
+                'apiPaymentCreated', 'apiPaymentModified',
+                'creationDate', 'modifiedDate'
+            ),
         }),
         (_('Additional Data'), {
             'classes': ('collapse', ),

@@ -9,9 +9,8 @@ import logging
 import uuid
 
 from danceschool.core.models import PaymentRecord
-from danceschool.core.utils.timezone import ensure_localtime
 from .tasks import updateSquareFees
-from .api_client import api_client
+from .api_client import api_client, iso_timestamp_to_localtime
 
 
 # Define logger for this file
@@ -88,6 +87,26 @@ class SquarePaymentRecord(PaymentRecord):
     def netRevenue(self):
         return self.netAmountPaid - self.netFees
 
+    @property
+    def apiPaymentCreated(self):
+        return iso_timestamp_to_localtime(
+            self.data.get('apiPaymentResponse', {}).get('created_at')
+        )
+
+    @property
+    def apiPaymentModified(self):
+        return iso_timestamp_to_localtime(
+            self.data.get('apiPaymentResponse', {}).get('updated_at')
+        )
+
+    @property
+    def receiptNumber(self):
+        return self.data.get('apiPaymentResponse', {}).get('receipt_number')
+
+    @property
+    def receiptUrl(self):
+        return self.data.get('apiPaymentResponse', {}).get('receipt_url')
+
     def getClient(self):
         return api_client
 
@@ -106,7 +125,7 @@ class SquarePaymentRecord(PaymentRecord):
 
         if (update_cache is True) and (response != cached):
             self.data['apiPaymentResponse'] = response
-            self.data['apiPaymentResponseDate'] = ensure_localtime(timezone.now()).isoformat()
+            self.data['apiPaymentResponseDate'] = timezone.localtime().isoformat()
             if commit:
                 self.save()
         return response
@@ -139,7 +158,7 @@ class SquarePaymentRecord(PaymentRecord):
 
         if update_cache and response != cached:
             self.data['apiRefundResponse'] = response
-            self.data['apiRefundResponseDate'] = ensure_localtime(timezone.now()).isoformat()
+            self.data['apiRefundResponseDate'] = timezone.localtime().isoformat()
             if commit:
                 self.save()
         return response
