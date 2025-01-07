@@ -21,9 +21,14 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     def invoiceLink(self, item):
         if item.invoice:
             i = item.invoice
-            return self.get_admin_change_link('core', 'invoice', i.id, i.id)
+            change_url = reverse('viewInvoice', args=(i.id, ))
+            return mark_safe(
+                '<a href="%s?v=%s">%s</a>' % (
+                    change_url, i.validationString, i.id
+                )
+            )
     invoiceLink.allow_tags = True
-    invoiceLink.short_description = _('Registration invoice')
+    invoiceLink.short_description = _('Invoice')
 
     def receiptLink(self, item):
         return mark_safe(
