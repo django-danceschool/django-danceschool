@@ -24,7 +24,7 @@ def iso_timestamp_to_localtime(timestamp):
         dt = datetime.strptime(
             timestamp, '%Y-%m-%dT%H:%M:%S.%fZ'
         ).replace(tzinfo=tz.utc)
-    except ValueError:
+    except (TypeError, ValueError):
         return None
 
     return timezone.template_localtime(dt)
