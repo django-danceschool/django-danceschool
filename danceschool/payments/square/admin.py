@@ -45,7 +45,7 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
         ('creationDate', DateRangeFilter),
         ('modifiedDate', DateRangeFilter),
         'locationId',
-        'invoice__isnull'
+        ('invoice', admin.EmptyFieldListFilter),
     ]
     search_fields = ['paymentId', 'orderId', 'invoice__id']
 
