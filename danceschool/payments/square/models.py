@@ -98,7 +98,6 @@ class SquarePaymentRecord(PaymentRecord):
         )
     apiPaymentCreated.fget.short_description = _('Payment created')
 
-
     @property
     def apiPaymentModified(self):
         return iso_timestamp_to_localtime(
