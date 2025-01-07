@@ -57,6 +57,7 @@ class SquarePaymentRecord(PaymentRecord):
             payment.get('amount_money', {}).get('amount', 0) / 100 -
             payment.get('refunded_money', {}).get('amount', 0) / 100
         )
+    netAmountPaid.fget.short_description = _('Net amount paid')
 
     @property
     def netRefund(self):
@@ -64,6 +65,7 @@ class SquarePaymentRecord(PaymentRecord):
         return (
             payment.get('refunded_money', {}).get('amount', 0) / 100
         )
+    netRefund.fget.short_description = _('Net refund amount')
 
     @property
     def netFees(self):
@@ -82,22 +84,27 @@ class SquarePaymentRecord(PaymentRecord):
             ])
 
         return fees
+    netFees.fget.short_description = _('Net fees')
 
     @property
     def netRevenue(self):
         return self.netAmountPaid - self.netFees
+    netRevenue.fget.short_description = _('Net revenue')
 
     @property
     def apiPaymentCreated(self):
         return iso_timestamp_to_localtime(
             self.data.get('apiPaymentResponse', {}).get('created_at')
         )
+    apiPaymentCreated.fget.short_description = _('Payment created')
+
 
     @property
     def apiPaymentModified(self):
         return iso_timestamp_to_localtime(
             self.data.get('apiPaymentResponse', {}).get('updated_at')
         )
+    apiPaymentModified.fget.short_description = _('Payment last updated')
 
     @property
     def receiptNumber(self):

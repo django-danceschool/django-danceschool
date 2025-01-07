@@ -27,18 +27,19 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
 
     def receiptLink(self, item):
         return mark_safe(
-            f'<a href="{item.receiptUrl}">{item.receiptNumber}</a>'
+            f'<a href="{item.receiptUrl}" target="_blank">{item.receiptNumber}</a>'
         )
     receiptLink.allow_tags = True
     receiptLink.short_description = _('Square Receipt')
 
     list_display = [
-        'paymentId', 'orderId', 'creationDate', 'netAmountPaid', 'netFees',
-        'invoiceLink', 'receiptLink'
+        'paymentId', 'apiPaymentCreated', 'apiPaymentModified',
+        'netAmountPaid', 'netFees', 'invoiceLink', 'receiptLink'
     ]
     list_filter = [
         ('creationDate', DateRangeFilter),
-        ('modifiedDate', DateRangeFilter),
+        ('apiPaymentCreated', DateRangeFilter),
+        ('apiPaymentModified', DateRangeFilter),
         'locationId'
     ]
     search_fields = ['paymentId', 'orderId', 'invoice__id']
@@ -48,7 +49,8 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
         'paymentId', 'orderId', 'locationId',
         'creationDate', 'modifiedDate',
         'netAmountPaid', 'netFees',
-        'invoiceLink', 'receiptLink'
+        'invoiceLink', 'receiptLink',
+        'apiPaymentCreated', 'apiPaymentModified'
     ]
 
     fieldsets = (
