@@ -357,7 +357,7 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
     # created or updated.
     to_update_entries = SquarePayoutRecord.objects.filter(
         payoutId__in=(
-            existing_records.values_list('payoutId', flat=True) +
+            [x.payoutId for x in existing_records] +
             [x.payoutId for x in created_objects]
         )
     )
