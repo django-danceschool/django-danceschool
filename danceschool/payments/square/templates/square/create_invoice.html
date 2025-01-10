@@ -1,0 +1,30 @@
+{% extends "cms/admin_home.html" %}
+{% load crispy_forms_tags danceschool_tags sekizai_tags i18n %}
+
+{% block content %}
+
+<h2 class="my-4">{% trans "Square Payment Record" %} {{ object.paymentId }}</h2>
+
+<dl class="card card-body">
+	<dt>{% trans "Date Payment Created" %}:</dt><dd>{{ object.apiPaymentCreated }}</dd>
+	<dt>{% trans "Date Last Modified" %}:</dt><dd>{{ object.apiPaymentModified }}</dd>
+    <dt>{% trans "Gross Amount Paid" %}:</dt><dd>{{ object.grossAmountPaid }}</dd>
+    <dt>{% trans "Net Refund" %}:</dt><dd>{{ object.netRefund }}</dd>
+</dl>
+
+{% if object.orderLineItems %}
+    <h3 class="my-2">{% trans "Order Line Items" %}</h3>
+    <table>
+    <thead><tr><td>{% trans "Item" %}</td><td>{% trans "Quantity" %}</td><td>{% trans "Total" %}</td><td>{% trans "Taxes" %}</td></tr></thead>
+    <tbody>
+    {% for item in object.orderLineItems %}
+    <tr><td>{{ item.name or item.item_type }}</td><td>{{ item.quantity }}</td><td>{{ item.total_money.amount }}</td><td>{{ item.total_tax_money.amount }}</td></tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% endif %}
+
+
+{% crispy form %}
+
+{% endblock %}

@@ -51,6 +51,14 @@ class SquarePaymentRecord(PaymentRecord):
         return self.paymentId
 
     @property
+    def grossAmountPaid(self):
+        payment = self.getPayment()
+        return (
+            payment.get('amount_money', {}).get('amount', 0) / 100
+        )
+    grossAmountPaid.fget.short_description = _('Gross amount paid')
+
+    @property
     def netAmountPaid(self):
         payment = self.getPayment()
         return (
@@ -106,6 +114,12 @@ class SquarePaymentRecord(PaymentRecord):
     apiPaymentModified.fget.short_description = _('Payment last updated')
 
     @property
+    def orderLineItems(self):
+        ''' Get the line items from the Orders API data. '''
+        order_data = self.getOrder()
+        return order_data.get('line_items', [])
+
+    @property
     def receiptNumber(self):
         return self.data.get('apiPaymentResponse', {}).get('receipt_number')
 
@@ -113,8 +127,17 @@ class SquarePaymentRecord(PaymentRecord):
     def receiptUrl(self):
         return self.data.get('apiPaymentResponse', {}).get('receipt_url')
 
-    def getClient(self):
-        return api_client
+    @property
+    def paidOut(self):
+        return self.getPayouts().exists()
+    
+    @property
+    def paidOutAmount(self):
+        return sum([x.amountPaid for x in self.getPayouts()])
+
+    @property
+    def paidOutDate(self):
+        return max([x.modifiedDate for x in self.getPayouts()])
 
     def getPayment(
         self, client=None, use_cache=True, update_cache=True, commit=True
@@ -122,7 +145,7 @@ class SquarePaymentRecord(PaymentRecord):
 
         cached = self.data.get('apiPaymentResponse', None)
         if use_cache and cached is not None:
-                return cached
+            return cached
 
         if not client:
             client = self.client
@@ -132,6 +155,35 @@ class SquarePaymentRecord(PaymentRecord):
         if (update_cache is True) and (response != cached):
             self.data['apiPaymentResponse'] = response
             self.data['apiPaymentResponseDate'] = timezone.localtime().isoformat()
+            if commit:
+                if not self.orderId:
+                    self.orderId = response.get('order_id')
+                self.save()
+        return response
+
+    def getOrder(
+        self, client=None,  use_cache=True, update_cache=True, commit=True
+    ):
+        '''
+        Order data from the API is not automatically imported or retained
+        locally, but it can be requested and used in individual views, and is
+        cached when that occurs.
+        '''
+        cached = self.data.get('apiOrderResponse', None)
+        if use_cache and cached is not None:
+            return cached
+
+        if not self.orderId:
+            self.orderId = self.getPayment(commit=commit).get('order_id')
+
+        if not client:
+            client = self.client
+
+        response = client.orders.retrieve_order(self.orderId).body.get('order', {})
+
+        if (update_cache is True) and (response != cached):
+            self.data['apiOrderResponse'] = response
+            self.data['apiOrderResponseDate'] = timezone.localtime().isoformat()
             if commit:
                 self.save()
         return response
@@ -168,6 +220,9 @@ class SquarePaymentRecord(PaymentRecord):
             if commit:
                 self.save()
         return response
+
+    def getPayouts(self):
+        return self.squarepayoutentry_set.all()
 
     def getPayerEmail(self):
         return self.payerEmail
@@ -232,9 +287,9 @@ class SquarePaymentRecord(PaymentRecord):
         return refundData
 
     def __init__(self, *args, **kwargs):
-        client = kwargs.pop('client', None)
+        client = kwargs.pop('client', api_client)
         super().__init__(*args, **kwargs)
-        self.client = client or self.getClient()
+        self.client = client
 
     class Meta:
         permissions = (
@@ -242,6 +297,156 @@ class SquarePaymentRecord(PaymentRecord):
         )
         verbose_name = _('Square payment record')
         verbose_name_plural = _('Payment records')
+
+
+class SquarePayoutRecord(models.Model):
+    '''
+    Keeps a local record of Square payouts so that they can be looked up
+    using the REST API and so that square payouts can be corresponded to payment
+    records.
+    '''
+
+    payoutId = models.CharField(
+        _('Square Payout ID'), max_length=100, unique=True, null=False,
+        primary_key=True, editable=False
+    )
+    locationId = models.CharField(
+        _('Square Location ID'), max_length=100, editable=False
+    )
+    creationDate = models.DateTimeField(_('Payout creation date'))
+    modifiedDate = models.DateTimeField(_('Payout modified date'))
+
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
+
+    @property
+    def amountPaid(self):
+        return self.getPayout().get('amount_money').get('amount', 0) / 100
+    amountPaid.fget.short_description = _('Total payout amount')
+
+    @property
+    def netRevenue(self):
+        return self.amountPaid
+
+    @property
+    def payoutDate(self):
+        return iso_timestamp_to_localtime(
+            self.getPayout().get('arrival_date', '')
+        )
+    payoutDate.fget.short_description = _('Payout deposit date')
+
+    def getPayout(
+        self, client=None, use_cache=True, update_cache=True, commit=True
+    ):
+        cached = self.data.get('apiPayoutResponse', None)
+        if use_cache and cached is not None:
+            return cached
+
+        if not client:
+            client = self.client
+
+        response = client.payouts.get_payout(self.payoutId).body.get('payout', {})
+
+        if (update_cache is True) and (response != cached):
+            self.data['apiPayoutResponse'] = response
+            self.data['apiPayoutResponseDate'] = timezone.localtime().isoformat()
+            if commit:
+                self.save()
+        return response
+
+    def getPayoutEntries(
+        self, client=None, use_cache=True, update_cache=True, commit=True
+    ):
+        cached = self.data.get('apiEntriesResponse', None)
+        if use_cache and cached is not None:
+            return cached
+
+        if not client:
+            client = self.client
+
+        response = client.payouts.list_payout_entries(self.payoutId).body.get('payout_entries', [])
+
+        if (update_cache is True) and (response != cached):
+            self.data['apiEntriesResponse'] = response
+            self.data['apiEntriesResponseDate'] = timezone.localtime().isoformat()
+            if commit:
+                self.save()
+        return response
+
+    def updatePayoutEntries(self, **kwargs):
+        '''
+        Ensure that all payout entries exist in the database, and that any
+        entries that are not in the API data are deleted, so that the database
+        info matches the API info.
+        '''
+
+        entries = self.getPayoutEntries(**kwargs)
+        for entry in entries:
+            SquarePayoutEntry.objects.update_or_create(
+                entryId=entry.get('id'),
+                payout=self,
+                defaults={
+                    'paymentRecord': SquarePaymentRecord.objects.filter(
+                        paymentId=entry.get('type_charge_details', {}).get('payment_id')
+                    ).first(),
+                    'data': {
+                        'apiEntryResponse':entry,
+                        'apiEntryResponseDate': timezone.localtime().isoformat()
+                    }
+                }
+            )
+        SquarePayoutEntry.objects.filter(payout=self).exclude(
+            entryId__in=[x.get('id') for x in entries]
+        ).delete()
+
+    def __init__(self, *args, **kwargs):
+        client = kwargs.pop('client', api_client)
+        super().__init__(*args, **kwargs)
+        self.client = client
+
+    class Meta:
+        verbose_name = _('Square payout record')
+        verbose_name_plural = _('Payout records')
+
+
+class SquarePayoutEntry(models.Model):
+    '''
+    This class defines the relationship between payments and payouts so that
+    we can perform accounting to ensure that all Square revenues are properly
+    recognized.
+    '''
+
+    entryId = models.CharField(
+        _('Square Payout Entry ID'), max_length=100, unique=True, null=False,
+        primary_key=True, editable=False
+    )
+    payout = models.ForeignKey(SquarePayoutRecord, on_delete=models.CASCADE)
+    paymentRecord = models.ForeignKey(
+        SquarePaymentRecord, null=True, on_delete=models.SET_NULL
+    )
+    
+    data = models.JSONField(_('Additional data'), default=dict, blank=True)
+
+    @property
+    def apiEntry(self):
+        return self.data.get('apiEntryResponse', {})
+
+    @property
+    def amountPaid(self):
+        return self.apiEntry.get('net_amount_money').get('amount', 0) / 100
+
+    @property
+    def netRevenue(self):
+        return self.amountPaid
+
+    @property
+    def payoutDate(self):
+        return iso_timestamp_to_localtime(
+            self.apiEntry.get('effective_at', '')
+        )
+
+    class Meta:
+        verbose_name = _('Square payout entry')
+        verbose_name_plural = _('Payout entries')
 
 
 class SquareCheckoutFormModel(CMSPlugin):

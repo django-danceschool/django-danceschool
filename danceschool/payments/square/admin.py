@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from rangefilter.filters import DateRangeFilter
 
-from .models import SquarePaymentRecord
+from .models import SquarePaymentRecord, SquarePayoutRecord, SquarePayoutEntry
 
 
 class SquarePaymentRecordAdmin(admin.ModelAdmin):
@@ -14,19 +14,12 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     def get_admin_change_link(self, app_label, model_name, obj_id, name):
         url = reverse('admin:%s_%s_change' % (app_label, model_name),
                       args=(obj_id, ))
-        return format_html('<a href="%s">%s</a>' % (
-            url, str(name)
-        ))
+        return mark_safe(f'<a href="{url}">{name}</a>')
 
     def invoiceLink(self, item):
-        if item.invoice:
-            i = item.invoice
-            change_url = reverse('viewInvoice', args=(i.id, ))
-            return mark_safe(
-                '<a href="%s?v=%s">%s</a>' % (
-                    change_url, i.validationString, i.id
-                )
-            )
+        change_url = reverse('viewOrCreatePaymentInvoice', args=(item.pk, ))
+        link_text = getattr(item.invoice, 'id', _('Create an invoice'))
+        return mark_safe(f'<a href="{change_url}">{link_text}</a>')
     invoiceLink.allow_tags = True
     invoiceLink.short_description = _('Invoice')
 
@@ -37,33 +30,48 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     receiptLink.allow_tags = True
     receiptLink.short_description = _('Square Receipt')
 
-    list_display = [
+    def payoutLinks(self, item):
+        payouts = item.getPayouts()
+        links = []
+        for payout in payouts:
+            links += [
+                self.get_admin_change_link(
+                    'square', 'squarepayoutrecord', payout.payoutId,
+                    f'{payout.modifiedDate.strftime("%Y-%m-%d")}: {payout.amountPaid}'
+                ),
+                mark_safe('<br />')
+            ]
+        return format_html(links)
+    payoutLinks.allow_tags = True
+    payoutLinks.short_description = _('Square payouts')
+
+    list_display = (
         'paymentId', 'apiPaymentCreated', 'apiPaymentModified',
-        'netAmountPaid', 'netFees', 'invoiceLink', 'receiptLink'
-    ]
-    list_filter = [
+        'netAmountPaid', 'netFees', 'paidOut', 'invoiceLink', 'receiptLink'
+    )
+    list_filter = (
         ('creationDate', DateRangeFilter),
         ('modifiedDate', DateRangeFilter),
         'locationId',
         ('invoice', admin.EmptyFieldListFilter),
-    ]
-    search_fields = ['paymentId', 'orderId', 'invoice__id']
+    )
+    search_fields = ('paymentId', 'orderId', 'invoice__id')
 
-    ordering = ['-modifiedDate', '-creationDate']
-    readonly_fields = [
+    ordering = ('-modifiedDate', '-creationDate')
+    readonly_fields = (
         'paymentId', 'orderId', 'locationId',
         'creationDate', 'modifiedDate',
         'netAmountPaid', 'netFees',
-        'invoiceLink', 'receiptLink',
+        'invoiceLink', 'receiptLink', 'payoutLinks',
         'apiPaymentCreated', 'apiPaymentModified'
-    ]
+    )
 
     fieldsets = (
         (_('Basic Information'), {
             'fields': (
                 'paymentId', 'orderId',
                 'netAmountPaid', 'netFees',
-                'invoiceLink', 'receiptLink'
+                'invoiceLink', 'payoutLinks', 'receiptLink'
             ),
         }),
         (_('Dates'), {
@@ -79,4 +87,70 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     )
 
 
+class SquarePayoutEntryInline(admin.TabularInline):
+
+    def get_admin_change_link(self, app_label, model_name, obj_id, name):
+        url = reverse('admin:%s_%s_change' % (app_label, model_name),
+                      args=(obj_id, ))
+        return mark_safe(f'<a href="{url}">{name}</a>')
+
+    def paymentRecordLink(self, item):
+        return self.get_admin_change_link(
+            'square', 'squarepaymentrecord',
+            item.paymentRecord.id, item.paymentRecord.paymentId
+        )
+    paymentRecordLink.allow_tags = True
+    paymentRecordLink.short_description = _('Payment record')
+
+    model = SquarePayoutEntry
+    extra = 0
+    fields = ('entryId', 'amountPaid', 'paymentRecordLink')
+    readonly_fields = ('entryId', 'amountPaid', 'paymentRecordLink')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class SquarePayoutRecordAdmin(admin.ModelAdmin):
+
+    list_display = (
+        'payoutId', 'payoutDate',
+        'amountPaid'
+    )
+    list_filter = (
+        ('creationDate', DateRangeFilter),
+        ('modifiedDate', DateRangeFilter),
+        'locationId',
+    )
+    search_fields = ('payoutId',)
+
+    ordering = ('-modifiedDate', '-creationDate')
+    readonly_fields = (
+        'payoutId', 'locationId', 'amountPaid',
+        'creationDate', 'modifiedDate', 'payoutDate'
+    )
+
+    inlines = (SquarePayoutEntryInline,)
+
+    fieldsets = (
+        (_('Basic Information'), {
+            'fields': (
+                'payoutId', 'locationId', 'amountPaid',
+                'creationDate', 'modifiedDate', 'payoutDate',
+            ),
+        }),
+        (_('Additional Data'), {
+            'classes': ('collapse', ),
+            'fields': ('data',),
+        }),
+    )
+
+
 admin.site.register(SquarePaymentRecord, SquarePaymentRecordAdmin)
+admin.site.register(SquarePayoutRecord, SquarePayoutRecordAdmin)

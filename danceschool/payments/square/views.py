@@ -1,5 +1,5 @@
 from django.http import (
-HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
+    Http404, HttpResponseRedirect, HttpResponseBadRequest, JsonResponse
 )
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ObjectDoesNotExist
@@ -9,11 +9,11 @@ from django.utils import timezone
 from django.conf import settings
 from django.contrib import messages
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
-from django.views.generic import View
+from django.views.generic import View, UpdateView
 
 
 import uuid
+from braces.views import PermissionRequiredMixin
 from square.client import Client
 from square.exceptions.api_exception import APIException
 import logging
@@ -24,10 +24,12 @@ import binascii
 from urllib.parse import unquote
 from time import sleep
 
-from danceschool.core.models import Invoice
+from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.helpers import getReturnPage
 
+
+from .forms import CreateInvoiceForm
 from .models import SquarePaymentRecord
 from .tasks import updateSquareFees
 
@@ -520,3 +522,96 @@ class ProcessPointOfSalePaymentView(View):
             request.session[PAYMENT_VALIDATION_STR] = paymentSession
 
         return HttpResponseRedirect(successUrl)
+
+
+class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
+    '''
+    This view allows for the creation of an invoice for a SquarePaymentRecord
+    if one does not already exist.
+    '''
+    model = SquarePaymentRecord
+    form_class = CreateInvoiceForm
+    permission_required = 'core.add_invoice'
+    template_name = 'square/create_invoice.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        '''
+        Get the payment record being requested. If it already has an invoice,
+        then just redirect to view the invoice.
+        '''
+        self.object = self.get_object()
+        if self.object.invoice:
+            change_url = reverse('viewInvoice', args=(self.object.invoice.id, ))
+            return HttpResponseRedirect(
+                f'{change_url}?v={self.object.invoice.validationString}'
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        '''
+        Create the invoice and return to the SquarePaymentRecord changelist view.
+        '''
+        cleaned_data = form.cleaned_data
+
+        new_invoice = Invoice.objects.create(
+            email=self.object.payerEmail,
+            comments=cleaned_data.get('comments'),
+            submissionUser=self.request.user,
+            buyerPaysSalesTax=getConstant('registration__buyerPaysSalesTax'),
+            status=Invoice.PaymentStatus.paid
+        )
+
+        line_items = self.object.orderLineItems
+        if not line_items:
+            # If there are no order line items, just use the payment totals to
+            # create a single item.
+            InvoiceItem.objects.create(
+                invoice=new_invoice,
+                description=_('Square payment'),
+                grossTotal=self.object.grossAmountPaid,
+                total=self.object.grossAmountPaid,
+                adjustments=-1*self.object.netRefund,
+                fees=self.object.netFees,
+            )
+        else:
+            # This is used to allocate fees across line items.
+            line_item_total = sum([
+                item.get('total_money',{}).get('amount', 0) / 100
+                for item in line_items
+            ])
+
+            for item in line_items:
+                quantity = item.get('quantity', 1)
+                for n in range(quantity):
+                    this_total = item.get('total_money',{}).get('amount', 0) / (100*quantity)
+
+                    ii = InvoiceItem.objects.create(
+                        invoice=new_invoice,
+                        description=item.get('name', item.get('item_type'), _('Square payment')),
+                        grossTotal=item.get('gross_sales_money',{}).get('amount', 0) / (100*quantity),
+                        total=this_total,
+                        taxes=item.get('total_tax_money',{}).get('amount', 0) / (100*quantity),
+                        adjustments=-1*self.object.netRefund*(this_total / line_item_total),
+                        fees=self.object.netFees*(this_total / line_item_total)
+                    )
+
+                    # Update the revenue item that has been created alongside
+                    # the invoice item.
+                    if hasattr(ii, 'revenueitem'):
+                        ii.revenueitem.update(
+                            category=getConstant('financial__doorPaymentRevenueCat'),
+                            description=ii.description,
+                            event=cleaned_data.get('event'),
+                            paymentMethod='Square App',
+                            receivedDate=self.object.apiPaymentCreated,
+                        )
+        # Now that invoice items have been created, update the invoice totals to
+        # match the sum of item totals.
+        new_invoice.updateTotals()
+        
+        self.object.invoice = new_invoice
+        self.object.save()
+
+        return HttpResponseRedirect(
+            reverse('admin:square_squarepaymentrecord_changelist')
+        )
