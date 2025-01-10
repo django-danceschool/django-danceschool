@@ -20,11 +20,19 @@ def iso_timestamp_to_localtime(timestamp):
     Convert the ISO string timestamps that the Square API provides into a
     localized datetime.
     '''
-    try:
-        dt = datetime.strptime(
-            timestamp, '%Y-%m-%dT%H:%M:%S.%fZ'
-        ).replace(tzinfo=tz.utc)
-    except (TypeError, ValueError):
-        return None
+    iso_formats = [
+        ('%Y-%m-%dT%H:%M:%S.%fZ', tz.utc),
+        ('%Y-%m-%dT%H:%M:%SZ', tz.utc),
+        ('%Y-%m-%d', timezone.get_default_timezone()),
+    ]
+    dt = None
 
-    return timezone.template_localtime(dt)
+    for format in iso_formats:
+        try:
+            dt = datetime.strptime(
+                timestamp, format[0]
+            ).replace(tzinfo=format[1])
+        except (TypeError, ValueError):
+            continue
+    if dt:
+        return timezone.template_localtime(dt)
