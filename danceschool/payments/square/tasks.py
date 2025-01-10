@@ -61,11 +61,13 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
 
     # Use the database to determine how recent the most recent updates are.
     if not update_all and not begin_time:
-        last_updated = SquarePaymentRecord.objects.filter(
-            data__apiPaymentResponseDate__isnull=False
-        ).order_by(
-            '-data__apiPaymentResponseDate'
-        ).values_list('data__apiPaymentResponseDate', flat=True).first()
+        last_updated = iso_timestamp_to_localtime(
+            SquarePaymentRecord.objects.filter(
+                data__apiPaymentResponseDate__isnull=False
+            ).order_by(
+                '-data__apiPaymentResponseDate'
+            ).values_list('data__apiPaymentResponseDate', flat=True).first()
+        )
 
         if last_updated:
             api_kwargs['updated_at_begin_time'] = last_updated - timedelta(hours=6)
@@ -251,11 +253,13 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
 
     # Use the database to determine how recent the most recent updates are.
     if not update_all and not begin_time:
-        last_updated = SquarePayoutRecord.objects.filter(
-            data__apiPayoutResponseDate__isnull=False
-        ).order_by(
-            '-data__apiPayoutResponseDate'
-        ).values_list('data__apiPayoutResponseDate', flat=True).first()
+        last_updated = iso_timestamp_to_localtime(
+            SquarePayoutRecord.objects.filter(
+                data__apiPayoutResponseDate__isnull=False
+            ).order_by(
+                '-data__apiPayoutResponseDate'
+            ).values_list('data__apiPayoutResponseDate', flat=True).first()
+        )
 
         if last_updated:
             api_kwargs['begin_time'] = last_updated - timedelta(hours=6)
@@ -353,7 +357,7 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
     # created or updated.
     to_update_entries = SquarePayoutRecord.objects.filter(
         payoutId__in=(
-            existing_records.value_list('payoutId', flat=True) +
+            existing_records.values_list('payoutId', flat=True) +
             [x.payoutId for x in created_objects]
         )
     )
