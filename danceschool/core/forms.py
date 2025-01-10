@@ -1076,6 +1076,10 @@ class EventAutocompleteForm(forms.Form):
             (forms.ModelChoiceField, autocomplete.ModelSelect2)
         )
 
+        # Allows this to be used in cases where the form is associated with a
+        # model instance.
+        self.instance = kwargs.pop('instance', None)
+
         super().__init__(*args, **kwargs)
 
         self.fields['event'] = field_class(

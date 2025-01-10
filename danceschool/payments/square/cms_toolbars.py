@@ -38,3 +38,9 @@ class SquareLinksToolbar(CMSToolbar):
                 _('Square Payment Records'),
                 url=reverse('admin:square_squarepaymentrecord_changelist')
             )
+
+        if self.request.user.has_perm('square.change_squarepayoutrecord'):
+            related_menu.add_link_item(
+                _('Square Payout Records'),
+                url=reverse('admin:square_squarepayoutrecord_changelist')
+            )
