@@ -15,7 +15,7 @@
 	<div class="card-body">
 		<select id="guestListSelect">
 		{% for event in guestList.recentEvents %}
-			<option value="{{ event.id }}" {% ifequal event guestList.currentEvent %}selected{% endifequal %}>{{ event.name }}: {{ event.startTime|date:"N jS, P" }}</option>
+			<option value="{{ event.id }}" {% if event == guestList.currentEvent %}selected{% endif %}>{{ event.name }}: {{ event.startTime|date:"N jS, P" }}</option>
 		{% endfor %}
 		</select>
 	</div>
