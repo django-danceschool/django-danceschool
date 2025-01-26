@@ -1085,7 +1085,7 @@ class ExpenseItem(models.Model):
 
         if not self.accrualDate:
             if self.event:
-                last_end = datetime.min.replace(tzinfo=timezone.utc)
+                last_end = datetime.min.replace(tzinfo=timezone.timezone.utc)
 
                 if self.pk:
                     staff_purpose = self.expensepurpose_set.filter(
@@ -1101,7 +1101,7 @@ class ExpenseItem(models.Model):
                             )
                         )
 
-                if last_end == datetime.min.replace(tzinfo=timezone.utc):
+                if last_end == datetime.min.replace(tzinfo=timezone.timezone.utc):
                     last_end = self.event.endTime
                 self.accrualDate = last_end
             elif self.submissionDate:
