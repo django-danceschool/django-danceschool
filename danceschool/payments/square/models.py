@@ -129,15 +129,15 @@ class SquarePaymentRecord(PaymentRecord):
 
     @property
     def paidOut(self):
-        return self.getPayouts().exists()
+        return self.getPayoutEntries().exists()
     
     @property
     def paidOutAmount(self):
-        return sum([x.amountPaid for x in self.getPayouts()])
+        return sum([x.amountPaid for x in self.getPayoutEntries()])
 
     @property
     def paidOutDate(self):
-        return max([x.modifiedDate for x in self.getPayouts()])
+        return max([x.payoutDate for x in self.getPayoutEntries()])
 
     def getPayment(
         self, client=None, use_cache=True, update_cache=True, commit=True
@@ -221,7 +221,7 @@ class SquarePaymentRecord(PaymentRecord):
                 self.save()
         return response
 
-    def getPayouts(self):
+    def getPayoutEntries(self):
         return self.squarepayoutentry_set.all()
 
     def getPayerEmail(self):

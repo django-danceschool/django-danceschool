@@ -31,23 +31,23 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     receiptLink.short_description = _('Square Receipt')
 
     def payoutLinks(self, item):
-        payouts = item.getPayouts()
+        entries = item.getPayoutEntries()
         links = []
-        for payout in payouts:
+        for entry in entries:
             links += [
                 self.get_admin_change_link(
-                    'square', 'squarepayoutrecord', payout.payoutId,
-                    f'{payout.modifiedDate.strftime("%Y-%m-%d")}: {payout.amountPaid}'
+                    'square', 'squarepayoutrecord', entry.payout.payoutId,
+                    f'{entry.payoutDate.strftime("%Y-%m-%d")}: {entry.amountPaid}'
                 ),
                 mark_safe('<br />')
             ]
-        return format_html(links)
+        return format_html(''.join(links))
     payoutLinks.allow_tags = True
     payoutLinks.short_description = _('Square payouts')
 
     list_display = (
         'paymentId', 'apiPaymentCreated', 'apiPaymentModified',
-        'netAmountPaid', 'netFees', 'paidOut', 'invoiceLink', 'receiptLink'
+        'netAmountPaid', 'netFees', 'payoutLinks', 'invoiceLink', 'receiptLink'
     )
     list_filter = (
         ('creationDate', DateRangeFilter),

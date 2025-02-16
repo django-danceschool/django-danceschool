@@ -587,7 +587,7 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
 
                     ii = InvoiceItem.objects.create(
                         invoice=new_invoice,
-                        description=item.get('name', item.get('item_type'), _('Square payment')),
+                        description=item.get('name', item.get('item_type', _('Square payment'))),
                         grossTotal=item.get('gross_sales_money',{}).get('amount', 0) / (100*quantity),
                         total=this_total,
                         taxes=item.get('total_tax_money',{}).get('amount', 0) / (100*quantity),
