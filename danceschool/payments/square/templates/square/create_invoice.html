@@ -18,7 +18,7 @@
     <thead><tr><td>{% trans "Item" %}</td><td>{% trans "Quantity" %}</td><td>{% trans "Total" %}</td><td>{% trans "Taxes" %}</td></tr></thead>
     <tbody>
     {% for item in object.orderLineItems %}
-    <tr><td>{{ item.name or item.item_type }}</td><td>{{ item.quantity }}</td><td>{{ item.total_money.amount }}</td><td>{{ item.total_tax_money.amount }}</td></tr>
+    <tr><td>{{ item.name|default:item.item_type }}</td><td>{{ item.quantity }}</td><td>{{ item.total_money.amount }}</td><td>{{ item.total_tax_money.amount }}</td></tr>
     {% endfor %}
     </tbody>
     </table>
