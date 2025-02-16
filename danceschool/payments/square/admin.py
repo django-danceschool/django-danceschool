@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from rangefilter.filters import DateRangeFilter
 
+from danceschool.core.constants import getConstant
 from .models import SquarePaymentRecord, SquarePayoutRecord, SquarePayoutEntry
 
 
@@ -30,14 +31,19 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     receiptLink.allow_tags = True
     receiptLink.short_description = _('Square Receipt')
 
-    def payoutLinks(self, item):
+    def payoutLinks(self, item, includeAmount=True):
         entries = item.getPayoutEntries()
         links = []
         for entry in entries:
+            entry_label = (
+                f'{entry.payoutDate.strftime("%Y-%m-%d")}: {getConstant('general__currencySymbol')}{entry.amountPaid}'
+                if includeAmount else
+                f'{entry.payoutDate.strftime("%Y-%m-%d")}'
+            )
             links += [
                 self.get_admin_change_link(
                     'square', 'squarepayoutrecord', entry.payout.payoutId,
-                    f'{entry.payoutDate.strftime("%Y-%m-%d")}: {entry.amountPaid}'
+                    entry_label
                 ),
                 mark_safe('<br />')
             ]
@@ -45,9 +51,14 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
     payoutLinks.allow_tags = True
     payoutLinks.short_description = _('Square payouts')
 
+    def payoutLinksShort(self, item):
+        return self.payoutLinks(item, includeAmount=False)
+    payoutLinksShort.allow_tags = True
+    payoutLinksShort.short_description = _('Square payouts')
+
     list_display = (
         'paymentId', 'apiPaymentCreated', 'apiPaymentModified',
-        'netAmountPaid', 'netFees', 'payoutLinks', 'invoiceLink', 'receiptLink'
+        'netAmountPaid', 'netFees', 'payoutLinksShort', 'invoiceLink', 'receiptLink'
     )
     list_filter = (
         ('creationDate', DateRangeFilter),
