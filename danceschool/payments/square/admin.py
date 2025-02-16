@@ -36,7 +36,7 @@ class SquarePaymentRecordAdmin(admin.ModelAdmin):
         links = []
         for entry in entries:
             entry_label = (
-                f'{entry.payoutDate.strftime("%Y-%m-%d")}: {getConstant('general__currencySymbol')}{entry.amountPaid}'
+                f'{entry.payoutDate.strftime("%Y-%m-%d")}: {getConstant("general__currencySymbol")}{entry.amountPaid}'
                 if includeAmount else
                 f'{entry.payoutDate.strftime("%Y-%m-%d")}'
             )
