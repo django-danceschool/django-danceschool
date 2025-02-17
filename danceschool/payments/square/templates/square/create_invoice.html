@@ -14,11 +14,21 @@
 
 {% if object.orderLineItems %}
     <h3 class="my-2">{% trans "Order Line Items" %}</h3>
-    <table>
-    <thead><tr><td>{% trans "Item" %}</td><td>{% trans "Quantity" %}</td><td>{% trans "Total" %}</td><td>{% trans "Taxes" %}</td></tr></thead>
+    <table class="table">
+    <thead><tr>
+        <th scope="col">{% trans "Item" %}</th>
+        <th scope="col">{% trans "Quantity" %}</th>
+        <th scope="col">{% trans "Total" %}</th>
+        <td scope="col">{% trans "Taxes" %}</th>
+    </tr></thead>
     <tbody>
     {% for item in object.orderLineItems %}
-    <tr><td>{{ item.name|default:item.item_type }}</td><td>{{ item.quantity }}</td><td>{{ item.total_money.amount }}</td><td>{{ item.total_tax_money.amount }}</td></tr>
+    <tr>
+        <td>{{ item.name|default:item.item_type }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.total_money.amount|divide:100|floatformat:2 }}</td>
+        <td>{{ item.total_tax_money.amount|divide:100|floatformat:2 }}</td>
+    </tr>
     {% endfor %}
     </tbody>
     </table>
