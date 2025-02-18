@@ -581,7 +581,7 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
             ])
 
             for item in line_items:
-                quantity = item.get('quantity', 1)
+                quantity = int(item.get('quantity', 1))
                 for n in range(quantity):
                     this_total = item.get('total_money',{}).get('amount', 0) / (100*quantity)
 
