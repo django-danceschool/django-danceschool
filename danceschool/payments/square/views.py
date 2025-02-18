@@ -591,8 +591,8 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
                         grossTotal=item.get('gross_sales_money',{}).get('amount', 0) / (100*quantity),
                         total=this_total,
                         taxes=item.get('total_tax_money',{}).get('amount', 0) / (100*quantity),
-                        adjustments=-1*spr.netRefund*(this_total / line_item_total),
-                        fees=spr.netFees*(this_total / line_item_total)
+                        adjustments=-1*self.object.netRefund*(this_total / line_item_total),
+                        fees=self.object.netFees*(this_total / line_item_total)
                     )
 
                     # Update the revenue item that has been created alongside
