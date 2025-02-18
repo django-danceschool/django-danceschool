@@ -558,7 +558,7 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
             comments=cleaned_data.get('comments'),
             submissionUser=self.request.user,
             buyerPaysSalesTax=getConstant('registration__buyerPaysSalesTax'),
-            status=Invoice.PaymentStatus.paid
+            status=Invoice.PaymentStatus.preliminary
         )
 
         line_items = self.object.orderLineItems
@@ -591,8 +591,8 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
                         grossTotal=item.get('gross_sales_money',{}).get('amount', 0) / (100*quantity),
                         total=this_total,
                         taxes=item.get('total_tax_money',{}).get('amount', 0) / (100*quantity),
-                        adjustments=-1*self.object.netRefund*(this_total / line_item_total),
-                        fees=self.object.netFees*(this_total / line_item_total)
+                        adjustments=-1*spr.netRefund*(this_total / line_item_total),
+                        fees=spr.netFees*(this_total / line_item_total)
                     )
 
                     # Update the revenue item that has been created alongside
@@ -607,6 +607,8 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
                         )
         # Now that invoice items have been created, update the invoice totals to
         # match the sum of item totals.
+        new_invoice.status = Invoice.PaymentStatus.paid
+        new_invoice.save()
         new_invoice.updateTotals()
         
         self.object.invoice = new_invoice
