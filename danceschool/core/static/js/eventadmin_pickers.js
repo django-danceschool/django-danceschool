@@ -3,8 +3,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	// The code below requires jQuery
 	var $ = django.jQuery;
 
-	$(document).on('formset:added', function(event, $row, formsetName) {
-		if (formsetName == 'eventoccurrence_set') {
+	$(document).on('formset:added', function(event) {
+		if (event.detail.formsetName == 'eventoccurrence_set') {
 			makepickers();
 			set_new_times();
 			set_new_dates();
