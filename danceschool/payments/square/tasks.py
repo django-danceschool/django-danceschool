@@ -33,7 +33,7 @@ def updateSquareFees(paymentRecord):
     return paymentRecord.netFees
 
 
-@db_periodic_task(crontab(hour='*'))
+@db_periodic_task(crontab(minute='*/60'))
 def updateSquarePaymentRecords(update_all=False, begin_time=None):
     '''
     To keep the Square records on the server in sync with those reported by
@@ -52,7 +52,7 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
         for i, d in enumerate(list_of_dicts):
             if d.get(key) == value:
                 return list_of_dicts.pop(i)
-        return None
+        return {}
 
     logger.info('Syncing local Square payment records to API responses.')
 
@@ -137,8 +137,8 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
         # simply replace the JSON data if a new API response exists. Notice also
         # that the data are popped from the full list, so that what will
         # remain after this loop are the set of API payments that still lack a
-        # SquarePaymentRecord. Finally, we are iterating over a shallow copy so that we
-        # can remove items that don't need to be updated at all.
+        # SquarePaymentRecord. Finally, we are iterating over a shallow copy so
+        # that we can remove items that don't need to be updated at all.
         payment_response = pop_by_key_value(remaining_payments, 'id', record.paymentId)
         if payment_response:
             if (
@@ -152,36 +152,52 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
 
         # There can be multiple refunds associated with a payment record, so
         # first, get the set of refunds associated with this one.
-        this_record_refunds = [
+        this_record_api_refunds = [
             x for x in all_refunds if x.get('payment_id') == record.paymentId
         ]
-        if this_record_refunds:
+        if this_record_api_refunds:
             # Pop off any old records in the JSON data that are associated with the
             # new/updated refunds, and then append the new records received from the
             # API if the update stamp has changed.
-            refund_data = record.data.get('apiRefundResponse', [])
-            this_record_refund_ids = [x.get('id') for x in this_record_refunds]
-            existing_refund_data = filter(
-                lambda x: x.get('id') in this_record_refund_ids, refund_data
-            )
-            
-            # This will be filled in with replacement records below.
-            updated_refund_data = filter(
-                lambda x: x not in existing_refund_data, refund_data
-            )
+            old_db_refund_data = record.data.get('apiRefundResponse', [])
+            this_record_refund_ids = [x.get('id') for x in this_record_api_refunds]
+
+            # We will only update records that have a reason to be updated.
             flag_to_update = False
 
-            for new in this_record_refunds:
+            # This will be filled in with records that were found in both the
+            # API response and the database for additional checking.
+            existing_db_refund_data = []
+            
+            # This will be iteratively filled in with replacement records below,
+            # but will only be saved to DB if the flag is set because something
+            # has changed.
+            updated_refund_data = []
+
+            for old in old_db_refund_data:
+                if old.get('id') in this_record_refund_ids:
+                    existing_db_refund_data.append(old)
+                else:
+                    # If a refund occurred before the API time window, then it still
+                    # belongs on the DB record, but is presumed not to have changed.
+                    updated_refund_data.append(old)
+            
+            # Now loop through all the API records and compare them to any
+            # existing records in the database. If something has changed, then
+            # we will update the database record.
+            for new in this_record_api_refunds:
                 existing = pop_by_key_value(
-                    existing_refund_data, 'id', existing.get('id')
+                    existing_db_refund_data, 'id', new.get('id')
                 )
-                if new.get('updated_at') != existing.get('updated_at'):
+                if existing and (new.get('updated_at') != existing.get('updated_at')):
                     flag_to_update  = True
                 updated_refund_data.append(new)
 
+            # The updated_refund_data is now complete, but the flag identifies
+            # whether a database update is needed.
             if flag_to_update:
                 record.data.update({
-                    'apiRefundResponse': refund_data,
+                    'apiRefundResponse': updated_refund_data,
                     'apiRefundResponseDate': update_time,
                 })
             
@@ -226,7 +242,7 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
     logger.info(f'Created {len(created_objects)} new SquarePaymentRecords.')
 
 
-@db_periodic_task(crontab(hour='*'))
+@db_periodic_task(crontab(minute='*/60'))
 def updateSquarePayoutRecords(update_all=False, begin_time=None):
     '''
     To keep the Square records on the server in sync with those reported by
@@ -245,7 +261,7 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
         for i, d in enumerate(list_of_dicts):
             if d.get(key) == value:
                 return list_of_dicts.pop(i)
-        return None
+        return {}
 
     logger.info('Syncing local Square payout records to API responses.')
 
