@@ -101,7 +101,9 @@ class GiftCertificateCustomizeView(FormView):
         if recipientName:
             pdf_kwargs.update({})
 
-        attachment = GiftCertificatePDFView(request=pdf_request).get(request=pdf_request, **pdf_kwargs).content or None
+        response = GiftCertificatePDFView(request=pdf_request).get(request=pdf_request, **pdf_kwargs)
+        response.render()
+        attachment = response.content or None
 
         if attachment:
             attachment_name = 'gift_certificate.pdf'
