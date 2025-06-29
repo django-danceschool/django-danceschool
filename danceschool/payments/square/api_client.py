@@ -6,12 +6,19 @@ from django.utils import timezone
 from datetime import datetime
 from datetime import timezone as tz
 
-from square.client import Client
+from square import Square
+from square.environment import SquareEnvironment
 
-
-api_client = Client(
-    access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
-    environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production')
+api_environment = (
+    SquareEnvironment.PRODUCTION if 'production' in
+    str(getattr(settings, 'SQUARE_ENVIRONMENT', 'sandbox')).lower()
+    else SquareEnvironment.SANDBOX
+)
+# The token is provided with a placeholder to avoid issues with blank bearer
+# tokens. However, this must be specified in settings or Square cannot work.
+api_client = Square(
+    token=getattr(settings, 'SQUARE_ACCESS_TOKEN', 'django-danceschool'),
+    environment=api_environment
 )
 
 

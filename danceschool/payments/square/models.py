@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from cms.models.pluginmodel import CMSPlugin
 from cms.models.fields import PageField
+from square.core.api_error import ApiError
 
 import logging
 import uuid
@@ -142,6 +143,10 @@ class SquarePaymentRecord(PaymentRecord):
     def getPayment(
         self, client=None, use_cache=True, update_cache=True, commit=True
     ):
+        # No need to proceed if there is no way to get the payment record from
+        # the API.
+        if not self.paymentId:
+            return {}
 
         cached = self.data.get('apiPaymentResponse', None)
         if use_cache and cached is not None:
@@ -150,7 +155,7 @@ class SquarePaymentRecord(PaymentRecord):
         if not client:
             client = self.client
 
-        response = client.payments.get_payment(self.paymentId).body.get('payment', {})
+        response = client.payments.get(self.paymentId).dict().get('payment', {})
 
         if (update_cache is True) and (response != cached):
             self.data['apiPaymentResponse'] = response
@@ -176,10 +181,15 @@ class SquarePaymentRecord(PaymentRecord):
         if not self.orderId:
             self.orderId = self.getPayment(commit=commit).get('order_id')
 
+        # No need to proceed if there is no way to get the order record from
+        # the API.
+        if not self.orderId:
+            return {}
+
         if not client:
             client = self.client
 
-        response = client.orders.retrieve_order(self.orderId).body.get('order', {})
+        response = client.orders.get(self.orderId).dict().get('order', {})
 
         if (update_cache is True) and (response != cached):
             self.data['apiOrderResponse'] = response
@@ -207,14 +217,14 @@ class SquarePaymentRecord(PaymentRecord):
 
         if payment.get('refund_ids', []):
             for y in payment['refund_ids']:
-                refund_response = client.refunds.get_payment_refund(y)
-                if refund_response.is_error():
+                try:
+                    refund_response = client.refunds.get(y).dict().get('refund', {})
+                except ApiError:
                     continue
-                r = refund_response.body.get('refund', {})
-                if r:
-                    response.append(r)
+                else:
+                    response.append(refund_response)
 
-        if update_cache and response != cached:
+        if update_cache and response and (response != cached):
             self.data['apiRefundResponse'] = response
             self.data['apiRefundResponseDate'] = timezone.localtime().isoformat()
             if commit:
@@ -263,12 +273,12 @@ class SquarePaymentRecord(PaymentRecord):
             }
         }
 
-        response = self.client.refunds.refund_payment(body)
-        if response.is_error():
-            logger.error('Error in providing Square refund: %s' % response.errors)
-            refundData.append({'status': 'error', 'errors': response.errors})
-        else:
-            this_refund = response.body.get('refund', {})
+        try:
+            response = self.client.refunds.refund_payment(**body)
+            this_refund = response.dict().get('refund', {})
+        except ApiError as e:
+            logger.error('Error in providing Square refund: %s' % e.errors)
+            refundData.append({'status': 'error', 'errors': e.errors})            
 
             # Note that fees are often 0 or missing here, but we enqueue the task
             # retrieve and update them afterward.
@@ -337,6 +347,11 @@ class SquarePayoutRecord(models.Model):
     def getPayout(
         self, client=None, use_cache=True, update_cache=True, commit=True
     ):
+        # No need to proceed if there is no way to get the payout record from
+        # the API.
+        if not self.payoutId:
+            return {}
+
         cached = self.data.get('apiPayoutResponse', None)
         if use_cache and cached is not None:
             return cached
@@ -344,7 +359,7 @@ class SquarePayoutRecord(models.Model):
         if not client:
             client = self.client
 
-        response = client.payouts.get_payout(self.payoutId).body.get('payout', {})
+        response = client.payouts.get(self.payoutId).dict().get('payout', {})
 
         if (update_cache is True) and (response != cached):
             self.data['apiPayoutResponse'] = response
@@ -356,6 +371,11 @@ class SquarePayoutRecord(models.Model):
     def getPayoutEntries(
         self, client=None, use_cache=True, update_cache=True, commit=True
     ):
+        # No need to proceed if there is no way to get the payout record from
+        # the API.
+        if not self.payoutId:
+            return {}
+
         cached = self.data.get('apiEntriesResponse', None)
         if use_cache and cached is not None:
             return cached
@@ -363,7 +383,7 @@ class SquarePayoutRecord(models.Model):
         if not client:
             client = self.client
 
-        response = client.payouts.list_payout_entries(self.payoutId).body.get('payout_entries', [])
+        response = client.payouts.list_entries(self.payoutId).dict().get('items', [])
 
         if (update_cache is True) and (response != cached):
             self.data['apiEntriesResponse'] = response

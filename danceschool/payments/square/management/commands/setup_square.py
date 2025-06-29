@@ -65,15 +65,23 @@ CHECKING SQUARE INTEGRATION
 
         if location_id and client_id and client_secret:
             try:
-                from square.client import Client
-                client = Client(
-                    access_token=client_secret,
-                    environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production')
+                from square import Square
+                from square.environment import SquareEnvironment
+                from square.core.api_error import ApiError
+
+                api_environment = (
+                    SquareEnvironment.PRODUCTION if 'production' in
+                    str(getattr(settings, 'SQUARE_ENVIRONMENT', 'sandbox')).lower()
+                    else SquareEnvironment.SANDBOX
+                )
+                client = Square(
+                    token=client_secret, environment=api_environment
                 )
 
                 # Check that the location ID from settings actually identifies a location.
-                location_response = client.locations.retrieve_location(location_id)
-                if location_response.is_error():
+                try:
+                    location_response = client.locations.get(location_id)
+                except ApiError as e:
                     self.stdout.write(self.style.ERROR(
                         'Location ID from settings does not identify a valid ' +
                         'Square Location.'
@@ -81,9 +89,10 @@ CHECKING SQUARE INTEGRATION
                     foundErrors = True
 
                 # Check that we can access payment information
-                payment_response = client.payments.list_payments(location_id=location_id)
-                if payment_response.is_error():
-                    self.stdout.write(self.style.ERROR('Error in listing payments: %s' % payment_response.errors))
+                try:
+                    payment_response = client.payments.list(location_id=location_id)
+                except ApiError as e:
+                    self.stdout.write(self.style.ERROR('Error in listing payments: %s' % e.errors))
                     foundErrors = True
                 else:
                     self.stdout.write(self.style.SUCCESS(

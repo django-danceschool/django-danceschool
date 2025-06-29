@@ -4,6 +4,7 @@ from huey.contrib.djhuey import db_task, db_periodic_task
 from huey import crontab
 import logging
 from datetime import timedelta
+from square.core.api_error import ApiError
 
 from .api_client import iso_timestamp_to_localtime
 from .api_client import api_client as client
@@ -45,15 +46,6 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
 
     from .models import SquarePaymentRecord
 
-    def pop_by_key_value(list_of_dicts, key, value):
-        '''
-        Pops the first dictionary from a list of dictionaries that matches the given key-value pair.
-        '''
-        for i, d in enumerate(list_of_dicts):
-            if d.get(key) == value:
-                return list_of_dicts.pop(i)
-        return {}
-
     logger.info('Syncing local Square payment records to API responses.')
 
     api_kwargs = {}
@@ -80,51 +72,41 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
     # call the API.
     update_time = timezone.localtime().isoformat()
 
-    # Get the set of payments that have been updated, which may be on multiple
-    # pages.
-    cursor = None
-    has_next_page = True
+    # Get the set of payments that have been updated. The updated Square APIs
+    # handle pagination under the hood.
     remaining_payments = []
+    remaining_payment_ids = []
 
-    while has_next_page:
-        payments_page = client.payments.list_payments(
+    try:
+        payments_response = client.payments.list(
             location_id=settings.SQUARE_LOCATION_ID,
-            cursor=cursor,
             **api_kwargs
         )
-        if not payments_page.errors:
-            cursor = payments_page.cursor
-            remaining_payments += payments_page.body.get('payments', [])
-        if payments_page.errors or cursor is None:
-            has_next_page = False
-
-    # We only want completed payments to be included in our database, but the
-    # API cannot filter, so we filter the response list here before further
-    # processing.
-    remaining_payments = [
-        x for x in remaining_payments if x.get('status') == 'COMPLETED'
-    ]
+        for payment in payments_response:
+            # We only want completed payments to be included in our database,
+            # but the API cannot filter, so we filter the response list here
+            # before further processing.
+            if payment.status == 'COMPLETED':
+                remaining_payments.append(payment)
+                remaining_payment_ids.append(payment.id)
+    except ApiError as e:
+        pass
 
     # Now, apply a similar procedure to collect refund information so that we
     # can update associated payment records.
-    cursor = None
-    has_next_page = True
     all_refunds = []
+    all_refund_ids = []
 
-    while has_next_page:
-        refunds_page = client.refunds.list_payment_refunds(
+    try:
+        refunds_response = client.refunds.list(
             location_id=settings.SQUARE_LOCATION_ID,
-            cursor=cursor,
             **refund_api_kwargs
         )
-        if not refunds_page.errors:
-            cursor = refunds_page.cursor
-            all_refunds += refunds_page.body.get('refunds', [])
-        if refunds_page.errors or cursor is None:
-            has_next_page = False
-
-    remaining_payment_ids = [x.get('id') for x in remaining_payments]
-    all_refund_ids = [x.get('payment_id') for x in all_refunds]
+        for refund in refunds_response:
+            all_refunds.append(refund)
+            all_refund_ids.append(refund.payment_id)  
+    except ApiError as e:
+        pass
 
     # Get the local records associated with these updated API records. Their
     # JSON data will be updated to reflect the API responses.
@@ -139,28 +121,28 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
         # remain after this loop are the set of API payments that still lack a
         # SquarePaymentRecord. Finally, we are iterating over a shallow copy so
         # that we can remove items that don't need to be updated at all.
-        payment_response = pop_by_key_value(remaining_payments, 'id', record.paymentId)
+        payment_response = next((x for x in remaining_payments if x.id == record.paymentId), None)
         if payment_response:
             if (
-                payment_response.get('version_token') !=
+                payment_response.version_token !=
                 record.data.get('apiPaymentResponse', {}).get('version_token')
             ):
                 record.data.update({
-                    'apiPaymentResponse': payment_response,
+                    'apiPaymentResponse': payment_response.dict(),
                     'apiPaymentResponseDate': update_time,
                 })
 
         # There can be multiple refunds associated with a payment record, so
         # first, get the set of refunds associated with this one.
         this_record_api_refunds = [
-            x for x in all_refunds if x.get('payment_id') == record.paymentId
+            x for x in all_refunds if x.payment_id == record.paymentId
         ]
         if this_record_api_refunds:
             # Pop off any old records in the JSON data that are associated with the
             # new/updated refunds, and then append the new records received from the
             # API if the update stamp has changed.
             old_db_refund_data = record.data.get('apiRefundResponse', [])
-            this_record_refund_ids = [x.get('id') for x in this_record_api_refunds]
+            this_record_refund_ids = [x.id for x in this_record_api_refunds]
 
             # We will only update records that have a reason to be updated.
             flag_to_update = False
@@ -186,12 +168,10 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
             # existing records in the database. If something has changed, then
             # we will update the database record.
             for new in this_record_api_refunds:
-                existing = pop_by_key_value(
-                    existing_db_refund_data, 'id', new.get('id')
-                )
-                if existing and (new.get('updated_at') != existing.get('updated_at')):
+                existing = next((x for x in existing_db_refund_data if x.get('id') == new.id), {})
+                if existing and (new.updated_at != existing.get('updated_at')):
                     flag_to_update  = True
-                updated_refund_data.append(new)
+                updated_refund_data.append(new.dict())
 
             # The updated_refund_data is now complete, but the flag identifies
             # whether a database update is needed.
@@ -229,11 +209,11 @@ def updateSquarePaymentRecords(update_all=False, begin_time=None):
     for x in remaining_payments:
         created_objects.append(
             SquarePaymentRecord.objects.create(
-                paymentId=x.get('id'),
-                orderId=x.get('order_id'),
-                locationId=x.get('location_id'),
+                paymentId=x.id,
+                orderId=x.order_id,
+                locationId=x.location_id,
                 data={
-                    'apiPaymentResponse': x,
+                    'apiPaymentResponse': x.dict(),
                     'apiPaymentResponseDate': update_time
                 }
             )
@@ -253,15 +233,6 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
     '''
 
     from .models import SquarePayoutRecord
-
-    def pop_by_key_value(list_of_dicts, key, value):
-        '''
-        Pops the first dictionary from a list of dictionaries that matches the given key-value pair.
-        '''
-        for i, d in enumerate(list_of_dicts):
-            if d.get(key) == value:
-                return list_of_dicts.pop(i)
-        return {}
 
     logger.info('Syncing local Square payout records to API responses.')
 
@@ -286,35 +257,27 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
     # call the API.
     update_time = timezone.localtime().isoformat()
 
-    # Get the set of payments that have been updated, which may be on multiple
-    # pages.
-    cursor = None
-    has_next_page = True
+    # Get the set of payments that have been updated.
     remaining_payouts = []
 
-    while has_next_page:
-        payouts_page = client.payouts.list_payouts(
+    try:
+        payouts_response = client.payouts.list(
             location_id=settings.SQUARE_LOCATION_ID,
-            cursor=cursor,
             **api_kwargs
         )
-        if not payouts_page.errors:
-            cursor = payouts_page.cursor
-            remaining_payouts += payouts_page.body.get('payouts', [])
-        if payouts_page.errors or cursor is None:
-            has_next_page = False
-
-    # We only want submitted payouts to be included in our database, but the
-    # API cannot filter, so we filter the response list here before further
-    # processing.
-    remaining_payouts = [
-        x for x in remaining_payouts if x.get('status') != 'FAILED'
-    ]
+        for payout in payouts_response:
+            # We only want submitted payouts to be included in our database, but
+            # the API cannot filter, so we filter the response list here before
+            # further processing.
+            if payout.status != 'FAILED':
+                remaining_payouts.append(payout)
+    except ApiError as e:
+        pass
 
     # Get the local records associated with these updated API records. Their
     # JSON data will be updated to reflect the API responses.
     existing_records = list(SquarePayoutRecord.objects.filter(
-        payoutId__in=[x.get('id') for x in remaining_payouts]
+        payoutId__in=[x.id for x in remaining_payouts]
     ))
 
     for record in existing_records.copy():
@@ -324,18 +287,18 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
         # remain after this loop are the set of API payouts that still lack a
         # SquarePayoutRecord. Finally, we are iterating over a shallow copy so that we
         # can remove items that don't need to be updated at all.
-        payout_response = pop_by_key_value(remaining_payouts, 'id', record.payoutId)
+        payout_response = next((x for x in remaining_payouts if x.id == record.payoutId), None)
         if payout_response:
             if (
-                payout_response.get('version') !=
+                payout_response.version !=
                 record.data.get('apiPayoutResponse', {}).get('version')
             ):
                 record.data.update({
-                    'apiPayoutResponse': payout_response,
+                    'apiPayoutResponse': payout_response.dict(),
                     'apiPayoutResponseDate': update_time,
                 })
                 record.modifiedDate = iso_timestamp_to_localtime(
-                    payout_response.get('updated_at','')
+                    payout_response.updated_at
                 )
             else:
                 # Nothing in this record was updated, so don't include it in the
@@ -353,12 +316,12 @@ def updateSquarePayoutRecords(update_all=False, begin_time=None):
     # records are created.
     created_objects = [
         SquarePayoutRecord(
-            payoutId=x.get('id'),
-            locationId=x.get('location_id'),
-            creationDate=iso_timestamp_to_localtime(x.get('created_at','')),
-            modifiedDate=iso_timestamp_to_localtime(x.get('updated_at','')),
+            payoutId=x.id,
+            locationId=x.location_id,
+            creationDate=iso_timestamp_to_localtime(x.created_at),
+            modifiedDate=iso_timestamp_to_localtime(x.updated_at),
             data={
-                'apiPayoutResponse': x,
+                'apiPayoutResponse': x.dict(),
                 'apiPayoutResponseDate': update_time,
             }
         )

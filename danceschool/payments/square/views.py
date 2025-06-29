@@ -14,8 +14,7 @@ from django.views.generic import View, UpdateView
 
 import uuid
 from braces.views import PermissionRequiredMixin
-from square.client import Client
-from square.exceptions.api_exception import APIException
+from square.core.api_error import ApiError
 import logging
 from datetime import timedelta
 import json
@@ -29,6 +28,7 @@ from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.helpers import getReturnPage
 
 
+from .api_client import api_client
 from .forms import CreateInvoiceForm
 from .models import SquarePaymentRecord
 from .tasks import updateSquareFees
@@ -171,10 +171,7 @@ class ProcessSquarePaymentView(View):
         this_currency = getConstant('general__currencyCode')
         this_total = min(this_invoice.outstandingBalance, amount)
 
-        client = Client(
-            access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
-            environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production'),
-        )
+        client = api_client
 
         body = {
             'source_id': data.get('sourceId'),
@@ -186,14 +183,15 @@ class ProcessSquarePaymentView(View):
             },
         }
 
-        response = client.payments.create_payment(body)
-        if response.is_error():
-            logger.error('Error in charging Square transaction: %s' % response.errors)
+        try:
+            response = client.payments.create(**body)
+        except ApiError as e:
+            logger.error('Error in charging Square transaction: %s' % e.errors)
 
             this_invoice.status = Invoice.PaymentStatus.error
             this_invoice.save()
             errors_string = ''
-            for err in response.errors:
+            for err in e.errors:
                 errors_string += '<li><strong>{}:</strong> {}</li>'.format(
                     err.get('code', str(_('Unknown'))), err.get('detail', str(_('Unknown')))
                 )
@@ -207,7 +205,7 @@ class ProcessSquarePaymentView(View):
         else:
             logger.info('Square charge successfully created.')
 
-        payment = response.body.get('payment')
+        payment = response.dict().get('payment', {})
 
         paymentRecord = SquarePaymentRecord.objects.create(
             invoice=this_invoice,
@@ -262,10 +260,7 @@ class ProcessPointOfSalePaymentView(View):
             return
 
         location_id = getattr(settings, 'SQUARE_LOCATION_ID', '')
-        client = Client(
-            access_token=getattr(settings, 'SQUARE_ACCESS_TOKEN', ''),
-            environment=getattr(settings, 'SQUARE_ENVIRONMENT', 'production'),   
-        )
+        client = api_client
 
         payment = None
 
@@ -273,35 +268,32 @@ class ProcessPointOfSalePaymentView(View):
             # Added to avoid errors associated with Square API not being up to date.
             sleep(1)
             try:
-                response = client.transactions.retrieve_transaction(
-                    transaction_id=serverTransId, location_id=location_id
+                response = client.v1transactions.v1retrieve_order(
+                    order_id=serverTransId, location_id=location_id
                 )
                 response_key = 'transaction'
-
-                if response.is_error():
-                    response = client.orders.retrieve_order(serverTransId)
+            except ApiError as e:
+                try:
+                    response = client.orders.get(serverTransId)
                     response_key = 'order'
-
-                if response.is_error():
+                except ApiError as e2:
+                    response = None
                     response_key = 'error'
-            except APIException:
-                response = None
-                response_key = 'error'
 
             if response_key == 'error':
                 logger.error('Unable to find Square transaction for %s by server ID: %s' % (
-                    serverTransId, response.errors
+                    serverTransId, e2.errors
                 ))
                 messages.error(
                     request,
                     str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
-                    str(getattr(response, 'errors', None)),
+                    str(getattr(e2, 'errors', None)),
                     extra_tags='square-error'
                 )
             else:
-                payment_list = [x.get('id') for x in response.body.get(response_key, {}).get('tenders', [])]
+                payment_list = [x.get('id') for x in response.dict().get(response_key, {}).get('tenders', [])]
                 if len(payment_list) == 1:
-                    payment = client.payments.get_payment(payment_list[0]).body.get('payment')
+                    payment = client.payments.get(payment_list[0]).dict().get('payment')
                     logger.debug(f'Successfully retrieved payment based on server transaction identifier {serverTransId}')
                 else:
                     logger.error('Returned client transaction ID not found.')
@@ -312,21 +304,22 @@ class ProcessPointOfSalePaymentView(View):
 
         if clientTransId and not payment:
             # Try to find the payment in the 50 most recent payments
-            response = client.payments.list_payments(location_id=location_id)
-            if response.is_error():
+            try:
+                response = client.payments.list(location_id=location_id)
+            except ApiError as e:
                 logger.error('Unable to find Square transaction for %s by client ID: %s' % (
-                    location_id, response.errors
+                    location_id, e.errors
                 ))
                 messages.error(
                     request,
                     str(_('ERROR: Unable to find Square transaction by client ID:' )) +
-                    str(response.errors),
+                    str(e.errors),
                     extra_tags='square-error'
                 )
             else:
-                payment_list = [x for x in response.body.get('payments', []) if x.get('order_id') == clientTransId]
+                payment_list = [x for x in response if x.order_id == clientTransId]
                 if len(payment_list) == 1:
-                    payment = payment_list[0].body.get('payment')
+                    payment = payment_list[0].dict()
                     logger.debug(f'Successfully retrieved payment based on client transaction identifier {clientTransId}')
                 else:
                     logger.error('Returned client transaction ID not found.')
