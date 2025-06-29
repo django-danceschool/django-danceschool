@@ -193,7 +193,7 @@ class ProcessSquarePaymentView(View):
             errors_string = ''
             for err in e.errors:
                 errors_string += '<li><strong>{}:</strong> {}</li>'.format(
-                    err.get('code', str(_('Unknown'))), err.get('detail', str(_('Unknown')))
+                    err.code, err.detail
                 )
             return SquareCheckoutErrorResponse(
                 format_html(
@@ -279,18 +279,17 @@ class ProcessPointOfSalePaymentView(View):
                 except ApiError as e2:
                     response = None
                     response_key = 'error'
-
-            if response_key == 'error':
-                logger.error('Unable to find Square transaction for %s by server ID: %s' % (
-                    serverTransId, e2.errors
-                ))
-                messages.error(
-                    request,
-                    str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
-                    str(getattr(e2, 'errors', None)),
-                    extra_tags='square-error'
-                )
-            else:
+                    logger.error('Unable to find Square transaction for %s by server ID: %s' % (
+                        serverTransId, e2.errors
+                    ))
+                    messages.error(
+                        request,
+                        str(_('ERROR: Unable to find Square transaction for {} by server ID: '.format(serverTransId))) +
+                        str(e2.errors),
+                        extra_tags='square-error'
+                    )
+            
+            if response_key != 'error':
                 payment_list = [x.get('id') for x in response.dict().get(response_key, {}).get('tenders', [])]
                 if len(payment_list) == 1:
                     payment = client.payments.get(payment_list[0]).dict().get('payment')
