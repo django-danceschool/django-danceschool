@@ -276,9 +276,6 @@ class SquarePaymentRecord(PaymentRecord):
         try:
             response = self.client.refunds.refund_payment(**body)
             this_refund = response.dict().get('refund', {})
-        except ApiError as e:
-            logger.error('Error in providing Square refund: %s' % e.errors)
-            refundData.append({'status': 'error', 'errors': e.errors})            
 
             # Note that fees are often 0 or missing here, but we enqueue the task
             # retrieve and update them afterward.
@@ -288,6 +285,9 @@ class SquarePaymentRecord(PaymentRecord):
                 'refundAmount': float(this_refund.get('amount_money', {}).get('amount', 0)) / 100,
                 'fees': float(this_refund.get('app_fee_money', {}).get('amount', 0)) / 100,
             })
+        except ApiError as e:
+            logger.error('Error in providing Square refund: %s' % e.errors)
+            refundData.append({'status': 'error', 'errors': e.errors})            
 
             # Once the refund process is complete, fees will be calculated,
             # so schedule a task to get them and update records one minute
