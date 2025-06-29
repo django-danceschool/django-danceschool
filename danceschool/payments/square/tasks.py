@@ -6,7 +6,6 @@ import logging
 from datetime import timedelta
 from square.core.api_error import ApiError
 
-from .models import SquarePaymentRecord
 from .api_client import iso_timestamp_to_localtime
 from .api_client import api_client as client
 
@@ -25,7 +24,9 @@ def updateSquareFees(paymentRecordId):
 
     # Get payments and refunds and simultaneously update the cache for each.
     # This ensures that fees are calculated properly.
+    from .models import SquarePaymentRecord
     paymentRecord = SquarePaymentRecord.objects.filter(id=paymentRecordId)
+
     payment=paymentRecord.getPayment(use_cache=False, commit=False)
     refunds=paymentRecord.getRefunds(
         payment=payment, use_cache=False, commit=True
