@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 from square.core.api_error import ApiError
 
+from .models import SquarePaymentRecord
 from .api_client import iso_timestamp_to_localtime
 from .api_client import api_client as client
 
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @db_task(retries=3)
-def updateSquareFees(paymentRecord):
+def updateSquareFees(paymentRecordId):
     '''
     The Square Checkout API does not calculate fees immediately, so this task is
     called to be asynchronously run 1 minute after the initial transaction, so that
@@ -24,6 +25,7 @@ def updateSquareFees(paymentRecord):
 
     # Get payments and refunds and simultaneously update the cache for each.
     # This ensures that fees are calculated properly.
+    paymentRecord = SquarePaymentRecord.objects.filter(id=paymentRecordId)
     payment=paymentRecord.getPayment(use_cache=False, commit=False)
     refunds=paymentRecord.getRefunds(
         payment=payment, use_cache=False, commit=True
