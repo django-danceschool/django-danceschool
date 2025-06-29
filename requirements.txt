@@ -1,10 +1,10 @@
 beautifulsoup4>=4.12.3
-Django>=5.0.9,<5.1
+Django>=5.2.3,<6.0
 django-addanother>=2.2.2
 django-admin-list-filter-dropdown>=1.0.3
 django-admin-rangefilter>=0.13.2
 django-admin-sortable2>=2.2.3
-django-allauth>=65.0.2
+django-allauth>=65.9.0
 django-autocomplete-light>=3.11.0
 django-braces>=1.16.0
 django-ckeditor>=6.7.1

@@ -39,9 +39,8 @@ AUTHENTICATION_BACKENDS = (
 
 # Settings for Django-allauth to allow login by email address, to require email
 # address on signup, and to require email verification before login.
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {'email', 'username'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_UNIQUE_EMAIL = True
 
