@@ -501,7 +501,7 @@ class ProcessPointOfSalePaymentView(View):
                 methodTxn=payment.get('id'),
                 notify=customerEmail,
             )
-        updateSquareFees.schedule(args=(paymentRecord, ), delay=60)
+        updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)
 
         if addSessionInfo:
             paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})

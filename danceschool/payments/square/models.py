@@ -292,7 +292,7 @@ class SquarePaymentRecord(PaymentRecord):
             # Once the refund process is complete, fees will be calculated,
             # so schedule a task to get them and update records one minute
             # in the future.
-            updateSquareFees.schedule(args=(self, ), delay=60)
+            updateSquareFees.schedule(args=(self.pk, ), delay=60)
 
         return refundData
 
