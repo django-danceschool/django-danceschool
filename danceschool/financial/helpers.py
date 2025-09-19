@@ -1239,11 +1239,11 @@ def prepareFinancialDetails(**kwargs):
             })
             context.update({
                 'allocatedVenueTotal': sum([
-                    x.getAllocation(**allocationBasis) * x.net
+                    x.getAllocation(**allocationBasis) * (x.net or 0)
                     for x in context['allocatedVenueExpenseItems']
                 ]),
                 'allocatedStaffTotal': sum([
-                    x.getAllocation(**allocationBasis) * x.net
+                    x.getAllocation(**allocationBasis) * (x.net or 0)
                     for x in context['allocatedStaffExpenseItems']
                 ])
             })
@@ -1273,7 +1273,7 @@ def prepareFinancialDetails(**kwargs):
             ).order_by('category'),
             'totalExpenses': (
                 sum([
-                    x.getAllocation(**allocationBasis) * x.net
+                    x.getAllocation(**allocationBasis) * (x.net or 0)
                     for x in expenseItems
                 ])
             ),
@@ -1287,7 +1287,7 @@ def prepareFinancialDetails(**kwargs):
                 category=getConstant('financial__registrationsRevenueCat')
             ).order_by('category'),
             'totalRevenues': sum([
-                x.getAllocation(**allocationBasis) * x.net for x in revenueItems
+                x.getAllocation(**allocationBasis) * (x.net or 0) for x in revenueItems
             ]),
         })
 
