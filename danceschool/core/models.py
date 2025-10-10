@@ -2615,6 +2615,13 @@ class Invoice(EmailRecipientMixin, models.Model):
     unpaid.fget.short_description = _('Unpaid')
 
     @property
+    def modified(self):
+        '''
+        Used to add additional context in views if an invoice has been updated
+        since its creation. '''
+        return (self.modifiedDate - self.creationDate) >= timedelta(seconds=1)
+
+    @property
     def outstandingBalance(self):
         balance = self.total + self.adjustments - self.amountPaid
         if self.buyerPaysSalesTax:
@@ -2946,7 +2953,10 @@ class Invoice(EmailRecipientMixin, models.Model):
             # Get rescaled weights, with one item for each passed ID.  Also
             # create a binary indicator that the weight is greater than 0.
             totalWeight = sum([x for x in allocateWeights.values()])
-            allocateWeights = {k: v / totalWeight for k,v in allocateWeights.items()}
+            allocateWeights = {
+                k: (v / totalWeight) if totalWeight > 0 else 0
+                for k,v in allocateWeights.items()
+            }
 
             when_weight = []
             for k,v in allocateWeights.items():

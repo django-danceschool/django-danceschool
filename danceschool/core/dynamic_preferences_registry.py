@@ -663,6 +663,35 @@ class RetainExpiredInvoicesMinutes(IntegerPreference):
     default = 1440
 
 
+@global_preferences_registry.register
+class InvoicePDFTemplate(ModelChoicePreference):
+    section = registration
+    name = 'invoicePDFTemplate'
+    verbose_name = _('Template used for PDF invoice payment instructions')
+    model = EmailTemplate
+    queryset = EmailTemplate.objects.all()
+
+    def get_default(self):
+        # if self.model and self.model._meta.db_table in connection.introspection.table_names():
+
+        initial_template = get_template('core/pdf/invoice_payment_instructions_initial.html')
+        with open(initial_template.origin.name, 'r') as infile:
+            content = infile.read()
+            infile.close()
+
+        return EmailTemplate.objects.get_or_create(
+            name=_('PDF Invoice Payment Instructions'),
+            defaults={
+                'subject': _('Invoice Payment Instructions'),
+                'content': content or '',
+                'defaultFromAddress': get_defaultEmailFrom(),
+                'defaultFromName': get_defaultEmailName(),
+                'defaultCC': '',
+                'hideFromForm': True,
+            }
+        )[0]
+
+
 ############################
 # Email Preferences
 #

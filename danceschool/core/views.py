@@ -1,4 +1,5 @@
 from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest, HttpResponse
+from django.template import Template, Context
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -27,6 +28,7 @@ from urllib.parse import unquote_plus, unquote
 from braces.views import UserFormKwargsMixin, PermissionRequiredMixin, LoginRequiredMixin, StaffuserRequiredMixin
 from cms.constants import RIGHT
 from cms.models import Page
+from django_weasyprint import WeasyTemplateView
 import re
 import logging
 import json
@@ -611,6 +613,51 @@ class InvoiceNotificationView(FinancialContextMixin, AdminSuccessURLMixin,
             'cannotNotify': self.cannotNotify,
         })
         return context
+
+
+class InvoicePDFView(PermissionRequiredMixin, FinancialContextMixin, WeasyTemplateView):
+    template_name = 'core/pdf/invoice_pdf.html'
+    pdf_filename = 'invoice.pdf'
+    permission_required = 'core.view_all_invoices'
+
+    def get(self, request, *args, **kwargs):
+        '''
+        Ensure that the invoice is loaded
+        '''
+        pk = self.kwargs.get('pk')
+        self.object = Invoice.objects.filter(pk=pk).first()
+        if not self.object:
+            return self.handle_no_permission()
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'object': self.object,
+            'invoice': self.object,
+            'payments': self.get_payments(),
+        })
+
+        template = getConstant('registration__invoicePDFTemplate')
+
+        # For security reasons, the following tags are removed from the template before parsing:
+        # {% extends %}{% load %}{% debug %}{% include %}{% ssi %}
+        content = re.sub(r'\{%\s*((extends)|(load)|(debug)|(include)|(ssi))\s+.*?\s*%\}', '', template.content)
+
+        t = Template(content)
+
+        rendered_content = t.render(Context(context))
+
+        context.update({
+            'payment_instructions': rendered_content
+        })
+
+        return context
+
+    def get_payments(self):
+        if not getattr(self, 'payments', None):
+            self.payments = self.object.get_payments()
+        return self.payments
 
 
 #################################

@@ -9,7 +9,7 @@ from .views import (
     StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView,
     RepeatEventsView, IndividualClassReferralView, IndividualPublicEventReferralView,
     RefundProcessingView, RefundConfirmationView, ViewInvoiceView,
-    InvoiceNotificationView, RegistrationTransferProcessingView
+    InvoicePDFView, InvoiceNotificationView, RegistrationTransferProcessingView
 )
 from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
 from .autocomplete_light_registry import (
@@ -140,6 +140,7 @@ urlpatterns = [
     ),
 
     # These URLs are associated with viewing individual invoices and sending notifications
+    path('invoice/view/pdf/<uuid:pk>/', InvoicePDFView.as_view(), name='viewInvoicePDF'),
     path('invoice/view/<uuid:pk>/', ViewInvoiceView.as_view(), name='viewInvoice'),
     path(
         'invoice/notify/<uuid:pk>/',
