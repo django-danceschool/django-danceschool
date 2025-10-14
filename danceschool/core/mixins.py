@@ -627,7 +627,9 @@ class RegistrationAdjustmentsMixin(object):
         else:
             return {}
 
-    def getDiscounts(self, invoice, registration=None, initial_price=None):
+    def getDiscounts(
+        self, invoice, registration=None, initial_price=None, voucher_code=None
+    ):
         '''
         This method takes a registration and an initial price, and it returns
         a tuple that contains all the information needed to process any
@@ -658,7 +660,8 @@ class RegistrationAdjustmentsMixin(object):
             sender=sender,
             registration=registration,
             invoice=invoice,
-            customer_final=self.customers_final
+            customer_final=self.customers_final,
+            voucher_code=voucher_code
         )
         discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 
@@ -686,10 +689,17 @@ class RegistrationAdjustmentsMixin(object):
                         [getattr(x, 'net_price', initial_price) for x in discount_codes]
                     ) + getattr(discount_responses[0], 'ineligible_total', 0)
                     total_discount_amount = initial_price - discounted_total
+
+                    # Pop the voucher code from return if it was used to access
+                    # a discount.
+                    for x in discount_codes:
+                        if getattr(getattr(x, 'code', None), 'voucherId', None) == voucher_code:
+                            voucher_code = None
+
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
 
-        return (discount_codes, total_discount_amount)
+        return (discount_codes, total_discount_amount, voucher_code)
 
     def getAddons(self, invoice, registration=None):
         '''

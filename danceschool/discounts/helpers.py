@@ -1,62 +1,97 @@
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, When, Case
+from django.apps import apps
 
 from datetime import timedelta
+import logging
 
-from .models import DiscountCombo, PointGroup
+from danceschool.core.models import Registration
 
 
-def getApplicableDiscountCombos(
-    cart_object_list, newCustomer=True, student=False, customer=None,
-    addOn=False, cannotCombine=False, dateTime=None, payAtDoor=False,
+# Define logger for this file
+logger = logging.getLogger(__name__)
+
+
+def prepareCartObjects(reg=None, invoice=None):
+    '''
+    This common function is used to prepare the cart for finding the best
+    discount available, and also to check whether a specific discount is
+    applicable to a specific cart.
+    '''
+
+    if not reg:
+        reg = Registration.objects.filter(invoice=invoice).first()
+
+    if not reg or not invoice:
+        logger.warning('No registration passed, discounts not applied.')
+        return
+
+    eligible_filter = (
+        Q(event__series__pricingTier__isnull=False) |
+        Q(event__publicevent__pricingTier__isnull=False)
+    )
+    ineligible_filter = (
+        (
+            Q(event__series__isnull=False) &
+            Q(event__series__pricingTier__isnull=True)
+        ) |
+        (
+            Q(event__publicevent__isnull=False) &
+            Q(event__publicevent__pricingTier__isnull=True)
+        ) |
+        Q(dropIn=True)
+    )
+    pricingTier_cases = [
+        When(event__publicevent__isnull=False, then='event__publicevent__pricingTier'),
+        When(event__series__isnull=False, then='event__series__pricingTier'),
+    ]
+
+    if apps.is_installed('danceschool.private_lessons'):
+        eligible_filter = (
+            eligible_filter |
+            Q(event__privatelessonevent__pricingTier__isnull=False)
+        )
+        ineligible_filter = ineligible_filter | (
+            Q(event__privatelessonevent__isnull=False) &
+            Q(event__privatelessonevent__pricingTier__isnull=True)
+        )
+        pricingTier_cases.append(When(
+            event__privatelessonevent__isnull=False,
+            then='event__privatelessonevent__pricingTier'
+        ))
+
+    # The items for which the customer registered.
+    eventregs_list = reg.eventregistration_set.all()
+    eligible_list = eventregs_list.filter(dropIn=False).filter(
+        eligible_filter
+    ).annotate(
+        pricingTier=Case(*pricingTier_cases)
+    )
+    ineligible_list = eventregs_list.filter(ineligible_filter)
+
+    student = getattr(eligible_list.first(), 'student', False)
+
+    ineligible_total = sum([x.invoiceItem.initialTotal for x in ineligible_list])
+
+    return {
+        'student': student,
+        'cart_object_list': eligible_list,
+        'ineligible_total': ineligible_total
+    }
+
+
+def checkDiscountCombos(
+    discounts_to_check=[], cart_object_list=[], customer=None, dateTime=None
 ):
+    '''
+    Check whether points are satisfied for one or more discounts. Note that this
+    is just one step in the validation process. Use
+    DiscountCombo.validateForCart() to perform a full validation of a specific
+    discount against a specific cart.
+    '''
 
-    # First, identify the set of discounts that could potentially be satisfied
-    # based on customer restrictions, active status, and expiration date.
-    filters = Q(active=True)
-    if customer:
-        filters &= (
-            Q(
-                Q(customerdiscount__isnull=True) &
-                Q(customergroupdiscount__isnull=True)
-            ) |
-            Q(customerdiscount__customer=customer) |
-            Q(customergroupdiscount__group__customer=customer)
-        )
-    else:
-        filters &= (
-            Q(customerdiscount__isnull=True) &
-            Q(customergroupdiscount__isnull=True)
-        )
-
-    # Existing customers can't get discounts marked for new customers only.
-    # Add-ons are handled separately.
-    if addOn:
-        filters = filters & Q(discountType=DiscountCombo.DiscountType.addOn)
-
-        availableDiscountCodes = DiscountCombo.objects.filter(
-            filters
-        ).exclude(expirationDate__lte=timezone.now()).distinct()
-    else:
-        filters = filters & Q(category__cannotCombine=cannotCombine)
-
-        availableDiscountCodes = DiscountCombo.objects.filter(
-            filters
-        ).exclude(
-            discountType=DiscountCombo.DiscountType.addOn
-        ).exclude(
-            expirationDate__lte=timezone.now()
-        ).distinct()
-
-    if payAtDoor:
-        availableDiscountCodes = availableDiscountCodes.exclude(availableAtDoor=False)
-    else:
-        availableDiscountCodes = availableDiscountCodes.exclude(availableOnline=False)
-
-    if not newCustomer:
-        availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)
-    if not student:
-        availableDiscountCodes = availableDiscountCodes.exclude(studentsOnly=True)
+    if not dateTime:
+        dateTime=timezone.now()
 
     pointbased_cart_object_lists = {}
     pointbased_customer_object_lists = {}
@@ -107,7 +142,7 @@ def getApplicableDiscountCombos(
     # Start out with a blank list of codes and fill the list with namedtuples
     useableCodes = []
 
-    for x in availableDiscountCodes:
+    for x in discounts_to_check:
         # Create two lists, one that starts with all of the items necessary for
         # the discount to apply, and one that starts empty.  As we find an item
         # in the cart that matches an item in the discount requirements, move
@@ -199,5 +234,76 @@ def getApplicableDiscountCombos(
                 for item in matchedList
             ]
             useableCodes += [x.ApplicableDiscountCode(x, matchedList, matchedTuples)]
-
+    
+    # Return the list of codes that matched.
     return useableCodes
+
+
+def getApplicableDiscountCombos(
+    cart_object_list=[], newCustomer=True, student=False, customer=None,
+    addOn=False, cannotCombine=False, dateTime=None, payAtDoor=False,
+    voucher_code=None
+):
+
+    # Loaded here to avoid circular import
+    from danceschool.discounts.models import DiscountCombo
+
+    # First, identify the set of discounts that could potentially be satisfied
+    # based on customer restrictions, active status, expiration date, and passed
+    # voucher ID.
+    filters = Q(active=True)
+    if customer:
+        filters &= (
+            Q(
+                Q(customerdiscount__isnull=True) &
+                Q(customergroupdiscount__isnull=True)
+            ) |
+            Q(customerdiscount__customer=customer) |
+            Q(customergroupdiscount__group__customer=customer)
+        )
+    else:
+        filters &= (
+            Q(customerdiscount__isnull=True) &
+            Q(customergroupdiscount__isnull=True)
+        )
+
+    if voucher_code:
+        filters &= (
+            Q(voucherId__isnull=True) |
+            Q(voucherId=voucher_code)
+        )
+    else:
+        filters &= Q(voucherId__isnull=True)
+
+    # Existing customers can't get discounts marked for new customers only.
+    # Add-ons are handled separately.
+    if addOn:
+        filters = filters & Q(discountType=DiscountCombo.DiscountType.addOn)
+
+        availableDiscountCodes = DiscountCombo.objects.filter(
+            filters
+        ).exclude(expirationDate__lte=timezone.now()).distinct()
+    else:
+        filters = filters & Q(category__cannotCombine=cannotCombine)
+
+        availableDiscountCodes = DiscountCombo.objects.filter(
+            filters
+        ).exclude(
+            discountType=DiscountCombo.DiscountType.addOn
+        ).exclude(
+            expirationDate__lte=timezone.now()
+        ).distinct()
+
+    if payAtDoor:
+        availableDiscountCodes = availableDiscountCodes.exclude(availableAtDoor=False)
+    else:
+        availableDiscountCodes = availableDiscountCodes.exclude(availableOnline=False)
+
+    if not newCustomer:
+        availableDiscountCodes = availableDiscountCodes.exclude(newCustomersOnly=True)
+    if not student:
+        availableDiscountCodes = availableDiscountCodes.exclude(studentsOnly=True)
+
+    return checkDiscountCombos(
+        availableDiscountCodes, cart_object_list, customer, dateTime
+    )

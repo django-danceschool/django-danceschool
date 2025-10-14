@@ -1,3 +1,4 @@
+from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
 
@@ -33,6 +34,7 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         test_combo = DiscountCombo(
             name=kwargs.get('name', 'Test Discount'),
             category=kwargs.get('category', DiscountCategory.objects.get(id=1)),
+            voucherId=kwargs.get('voucherId', None),
             discountType=kwargs.get('discountType', DiscountCombo.DiscountType.flatPrice),
             onlinePrice=kwargs.get('onlinePrice', self.defaultPricing.onlinePrice - 5),
             doorPrice=kwargs.get('doorPrice', self.defaultPricing.doorPrice - 5),
@@ -56,7 +58,10 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         )
         return (test_combo, test_component)
 
-    def register_to_check_discount(self, series, expected_amount=None, payAtDoor=False):
+    def register_to_check_discount(
+        self, series, expected_amount=None, payAtDoor=False,
+        voucherId=None
+    ):
         '''
         This method makes it easy to determine whether discounts are working
         correctly for a single class registration
@@ -64,8 +69,14 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
 
         s = series
 
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
+        if voucherId:
+            response = self.client.get(reverse('registrationWithVoucher', args=(voucherId,)), follow=True)
+            self.assertEqual(response.redirect_chain, [(reverse('registration'), 302)])
+            regSession = self.client.session.get(REG_VALIDATION_STR, {})
+            self.assertEqual(regSession.get('voucher_id'), voucherId)
+        else:
+            response = self.client.get(reverse('registration'))
+            self.assertEqual(response.status_code, 200)
         self.assertIn(s, response.context_data.get('regOpenSeries'))
 
         # Sign up for the series, and check that we proceed to the student information page.
@@ -89,11 +100,15 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
 
+        if voucherId:
+            regSession = self.client.session.get(REG_VALIDATION_STR, {})
+            self.assertEqual(response.context['form'].fields['gift'].initial, voucherId)
+
         # Check that the student info page lists the correct subtotal with
         # the discount applied
         self.assertEqual(invoice.grossTotal, s.getBasePrice(payAtDoor=payAtDoor))
         if expected_amount is not None:
-            self.assertEqual(response.context_data.get('invoice').total, expected_amount)
+            self.assertEqual(response.context_data.get('invoice').outstandingBalance, expected_amount)
 
         # Continue to the summary page
         post_data = {
@@ -102,6 +117,8 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
             'email': 'test@customer.com',
             'agreeToPolicies': True,
         }
+        if voucherId:
+            post_data['gift'] = voucherId
         return self.client.post(reverse('getStudentInfo'), post_data, follow=True)
 
 
@@ -269,6 +286,31 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
 
+    def test_voucher_required(self):
+        '''
+        Create a discount that uses a voucher code and ensure that it doesn't
+        work if the voucher code is not specified.
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(voucherId='ABC123')
+        s = self.create_series(
+            pricingTier=self.defaultPricing,
+            startTime=timezone.now() + timedelta(days=1)
+        )
+
+        response = self.register_to_check_discount(s, s.getBasePrice(), False)
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(
+            invoice.total, invoice.grossTotal
+        )
+        self.assertEqual(response.context_data.get('zero_balance'), False)
+        self.assertEqual(response.context_data.get('total_discount_amount'), 0)
+        self.assertFalse(response.context_data.get('addonItems'))
+        self.assertFalse(response.context_data.get('discount_codes'))
+
 
 class DiscountsTypesTest(BaseDiscountsTest):
 
@@ -282,6 +324,29 @@ class DiscountsTypesTest(BaseDiscountsTest):
         s = self.create_series(pricingTier=self.defaultPricing)
 
         response = self.register_to_check_discount(s, s.getBasePrice() - 5)
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        self.assertEqual(invoice.grossTotal, s.getBasePrice())
+        self.assertEqual(
+            invoice.total, invoice.grossTotal - 5
+        )
+        self.assertEqual(response.context_data.get('zero_balance'), False)
+        self.assertEqual(response.context_data.get('total_discount_amount'), 5)
+        self.assertFalse(response.context_data.get('addonItems'))
+
+        discount_codes = response.context_data.get('discount_codes')
+        self.assertEqual([x[0] for x in discount_codes], [test_combo.name, ])
+
+    def test_voucherid_applies(self):
+        '''
+        Apply a flat $5 discount by passing a voucher code
+        '''
+
+        updateConstant('general__discountsEnabled', True)
+        test_combo, test_component = self.create_discount(voucherId='ZYX987')
+        s = self.create_series(pricingTier=self.defaultPricing)
+
+        response = self.register_to_check_discount(s, s.getBasePrice() - 5, voucherId='ZYX987')
         invoice = response.context_data.get('invoice')
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         self.assertEqual(invoice.grossTotal, s.getBasePrice())

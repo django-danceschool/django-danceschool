@@ -1,6 +1,8 @@
 from django.db import models
-from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from calendar import day_name
 from collections import namedtuple
@@ -8,6 +10,7 @@ from collections import namedtuple
 from danceschool.core.models import (
     PricingTier, DanceTypeLevel, Registration, Customer, CustomerGroup
 )
+from .helpers import checkDiscountCombos
 
 
 class PointGroup(models.Model):
@@ -134,6 +137,17 @@ class DiscountCombo(models.Model):
     expirationDate = models.DateTimeField(
         _('Expiration Date'), null=True, blank=True,
         help_text=_('Leave blank for no expiration.')
+    )
+
+    # If specified, then this code must be specified to access the discount.
+    voucherId = models.CharField(
+        _('Voucher code to access discount'), max_length=100,
+        null=True, blank=True,
+        validators=[RegexValidator(regex=r'^[a-zA-Z\-_0-9]*$')],
+        help_text=_(
+            'If specified, then this discount will only be applied if the ' +
+            'voucher code has been passed'
+        )
     )
 
     availableAtDoor = models.BooleanField(
@@ -296,6 +310,11 @@ class DiscountCombo(models.Model):
             this_price = max(this_price, 0)
             return self.DiscountInfo(self, this_price, initial_net_price - this_price, this_allocated_prices)
 
+    @property
+    def hasExpired(self):
+        return (self.expirationDate and timezone.now() > self.expirationDate)
+    hasExpired.fget.short_description = _('Has Expired')
+
     def getFlatPrice(self, payAtDoor=False):
         '''
         Rather than embedding logic re: door pricing,
@@ -325,6 +344,108 @@ class DiscountCombo(models.Model):
         component_list.sort(key=lambda x: x.quantity, reverse=True)
         return component_list
 
+
+    def validateForCart(
+        self, cart_object_list=[],
+        newCustomer=True, student=False, customer=None,
+        dateTime=None, payAtDoor=False, raise_errors=True
+    ):
+        '''
+        Check if this discount can apply to a cart (as previously processed by
+        danceschool.helpers.prepareCartObjects).
+        '''
+
+        errors = []
+        warnings = []
+
+        if self.hasExpired:
+            errors.append(
+                ValidationError(_('This discount has expired.'), code='expired')
+            )
+
+        # is active
+        if not self.active:
+            errors.append(
+                ValidationError(_('This discount is not active.'), code='inactive')
+            )
+
+        if (not payAtDoor) and (not self.availableOnline):
+            errors.append(ValidationError(
+                _('This discount can only be used for registration at the door.'),
+                code='door_only'
+            ))
+
+        if payAtDoor and (not self.availableAtDoor):
+            errors.append(ValidationError(
+                _('This discount can only be used for advance online registration.'),
+                code='online_only'
+            ))
+
+        if self.studentsOnly and not student:
+            errors.append(ValidationError(
+                _('This discount is for HS/college/university students only'),
+                code='students_only'
+            ))
+
+        if self.newCustomersOnly and not newCustomer:
+            errors.append(ValidationError(
+                _('This discount is for new customers only'),
+                code='new_customers_only'
+            ))
+        
+        # If there were errors and we are supposed to raise them, then no need
+        # to proceed further (skip additional DB queries)
+        if errors and raise_errors:
+            raise ValidationError(errors)
+
+        if (
+            customer and ((
+                self.customerdiscount_set.exists() and not
+                self.customerdiscount_set.filter(customer=customer).exists()
+            ) or (
+                self.customergroupdiscount_set.exists() and not
+                self.customergroupdiscount_set.filter(group__customer=customer).exists()
+            ))
+        ):
+            errors.append(ValidationError(
+                _('This discount is for specific customers only'),
+                code='specific_customers_only'
+            ))
+
+        # If there were errors and we are supposed to raise them, then no need
+        # to proceed further.
+        if errors and raise_errors:
+            raise ValidationError(errors)
+
+        useableCodes = checkDiscountCombos(
+            [self,], cart_object_list, customer, dateTime
+        )
+        if self not in [x.code for x in useableCodes]:
+            errors.append(ValidationError(
+                _('This discount does not apply these items'),
+                code='not_applicable'
+            ))
+
+        # If there were errors and we are supposed to raise them, then no need
+        # to proceed further.
+        if errors and raise_errors:
+            raise ValidationError(errors)
+
+        retval = {
+            'name': self.name,
+            'id': self.id,
+            'status': 'valid',
+            'warnings': warnings,
+        }
+
+        if errors:
+            retval.update({
+                'status': 'invalid',
+                'errors': [{'code': x.code, 'message': ';'.join(x.messages)} for x in errors]
+            })
+
+        return retval
+
     def save(self, *args, **kwargs):
         '''
         Don't save any passed values related to a type of discount
@@ -350,7 +471,6 @@ class DiscountCombo(models.Model):
     class Meta:
         verbose_name = _('Discount')
         verbose_name_plural = _('Discounts')
-
 
 class DiscountComboComponent(models.Model):
 

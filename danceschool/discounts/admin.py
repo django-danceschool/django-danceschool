@@ -110,9 +110,9 @@ class DiscountComboAdmin(admin.ModelAdmin):
             'fields': (
                 'name', 'category',
                 ('active', 'expirationDate'),
-                'availableOnline', 'availableAtDoor', 'newCustomersOnly',
-                'studentsOnly', 'daysInAdvanceRequired', 'firstXRegistered',
-                'customerMatchRequired', 'discountType',
+                'voucherId', 'availableOnline', 'availableAtDoor',
+                'newCustomersOnly', 'studentsOnly', 'daysInAdvanceRequired',
+                'firstXRegistered', 'customerMatchRequired', 'discountType',
             )
         }),
         (_('Flat-Price Discount (in default currency)'), {
@@ -131,6 +131,8 @@ class DiscountComboAdmin(admin.ModelAdmin):
 
     def restrictions(self, obj):
         text = []
+        if obj.voucherId:
+            text.append(_('Voucher code %s required' % obj.voucherId))
         if obj.availableOnline is False:
             text.append(_('Not available in advance'))
         if obj.availableAtDoor is False:

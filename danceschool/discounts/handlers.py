@@ -1,19 +1,21 @@
+from django.core.exceptions import ValidationError
 from django.dispatch import receiver
 from django.db.models import Q, Value, CharField, F, Case, When
 from django.db.models.query import QuerySet
 from django.apps import apps
+from django.utils import timezone
 
 import logging
 from collections import OrderedDict
 
 from danceschool.core.signals import (
-    request_discounts, apply_discount, apply_addons, post_registration,
-    get_eventregistration_data
+    request_discounts, check_student_info, apply_discount, apply_addons,
+    post_registration, get_eventregistration_data
 )
-from danceschool.core.constants import getConstant
+from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.models import Customer, EventRegistration, Registration
 
-from .helpers import getApplicableDiscountCombos
+from .helpers import prepareCartObjects, getApplicableDiscountCombos
 from .models import DiscountCombo, RegistrationDiscount
 
 
@@ -24,89 +26,55 @@ logger = logging.getLogger(__name__)
 @receiver(request_discounts)
 def getBestDiscount(sender, **kwargs):
     '''
-    When a customer registers for events, discounts may need to be
-    automatically applied.  A given shopping cart may, in fact,
-    be eligible for multiple different types of discounts (e.g. hours-based
-    discounts for increasing numbers of class hours), but typically, only one
-    discount should be applied.  Therefore, this handler loops through all potential
-    discounts, finds the ones that are applicable to the passed registration or set
-    of items, and returns the code and discounted price of the best available discount,
-    in a tuple of the form (code, discounted_price).
+    When a customer registers for events, discounts may need to be automatically
+    applied.  A given shopping cart may, in fact, be eligible for multiple
+    different types of discounts (e.g. hours-based discounts for increasing
+    numbers of class hours), but typically, only one discount should be applied.
+    Therefore, this handler loops through all potential discounts, finds the
+    ones that are applicable to the passed registration or set of items, and
+    returns the code and discounted price of the best available discount, in a
+    tuple of the form (code, discounted_price).
     '''
     if not getConstant('general__discountsEnabled'):
         return
 
     logger.debug('Signal fired to request discounts.')
 
+    voucher_code = kwargs.get('voucher_code', None)
     reg = kwargs.pop('registration', None)
     invoice = kwargs.get('invoice', None)
+    cart_kwargs = prepareCartObjects(reg, invoice)
+    eligible_list = cart_kwargs.get('cart_object_list')
     customer_final = kwargs.pop('customer_final', False)
 
-    if not reg:
-        reg = Registration.objects.filter(invoice=invoice).first()
-
-    if not reg or not invoice:
-        logger.warning('No registration passed, discounts not applied.')
-        return
-
-    payAtDoor = reg.payAtDoor
-
+    payAtDoor = getattr(reg, 'payAtDoor', False)
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
     customer = Customer.objects.filter(
-        email=invoice.email, first_name=invoice.firstName, last_name=invoice.lastName
+        email=invoice.email,
+        first_name=invoice.firstName,
+        last_name=invoice.lastName
     ).first()
     if (customer and customer.numEventRegistrations > 0) or not customer_final:
         newCustomer = False
-
-    eligible_filter = (
-        Q(event__series__pricingTier__isnull=False) |
-        Q(event__publicevent__pricingTier__isnull=False)
-    )
-    ineligible_filter = (
-        (Q(event__series__isnull=False) & Q(event__series__pricingTier__isnull=True)) |
-        (Q(event__publicevent__isnull=False) & Q(event__publicevent__pricingTier__isnull=True)) |
-        Q(dropIn=True)
-    )
-    pricingTier_cases = [
-        When(event__publicevent__isnull=False, then='event__publicevent__pricingTier'),
-        When(event__series__isnull=False, then='event__series__pricingTier'),
-    ]
-
-    if apps.is_installed('danceschool.private_lessons'):
-        eligible_filter = eligible_filter | Q(event__privatelessonevent__pricingTier__isnull=False)
-        ineligible_filter = ineligible_filter | (
-            Q(event__privatelessonevent__isnull=False) &
-            Q(event__privatelessonevent__pricingTier__isnull=True)
-        )
-        pricingTier_cases.append(When(event__privatelessonevent__isnull=False, then='event__privatelessonevent__pricingTier'))
-
-    # The items for which the customer registered.
-    eventregs_list = reg.eventregistration_set.all()
-    eligible_list = eventregs_list.filter(dropIn=False).filter(
-        eligible_filter
-    ).annotate(
-        pricingTier=Case(*pricingTier_cases)
-    )
-    ineligible_list = eventregs_list.filter(ineligible_filter)
-
-    student = getattr(eligible_list.first(), 'student', False)
-
-    ineligible_total = sum([x.invoiceItem.initialTotal for x in ineligible_list])
 
     # Get the applicable discounts and sort them in ascending category order
     # so that the best discounts are always listed in the order that they will
     # be applied.
     discountCodesApplicable = getApplicableDiscountCombos(
-        eligible_list, newCustomer, student, customer=customer, addOn=False,
-        cannotCombine=False, dateTime=reg.dateTime, payAtDoor=payAtDoor,
+        cart_object_list=cart_kwargs.get('cart_object_list'),
+        customer=customer, newCustomer=newCustomer,
+        student=cart_kwargs.get('student', False),
+        dateTime=getattr(reg, 'dateTime', timezone.now()),
+        payAtDoor=getattr(reg, 'payAtDoor', False),
+        voucher_code=voucher_code, addOn=False, cannotCombine=False,
     )
     discountCodesApplicable.sort(key=lambda x: x.code.category.order)
 
-    # Once we have a list of codes to try, calculate the discounted price for each
-    # possibility, and pick the one in each category that has the lowest total
-    # price.  We also need to keep track of the way in which some discounts
-    # are allocated across individual events.
+    # Once we have a list of codes to try, calculate the discounted price for
+    # each possibility, and pick the one in each category that has the lowest
+    # total price.  We also need to keep track of the way in which some
+    # discounts are allocated across individual events.
     best_discounts = OrderedDict()
 
     initial_prices = [x.invoiceItem.grossTotal for x in eligible_list]
@@ -120,14 +88,15 @@ def getBestDiscount(sender, **kwargs):
     for discount in discountCodesApplicable:
 
         # If the category has changed, then the new net_allocated_prices and the
-        # new net_precategory price are whatever was found to be best in the last
-        # category.
+        # new net_precategory price are whatever was found to be best in the
+        # last category.
         if (discount.code.category != last_category):
             last_category = discount.code.category
 
             if best_discounts:
-                # Since this is an OrderedDict, we can get the last element of the dict from
-                # the iterator, which is the last category for which there was a valid discount.
+                # Since this is an OrderedDict, we can get the last element of
+                # the dict from the iterator, which is the last category for
+                # which there was a valid discount.
                 last_discount = best_discounts.get(next(reversed(best_discounts)))
                 net_allocated_prices = last_discount.net_allocated_prices
                 net_precategory_price = last_discount.net_price
@@ -144,7 +113,9 @@ def getBestDiscount(sender, **kwargs):
                 (p, q - itemTuple[1]) for (p, q) in tieredTuples
             ]
 
-        response = discount.code.applyAndAllocate(net_allocated_prices, tieredTuples, payAtDoor)
+        response = discount.code.applyAndAllocate(
+            net_allocated_prices, tieredTuples, payAtDoor
+        )
 
         # Once the final price has been calculated, apply it iff it is less than
         # the previously best discount found.
@@ -157,41 +128,123 @@ def getBestDiscount(sender, **kwargs):
         ):
             best_discounts[discount.code.category.name] = response
 
-    # Now, repeat the basic process for codes that cannot be combined.  These codes are always
-    # compared against the base price, and there is no need to allocate across items since
-    # only one code will potentially be applied.
+    # Now, repeat the basic process for codes that cannot be combined.  These
+    # codes are always compared against the base price, and there is no need to
+    # allocate across items since only one code will potentially be applied.
     uncombinedCodesApplicable = getApplicableDiscountCombos(
-        eligible_list, newCustomer, student,
-        customer=customer, addOn=False, cannotCombine=True, dateTime=reg.dateTime,
-        payAtDoor=payAtDoor,
+        cart_object_list=cart_kwargs.get('cart_object_list'),
+        customer=customer, newCustomer=newCustomer,
+        student=cart_kwargs.get('student', False),
+        dateTime=getattr(reg, 'dateTime', timezone.now()),
+        payAtDoor=getattr(reg, 'payAtDoor', False),
+        voucher_code=voucher_code, addOn=False, cannotCombine=True,
     )
 
     for discount in uncombinedCodesApplicable:
 
-        # The second item in each tuple is now adjusted, so that each item that is wholly or partially
-        # applied against the discount will be wholly (value goes to 0) or partially subtracted from the
-        # remaining value to be calculated at full price.
+        # The second item in each tuple is now adjusted, so that each item that
+        # is wholly or partially applied against the discount will be wholly
+        # (value goes to 0) or partially subtracted from the remaining value to
+        # be calculated at full price.
         tieredTuples = [(x, 1) for x in eligible_list[:]]
 
         for itemTuple in discount.itemTuples:
-            tieredTuples = [(p, q) if p != itemTuple[0] else (p, q - itemTuple[1]) for (p, q) in tieredTuples]
+            tieredTuples = [
+                (p, q) if p != itemTuple[0] else (p, q - itemTuple[1])
+                for (p, q) in tieredTuples
+            ]
 
-        response = discount.code.applyAndAllocate(initial_prices, tieredTuples, payAtDoor)
+        response = discount.code.applyAndAllocate(
+            initial_prices, tieredTuples, payAtDoor
+        )
 
         # Once the final price has been calculated, apply it iff it is less than
         # the previously best discount or combination of discounts found.
         if (
             response and
-            response.net_price < min([x.net_price for x in best_discounts.values()] + [initial_total])
+            response.net_price < min(
+                [x.net_price for x in best_discounts.values()] + [initial_total]
+            )
         ):
             best_discounts = OrderedDict({discount.code.category.name: response})
 
     if not best_discounts:
         logger.debug('No applicable discounts found.')
 
-    # Return the list of discounts to be applied (in DiscountInfo tuples), along with the additional
-    # price of ineligible items to be added.
-    return DiscountCombo.DiscountApplication([x for x in best_discounts.values()], ineligible_total)
+    # Return the list of discounts to be applied (in DiscountInfo tuples), along
+    # with the additional price of ineligible items to be added.
+    return DiscountCombo.DiscountApplication(
+        [x for x in best_discounts.values()], cart_kwargs.get('ineligible_total')
+    )
+
+
+@receiver(check_student_info)
+def checkVoucherFieldForDiscount(sender, **kwargs):
+    '''
+    If the given voucher code applies to a discount, then ensure that the
+    discount actually applies.
+    '''
+    logger.debug('Signal to check RegistrationContactForm handled by discounts app.')
+
+    formData = kwargs.get('data', {})
+    customer_final = kwargs.pop('customer_final', False)
+
+    id = formData.get('gift', '')
+    first = formData.get('firstName')
+    last = formData.get('lastName')
+    email = formData.get('email')
+
+    if id == '':
+        return
+
+    objs = DiscountCombo.objects.filter(voucherId=id)
+    if not objs.exists():
+        return
+    else:
+
+        registration = kwargs.get('registration', None)
+        if not registration:
+            invoice = kwargs.get('invoice', None)
+            registration = Registration.objects.filter(invoice=invoice).first()
+        if not registration:
+            return
+        cart_kwargs = prepareCartObjects(registration, kwargs.get('invoice', None))
+
+        newCustomer = True
+        customer = Customer.objects.filter(
+            first_name=first,
+            last_name=last,
+            email=email).first()
+        if (customer and customer.numEventRegistrations > 0) or not customer_final:
+            newCustomer = False
+
+        # This will raise any other errors that may be relevant
+        errors_found = []
+        for obj in objs:
+            try:
+                obj.validateForCart(
+                    cart_object_list=cart_kwargs.get('cart_object_list'),
+                    newCustomer=newCustomer,
+                    student=cart_kwargs.get('student', False),
+                    customer=customer,
+                    dateTime=registration.dateTime,
+                    payAtDoor=registration.payAtDoor
+                )
+            except ValidationError as e:
+                errors_found.append(e)
+            else:
+                # A discount successfully validated, so no need to check others
+                errors_found = []
+                break
+        if errors_found:
+            # Ensures that the error is applied to the correct field. In case of
+            # multiple discounts with the same ID, we will report the error
+            # message associated with the first one.
+            raise ValidationError({'gift': errors_found[0]})
+            
+    # If we got this far, then the discount is determined to be valid, so the
+    # registration can proceed with no errors.
+    return
 
 
 @receiver(apply_discount)

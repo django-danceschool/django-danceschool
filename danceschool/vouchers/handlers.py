@@ -1,9 +1,13 @@
+from django.apps import apps
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Value, CharField
 from django.db.models.query import QuerySet
 from django.db.models.functions import Concat
+
+import logging
+from importlib import import_module
 
 from danceschool.core.signals import (
     post_student_info, apply_price_adjustments, get_person_data,
@@ -14,8 +18,6 @@ from danceschool.core.models import (
     Customer, EventRegistration, Event, Registration
 )
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
-
-import logging
 
 from .models import Voucher, VoucherUse
 from .helpers import awardReferrers, ensureReferralVouchersExist
@@ -65,6 +67,15 @@ def checkVoucherField(sender, **kwargs):
         events = Event.objects.filter(
             eventregistration__registration=registration
         ).exclude(eventregistration__dropIn=True).values_list('id', flat=True)
+
+    # If a discount code with this ID exists, then no further validation can be
+    # performed here. Otherwise, ensure that a voucher ID exists matching this
+    # code.
+    if apps.is_installed('danceschool.discounts'):
+        discount_models = import_module('danceschool.discounts.models')
+        discount_obj = discount_models.DiscountCombo.objects.filter(voucherId=id).first()
+        if discount_obj:
+            return
 
     obj = Voucher.objects.filter(voucherId=id).first()
     if not obj:

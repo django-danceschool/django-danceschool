@@ -21,7 +21,9 @@ post_student_info = Signal(''' ['invoice', 'registration'] ''')
 # return an object that describes the discount (in the case of the discounts app,)
 # a DiscountCombo object, as well as the discounted price to be applied to the _entire_
 # cart, in tuple form as (object, discounted_price).
-request_discounts = Signal(''' ['invoice', 'registration'] ''')
+request_discounts = Signal(
+    ''' ['invoice', 'registration', 'customer_final', 'voucher_code'] '''
+)
 
 # Fires in the AjaxClassRegistrationView to check the validity of a voucher code
 # if it is passed.  Unlike the vouchers handler for check_student_info, the vouchers

@@ -857,8 +857,10 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 if key.startswith('__related'):
                     i.pop(key)
 
-        discount_codes, total_discount_amount = self.getDiscounts(
-            invoice, registration=reg
+
+        voucherId = post_data.get('voucher', {}).get('voucherId', None)
+        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+            invoice, registration=reg, voucher_code=voucherId
         )
         if total_discount_amount > 0:
             response.update({
@@ -889,7 +891,6 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 'addonItems': addons,
             })
 
-        voucherId = post_data.get('voucher', {}).get('voucherId', None)
         if voucherId:
             response.update({
                 'voucher': self.getVoucher(
@@ -1502,9 +1503,11 @@ class RegistrationSummaryView(
         total_discount_amount = 0
         addons = []
 
+        voucherId = invoice.data.get('gift', None)
+
         if reg:
-            discount_codes, total_discount_amount = self.getDiscounts(
-                invoice, registration=reg
+            discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+                invoice, registration=reg, voucher_code=voucherId
             )
             addons = self.getAddons(invoice, reg)
 
@@ -1517,7 +1520,7 @@ class RegistrationSummaryView(
                 )
 
         # The return value to this signal should contain any adjustments that
-        # need to be made to the price (e.g. from vouchers if the voucher app
+        # need to be made to the price (e.g., from vouchers if the voucher app
         # is installed)
         adjustment_responses = apply_price_adjustments.send(
             sender=RegistrationSummaryView,
@@ -1709,8 +1712,11 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
 
         payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
 
-        discount_codes, total_discount_amount = self.getDiscounts(
-            self.invoice, registration=reg
+        # Get a voucher ID to check from the current contents of the form
+        voucherId = self.invoice.data.get('gift', None)
+
+        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+            self.invoice, registration=reg, voucher_code=voucherId
         )
         addons = self.getAddons(self.invoice, reg)
 
@@ -1719,9 +1725,6 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
         items_queryset = self.invoice.updateTotals(
             save=False, allocateAmounts={'total': -1*total_discount_amount}
         )
-
-        # Get a voucher ID to check from the current contents of the form
-        voucherId = self.invoice.data.get('gift', None)
 
         if voucherId:
             context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
@@ -1855,8 +1858,11 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
 
         payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
 
-        discount_codes, total_discount_amount = self.getDiscounts(
-            self.invoice, registration=reg
+        # Get a voucher ID to check from the current contents of the form
+        voucherId = self.invoice.data.get('gift', None)
+
+        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+            self.invoice, registration=reg, voucher_code=voucherId
         )
         addons = self.getAddons(self.invoice, reg)
 
@@ -1865,9 +1871,6 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
         items_queryset = self.invoice.updateTotals(
             save=False, allocateAmounts={'total': -1*total_discount_amount}
         )
-
-        # Get a voucher ID to check from the current contents of the form
-        voucherId = self.invoice.data.get('gift', None)
 
         if voucherId:
             context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
@@ -2025,8 +2028,11 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
         payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
 
-        discount_codes, total_discount_amount = self.getDiscounts(
-            self.invoice, registration=reg
+        # Get a voucher ID to check from the current contents of the form
+        voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
+
+        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+            self.invoice, registration=reg, voucher_code=voucherId
         )
         addons = self.getAddons(self.invoice, reg)
 
@@ -2035,9 +2041,6 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         items_queryset = self.invoice.updateTotals(
             save=False, allocateAmounts={'total': -1*total_discount_amount}
         )
-
-        # Get a voucher ID to check from the current contents of the form
-        voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
 
         if voucherId:
             context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
