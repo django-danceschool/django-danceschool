@@ -45,3 +45,33 @@ class BanListNotificationEmail(StringPreference):
     help_text = _('If no email is specified, then no notification will be sent.')
     default = ''
     required = False
+
+
+@global_preferences_registry.register
+class BanListNotificationText(StringPreference):
+    section = registration
+    name = 'banListNotificationText'
+    verbose_name = _(
+        'Show the following text to banned users who attempt to register online.'
+    )
+    default = (
+        'There appears to be an issue with this registration. '
+        'Please contact {respondTo} to proceed with the registration process. '
+        'You may reference the error code {flagCode}.'
+    )
+    required = False
+
+
+@global_preferences_registry.register
+class BanListDoorNotificationText(StringPreference):
+    section = registration
+    name = 'banListDoorNotificationText'
+    verbose_name = _(
+        'Show the following text when banned users attempt to register at the door.'
+    )
+    default = (
+        'This person currently prevented from registration because they are on '
+        'the banned users list. This registration attempt has been flagged and '
+        'recorded using error code {flagCode}.'
+    )
+    required = False

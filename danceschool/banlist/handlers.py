@@ -8,6 +8,7 @@ from django.dispatch import receiver
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _, gettext
 from django.db.models import Q
 
@@ -49,6 +50,7 @@ def checkBanlist(sender, **kwargs):
 
     request = kwargs.get('request', {})
     session = getattr(request, 'session', {}).get(REG_VALIDATION_STR, {})
+    payAtDoor = session.get('payAtDoor', False)
     registrationId = getattr(kwargs.get('registration', None), 'id', None)
     invoice = kwargs.get('invoice', None)
     invoiceId = str(getattr(invoice, 'id', ''))
@@ -104,12 +106,25 @@ def checkBanlist(sender, **kwargs):
 
         sendEmail(subject, message, send_from, to=[notify])
 
-    message = gettext('There appears to be an issue with this registration. '
-                       'Please contact %s to proceed with the registration process. '
-                       'You may reference the error code %s.' % (respondTo, flagCode))
+    message = format_html(
+        '<strong>{}:</strong> {}', gettext('ERROR'),
+        (
+            getConstant('registration__banListDoorNotificationText')
+            if payAtDoor else
+            getConstant('registration__banListNotificationText')
+        ).format(respondTo=respondTo, flagCode=flagCode)
+    )
 
     if request.user.has_perm('banlist.ignore_ban'):
-        messages.warning(request, message)
+        messages.error(request, message, extra_tags='banlist_found')
+        messages.warning(
+            request,
+            gettext(
+                'Based on your permissions level, you are not prevented from '
+                'proceeding with registration. However, completing this '
+                'registration is not advised.'
+            ), extra_tags='banlist_allow_proceed'
+        )
 
     else:
         raise ValidationError(message)

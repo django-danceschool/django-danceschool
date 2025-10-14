@@ -561,14 +561,19 @@ class RegistrationForm(forms.Form):
         valid = super().is_valid()
         msgs = messages.get_messages(self._request)
 
-        # We only want validation messages to show up once, so pop messages that have already show up
-        # before checking to see if any messages remain to be shown.
+        # We only want validation messages to show up once, so pop messages that
+        # have already show up before checking to see if any messages remain to
+        # be shown. Use the message tags to identify messages that have already
+        # appeared.
         prior_messages = self._session.pop('prior_messages', [])
         remaining_messages = []
 
         for m in msgs:
-            m_dict = {'message': m.message, 'level': m.level, 'extra_tags': m.extra_tags}
-            if m_dict not in prior_messages:
+            m_dict = {'level': m.level, 'extra_tags': m.extra_tags}
+            if (
+                (m_dict not in prior_messages) or
+                ('prevent_registration' in m_dict['extra_tags'])
+            ):
                 remaining_messages.append(m_dict)
 
         if remaining_messages:
