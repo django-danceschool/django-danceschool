@@ -48,9 +48,7 @@ class SlotBookingForm(forms.Form):
     )
 
     def clean(self, **kwargs):
-        print('GOT TO CLEAN')
-        print(self.cleaned_data)
-        super().clean(**kwargs)
+        return super().clean(**kwargs)
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
