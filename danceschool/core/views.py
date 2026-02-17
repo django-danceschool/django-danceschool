@@ -1001,9 +1001,23 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
             items_to_send += list(events)
         elif events not in [None, '', [], ['']]:
             items_to_send += list(Event.objects.filter(id__in=events))
-
         if customers:
-            items_to_send.append(list(Customer.objects.filter(id__in=customers)))
+            items_to_send.append(Customer.objects.filter(id__in=customers))
+
+        # Ensure that an email can be sent to the additional CC and BCC
+        # recipients even if no Event or customer has been specified
+        if (not items_to_send) and (
+            testemail or additional_cc or additional_bcc or cc_myself
+        ):
+            items_to_send.append([])
+
+        if not items_to_send:
+            self.request.session.pop(EMAIL_VALIDATION_STR, None)
+            messages.warning(
+                self.request,
+                _('No recipients specified; email will not be sent.')
+            )
+            return HttpResponseRedirect(self.get_success_url())
 
         # We always call one email per event so that the event-level tags
         # can be passed.  The entire list of customers is also a single item
@@ -1018,10 +1032,14 @@ class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, Templ
                 if include_staff:
                     for x in staff:
                         emails += x.get_default_recipients() or []
-            else:
+            elif isinstance(s, QuerySet) and s.model is Customer:
                 # Customers are themselves the list.
                 regs = s
                 emails = [x.email for x in s]
+            elif isinstance(s, list):
+                # A list of email addresses can also be accepted
+                regs = []
+                emails = s
 
             email_kwargs['cc'] = additional_cc
             if cc_myself:
