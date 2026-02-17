@@ -74,7 +74,7 @@ class EmailRecipientMixin(object):
 
         email_kwargs['from_name'] = kwargs.pop('from_name', getConstant('email__defaultEmailName')) or \
             getConstant('email__defaultEmailName')
-        email_kwargs['from_address'] = kwargs.pop('from_name', getConstant('email__defaultEmailFrom')) or \
+        email_kwargs['from_address'] = kwargs.pop('from_address', getConstant('email__defaultEmailFrom')) or \
             getConstant('email__defaultEmailFrom')
 
         # Add the object's default recipients if they are provided
