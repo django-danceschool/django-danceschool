@@ -57,13 +57,9 @@
     {% block extra_meta %}{% endblock %}
 
     {# Bootstrap and Related Files #}
-    {% addtoblock "css" %}
-      <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
-    {% endaddtoblock %}
-    {% addtoblock "css" %}
-      <link rel="stylesheet" type="text/css" href="{% static 'bootstrap/css/bootstrap.min.css' %}" />
-    {% endaddtoblock %}
-
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css" />
+    <link rel="stylesheet" type="text/css" href="{% static 'bootstrap/css/bootstrap.min.css' %}" />
+    {# Put css block after Bootstrap and FontAwesome to simplify modifications and inheritance #}
     {% render_block "css" %}
     {% block extra_css %}{% endblock %}
 
