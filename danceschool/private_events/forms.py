@@ -114,7 +114,7 @@ class AddPrivateEventForm(forms.ModelForm):
         js = (
             'timepicker/jquery.timepicker.min.js',
             'jquery-ui/jquery-ui.min.js',
-            'moment/moment.min.js',
+            'https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js',
             'js/addEvent_rollups.js',
             'js/serieslocation_capacity_change.js',
         )

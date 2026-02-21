@@ -100,7 +100,7 @@
 </script>
 {% endaddtoblock %}
 
-{% addtoblock "js" %}<script type="text/javascript" src="{% static 'moment/moment.min.js' %}"></script>{% endaddtoblock %}
+{% addtoblock "js" %}<script src="https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js"></script>{% endaddtoblock %}
 {% addtoblock "js" %}<script type="text/javascript" src="{% static 'js/manage_register.js' %}"></script>{% endaddtoblock %}
 {% addtoblock "js" %}
 {% for k,t in extras_templates_registry.items %}

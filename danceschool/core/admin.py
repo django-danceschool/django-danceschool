@@ -217,7 +217,7 @@ class EventOccurrenceInline(admin.TabularInline):
 
     class Media:
         js = (
-            'moment/moment.min.js',
+            'https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js',
             'datepair/datepair.min.js',
             'datepair/jquery.datepair.min.js',
             'js/eventadmin_pickers.js'
