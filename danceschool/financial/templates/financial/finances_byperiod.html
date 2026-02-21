@@ -119,16 +119,16 @@
 </div>
 
 {% addtoblock "css" %}
-	<link rel="stylesheet" type="text/css" href="{% static 'metricsgraphics/metricsgraphics.css' %}"/>
+	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/metrics-graphics@3.0.0-beta1/dist/mg.min.css"/>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 	<script src="{% static 'moment/moment.min.js' %}"></script>	
 {% endaddtoblock %}
 {% addtoblock "js" %}
-	<script src="{% static 'd3/d3.min.js' %}"></script>
+	<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-	<script src="{% static 'metricsgraphics/metricsgraphics.min.js' %}"></script>
+	<script src="https://cdn.jsdelivr.net/npm/metrics-graphics@3.0.0-beta1/dist/cjs/index.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 	<script type="text/javascript">
