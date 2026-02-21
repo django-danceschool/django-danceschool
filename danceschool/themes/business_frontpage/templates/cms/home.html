@@ -7,16 +7,6 @@
 		<meta name="robots" content="index, follow">
 	{% endaddtoblock %}
 
-	{# Fitvids code (to ensure Youtube videos always fit) #}
-	{% addtoblock "js" %}
-	<script type="text/javascript" src="{% static 'fitvids/jquery.fitvids.js' %}"></script>
-	{% endaddtoblock %}
-	{% addtoblock "js" %}
-	<script type="text/javascript">
-	    $(".content-col").fitVids();
-	</script>
-	{% endaddtoblock %}
-
 	{% addtoblock "css" %}
     <!-- Custom styles for this template -->
     <link href="{% static 'css/business-frontpage.css' %}" rel="stylesheet">
