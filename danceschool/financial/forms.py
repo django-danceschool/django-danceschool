@@ -290,12 +290,12 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
         add_media = forms.Media(
             js = (
                 'admin/js/admin/RelatedObjectLookups.js',
-                'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+                'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
                 'js/expense_reporting.js',
             ),
             css = {
                 'all': (
-                    'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+                    'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css',
                 ),
             }
         )
@@ -508,11 +508,11 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
         add_media = forms.Media(
             js = (
                 'js/revenue_reporting.js',
-                'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+                'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
             ),
             css = {
                 'all': (
-                    'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css',
+                    'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css',
                 ),
             }
         )

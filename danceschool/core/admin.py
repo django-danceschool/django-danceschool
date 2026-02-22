@@ -925,14 +925,17 @@ class SeriesAdminForm(ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
-            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+            'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
             'timepicker/jquery.timepicker.min.js',
             'admin/js/jquery.init.js',
             'js/serieslocation_capacity_change.js',
             'js/location_related_objects_lookup.js',
         )
         css = {
-            'all': ('timepicker/jquery.timepicker.css', 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css')
+            'all': (
+                'timepicker/jquery.timepicker.css',
+                'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css'
+            )
         }
 
 
@@ -1051,13 +1054,16 @@ class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
     class Media:
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
-            'bootstrap-datepicker/js/bootstrap-datepicker.min.js',
+            'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
             'timepicker/jquery.timepicker.min.js',
             'admin/js/jquery.init.js',
             'js/location_related_objects_lookup.js',
         )
         css = {
-            'all': ('timepicker/jquery.timepicker.css', 'bootstrap-datepicker/css/bootstrap-datepicker.standalone.min.css')
+            'all': (
+                'timepicker/jquery.timepicker.css',
+                'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css'
+            )
         }
 
 
