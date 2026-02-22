@@ -767,7 +767,10 @@ class ExpenseItem(models.Model):
         _('Wage rate'),
         help_text=_('This should be filled automatically, but can be changed as needed.'),
         null=True, blank=True, validators=[MinValueValidator(0)])
-    total = models.FloatField(_('Total amount'), null=True, blank=True, validators=[MinValueValidator(0)])
+    total = models.FloatField(
+        _('Total amount'), blank=True, validators=[MinValueValidator(0)],
+        default=0
+    )
     adjustments = models.FloatField(
         _('Adjustments/refunds'),
         help_text=_(
