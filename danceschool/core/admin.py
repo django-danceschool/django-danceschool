@@ -218,8 +218,7 @@ class EventOccurrenceInline(admin.TabularInline):
     class Media:
         js = (
             'https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js',
-            'datepair/datepair.min.js',
-            'datepair/jquery.datepair.min.js',
+            'https://cdn.jsdelivr.net/npm/datepair.js@0.4.17/dist/jquery.datepair.min.js',
             'js/eventadmin_pickers.js'
         )
 
@@ -926,14 +925,14 @@ class SeriesAdminForm(ModelForm):
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
             'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
-            'timepicker/jquery.timepicker.min.js',
+            'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.js',
             'admin/js/jquery.init.js',
             'js/serieslocation_capacity_change.js',
             'js/location_related_objects_lookup.js',
         )
         css = {
             'all': (
-                'timepicker/jquery.timepicker.css',
+                'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.css',
                 'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css'
             )
         }
@@ -1055,13 +1054,13 @@ class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
             'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
-            'timepicker/jquery.timepicker.min.js',
+            'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.js',
             'admin/js/jquery.init.js',
             'js/location_related_objects_lookup.js',
         )
         css = {
             'all': (
-                'timepicker/jquery.timepicker.css',
+                'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.css',
                 'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css'
             )
         }
