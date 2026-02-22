@@ -3,7 +3,7 @@
 
 {% block extra_js %}
   {% addtoblock "js" %}
-    <script src="{% static 'jquery-ui/jquery-ui.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery-ui@1.14.2/dist/jquery-ui.min.js" integrity="sha256-mblSWfbYzaq/f+4akyMhE6XELCou4jbkgPv+JQPER2M=" crossorigin="anonymous"></script>
   {% endaddtoblock %}
 
   {# Needed to get the admin success page autocomplete to function #}
@@ -30,7 +30,7 @@
 
 {% block extra_css %}
   {% addtoblock "css" %}
-    <link rel="stylesheet" href="{% static 'jquery-ui/jquery-ui.min.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-ui@1.14.2/dist/themes/base/jquery-ui.min.css" integrity="sha256-C7B7AU3MEY9emLq5TNqS5jCwucRksfw1oqzKdSp9r1c=" crossorigin="anonymous">
   {% endaddtoblock %}
 {% endblock %}
 
