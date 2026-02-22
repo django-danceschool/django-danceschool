@@ -1,4 +1,4 @@
-{% load crispy_forms_tags sekizai_tags static %}
+{% load crispy_forms_tags sekizai_tags %}
 <table class="mb-4">
 {{ formset.management_form|crispy }}
 
@@ -22,7 +22,7 @@
 
 </table>
 
-<script src="{% static 'django-dynamic-formset/jquery.formset.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/jquery.formset@1.3.0/src/jquery.formset.min.js"></script>
 <script type="text/javascript">
     $('.formset_row-{{ formset.prefix }}').formset({
         addText: 'Add another',
