@@ -925,14 +925,14 @@ class SeriesAdminForm(ModelForm):
         js = (
             'admin/js/vendor/jquery/jquery.min.js',
             'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/js/bootstrap-datepicker.min.js',
-            'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.js',
+            'https://cdn.jsdelivr.net/gh/jonthornton/jquery-timepicker@1.14.1/jquery.timepicker.js',
             'admin/js/jquery.init.js',
             'js/serieslocation_capacity_change.js',
             'js/location_related_objects_lookup.js',
         )
         css = {
             'all': (
-                'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.css',
+                'https://cdn.jsdelivr.net/gh/jonthornton/jquery-timepicker@1.14.1/jquery.timepicker.min.css',
                 'https://cdn.jsdelivr.net/npm/bootstrap-datepicker@1.10.1/dist/css/bootstrap-datepicker.standalone.min.css'
             )
         }

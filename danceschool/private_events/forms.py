@@ -112,7 +112,7 @@ class AddPrivateEventForm(forms.ModelForm):
 
     class Media:
         js = (
-            'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.js',
+            'https://cdn.jsdelivr.net/gh/jonthornton/jquery-timepicker@1.14.1/jquery.timepicker.js',
             'https://cdn.jsdelivr.net/npm/jquery-ui@1.14.2/dist/jquery-ui.min.js',
             'https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js',
             'js/addEvent_rollups.js',
@@ -120,7 +120,7 @@ class AddPrivateEventForm(forms.ModelForm):
         )
         css = {
             'all': (
-                'https://cdn.jsdelivr.net/npm/jquery-timepicker@1.3.3/jquery.timepicker.min.css',
+                'https://cdn.jsdelivr.net/gh/jonthornton/jquery-timepicker@1.14.1/jquery.timepicker.min.css',
                 'https://cdn.jsdelivr.net/npm/jquery-ui@1.14.2/dist/themes/base/jquery-ui.min.css',
             )
         }
