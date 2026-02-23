@@ -553,7 +553,7 @@ class FinancialDetailView(FinancialContextMixin, PermissionRequiredMixin, Templa
         if events and occurrence_ids:
             occurrences = EventOccurrence.objects.filter(
                 event__in=events, id__in=occurrence_ids
-            )
+            ).select_related('event')
 
         # Prevents producing an event-level summary when invalid occurrences
         # are passed.

@@ -1194,12 +1194,25 @@ def prepareFinancialDetails(**kwargs):
                 rev_timeFilters['receivedDate__lt'] = rev_timeFilters.get('%s__lt' % basis)
                 rev_timeFilters.pop('%s__lt' % basis, None)
 
-        expenseItems = ExpenseItem.objects.filter(**timeFilters).annotate(
-            basisDate=Min(basis)
-        ).order_by(basis)
-        revenueItems = RevenueItem.objects.filter(**rev_timeFilters).annotate(
-            basisDate=Min(rev_basis)
-        ).order_by(rev_basis)
+        expenseItems = list(
+            ExpenseItem.objects.filter(**timeFilters).annotate(
+                basisDate=Min(basis)
+            ).select_related(
+                'category', 'payTo', 'payTo__location', 'event'
+            ).prefetch_related(
+                'expensepurpose_set', 'expensepurpose_set__content_type',
+                'event__eventoccurrence_set'
+            ).order_by(basis)
+        )
+        revenueItems = list(
+            RevenueItem.objects.filter(**rev_timeFilters).annotate(
+                basisDate=Min(rev_basis)
+            ).select_related(
+                'category', 'event', 'invoiceItem', 'receivedFrom'
+            ).prefetch_related(
+                'event__eventoccurrence_set'
+            ).order_by(rev_basis)
+        )
 
         context['expenseItems'] = expenseItems
         context['revenueItems'] = revenueItems
@@ -1253,24 +1266,29 @@ def prepareFinancialDetails(**kwargs):
 
         # Registration revenues, instruction and venue expenses
         # are broken out separately.
+        instruction_cats = [
+            getConstant('financial__classInstructionExpenseCat'),
+            getConstant('financial__assistantClassInstructionExpenseCat')
+        ]
+        venue_cat = getConstant('financial__venueRentalExpenseCat')
+        reg_rev_cat = getConstant('financial__registrationsRevenueCat')
 
         context.update({
-            'instructionExpenseItems': expenseItems.filter(
-                category__in=[
-                    getConstant('financial__classInstructionExpenseCat'),
-                    getConstant('financial__assistantClassInstructionExpenseCat')
-                ]
-            ).order_by('payTo__name'),
-            'venueExpenseItems': expenseItems.filter(
-                category=getConstant('financial__venueRentalExpenseCat')
-            ).order_by('payTo__name'),
-            'otherExpenseItems': expenseItems.exclude(
-                category__in=[
-                    getConstant('financial__classInstructionExpenseCat'),
-                    getConstant('financial__assistantClassInstructionExpenseCat'),
-                    getConstant('financial__venueRentalExpenseCat')
-                ]
-            ).order_by('category'),
+            'instructionExpenseItems': sorted(
+                [x for x in expenseItems if x.category in instruction_cats],
+                key=lambda x: getattr(x.payTo, 'name', '')
+            ),
+            'venueExpenseItems': sorted(
+                [x for x in expenseItems if x.category == venue_cat],
+                key=lambda x: getattr(x.payTo, 'name', '')
+            ),
+            'otherExpenseItems': sorted(
+                [
+                    x for x in expenseItems if
+                    x.category not in (instruction_cats + [venue_cat])
+                ],
+                key=lambda x: getattr(x.category, 'name', '')
+            ),
             'totalExpenses': (
                 sum([
                     x.getAllocation(**allocationBasis) * (x.net or 0)
@@ -1280,12 +1298,18 @@ def prepareFinancialDetails(**kwargs):
         })
 
         context.update({
-            'registrationRevenueItems': revenueItems.filter(
-                category=getConstant('financial__registrationsRevenueCat')
-            ).order_by('-event__startTime', 'event__uuid'),
-            'otherRevenueItems': revenueItems.exclude(
-                category=getConstant('financial__registrationsRevenueCat')
-            ).order_by('category'),
+            'registrationRevenueItems': sorted(
+                [x for x in revenueItems if x.category == reg_rev_cat],
+                key=lambda x: (
+                    getattr(x.event, 'startTime', ''),
+                    getattr(x.event, 'uuid', '')
+                ),
+                reverse=True
+            ),
+            'otherRevenueItems': sorted(
+                [x for x in revenueItems if x.category != reg_rev_cat],
+                key=lambda x: getattr(x.category, 'name', '')
+            ),
             'totalRevenues': sum([
                 x.getAllocation(**allocationBasis) * (x.net or 0) for x in revenueItems
             ]),
