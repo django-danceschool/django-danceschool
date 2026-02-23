@@ -1301,7 +1301,7 @@ def prepareFinancialDetails(**kwargs):
             'registrationRevenueItems': sorted(
                 [x for x in revenueItems if x.category == reg_rev_cat],
                 key=lambda x: (
-                    getattr(x.event, 'startTime', ''),
+                    getattr(x.event, 'startTime', datetime.min),
                     getattr(x.event, 'uuid', '')
                 ),
                 reverse=True
