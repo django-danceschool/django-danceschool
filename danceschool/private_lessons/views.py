@@ -307,8 +307,8 @@ class BookPrivateLessonView(FormView):
 
             # Load the invoice ID into session data like a regular registration
             # and redirect to Step 2 as usual.
-            regSession["invoiceId"] = invoice.id.__str__()
-            regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+            regSession["invoice_id"] = invoice.id.__str__()
+            regSession["invoice_expiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
             self.request.session[REG_VALIDATION_STR] = regSession
             return HttpResponseRedirect(reverse('getStudentInfo'))
 

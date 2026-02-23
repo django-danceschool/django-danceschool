@@ -1,81 +1,177 @@
+
 from django.utils import timezone
-from django.db.models import Q, When, Case
+from django.db.models import Q, Value, F, FloatField, IntegerField, Count
+from django.db.models.functions import Coalesce, Cast
 from django.apps import apps
 
 from datetime import timedelta
 import logging
+import re
 
-from danceschool.core.models import Registration
+from danceschool.core.models import Registration, Event
 
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
 
 
-def prepareCartObjects(reg=None, invoice=None):
+def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
     '''
     This common function is used to prepare the cart for finding the best
     discount available, and also to check whether a specific discount is
     applicable to a specific cart.
     '''
 
-    if not reg:
+    # To avoid circular import
+    from danceschool.discounts.models import PricingTierGroup
+
+    def _get_coalesced(
+            elements: dict = {'tier': 'pricingTier'}, qs_class=Event
+        ):
+        '''
+        Get attributs for an event (such as pricing tiers) from the polymorphic
+        child class.
+        '''
+        filter_base = '' if qs_class == Event else 'event__'
+        response = {}
+        for key,attr in elements.items():
+            to_coalesce = [
+                F(f'{filter_base}publicevent__{attr}'),
+                F(f'{filter_base}series__{attr}')
+            ]
+            if apps.is_installed('danceschool.private_lessons'):
+                to_coalesce.append(F(f'{filter_base}privatelessonevent__{attr}'))
+            response[key] = Coalesce(*to_coalesce)
+        return response
+
+    if invoice and (not reg):
         reg = Registration.objects.filter(invoice=invoice).first()
 
-    if not reg or not invoice:
-        logger.warning('No registration passed, discounts not applied.')
+    if reg:
+        if apps.is_installed('danceschool.private_lessons'):
+            quantity_expression = Coalesce(
+                Count('event__privatelessonevent__instructoravailability'),
+                Value(1),
+                output_field=IntegerField()
+            )
+        else:
+            quantity_expression = Value(1)
+
+        # Construct the queryset and then iterate through to construct list of
+        # dictionaries. This ensures that the actual event is attached.
+        qs = reg.eventregistration_set.select_related(
+            'invoiceItem', 'event',
+            'event__series__classDescription__danceTypeLevel'
+        ).prefetch_related(
+            'event__eventoccurrence_set', 'event__eventregistration_set',
+            'event__eventregistration_set__registration'
+        ).annotate(
+            quantity=quantity_expression,
+            base_price=Coalesce(
+                Cast(
+                    F('invoiceItem__data___initialTotal'),
+                    output_field=FloatField()
+                ),
+                F('invoiceItem__grossTotal'),
+                output_field=FloatField()
+            ),
+            _customer_id=F('customer__id'),
+            **_get_coalesced(qs_class=reg.eventregistration_set.model)
+        )
+        event_count_list = [
+            {
+                'event_id': x.event.id, 'event': x.event,
+                'quantity': x.quantity, 'dropIn': x.dropIn,
+                'customer_id': x._customer_id, 'tier': x.tier,
+                'base_price': x.base_price
+            }
+            for x in qs
+        ]
+    elif cart_items:
+        events = Event.objects.filter(
+            id__in=[x.get('item_id') for x in cart_items]
+        ).prefetch_related(
+            'eventoccurrence_set', 'eventregistration_set',
+            'eventregistration_set__registration'
+        ).annotate(
+            **_get_coalesced({
+                'tier': 'pricingTier',
+                'doorPrice': 'pricingTier__doorPrice',
+                'onlinePrice': 'pricingTier__onlinePrice',
+                'dropinPrice': 'pricingTier__dropinPrice'
+            })
+        )
+
+        # TODO: Implement logic checking for door registration prior to this
+        # function being called.
+
+        event_count_list = [
+            {
+                'event_id': x.get('item_id'),
+                'quantity': x.get('quantity'),
+                'dropIn': x.get('drop_in'),
+                'customer_id': None
+            } for x in cart_items
+        ]
+
+        map_events = {x.id: x for x in events}
+
+        for item in event_count_list:
+            mapped = map_events.get(item['event_id'])
+            if not mapped:
+                continue
+            # Add pricing tier and base price to the list of event quantities.
+            item['event'] = mapped
+            item['tier'] = mapped.tier
+            if item.get('dropIn', False):
+                item['base_price'] = mapped.dropInPrice
+            elif payAtDoor:
+                item['base_price'] = mapped.doorPrice
+            else:
+                item['base_price'] = mapped.onlinePrice
+    else:
+        logger.warning('No registration information passed, discounts not applied.')
         return
 
-    eligible_filter = (
-        Q(event__series__pricingTier__isnull=False) |
-        Q(event__publicevent__pricingTier__isnull=False)
-    )
-    ineligible_filter = (
-        (
-            Q(event__series__isnull=False) &
-            Q(event__series__pricingTier__isnull=True)
-        ) |
-        (
-            Q(event__publicevent__isnull=False) &
-            Q(event__publicevent__pricingTier__isnull=True)
-        ) |
-        Q(dropIn=True)
-    )
-    pricingTier_cases = [
-        When(event__publicevent__isnull=False, then='event__publicevent__pricingTier'),
-        When(event__series__isnull=False, then='event__series__pricingTier'),
+    # Split items into eligible (for discounts) and ineligible
+    eligible_items = [
+        x for x in event_count_list
+        if x.get('tier') and (not x.get('dropIn', False))
     ]
+    ineligible_total = sum([
+        x.get('base_price', 0) for x in event_count_list
+        if (x.get('tier') is None) or (x.get('dropIn', False))
+    ])
 
-    if apps.is_installed('danceschool.private_lessons'):
-        eligible_filter = (
-            eligible_filter |
-            Q(event__privatelessonevent__pricingTier__isnull=False)
-        )
-        ineligible_filter = ineligible_filter | (
-            Q(event__privatelessonevent__isnull=False) &
-            Q(event__privatelessonevent__pricingTier__isnull=True)
-        )
-        pricingTier_cases.append(When(
-            event__privatelessonevent__isnull=False,
-            then='event__privatelessonevent__pricingTier'
-        ))
+    # Get all point groups and all point amounts based on pricing tier for
+    # any events associated with this cart or registration.
+    tier_groups = PricingTierGroup.objects.filter(
+        pricingTier__in=[x['tier'] for x in eligible_items]
+    ).values('pricingTier', 'group', 'points')
+    group_ids = set([x.get('group') for x in tier_groups])
 
-    # The items for which the customer registered.
-    eventregs_list = reg.eventregistration_set.all()
-    eligible_list = eventregs_list.filter(dropIn=False).filter(
-        eligible_filter
-    ).annotate(
-        pricingTier=Case(*pricingTier_cases)
-    )
-    ineligible_list = eventregs_list.filter(ineligible_filter)
+    tier_points = {}
+    for tier_group in tier_groups:
+        this_tier_points = tier_points.get(tier_group['pricingTier'], {})
+        this_tier_points[f'group_{tier_group.get("group")}_points'] = tier_group.get('points', 0)
+        tier_points[tier_group['pricingTier']] = this_tier_points
 
-    student = getattr(eligible_list.first(), 'student', False)
+    # Merge on total points for each item based on the pricing tier, and then
+    # update based on quantity.
+    for item in eligible_items:
+        this_tier_points = tier_points.get(item['tier'])
+        if this_tier_points:
+            item.update(this_tier_points)
+        for group_id in group_ids:
+            item[f'group_{group_id}_points'] = (
+                item.get(f'group_{group_id}_points', 0) *
+                item.get('quantity', 1)
+            )
 
-    ineligible_total = sum([x.invoiceItem.initialTotal for x in ineligible_list])
-
+    # TODO: Student status
+    # student = getattr(eligible_it.first(), 'student', False)
     return {
-        'student': student,
-        'cart_object_list': eligible_list,
+        'cart_object_list': eligible_items,
         'ineligible_total': ineligible_total
     }
 
@@ -90,31 +186,52 @@ def checkDiscountCombos(
     discount against a specific cart.
     '''
 
+    def unique_dicts(dicts, keys):
+        ''' Used below to make a list of dictionaries unique. '''
+        seen = set()
+        unique = []
+        for d in dicts:
+            key = tuple(d[k] for k in keys)
+            if key not in seen:
+                seen.add(key)
+                unique.append(d)
+        return unique
+
     if not dateTime:
         dateTime=timezone.now()
 
-    pointbased_cart_object_lists = {}
-    pointbased_customer_object_lists = {}
-    total_item_points = {}
+    # For each point group, construct a list of [(cart_item, points)]. First,
+    # get the set of possible point groups.
+    point_groups = set()
+    for cart_item in cart_object_list:
+        for key in cart_item.keys():
+            match = re.match(r'group_([0-9]+)_points', key)
+            if match:
+                point_groups.add(int(match.group(1)))
 
-    for cart_item in cart_object_list:        
-        for ptgroup in cart_item.event.pricingTier.pricingtiergroup_set.all():
-            this_points = (
-                (ptgroup.points or 0) * int(getattr(cart_item.event, 'discountPointsMultiplier', 1))
-            )
+    # Initialize dictionaries to populate below.
+    pointbased_cart_object_lists = {ptgroup: [] for ptgroup in point_groups}
+    pointbased_customer_object_lists = {ptgroup: [] for ptgroup in point_groups}
+    total_item_points = {
+        cart_item.get('event_id'): 0 for cart_item in cart_object_list
+    }
 
-            total_item_points[cart_item.id] = total_item_points.get(cart_item.id, 0) + this_points
+    # Now loop through items to populate the dictionaries.
+    for cart_item in cart_object_list:
+        event_id = cart_item.get('event_id')
+
+        for ptgroup in point_groups:
+            this_points = cart_item.get(f'group_{ptgroup}_points', 0)
+            total_item_points[event_id] += this_points
 
             for y in range(0, this_points):
-                pointbased_cart_object_lists[ptgroup.group] = (
-                    pointbased_cart_object_lists.get(ptgroup.group, []) + [(cart_item, this_points),]
-                )
-            if cart_item.customer == customer:
+                pointbased_cart_object_lists[ptgroup].append((cart_item, this_points))
+            if customer and (cart_item.get('customer_id') == customer.id):
                 for y in range(0, this_points):
-                    pointbased_customer_object_lists[ptgroup.group] = (
-                        pointbased_customer_object_lists.get(ptgroup.group, []) + [(cart_item, this_points),]
-                    )
+                    pointbased_customer_object_lists[ptgroup].append((cart_item, this_points))
 
+    # Sort the point-based lists in descending order of point values so that the
+    # most "valuable" items toward any discount are listed first.
     for k in pointbased_cart_object_lists.keys():
         pointbased_cart_object_lists[k] =[
             p[0] for p in
@@ -131,7 +248,9 @@ def checkDiscountCombos(
     # midnight local time).  Because installations may have timezone support enabled or disabled,
     # calculate the threshold time in advance.
     today_midnight = (
-        timezone.localtime(timezone.now()) if timezone.is_aware(timezone.now()) else timezone.now()
+        timezone.localtime(timezone.now())
+        if timezone.is_aware(timezone.now())
+        else timezone.now()
     ).replace(hour=0, minute=0, second=0, microsecond=0)
 
     # Look for exact match. If multiple are found, return them all.
@@ -169,14 +288,14 @@ def checkDiscountCombos(
                     match_flag = True
 
                     # Check that this component requires this type of points.
-                    if z.pointGroup != p:
+                    if z.pointGroup.id != p:
                         match_flag = False
 
                     # Check for matches in weekdays and levels:
-                    elif z.weekday and y.event.weekday != z.weekday:
+                    elif z.weekday and y['event'].weekday != z.weekday:
                         match_flag = False
                     elif (
-                        z.level and hasattr(y.event, 'series') and
+                        z.level and hasattr(y['event'], 'series') and
                         y.event.series.classDescription.danceTypeLevel != z.level
                     ):
                         match_flag = False
@@ -185,7 +304,7 @@ def checkDiscountCombos(
                     # that many days in the future from the beginning of today.
                     elif (
                         x.daysInAdvanceRequired is not None and
-                        y.event.startTime - today_midnight < timedelta(days=x.daysInAdvanceRequired)
+                        y['event'].startTime - today_midnight < timedelta(days=x.daysInAdvanceRequired)
                     ):
                         match_flag = False
                     # If the discount combo is only available for the first X registrants,
@@ -194,7 +313,7 @@ def checkDiscountCombos(
                     # handed out if registration is in progress).
                     elif (
                         x.firstXRegistered is not None and
-                        y.event.getNumRegistered(
+                        y['event'].getNumRegistered(
                             includeTemporaryRegs=True, dateTime=dateTime
                         ) > x.firstXRegistered
                     ):
@@ -207,34 +326,45 @@ def checkDiscountCombos(
                         matched_cart_items.append(y)
                         break
 
-        if len(necessary_discount_items) == 0 and len(matched_discount_items) == count_necessary_items:
-            # However, if a component of this discount applies to all items within the same point group
-            # (allWithinPointGroup flag is set), then this discount actually matches everything that
-            # it actually matched, plus anything else with that same point group.
+        if (
+            len(necessary_discount_items) == 0 and
+            len(matched_discount_items) == count_necessary_items
+        ):
+            # However, if a component of this discount applies to all items
+            # within the same point group (allWithinPointGroup flag is set),
+            # then this discount actually matches everything that it actually
+            # matched, plus anything else with that same point group.
             fullPointGroupsMatched = [
-                m.pointGroup for m in
+                m.pointGroup.id for m in
                 x.discountcombocomponent_set.all() if m.allWithinPointGroup
             ]
             additionalItems = []
             for group in fullPointGroupsMatched:
                 additionalItems += cart_lists.get(group, [])
 
-            # Return only the unique cart items that matched the combo (not one per point)
-            matchedList = list(set(matched_cart_items + additionalItems))
+            # Return only the unique cart items that matched the combo (not one
+            # per point)
+            matchedList = unique_dicts(
+                matched_cart_items + additionalItems,
+                keys=['event_id', 'quantity', 'dropIn', 'customer_id']
+            )
 
-            # An item could match only in part, so find out how many times it matched, and then
-            # figure out how many times it could have matched, to determine the fraction
-            # that matched.
+            # An item could match only in part, so find out how many times it
+            # matched, and then figure out how many times it could have matched,
+            # to determine the fraction that matched.
             matchedTuples = [
                 (
                     item,
-                    float(matched_cart_items.count(item)) / total_item_points.get(item.id, 0)
+                    float(matched_cart_items.count(item)) /
+                    total_item_points.get(item.get('event_id'), 0)
                 )
                 if item not in additionalItems else (item, 1)
                 for item in matchedList
             ]
-            useableCodes += [x.ApplicableDiscountCode(x, matchedList, matchedTuples)]
-    
+            useableCodes += [
+                x.ApplicableDiscountCode(x, matchedList, matchedTuples)
+            ]
+
     # Return the list of codes that matched.
     return useableCodes
 

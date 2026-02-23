@@ -1,0 +1,197 @@
+from rest_framework import serializers
+from .models import Event, EventRole
+
+
+class EventRoleSerializer(serializers.ModelSerializer):
+    model_class = serializers.CharField(default='EventRole', read_only=True)
+    description = serializers.CharField(source='role__name', read_only=True)
+    price = serializers.SerializerMethodField()
+    count_registrations = serializers.SerializerMethodField()
+    quantity_available = serializers.SerializerMethodField()
+
+    def get_price(self, obj):
+        payAtDoor = bool(self.context.get('payAtDoor', False))
+        return obj.price(payAtDoor=payAtDoor)
+
+    def get_count_registrations(self, obj):
+        includeTemporaryRegs = bool(self.context('includeTemporaryRegs', False))
+        return obj.numRegistered(includeTemporaryRegs)
+
+    def get_quantity_available(self, obj):
+        includeTemporaryRegs = bool(self.context('includeTemporaryRegs', False))
+        return obj.capacity - obj.numRegistered(includeTemporaryRegs)
+
+    class Meta:
+        model = EventRole
+        fields = [
+            'sku', 'description', 'price', 'quantity_available', 'model_class',
+            'id', 'capacity', 'count_registrations'
+        ]
+
+
+class SyntheticVariantSerializer(serializers.Serializer):
+    sku = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    price = serializers.FloatField(default=0, read_only=True)
+    quantity_available = serializers.CharField(read_only=True)
+    model_class = serializers.CharField(default='None', read_only=True)
+    capacity = serializers.CharField(read_only=True)
+
+
+class VariantsField(serializers.ListField):
+    '''
+    A hybrid field that constructs the full set of variants available for each
+    event. This includes separate items for each specified event role, a general
+    register option if no roles are specified, and a drop-in option in cases
+    where the event permits drop-in registrations.
+    '''
+    child = serializers.DictField()
+
+    def to_representation(self, event):
+        roles = getattr(event, 'eventrole_set', None) or []
+
+        if hasattr(roles, "all"):  # If it's a RelatedManager
+            roles = list(roles.filter(capacity__gt=0))
+
+        role_data = EventRoleSerializer(roles, many=True).data
+
+        # Now compute synthetic ones
+        synthetic_variants = []
+
+        # Add general admission if no roles have been specified
+        if not roles:
+            numRegistered = event.getNumRegistered(
+                includeTemporaryRegs=self.context.get(
+                    'includeTemporaryRegs', False
+                ),
+                dateTime=self.context.get('cart_datetime', None)
+            )
+
+            synthetic_variants.append({
+                'sku': f'EVENT_{event.id}_GENERAL',
+                'description': 'General Admission',
+                'price': event.getBasePrice(payAtDoor=self.context.get('payAtDoor', False)),
+                'quantity_available': (event.capacity - numRegistered),
+                'model_class': 'Event',
+                'id': event.id,
+                'capacity': event.capacity,
+                'count_registrations': numRegistered,
+            })
+
+        # TODO: Add drop-in registration if applicable
+
+        # Merge them
+        all_variants = role_data + synthetic_variants
+        return all_variants
+
+
+
+class EventSerializer(serializers.ModelSerializer):
+    variants = VariantsField()
+
+    class Meta:
+        model = Event
+        fields = [
+            'id', 'name', 'shortDescription', 'firstOccurrenceTime',
+            'nextOccurrenceTime', 'lastOccurrenceTime', 'durationMinutes',
+            'basePrice', 'registrationEnabled', 'variants'
+        ]
+
+
+class PurchasableItemSerializer(serializers.Serializer):
+    """
+    Given a list of (instance, serializer_class) tuples,
+    dynamically dispatch to the right serializer.
+    """
+    def to_representation(self, obj):
+        serializer_map = self.context.get("serializer_map", {})
+
+        obj_cls = type(obj)
+        serializer_class = serializer_map.get(obj_cls)
+
+        if serializer_class is None:
+            # Try resolving to the registered based model (for polymorphic cases)
+            for registered_cls in serializer_map.keys():
+                if isinstance(obj, registered_cls):
+                    serializer_class = serializer_map.get(registered_cls)
+                    break
+
+        if serializer_class is None:
+            raise ValueError(f'No serializer registered for model: {type(obj).__name__}')
+
+        data = serializer_class(obj, context=self.context).data
+        data["item_type"] = serializer_class.__name__
+        return data
+
+
+class CartItemSerializer(serializers.Serializer):
+    item_type = serializers.CharField()
+    item_id = serializers.IntegerField()
+    sku = serializers.CharField()
+    # variant_id = serializers.CharField(allow_null=True, required=False)
+    quantity = serializers.IntegerField(default=1, min_value=1)
+
+
+    # These are properties that can only be set for door registrations:
+    dropIn = serializers.BooleanField(required=False)
+    requireFull = serializers.BooleanField(required=False)
+    autoSubmit = serializers.BooleanField(required=False)
+    autoFulfill = serializers.BooleanField(required=False)
+
+    def check_door_only_field(self, value: bool, permitted: bool=False) -> bool:
+        payAtDoor = self.context.get('payAtDoor', False)
+        if (value not in [permitted, None]) and not payAtDoor:
+            raise serializers.ValidationError(
+                'This option is unavailable for online registrations.'
+            )
+        return value
+
+    def validate_dropIn(self, value):
+        return self.check_door_only_field(value)  
+
+    def validate_requireFull(self, value):
+        return self.check_door_only_field(value, permitted=True)
+
+    def validate_autoSubmit(self, value):
+        return self.check_door_only_field(value, permitted=True)
+
+    def validate_autoFulfill(self, value):
+        return self.check_door_only_field(value, permitted=True)
+
+    def validate(self, data):
+        purchasable_items = self.context.get('purchasable_items', [])
+
+        valid = False
+        for qs, _ in purchasable_items:
+            model = qs.model
+            if qs.filter(id=data["item_id"]).exists():
+                # If variants are relevant, validate variant_id as well
+                instance = qs.get(id=data["item_id"])
+                if hasattr(instance, "variants"):
+                    variants = [v["id"] for v in instance.variants] if isinstance(instance.variants, list) \
+                               else instance.variants.values_list("id", flat=True)
+                    if data.get("variant_id") and str(data["variant_id"]) not in map(str, variants):
+                        raise serializers.ValidationError("Invalid variant for selected item.")
+                valid = True
+                break
+
+        if not valid:
+            raise serializers.ValidationError("Item not found in available purchasable items.")
+
+        return data
+    
+
+class CartSerializer(serializers.Serializer):
+    items = CartItemSerializer(many=True)
+    discount_code = serializers.CharField(required=False, allow_blank=True)
+    marketing_id = serializers.CharField(required=False, allow_blank=True)
+    checkout = serializers.BooleanField(required=False, default=False)
+
+    firstName = serializers.CharField(required=False, max_length=100, allow_blank=True)
+    lastName = serializers.CharField(required=False, max_length=100, allow_blank=True)
+    email = serializers.CharField(required=False, max_length=200, allow_blank=True)
+
+    student = serializers.BooleanField(required=False, default=False)
+
+    def validate_discount_code(self, value):
+        pass

@@ -5,8 +5,10 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 import logging
+from itertools import chain
 
 from .constants import getConstant
+from .signals import collect_purchasable_items
 
 
 # Define logger for this file
@@ -67,3 +69,19 @@ def getReturnPage(siteHistory, prior=False):
         }
     else:
         return {'url': None, 'title': None}
+
+
+def getPurchasableItems(sender=None, request=None, payAtDoor=False):
+    """
+    Returns an iterable of (instance, serializer) pairs collected via signal
+    handlers. Can be used by both views and internal logic.
+    """
+    responses = collect_purchasable_items.send(
+        sender=sender, request=request, payAtDoor=payAtDoor
+    )
+
+    collected = []
+    for receiver, (qs, serializer_class) in responses:
+        if qs.exists():
+            collected.append((qs, serializer_class))
+    return collected

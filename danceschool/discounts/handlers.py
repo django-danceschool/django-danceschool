@@ -43,10 +43,12 @@ def getBestDiscount(sender, **kwargs):
     voucher_code = kwargs.get('voucher_code', None)
     reg = kwargs.pop('registration', None)
     invoice = kwargs.get('invoice', None)
-    cart_kwargs = prepareCartObjects(reg, invoice)
+    cart_items = kwargs.get('cart_items', [])
+    cart_kwargs = prepareCartObjects(reg, invoice, cart_items)
     eligible_list = cart_kwargs.get('cart_object_list')
     customer_final = kwargs.pop('customer_final', False)
 
+    # TODO: Update logic on this (also needs to be passed to prepareCartObjects)
     payAtDoor = getattr(reg, 'payAtDoor', False)
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
@@ -62,8 +64,9 @@ def getBestDiscount(sender, **kwargs):
     # so that the best discounts are always listed in the order that they will
     # be applied.
     discountCodesApplicable = getApplicableDiscountCombos(
-        cart_object_list=cart_kwargs.get('cart_object_list'),
+        cart_object_list=eligible_list,
         customer=customer, newCustomer=newCustomer,
+        # TODO fix student status
         student=cart_kwargs.get('student', False),
         dateTime=getattr(reg, 'dateTime', timezone.now()),
         payAtDoor=getattr(reg, 'payAtDoor', False),
@@ -77,7 +80,7 @@ def getBestDiscount(sender, **kwargs):
     # discounts are allocated across individual events.
     best_discounts = OrderedDict()
 
-    initial_prices = [x.invoiceItem.grossTotal for x in eligible_list]
+    initial_prices = [x['base_price'] for x in eligible_list]
     initial_total = sum(initial_prices)
 
     if discountCodesApplicable:
@@ -302,18 +305,10 @@ def getAddonItems(sender, **kwargs):
     if (customer and customer.numEventRegistrations > 0) or not customer_final:
         newCustomer = False
 
-    # No need to get all objects, just the ones that could qualify one for an add-on
-    cart_object_list = reg.eventregistration_set.filter(dropIn=False).filter(
-        Q(event__series__pricingTier__isnull=False) |
-        Q(event__publicevent__pricingTier__isnull=False)
-    ).annotate(
-        pricingTier=Case(
-            When(event__publicevent__isnull=False, then='event__publicevent__pricingTier'),
-            When(event__series__isnull=False, then='event__series__pricingTier'),
-        )
-    )
+    cart_object_list = prepareCartObjects(reg=reg).get('cart_object_list', [])
 
-    student = getattr(cart_object_list.first(), 'student', False)
+    # TODO: Fix student status
+    student = False
 
     availableAddons = getApplicableDiscountCombos(
         cart_object_list, newCustomer, student,

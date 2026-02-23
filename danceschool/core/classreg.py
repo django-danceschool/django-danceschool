@@ -3,7 +3,9 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse
+from django.shortcuts import redirect
 from django.views.generic import FormView, RedirectView, TemplateView, View
+from django.utils.functional import cached_property
 from django.utils.translation import gettext, gettext_lazy as _
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -15,6 +17,13 @@ import json
 from braces.views import PermissionRequiredMixin
 import uuid
 from copy import deepcopy
+from itertools import chain
+from rest_framework import status, exceptions
+from rest_framework.generics import ListAPIView
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import (
     Event, Series, PublicEvent, Invoice, InvoiceItem, Customer,
@@ -27,8 +36,11 @@ from .forms import (
 from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
     post_student_info, apply_discount, apply_price_adjustments,
-    get_invoice_related, get_invoice_item_related
+    get_invoice_related, get_invoice_item_related, get_cart_invoice_related,
+    get_cart_invoice_item_related
 )
+from .helpers import getPurchasableItems
+from .serializers import PurchasableItemSerializer, CartSerializer
 from .mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
     RegistrationAdjustmentsMixin, ReferralInfoMixin
@@ -226,7 +238,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         for key, eventRegs in event_listing.items():
             this_event = associated_events.get(id=key)
             this_child_events = associated_events.filter(
-                id__in=this_event.eventaddon_set.values_list('addOnEvent__id', flat=True) 
+                id__in=this_event.eventaddon_set.values_list('addOnEvent__id', flat=True)
             )
 
             for value in eventRegs:
@@ -274,7 +286,7 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                     'payAtDoor': reg.payAtDoor,
                     'dropIns': len(dropInList)
                 }
-                
+
                 # Use the Event model's method to allocated prices across the
                 # event itself and its children.
                 allocated_base_prices = this_event.getAllocatedTotals(
@@ -344,8 +356,8 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         self.registration = reg
         self.invoice = invoice
 
-        regSession["invoiceId"] = invoice.id.__str__()
-        regSession["invoiceExpiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
+        regSession["invoice_id"] = invoice.id.__str__()
+        regSession["invoice_expiry"] = expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         regSession["payAtDoor"] = reg.payAtDoor
         self.request.session[REG_VALIDATION_STR] = regSession
 
@@ -485,6 +497,295 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
         return self.listing
 
 
+class PurchasableItemPagination(PageNumberPagination):
+    page_size = 20
+
+
+class PurchasableItemsView(ListAPIView):
+    serializer_class = PurchasableItemSerializer
+    permission_classes = [AllowAny]
+    pagination_class = PurchasableItemPagination
+
+    def get_queryset(self) -> list:
+        # If registration is not online then do not return a list of items
+        # available for registration
+        regOnline = getConstant('registration__registrationEnabled')
+        if not regOnline:
+            return []
+
+        self.serializer_map = {}
+
+        responses = getPurchasableItems(
+            sender=self.__class__, request=self.request
+        )
+        querysets = []
+
+        for _, result in responses:
+            if not result:
+                continue
+
+            qs, serializer = result
+            if qs is None or not hasattr(qs, "model"):
+                continue
+
+            self.serializer_map[qs.model] = serializer
+            querysets.append(qs)
+
+        # Chain all objects from the querysets into a single iterable
+        combined = chain.from_iterable(qs for qs in querysets)
+
+        # Convert to a list so we can sort and paginate
+        items = list(combined)
+
+        # Sort safely by a shared attribute, if one exists (e.g. "name")
+        # items.sort(key=lambda obj: getattr(obj, "name", "").lower())
+
+        return items
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['serializer_map'] = getattr(self, 'serializer_map', {})
+        return context
+
+
+class CartView(APIView):
+    @cached_property
+    def purchasable_registry(self):
+        return getPurchasableItems(
+            sender=self.__class__,
+            request=self.request,
+            payAtDoor=self.payAtDoor
+        )
+
+    def validate_cart(self, request, data=None):
+        '''
+        Shared serializer validation for post and delete requests. Note that
+        data and door status have already been added by dispatch as properties
+        of the view.
+        '''
+        if data is None:
+            data = self.raw_data
+
+        serializer = CartSerializer(
+            data=data,
+            context={
+                'request': request,
+                'payAtDoor': self.payAtDoor,
+                'purchasable_items': self.purchasable_registry
+            }
+        )
+        serializer.is_valid(raise_exception=True)
+        return serializer.validated_data
+
+    def create_invoice_from_cart(self, cart, request):
+        '''
+        If there is an existing invoice, update it. Otherwise, create a new
+        one with items that match the shopping cart.
+        '''
+
+        # For later reference
+        invoice_update_keys = ['firstName', 'lastName', 'email']
+
+        # Item data is popped off the cart to be handled separately.
+        item_data = cart.pop('items', [])
+
+        reg_session = request.session.get(REG_VALIDATION_STR, {})
+        existing_invoice_id = reg_session.get('invoice_id')
+        invoice_expiry = parse_datetime(
+            reg_session.get('invoice_expiry', '')
+        )
+        if existing_invoice_id and (invoice_expiry < timezone.now()):
+            # Delete any preliminary invoice that has expired
+            Invoice.objects.filter(
+                id=existing_invoice_id, status=Invoice.PaymentStatus.preliminary
+            ).delete()
+            invoice = None
+        elif existing_invoice_id:
+            invoice = Invoice.objects.filter(
+                id=existing_invoice_id, _items_editable=True
+            ).first()
+        else:
+            invoice = None
+
+        if invoice:
+            for key in invoice_update_keys:
+                value = cart.pop(key, None)
+                if value:
+                    setattr(invoice, key, value)
+                data = invoice.data or {}
+                data.update(cart)
+                invoice.data = data
+        else:
+            # Some information on the shopping cart can go into invoice fields.
+            # All else goes in Invoice data. Note that items have already been
+            # popped off.
+            invoice_defaults = {
+                key: cart.pop(key, None) for key in invoice_update_keys
+            }
+            invoice_defaults.update({
+                'submissionUser': (
+                    request.user if request.user.is_authenticated else None
+                ),
+                'data': cart,
+                'status': Invoice.PaymentStatus.preliminary,
+                'buyerPaysSalesTax': getConstant('registration__buyerPaysSalesTax'),
+            })
+            invoice = Invoice(**invoice_defaults)
+
+        # Update expiration date for this invoice (will also be updated in
+        # session data).  Also reset all totals to 0 (will be populated by
+        # signal handlers.)
+        invoice.expirationDate = (
+            timezone.now() +
+            timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
+        )
+        for attr in ['grossTotal', 'total', 'taxes', 'adjustments', 'fees']:
+            setattr(invoice, attr, 0)
+
+        if reg_session.get('marketing_id'):
+            invoice.data.update({
+                'marketing_id': reg_session.pop('marketing_id', None)
+            })
+
+        # Delete any existing items on this invoice (the values in the cart
+        # always prevail).
+        invoice.invoiceitem_set.delete()
+
+        # Use a signal handler to check whether a registration or other related
+        # objects to the invoice are needed for this transaction, and whether
+        # they already exist.
+        signal_responses = get_cart_invoice_related.send(
+            sender=self.__class__,
+            request=request,
+            invoice=invoice,
+        )
+
+        errors = []
+        for s in signal_responses:
+            if isinstance(s[1], dict) and s[1].get('status') != 'success':
+                errors += s[1].get('errors', [])
+        if errors:
+            raise exceptions.ValidationError(errors)
+
+        # We now have an invoice and any related items (such as a Registration
+        # or MerchOrder) that need to be linked to that invoice. Loop through
+        # the set of passed items and create InvoiceItems for them. Also pass
+        # the signal to ensure that related items such as EventRegistration
+        # or MerchOrderItem are created and linked.
+        # We use a while loop with a counter rather than a for loop here because
+        # it allows the code inside the loop to add items to item_post which
+        # are then processed in subsequent iterations of the same loop.
+        counter = 0
+        while counter < len(item_data):
+            i = item_data[counter]
+            counter += 1
+
+            # Get information about the item from the set of purchasables that
+            # has already been compile for this view. Since there are multiple
+            # querysets in that response, choose the one associated with the
+            # type
+            this_model_purchasables = [
+                x[0] for x in self.purchasable_registry if
+                str(x[0].model) == i.get('item_type')
+            ]
+            this_item = [
+                x for x in this_model_purchasables if i['sku'] in
+                x.get('variants')
+            ]
+
+            # Get information about the item from the set of purchasables that
+            # has already been compile for this view.
+            this_item = InvoiceItem(
+                invoice=invoice
+            )
+
+        fields = [
+            'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
+            'disabled', 'creationDate', 'soldOut', 'numVariants',
+            'variants'
+        ]
+
+
+        return invoice
+
+    def link_registration(self, invoice, items):
+        # TODO
+        pass
+
+    def get_success_url(self):
+        return reverse('getStudentInfo')
+
+    def dispatch(self, request, *args, **kwargs):
+        '''
+        Determine at-the-door status, and check permissions for door
+        registrations. Set door status as a property of the view so that the
+        cached purchasable registry can access it.
+        '''
+        mode=kwargs.pop('mode', 'online')
+        data = kwargs.get('data', request.data) or {}
+
+        # Set the existing cart as a property of the view since it will be used
+        # by all subsequent request methods.
+        self.existing_cart = (
+            request.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+        )
+
+        # Fill in door status based on the available information.
+        payAtDoor = False
+
+        # First, if there is an existing cart, get door status from it.
+        if self.existing_cart:
+            payAtDoor = self.existing_cart.pop('payAtDoor', False)
+        # If door status is not already True, then we may update status based on
+        # the passed data or keyword arguments. This permits changes from online
+        # to at-the-door, but not the other way.
+        if not payAtDoor:
+            payAtDoor = data.pop('payAtDoor', (mode == 'door'))
+
+        # Now set data and door status as properties so they will persist
+        # throughout the view.
+        self.raw_data = data
+        self.payAtDoor = payAtDoor
+
+        # Check for door permissions before validating at-the-door carts.
+        if self.payAtDoor and not request.user.has_perm('core.accept_door_payments'):
+            raise exceptions.PermissionDenied(
+                'You lack door registration permissions.'
+            )
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        return Response(self.existing_cart)
+
+    def post(self, request, *args, **kwargs):
+        # Return the validated cart minus any parameters that should not
+        # persist (such as the checkout flag).
+        new_cart_data = self.validate_cart(request)
+        checkout = new_cart_data.pop('checkout', False)
+
+        request.session[REG_VALIDATION_STR]['cart'] = new_cart_data
+        request.session.modified = True
+
+        # Handle checkout flow
+        if checkout:
+            invoice = self.create_invoice_from_cart(new_cart_data, request)
+            request.session[REG_VALIDATION_STR]['invoice_id'] = invoice.id
+            return HttpResponseRedirect(self.get_success_url())
+
+        return Response(new_cart_data, status=status.HTTP_200_OK)
+
+    def delete(self, request, *args, **kwargs):
+        item_id = request.data.get("item_id")
+        cart = request.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+        cart['items'] = [c for c in cart.get('items', []) if c["item_id"] != item_id]
+        new_cart_data = self.validate_cart(
+            request, data=cart
+        )
+        request.session[REG_VALIDATION_STR]['cart'] = new_cart_data
+        request.session.modified = True
+        return Response(cart, status=status.HTTP_200_OK)
+
+
 class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustmentsMixin, View):
     '''
     This view handles Ajax requests to create or update a Registration.
@@ -571,14 +872,14 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             # In order to update an existing invoice, the ID passed in POST must
             # match the id contained in the current session data, and the existing
             # invoice must not have expired or be non-editable.
-            if str(invoice.id) != regSession.get('invoiceId'):
+            if str(invoice.id) != regSession.get('invoice_id'):
                 errors.append({
                     'code': 'invalid_invoice_id',
                     'message': _('Invalid invoice ID passed.')
                 })
 
             session_expiry = parse_datetime(
-                regSession.get('invoiceExpiry', ''),
+                regSession.get('invoice_expiry', ''),
             )
             if not session_expiry or session_expiry < timezone.now():
                 errors.append({
@@ -687,7 +988,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 response.update(s[1].get('response', {}))
 
         # We now have an invoice and any related items (such as a Registration
-        # or MerchOrder) that need to be linked to that Registration.  Loop
+        # or MerchOrder) that need to be linked to that invoice.  Loop
         # through the set of passed items and either create
         # InvoiceItems/EventRegistrations for them, or update existing ones.
         existing_item_ids = list(invoice.invoiceitem_set.values_list('id', flat=True))
@@ -828,7 +1129,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
                 })
             for key, value in i.items():
                 if isinstance(key, str) and key.startswith('__relateditem'):
-                    value.save()        
+                    value.save()
 
         # Remove the response key that holds actual invoice items, as they
         # cannot be passed in JSON.
@@ -927,7 +1228,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
             'itemCount': len([x for x in response.get('items', []) if not x.get('child_item', False)])
         })
 
-        # Format the response for return to the page that called this view 
+        # Format the response for return to the page that called this view
         response_dict = {
             'status': 'success',
             'invoice': response,
@@ -988,8 +1289,8 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
 
             regSession["voucher_id"] = response.get('voucher', {}).get('voucherId', None)
 
-        regSession["invoiceId"] = invoice.id.__str__()
-        regSession["invoiceExpiry"] = invoice.expirationDate.strftime('%Y-%m-%dT%H:%M:%S%z')
+        regSession["invoice_id"] = invoice.id.__str__()
+        regSession["invoice_expiry"] = invoice.expirationDate.strftime('%Y-%m-%dT%H:%M:%S%z')
         regSession["payAtDoor"] = response.get('payAtDoor', False)
         request.session[REG_VALIDATION_STR] = regSession
 
@@ -1124,7 +1425,7 @@ class AjaxClassRegistrationView(PermissionRequiredMixin, RegistrationAdjustments
         response['child_items'] = []
         for addOn in this_event.eventaddon_set.all():
 
-            child_item_data = item_data.copy()            
+            child_item_data = item_data.copy()
 
             # Start by checking the full item_post to see if this register UUID
             # is already in the submitted data. If so, then don't add the
@@ -1474,13 +1775,15 @@ class RegistrationSummaryView(
             return HttpResponseRedirect(reverse('registration'))
 
         try:
-            invoice = Invoice.objects.get(id=self.request.session[REG_VALIDATION_STR].get('invoiceId'))
+            invoice = Invoice.objects.get(
+                id=self.request.session[REG_VALIDATION_STR].get('invoice_id')
+            )
         except ObjectDoesNotExist:
             messages.error(request, _('Invalid invoice identifier passed to summary view.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
+            self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
             messages.info(request, _('Your registration session has expired. Please try again.'))
@@ -1669,14 +1972,14 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
 
         try:
             self.invoice = Invoice.objects.get(
-                id=self.request.session[REG_VALIDATION_STR].get('invoiceId')
+                id=self.request.session[REG_VALIDATION_STR].get('invoice_id')
             )
         except ObjectDoesNotExist:
             messages.error(request, _('Invalid invoice identifier passed to sign-up form.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
+            self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
             messages.info(request, _('Your registration session has expired. Please try again.'))
@@ -1771,7 +2074,7 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session[REG_VALIDATION_STR]["invoiceExpiry"] = \
+        self.request.session[REG_VALIDATION_STR]["invoice_expiry"] = \
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
@@ -1797,7 +2100,7 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
 class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
     '''
     This page collects additional name and email information needed when there
-    are multiple EventRegistrations associated with an Invoice.  For each 
+    are multiple EventRegistrations associated with an Invoice.  For each
 
     '''
     form_class = MultiRegCustomerNameForm
@@ -1814,14 +2117,14 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
 
         try:
             self.invoice = Invoice.objects.get(
-                id=self.request.session[REG_VALIDATION_STR].get('invoiceId')
+                id=self.request.session[REG_VALIDATION_STR].get('invoice_id')
             )
         except ObjectDoesNotExist:
             messages.error(request, _('Invalid invoice identifier passed to sign-up form.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
+            self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
             messages.info(request, _('Your registration session has expired. Please try again.'))
@@ -1922,7 +2225,7 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session[REG_VALIDATION_STR]["invoiceExpiry"] = \
+        self.request.session[REG_VALIDATION_STR]["invoice_expiry"] = \
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 
@@ -1975,14 +2278,14 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
         try:
             self.invoice = Invoice.objects.get(
-                id=self.request.session[REG_VALIDATION_STR].get('invoiceId')
+                id=self.request.session[REG_VALIDATION_STR].get('invoice_id')
             )
         except ObjectDoesNotExist:
             messages.error(request, _('Invalid invoice identifier passed to sign-up form.'))
             return HttpResponseRedirect(reverse('registration'))
 
         expiry = parse_datetime(
-            self.request.session[REG_VALIDATION_STR].get('invoiceExpiry', ''),
+            self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
             messages.info(request, _('Your registration session has expired. Please try again.'))
@@ -2010,7 +2313,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         )
 
         self.partnerRequired = (
-            self.registration and 
+            self.registration and
             self.registration.eventregistration_set.filter(
                 event__partnerRequired=True
             ).exists()
@@ -2113,7 +2416,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
 
         # The session expires after a period of inactivity that is specified in preferences.
         expiry = timezone.now() + timedelta(minutes=getConstant('registration__sessionExpiryMinutes'))
-        self.request.session[REG_VALIDATION_STR]["invoiceExpiry"] = \
+        self.request.session[REG_VALIDATION_STR]["invoice_expiry"] = \
             expiry.strftime('%Y-%m-%dT%H:%M:%S%z')
         self.request.session.modified = True
 

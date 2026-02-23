@@ -180,7 +180,7 @@ class MerchItemVariant(models.Model):
 
     @property
     def currentInventory(self):
-        qs = self.orders if self.pk else MerchOrder.objects.none()
+        qs = self.orders if self.pk else MerchOrderItem.objects.none()
         qs_adjust = self.quantity_adjustments if self.pk else MerchQuantityAdjustment.objects.none()
 
         return (

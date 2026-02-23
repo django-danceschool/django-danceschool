@@ -1,5 +1,11 @@
 from django.dispatch import Signal
 
+# Fires when collecting the set of purchasable items for a register page or
+# for shopping cart processing.
+collect_purchasable_items = Signal(
+    ''' ['request', 'payAtDoor', 'date'] '''
+)
+
 # Fires during the clean process of the StudentInfoView form or the
 # MultiRegCustomerNameForm, allowing hooked in apps to validate the form data
 # and raise ValidationErrors or send warnings (messages) to the user by adding
@@ -63,7 +69,9 @@ post_registration = Signal(''' ['invoice', registration'] ''')
 # Fires in AjaxClassRegistrationView so that items related to invoices can be
 # created or updated at the same time as the invoice.
 get_invoice_related = Signal(''' ['invoice', 'post_data', 'prior_response', 'request'] ''')
+get_cart_invoice_related = Signal(''' ['invoice', 'items', 'request'] ''')
 get_invoice_item_related = Signal(''' ['item', 'item_data', 'post_data', 'prior_response', 'request'] ''')
+get_cart_invoice_item_related = Signal(''' ['item', 'item_data', 'cart_data', 'request'] ''')
 
 # Fires whenever an invoice is finalized.
 invoice_finalized = Signal(''' ['invoice'] ''')

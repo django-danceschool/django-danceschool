@@ -6,10 +6,11 @@ from .views import (
     SchoolSingleCheckInView
 )
 from .classreg import (
-    RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
-    ClassRegistrationReferralView, RegistrationSummaryView, StudentInfoView,
-    AjaxClassRegistrationView, SingleClassRegistrationReferralView,
-    MultiRegCustomerNameView, PartnerRequiredView
+    RegistrationOfflineView, ClassRegistrationView, PurchasableItemsView,
+    SingleClassRegistrationView, ClassRegistrationReferralView,
+    RegistrationSummaryView, StudentInfoView, AjaxClassRegistrationView,
+    SingleClassRegistrationReferralView, MultiRegCustomerNameView,
+    PartnerRequiredView
 )
 from .ajax import ProcessCheckInView
 
@@ -18,6 +19,7 @@ urlpatterns = [
     # This view allows the passing of a voucher code in the URL to the class registration page
     # so that Referrers can provide a direct URL to get their referral benefits
     path('', ClassRegistrationView.as_view(), name='registration'),
+    path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
     path('ajax/', AjaxClassRegistrationView.as_view(), name='ajaxRegistration'),
     path(
         'id/<slug:marketing_id>/',

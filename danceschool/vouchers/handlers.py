@@ -39,6 +39,7 @@ def checkVoucherField(sender, **kwargs):
     invoice = kwargs.get('invoice', None)
     registration = kwargs.get('registration', None)
     session = getattr(request, 'session', {}).get(REG_VALIDATION_STR, {})
+    cart_items = session.get('cart', {}).get('items', [])
 
     id = formData.get('gift', '')
     first = formData.get('firstName')
@@ -59,7 +60,7 @@ def checkVoucherField(sender, **kwargs):
     if session.get('gift', '') != '':
         raise ValidationError({'gift': _('Can\'t have more than one voucher')})
 
-    if not registration:
+    if invoice and (not registration):
         registration = Registration.objects.filter(invoice=invoice).first()
     events = Event.objects.none()
 
@@ -67,6 +68,16 @@ def checkVoucherField(sender, **kwargs):
         events = Event.objects.filter(
             eventregistration__registration=registration
         ).exclude(eventregistration__dropIn=True).values_list('id', flat=True)
+    elif cart_items:
+        events = Event.objects.filter(
+            id__in=[
+                x.get('item_id') for x in cart_items
+                if (
+                    (x.get('item_type') == 'Event') and
+                    (not x.get('drop_in', False))
+                )
+            ]
+        ).values_list('id', flat=True)
 
     # If a discount code with this ID exists, then no further validation can be
     # performed here. Otherwise, ensure that a voucher ID exists matching this
@@ -111,6 +122,7 @@ def checkVoucherCode(sender, **kwargs):
 
     invoice = kwargs.get('invoice', None)
     registration = kwargs.get('registration', None)
+    cart_items = kwargs.get('cart_items', [])
     voucherId = kwargs.get('voucherId', None)
     customer = kwargs.get('customer', None)
     validate_customer = kwargs.get('validateCustomer', False)
@@ -145,7 +157,7 @@ def checkVoucherCode(sender, **kwargs):
     # If we got this far, then we can just use the model-level validation. The
     # dictionary that it returns takes the same form as the one that is returned
     # above if an error has already been found.
-    if not registration:
+    if invoice and (not registration):
         registration = Registration.objects.filter(invoice=invoice).first()
     events = Event.objects.none()
 
@@ -153,6 +165,16 @@ def checkVoucherCode(sender, **kwargs):
         events = Event.objects.filter(
             eventregistration__registration=registration
         ).exclude(eventregistration__dropIn=True)
+    elif cart_items:
+        events = Event.objects.filter(
+            id__in=[
+                x.get('item_id') for x in cart_items
+                if (
+                    (x.get('item_type') == 'Event') and
+                    (not x.get('drop_in', False))
+                )
+            ]
+        )
 
     return obj.validate(
         customer=customer, events=events,

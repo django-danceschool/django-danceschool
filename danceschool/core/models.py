@@ -13,6 +13,7 @@ from django.apps import apps
 from django.utils import timezone
 
 from polymorphic.models import PolymorphicModel
+from polymorphic.managers import PolymorphicManager
 from filer.models import ThumbnailOption
 from djangocms_text_ckeditor.fields import HTMLField
 import uuid
@@ -899,6 +900,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
+    # In apps.py, this will be replaced with a custom manager to add annotations
+    # for registration being enabled and for past events. It also allows access
+    # to QuerySet methods for prefetching occurrences and registrations.
+    objects = PolymorphicManager()
+
     @property
     def localStartTime(self):
         return ensure_localtime(self.startTime)
@@ -1379,6 +1385,11 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def soldOut(self):
+        # Prefer annotation if present (base annotation does not look at
+        # addOnEvents).
+        if getattr(self, '_sold_out', False) is True:
+            return True
+
         base_sold_out = (self.numRegistered >= (self.capacity or 0))
         if base_sold_out:
             return True
@@ -1750,11 +1761,31 @@ class EventOccurrence(models.Model):
         ]
 
 
-
 class EventRole(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     role = models.ForeignKey(DanceRole, on_delete=models.CASCADE)
     capacity = models.PositiveIntegerField()
+
+    @property
+    def sku(self):
+        return f'EVENT_{self.event.id}_ROLE_{self.id}'
+
+    @property
+    def price(self, payAtDoor):
+        return self.event.getBasePrice(payAtDoor=payAtDoor)
+
+    def numRegistered(self, includeTemporaryRegs=False):
+        '''
+        Accepts a DanceRole object and returns the number of registrations of that role.
+        '''
+        filters = Q(cancelled=False) & Q(dropIn=False) & Q(role=self.role)
+        excludes = Q()
+
+        if includeTemporaryRegs:
+            excludes = Q(registration__final=False) & Q(registration__invoice__expirationDate__lte=timezone.now())
+        else:
+            filters = filters & Q(registration__final=True)
+        return self.event.eventregistration_set.filter(filters).exclude(excludes).count()
 
     class Meta:
         ''' Ensure each role is only listed once per event. '''

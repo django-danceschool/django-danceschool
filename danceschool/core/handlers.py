@@ -1,16 +1,28 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.db.models import Prefetch
 from django.dispatch import receiver
 
 from allauth.account.signals import email_confirmed
 from allauth.account.models import EmailAddress
 import logging
 
-from .signals import post_registration
-from .models import Registration, EventRegistration
+from .models import Event, EventRegistration, EventRole
+from .serializers import EventSerializer
+from .signals import collect_purchasable_items, post_registration
 
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+@receiver(collect_purchasable_items)
+def event_purchasables(sender, **kwargs):
+    qs = (
+        Event.objects.prefetch_related(
+            Prefetch('eventrole_set', queryset=EventRole.objects.filter(capacity__gt=0))
+        )
+    )
+    return (qs, EventSerializer)
 
 
 @receiver(email_confirmed)

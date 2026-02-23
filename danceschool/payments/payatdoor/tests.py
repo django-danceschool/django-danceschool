@@ -69,7 +69,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
         invoice = Invoice.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
+            id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
         )
         tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
@@ -181,7 +181,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
         invoice = Invoice.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
+            id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
         )
         tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())

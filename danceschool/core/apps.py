@@ -14,6 +14,7 @@ class CoreAppConfig(AppConfig):
     def ready(self):
         # Ensure that signal handlers are loaded
         from . import handlers
+        from .managers import EventManager
 
         # This will load all cms_plugins.py files under
         # installed apps to identify custom plugin templates
@@ -21,6 +22,14 @@ class CoreAppConfig(AppConfig):
         plugin_templates_registry.autodiscover(app_names)
         model_templates_registry.autodiscover(app_names)
         extras_templates_registry.autodiscover(app_names)
+
+        # get the Event model from the registry (safe at this point)
+        Event = apps.get_model(self.label, "Event")
+
+        # attach a custom manager the Event model. It occurs here to avoid
+        # issues with early import that would arise if the manager were
+        # specified directly in models.py.
+        Event.add_to_class("objects", EventManager())
 
         # See django-cms issue #6433. Hopefully this monkeypatch can be removed soon.
         from cms.cms_toolbars import PageToolbar

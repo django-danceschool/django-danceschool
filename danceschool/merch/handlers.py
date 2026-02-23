@@ -1,4 +1,5 @@
 from django.utils.translation import gettext_lazy as _
+from django.db.models import Prefetch
 from django.dispatch import receiver
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -7,15 +8,34 @@ import logging
 
 from danceschool.core.signals import (
     invoice_finalized, invoice_cancelled,
-    get_invoice_related, get_invoice_item_related
+    get_invoice_related, get_invoice_item_related,
+    get_cart_invoice_related, get_cart_invoice_item_related
 )
 from danceschool.core.models import Invoice, InvoiceItem
+from danceschool.core.signals import collect_purchasable_items
 
-from .models import MerchItemVariant, MerchOrder, MerchOrderItem
+from .models import MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem
+from .serializers import MerchItemSerializer
 
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+@receiver(collect_purchasable_items)
+def merchitem_purchasables(sender, **kwargs):
+    ''' Return eligible merchandise for purchase at the door only. '''
+    if not kwargs.get('payAtDoor', False):
+        return
+    qs = (
+        MerchItem.objects.prefetch_related(
+            Prefetch(
+                'item_variant',
+                queryset=MerchItemVariant.objects.filter(soldOut=False)
+            )
+        )
+    )
+    return (qs, MerchItemSerializer)
 
 
 @receiver(get_invoice_related, dispatch_uid='linkMerchOrder')
@@ -44,6 +64,53 @@ def linkMerchOrder(sender, **kwargs):
     response = {
         '__related_merchitemvariants': MerchItemVariant.objects.filter(
             id__in=[x.get('variantId') for x in merchorder_items if x.get('variantId', None)]
+        ),
+    }
+
+    try:
+        order = MerchOrder.objects.get(invoice=invoice)
+    except ObjectDoesNotExist:
+        order = MerchOrder(invoice=invoice, status=MerchOrder.OrderStatus.unsubmitted)
+
+    if not order.itemsEditable:
+        return {
+            'status': 'error',
+            'errors': [{
+                'code': 'merchorder_not_editable',
+                'message': _('This invoice is linked to a merchandise order that is no longer editable.'),
+            }],
+        }
+
+    response.update({'__relateditem_merchorder': order})
+    return {'status': 'success', 'response': response}
+
+
+@receiver(get_cart_invoice_related, dispatch_uid='linkCartMerchOrder')
+def linkCartMerchOrder(sender, **kwargs):
+    '''
+    This method checks to see whether a MerchOrder is needed for this
+    transaction, and whether one already exists.  It returns a MerchOrder.
+    '''
+
+    invoice = kwargs.get('invoice')
+    item_data = kwargs.get('item_data', {})
+
+    if not isinstance(invoice, Invoice):
+        return {
+            'status': 'error',
+            'errors': [{
+                'code': 'no_invoice_passed',
+                'message': _('No invoice passed to get_invoice_related signal handler.')
+            }]
+        }
+
+    merchorder_items = [x for x in item_data if x.get('item_type', None) == 'MerchItem']
+    if not merchorder_items:
+        return {}
+
+    response = {
+        '__related_merchitemvariants': MerchItemVariant.objects.filter(
+            id__in=[x.get('variant_id') for x in merchorder_items if x.get('variant_id', None)]
         ),
     }
 

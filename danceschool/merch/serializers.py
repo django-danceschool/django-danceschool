@@ -4,15 +4,28 @@ from .models import MerchOrder, MerchItem, MerchOrderItem, MerchItemVariant
 
 
 class MerchItemVariantSerializer(serializers.ModelSerializer):
+    description = serializers.CharField(source='name')
+    price = serializers.SerializerMethodField()
+    quantity_available = serializers.IntegerField(source='currentInventory')
+    model_class = serializers.CharField(default='MerchItemVariant')
+    sold_out = serializers.BooleanField(source='soldOut')
+
+    def get_price(self, obj):
+        return obj.getPrice()
+
     class Meta:
         model = MerchItemVariant
+
         fields = [
-            'sku', 'fullName', 'name', 'price', 'currentInventory', 'soldOut' 
+            'sku', 'description', 'price', 'quantity_available', 'model_class',
+            'id', 'sold_out'
         ]
 
 
 class MerchItemSerializer(serializers.ModelSerializer):
-    variants = MerchItemVariantSerializer(many=True, read_only=True)
+    variants = MerchItemVariantSerializer(
+        many=True, source='item_variant', read_only=True
+    )
 
     class Meta:
         model = MerchItem
