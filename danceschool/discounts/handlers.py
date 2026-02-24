@@ -356,22 +356,21 @@ def reportDiscounts(sender, **kwargs):
 
     logger.debug('Signal fired to return discounts associated with registrations')
 
-    regs = kwargs.pop('eventregistrations', None)
-    if not regs or not isinstance(regs, QuerySet) or not (regs.model == EventRegistration):
-        logger.warning('No/invalid EventRegistration queryset passed, so discounts not found.')
-        return
+    reg_ids = kwargs.pop('eventregistrations', [])
+
+    discount_data = RegistrationDiscount.objects.filter(
+        registration__eventregistration__id__in=reg_ids,
+    ).annotate(
+        name=F('discount__name'),
+        type=Value('discount', output_field=CharField()),
+        amount=F('discountAmount'),
+        reg_id=F('registration__eventregistration__id'),
+    ).values('id', 'amount', 'name', 'type', 'reg_id')
 
     extras = {}
-    regs = regs.filter(registration__registrationdiscount__isnull=False).prefetch_related(
-        'registration__registrationdiscount_set',
-        'registration__registrationdiscount_set__discount'
-    )
-
-    for reg in regs:
-        extras[reg.id] = list(reg.registration.registrationdiscount_set.annotate(
-            name=F('discount__name'),
-            type=Value('discount', output_field=CharField()),
-            amount=F('discountAmount'),
-        ).values('id', 'amount', 'name', 'type'))
+    for row in discount_data:
+        extras.setdefault(row['reg_id'], []).append(
+            {k: v for k, v in row.items() if k != 'reg_id'}
+        )
 
     return extras

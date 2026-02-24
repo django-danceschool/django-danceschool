@@ -129,7 +129,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
         # the view class registrations page.  set_return_page() is in SiteHistoryMixin.
         self.set_return_page('viewregistrations', _('View Registrations'), event_id=self.object.id)
 
-        registrations = EventRegistration.objects.filter(
+        registrations = list(EventRegistration.objects.filter(
             event=self.object, cancelled=False,
             registration__final=True,
         ).select_related(
@@ -138,13 +138,14 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
         ).order_by(
             F('customer__last_name').asc(nulls_last=True),
             F('customer__first_name').asc(nulls_last=True),
-        )
+        ))
 
-        extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
+        extras_dict = {x.id: [] for x in registrations}
 
         if registrations:
             extras = get_eventregistration_data.send(
-                sender=EventRegistrationSummaryView, eventregistrations=registrations
+                sender=EventRegistrationSummaryView,
+                eventregistrations=[x.id for x in registrations]
             )
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
                 extras_dict[k].extend(v)
@@ -273,7 +274,7 @@ class SchoolSingleCheckInView(PermissionRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ''' Add the list of event registrations for the given invoice. '''
 
-        registrations = EventRegistration.objects.filter(
+        registrations = list(EventRegistration.objects.filter(
             registration__invoice=self.object, cancelled=False,
             registration__final=True,
         ).select_related(
@@ -282,13 +283,14 @@ class SchoolSingleCheckInView(PermissionRequiredMixin, DetailView):
         ).order_by(
             F('customer__last_name').asc(nulls_last=True),
             F('customer__first_name').asc(nulls_last=True),
-        )
+        ))
 
-        extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
+        extras_dict = {x.id: [] for x in registrations}
 
         if registrations:
             extras = get_eventregistration_data.send(
-                sender=SchoolSingleCheckInView, eventregistrations=registrations
+                sender=SchoolSingleCheckInView,
+                eventregistrations=[x.id for x in registrations]
             )
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
                 extras_dict[k].extend(v)
@@ -403,6 +405,9 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         if post_data.get('eventList'):
             queryset = queryset.filter(event__id__in=post_data.get('eventList'))
 
+        # Reduce DB calls
+        querylist = list(queryset)
+
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
             'id', 'dropIn', 'refundFlag', 'warningFlag',
@@ -426,10 +431,15 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
 
         extras_dict = {}
 
-        if queryset:
-            extras = get_eventregistration_data.send(sender=EventRegistrationJsonView, eventregistrations=queryset)
-            extras_dict = {x: [] for x in queryset.values_list('id', flat=True)}
-            for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]]):
+        if querylist:
+            extras = get_eventregistration_data.send(
+                sender=EventRegistrationJsonView,
+                eventregistrations=[x.id for x in querylist]
+            )
+            extras_dict = {x.id: [] for x in querylist}
+            for k, v in chain.from_iterable([
+                x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]
+            ]):
                 extras_dict[k].extend(v)
 
         this_listing = [

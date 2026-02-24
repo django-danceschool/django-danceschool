@@ -222,13 +222,14 @@ def reportRevenue(sender, **kwargs):
 
     logger.debug('Signal fired to return revenue items associated with registrations')
 
-    regs = kwargs.pop('eventregistrations', None)
-    if not regs or not isinstance(regs, QuerySet) or not (regs.model == EventRegistration):
-        logger.warning('No/invalid EventRegistration queryset passed, so revenue items not found.')
-        return
+    reg_ids = kwargs.pop('eventregistrations', [])
 
     extras = {}
-    regs = regs.filter(invoiceItem__revenueitem__isnull=False).select_related(
+    regs = EventRegistration.objects.filter(
+        id__in=reg_ids
+    ).filter(
+        invoiceItem__revenueitem__isnull=False
+    ).select_related(
         'invoiceItem__revenueitem'
     )
 

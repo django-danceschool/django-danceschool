@@ -2,7 +2,7 @@ from django.apps import apps
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.utils.translation import gettext_lazy as _
-from django.db.models import Value, CharField
+from django.db.models import Value, CharField, F
 from django.db.models.query import QuerySet
 from django.db.models.functions import Concat
 
@@ -324,20 +324,23 @@ def reportVouchers(sender, **kwargs):
 
     logger.debug('Signal fired to return vouchers associated with registrations')
 
-    regs = kwargs.pop('eventregistrations', None)
-    if not regs or not isinstance(regs, QuerySet) or not (regs.model == EventRegistration):
-        logger.warning('No/invalid EventRegistration queryset passed, so vouchers not found.')
-        return
+    reg_ids = kwargs.pop('eventregistrations', [])
+
+    voucher_data = VoucherUse.objects.filter(
+        invoice__registration__eventregistration__id__in=reg_ids,
+    ).annotate(
+        name=Concat(
+            'voucher__voucherId', Value(': '), 'voucher__name',
+            output_field=CharField()
+        ),
+        type=Value('voucher', output_field=CharField()),
+        reg_id=F('invoice__registration__eventregistration__id'),
+    ).values('id', 'amount', 'name', 'type', 'reg_id')
 
     extras = {}
-    regs = regs.filter(registration__invoice__voucheruse__isnull=False).prefetch_related(
-        'registration__invoice__voucheruse_set', 'registration__invoice__voucheruse_set__voucher'
-    )
-
-    for reg in regs:
-        extras[reg.id] = list(reg.registration.invoice.voucheruse_set.annotate(
-            name=Concat('voucher__voucherId', Value(': '), 'voucher__name', output_field=CharField()),
-            type=Value('voucher', output_field=CharField()),
-        ).values('id', 'amount', 'name', 'type'))
+    for row in voucher_data:
+        extras.setdefault(row['reg_id'], []).append(
+            {k: v for k, v in row.items() if k != 'reg_id'}
+        )
 
     return extras
