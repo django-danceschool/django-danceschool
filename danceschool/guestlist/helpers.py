@@ -28,7 +28,9 @@ def getList(
     applicable_lists = None
 
     if guestList:
-        applicable_lists = GuestList.objects.filter(id__in=getattr(guestList, 'id', guestList))
+        applicable_lists = GuestList.objects.filter(
+            id__in=getattr(guestList, 'id', guestList)
+        )
     else:
         # This is the same logic as the appliesToEvents() method of GuestList
         applicable_lists = GuestList.objects.filter(
@@ -43,6 +45,16 @@ def getList(
                 publicevent__category__isnull=False
             ).values_list('publicevent__category', flat=True))
         )
+
+    applicable_lists = applicable_lists.prefetch_related(
+        'individualEvents',
+        'eventSessions', 
+        'seriesCategories',
+        'eventCategories',
+        'guestlistcomponent_set',
+        'guestlistcomponent_set__staffMember',
+        'guestlistcomponent_set__staffCategory',
+    )
 
     queryset = []
     if not applicable_lists:
