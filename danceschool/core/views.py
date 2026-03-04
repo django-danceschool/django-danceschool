@@ -135,7 +135,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             registration__final=True,
         ).select_related(
             'registration', 'event', 'customer',
-            'invoiceItem', 'invoiceItem__revenueItem', 'role',
+            'invoiceItem', 'invoiceItem__revenueitem', 'role',
             'registration__invoice',
         ).prefetch_related(
             'occurrences',
