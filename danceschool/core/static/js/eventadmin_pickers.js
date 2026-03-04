@@ -3,6 +3,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	// The code below requires jQuery
 	var $ = django.jQuery;
 
+	var datepicker_options = {'format': 'yyyy-mm-dd'};
+	var timepicker_options = {'scrollDefault': '7:00pm', 'step': 15,'showDuration': true,'timeFormat':'g:ia'};
+
 	$(document).on('formset:added', function(event) {
 		if (event.detail.formsetName == 'eventoccurrence_set') {
 			makepickers();
@@ -20,12 +23,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	
 		$.each($('.dynamic-eventoccurrence_set'), function() {
 
-			$(this).find('.makeTimePicker').timepicker({
-				'scrollDefault': '7:00pm', 'step': 15,'showDuration': true,'timeFormat':'g:ia',
-			});
-			$(this).find('.makeDatePicker').datepicker({
-				'format': 'yyyy-mm-dd',
-			});
+			$(this).find('.makeTimePicker').timepicker(timepicker_options);
+			$(this).find('.makeDatePicker').datepicker(datepicker_options);
 
 			var datepair = new Datepair($(this)[0],{
 				'dateClass': 'makeDatePicker',
@@ -89,6 +88,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	}
 
 	$(document).ready(function() {
+		$('#id_registrationOpenDate_0').datepicker(datepicker_options);
+		$('#id_registrationOpenDate_1').timepicker(timepicker_options);
 		makepickers();
 	});
 
