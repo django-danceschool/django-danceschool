@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 from allauth.account.signals import email_confirmed
@@ -6,7 +7,7 @@ from allauth.account.models import EmailAddress
 import logging
 
 from .signals import post_registration
-from .models import Registration, EventRegistration
+from .models import EventRegistration
 
 
 # Define logger for this file
@@ -103,3 +104,24 @@ def linkCustomerToVerifiedUser(sender, **kwargs):
                 This duplicate key value violates unique constraint \"account_emailaddress_email_key\". \
                 The email field should be unique for each account.\n"
             logger.exception(errmsg, customer.email)
+
+
+@receiver(post_save, sender='core.EventOccurrence')
+@receiver(post_delete, sender='core.EventOccurrence')
+def reschedule_tasks_on_occurrence_change(sender, instance, **kwargs):
+    """
+    When an EventOccurrence is saved or deleted, the parent event's
+    close task ETA may have changed (since it's based on startTime of
+    the first occurrence). Trigger a reschedule on the parent event.
+    """
+    event = instance.event
+    if event and event.pk:
+        # Use .update() to trigger the scheduling logic without a full
+        # model save cycle — but we do need scheduleRegistrationTasks()
+        logger.debug(
+            'EventOccurrence changed for event %s — rescheduling registration tasks.',
+            event.pk
+        )
+        # Refresh from DB to get current occurrence times reflected
+        event.refresh_from_db()
+        event.scheduleRegistrationTasks()

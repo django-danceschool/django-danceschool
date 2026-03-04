@@ -842,14 +842,25 @@ class Event(EmailRecipientMixin, PolymorphicModel):
     # Although this can be inferred from status, this field is set in the database
     # to allow simpler queryset operations
     registrationOpen = models.BooleanField(_('Registration is open'), default=False)
+    registrationOpenDate = models.DateTimeField(
+        _('Registration opens at'),
+        null=True,
+        blank=True,
+        help_text=_(
+            'If set, registration will automatically open at this date and time. '
+            'Only applies when registration status is set to "Registration enabled" '
+            'or "Link only". Leave blank to open registration immediately when the '
+            'event is saved with one of those statuses.'
+        )
+    )
     closeAfterDays = models.FloatField(
         _('Registration closes days from first occurrence'),
         default=get_closeAfterDays,
         null=True,
         blank=True,
         help_text=_(
-            'Enter positive values to close after first event occurrence, and ' +
-            'negative values to close before first event occurrence.  Leave ' +
+            'Enter positive values to close after first event occurrence, and '
+            'negative values to close before first event occurrence.  Leave '
             'blank to keep registration open until the event has ended entirely.'
         )
     )
@@ -1063,6 +1074,37 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         ''' Convenience for templates that want to report duration in minutes '''
         return self.duration * 60
     durationMinutes.fget.short_description = _('Duration in minutes')
+
+    def _get_scheduled_close_time(self):
+        """
+        Calculate when registration should close, returning a datetime or None.
+        Returns None if registration should never auto-close (e.g. heldOpen).
+        """
+        startTime = (
+            ensure_localtime(self.startTime) or
+            (
+                getattr(
+                    self.eventoccurrence_set.order_by('startTime').first(),
+                    'startTime', None
+                ) if self.pk else None
+            )
+        )
+        endTime = (
+            ensure_localtime(self.endTime) or
+            (
+                getattr(
+                    self.eventoccurrence_set.order_by('-endTime').first(),
+                    'endTime', None
+                ) if self.pk else None
+            )
+        )
+
+        if not startTime or not endTime:
+            return None
+
+        if self.closeAfterDays is not None:
+            return startTime + timedelta(days=self.closeAfterDays)
+        return endTime
 
     def get_default_recipients(self):
         ''' Overrides EmailRecipientMixin '''
@@ -1444,12 +1486,78 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         if changed and not saveMethod:
             self.save()
 
+    def scheduleRegistrationTasks(self):
+        """
+        Revoke any existing scheduled open/close tasks, then schedule new ones
+        based on the current state of registrationOpenDate and closeAfterDays.
+        Called after every relevant save. Uses .update() on the data field to
+        avoid triggering another full save cycle.
+        """
+        from .tasks import open_event_registration, close_event_registration
+        from huey.contrib.djhuey import HUEY as huey
+
+        if not self.pk:
+            return
+
+        data = self.data or {}
+
+        # --- Revoke existing scheduled tasks ---
+        for key in ('scheduled_open_task_id', 'scheduled_close_task_id'):
+            task_id = data.pop(key, None)
+            if task_id:
+                try:
+                    huey.revoke_by_id(task_id)
+                    logger.debug('Revoked task %s (%s)', task_id, key)
+                except Exception:
+                    # Already executed or not found — safe to ignore
+                    logger.debug(
+                        'Could not revoke task %s — may have already run', task_id
+                    )
+
+        automatic_codes = [self.RegStatus.enabled, self.RegStatus.linkOnly]
+
+        # --- Schedule open task ---
+        if self.status in automatic_codes and self.pricingTier:
+            open_date = ensure_localtime(self.registrationOpenDate)
+            if open_date and open_date > timezone.now():
+                result = open_event_registration.schedule(
+                    args=(self.pk,), eta=open_date
+                )
+                data['scheduled_open_task_id'] = result.id
+                logger.info(
+                    'Scheduled registration open for event %s at %s (task %s)',
+                    self.pk, open_date, result.id
+                )
+
+        # --- Schedule close task ---
+        close_time = self._get_scheduled_close_time()
+        if (
+            self.status in automatic_codes and
+            self.pricingTier and
+            close_time and
+            close_time > timezone.now()
+        ):
+            result = close_event_registration.schedule(
+                args=(self.pk,), eta=close_time
+            )
+            data['scheduled_close_task_id'] = result.id
+            logger.info(
+                'Scheduled registration close for event %s at %s (task %s)',
+                self.pk, close_time, result.id
+            )
+
+        # Use .update() to persist task IDs without triggering another full save
+        Event.objects.filter(pk=self.pk).update(data=data)
+        self.data = data
+
     def updateRegistrationStatus(self, saveMethod=False):
-        '''
+        """
         If called via cron job or otherwise, then update the registrationOpen
         property for this series to reflect any manual override and/or the automatic
-        closing of this series for registration.
-        '''
+        closing of this series for registration. Now includes registrationOpenDate
+        awareness in the automatic_codes branch. If a registrationOpenDate is set
+        and we haven't reached it yet, treat registration as not yet open.
+        """
         logger.debug('Beginning update registration status.  saveMethod=%s' % saveMethod)
 
         modified = False
@@ -1457,11 +1565,13 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         startTime = (
             ensure_localtime(self.startTime) or
-            (getattr(self.eventoccurrence_set.order_by('startTime').first(), 'startTime', None) if self.pk else None)
-        )
-        endTime = (
-            ensure_localtime(self.endTime) or
-            (getattr(self.eventoccurrence_set.order_by('-endTime').first(), 'endTime', None) if self.pk else None)
+            (
+                getattr(
+                    self.eventoccurrence_set.order_by('startTime').first(),
+                    'startTime', None
+                )
+                if self.pk else None
+            )
         )
 
         # If set to these codes, then registration will be held closed
@@ -1469,19 +1579,22 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             self.RegStatus.disabled,
             self.RegStatus.heldClosed,
             self.RegStatus.regHidden,
-            self.RegStatus.hidden
+            self.RegStatus.hidden,
         ]
         # If set to these codes, then registration will be held open
         force_open_codes = [
-            self.RegStatus.heldOpen,
+            self.RegStatus.heldOpen
         ]
-
-        # If set to these codes, then registration will be open or closed
-        # automatically depending on the value of closeAfterDays
+        # If set to these codes, then registration status will be set at the
+        # designated times using scheduled tasks
         automatic_codes = [
             self.RegStatus.enabled,
-            self.RegStatus.linkOnly,
+            self.RegStatus.linkOnly
         ]
+
+        # Determine if registrationOpenDate is blocking us from opening yet
+        open_date = ensure_localtime(self.registrationOpenDate)
+        open_date_is_future = open_date and timezone.now() < open_date
 
         if (self.status in force_closed_codes or not self.pricingTier) and open is True:
             open = False
@@ -1492,36 +1605,27 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         elif (self.status in force_open_codes and self.pricingTier) and open is False:
             open = True
             modified = True
-        elif (
-            startTime and self.status in automatic_codes and
-            (
-                (
-                    self.closeAfterDays and
-                    timezone.now() > startTime + timedelta(days=self.closeAfterDays)
-                ) or
-                timezone.now() > endTime
-            ) and
-            open is True
-        ):
-            open = False
-            modified = True
-        elif (
-            startTime and self.status in automatic_codes and
-            (
-                (timezone.now() < endTime and not self.closeAfterDays) or
-                (
-                    self.closeAfterDays and
-                    timezone.now() < startTime + timedelta(days=self.closeAfterDays)
-                )
-            ) and
-            open is False
-        ):
-            open = True
-            modified = True
+        elif self.status in automatic_codes:
+            close_time = self._get_scheduled_close_time()
+            should_be_closed = (
+                open_date_is_future or
+                (close_time and timezone.now() > close_time)
+            )
+            should_be_open = (
+                not open_date_is_future and
+                startTime and
+                (not close_time or timezone.now() < close_time)
+            )
 
-        # Save if something has changed, otherwise, do nothing
+            if should_be_closed and open is True:
+                open = False
+                modified = True
+            elif should_be_open and open is False:
+                open = True
+                modified = True
+
         if modified and not saveMethod:
-            logger.debug('Attempting to save Series object with status: %s' % open)
+            logger.debug('Attempting to save event object with registrationOpen: %s' % open)
             self.registrationOpen = open
             self.save(fromUpdateRegistrationStatus=True)
         logger.debug('Returning value: %s' % open)
@@ -1599,34 +1703,35 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         if self.room and self.location and self.room.location != self.location:
             raise ValidationError(_('Selected room is not part of selected location.'))
 
-    def save(self, fromUpdateRegistrationStatus=False, *args, **kwargs):
+    def save(self, *args, **kwargs):
         logger.debug('Save method for Event or subclass called.')
+        from_update_status = kwargs.pop('fromUpdateRegistrationStatus', False)
 
-        if fromUpdateRegistrationStatus:
-            logger.debug('Avoiding duplicate call to update registration status; ready to save.')
-        else:
-            logger.debug('About to check registration status and update if needed.')
-            self.updateTimes(saveMethod=True)
+        logger.debug('About to check registration status and update if needed.')
+        self.updateTimes(saveMethod=True)
 
-            if self.room and not self.location:
-                self.location = self.room.location
+        if self.room and not self.location:
+            self.location = self.room.location
 
-            if self.room and self.room.defaultCapacity and not self.capacity:
-                self.capacity = self.room.defaultCapacity
-            elif self.location and not self.capacity:
-                self.capacity = self.location.defaultCapacity
+        if self.room and self.room.defaultCapacity and not self.capacity:
+            self.capacity = self.room.defaultCapacity
+        elif self.location and not self.capacity:
+            self.capacity = self.location.defaultCapacity
 
-            modified, open = self.updateRegistrationStatus(saveMethod=True)
-            if modified:
-                self.registrationOpen = open
-            logger.debug(
-                'Finished checking status and ready for super call. Value is %s' % self.registrationOpen
-            )
+        # Run registration status sync on every save
+        _, open_status = self.updateRegistrationStatus(saveMethod=True)
+        self.registrationOpen = open_status
+
         super().save(*args, **kwargs)
 
         # Update start time and end time for associated event session.
         if self.session:
             self.session.save()
+
+        # After saving, reschedule tasks unless we're being called from
+        # updateRegistrationStatus itself (to prevent recursion)
+        if not from_update_status:
+            self.scheduleRegistrationTasks()
 
     def __str__(self):
         return str(_('Event: %s' % self.name))
