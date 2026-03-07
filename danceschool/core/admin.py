@@ -898,8 +898,9 @@ class SeriesAdminForm(ModelForm):
 
         # Make registrationOpenDate a split date/time field.
         self.fields['registrationOpenDate'] = SplitDateTimeField(
-            label=_('Optional opening Date/Time'),
-            input_time_formats=WIDGET_FORMATS            
+            label=_('Optional opening date/time for registrations'),
+            input_time_formats=WIDGET_FORMATS,
+            required=False
         )
 
         # Locations are required for Series even though they are not for all events.
@@ -1030,8 +1031,9 @@ class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
 
         # Make registrationOpenDate a split date/time field.
         self.fields['registrationOpenDate'] = SplitDateTimeField(
-            label=_('Optional opening Date/Time'),
-            input_time_formats=WIDGET_FORMATS            
+            label=_('Optional opening date/time for registrations'),
+            input_time_formats=WIDGET_FORMATS,
+            required=False
         )
 
         # Allow adding additional rooms from a popup on Location, but not a popup on Room
