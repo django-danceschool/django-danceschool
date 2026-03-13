@@ -69,9 +69,9 @@ post_registration = Signal(''' ['invoice', registration'] ''')
 # Fires in AjaxClassRegistrationView so that items related to invoices can be
 # created or updated at the same time as the invoice.
 get_invoice_related = Signal(''' ['invoice', 'post_data', 'prior_response', 'request'] ''')
-get_cart_invoice_related = Signal(''' ['invoice', 'items', 'request'] ''')
+get_cart_invoice_related = Signal(''' ['invoice', 'item_data', 'payAtDoor', 'request'] ''')
 get_invoice_item_related = Signal(''' ['item', 'item_data', 'post_data', 'prior_response', 'request'] ''')
-get_cart_invoice_item_related = Signal(''' ['item', 'item_data', 'cart_data', 'request'] ''')
+get_cart_invoice_item_related = Signal(''' ['item', 'item_data', 'cart_data', 'prior_response', 'purchasable_registry', 'request'] ''')
 
 # Fires whenever an invoice is finalized.
 invoice_finalized = Signal(''' ['invoice'] ''')

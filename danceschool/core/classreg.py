@@ -648,69 +648,102 @@ class CartView(APIView):
             })
 
         # Delete any existing items on this invoice (the values in the cart
-        # always prevail).
-        invoice.invoiceitem_set.delete()
+        # always prevail). Guard against unsaved invoices with no PK yet.
+        if invoice.pk:
+            invoice.invoiceitem_set.all().delete()
 
-        # Use a signal handler to check whether a registration or other related
-        # objects to the invoice are needed for this transaction, and whether
-        # they already exist.
+        # Collect related objects (e.g. Registration, MerchOrder) that need to
+        # be created or retrieved for this invoice before processing items.
+        # Signal handlers return these under __relateditem_* keys so they can
+        # be saved after the invoice itself.
+        response = {}
+        errors = []
         signal_responses = get_cart_invoice_related.send(
             sender=self.__class__,
             request=request,
             invoice=invoice,
+            item_data=item_data,
+            payAtDoor=self.payAtDoor,
         )
 
-        errors = []
         for s in signal_responses:
             if isinstance(s[1], dict) and s[1].get('status') != 'success':
                 errors += s[1].get('errors', [])
+            elif isinstance(s[1], dict):
+                response.update(s[1].get('response', {}))
         if errors:
             raise exceptions.ValidationError(errors)
 
-        # We now have an invoice and any related items (such as a Registration
-        # or MerchOrder) that need to be linked to that invoice. Loop through
-        # the set of passed items and create InvoiceItems for them. Also pass
-        # the signal to ensure that related items such as EventRegistration
-        # or MerchOrderItem are created and linked.
-        # We use a while loop with a counter rather than a for loop here because
-        # it allows the code inside the loop to add items to item_post which
-        # are then processed in subsequent iterations of the same loop.
+        # Loop through cart items and create InvoiceItems. Signal handlers are
+        # responsible for resolving pricing and creating linked records such as
+        # EventRegistration or MerchOrderItem. The purchasable_registry is
+        # passed so handlers can use the already-fetched querysets rather than
+        # issuing redundant DB queries. We use a while loop so handlers can
+        # append child items (e.g. add-on events) to item_data, which are then
+        # processed in subsequent iterations.
+        items_response = []
         counter = 0
         while counter < len(item_data):
             i = item_data[counter]
             counter += 1
 
-            # Get information about the item from the set of purchasables that
-            # has already been compile for this view. Since there are multiple
-            # querysets in that response, choose the one associated with the
-            # type
-            this_model_purchasables = [
-                x[0] for x in self.purchasable_registry if
-                str(x[0].model) == i.get('item_type')
-            ]
-            this_item = [
-                x for x in this_model_purchasables if i['sku'] in
-                x.get('variants')
-            ]
+            this_item = InvoiceItem(invoice=invoice)
+            for attr in ['grossTotal', 'total', 'taxes', 'adjustments', 'fees']:
+                setattr(this_item, attr, 0)
 
-            # Get information about the item from the set of purchasables that
-            # has already been compile for this view.
-            this_item = InvoiceItem(
-                invoice=invoice
+            this_item_response = {'__item': this_item}
+
+            item_signal_responses = get_cart_invoice_item_related.send(
+                sender=self.__class__,
+                item=this_item,
+                item_data=i,
+                cart_data=item_data,
+                prior_response=response,
+                purchasable_registry=self.purchasable_registry,
+                request=request,
             )
 
-        fields = [
-            'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
-            'disabled', 'creationDate', 'soldOut', 'numVariants',
-            'variants'
-        ]
+            for s in item_signal_responses:
+                if isinstance(s[1], dict) and s[1].get('status') != 'success':
+                    errors += s[1].get('errors', [])
+                elif isinstance(s[1], dict):
+                    this_item_response.update(s[1].get('response', {}))
 
+            # Allow handlers to enqueue child items (e.g. add-on events).
+            item_data.extend(this_item_response.pop('child_items', []))
+            items_response.append(this_item_response)
 
+        if errors:
+            raise exceptions.ValidationError(errors)
+
+        # Save the invoice and any top-level related objects.
+        invoice.save()
+        for key, value in response.items():
+            if isinstance(key, str) and key.startswith('__relateditem'):
+                value.save()
+
+        # Save invoice items with parent-child linking via register_uuid.
+        for i in items_response:
+            this_invoice_item = i.get('__item')
+            if isinstance(this_invoice_item, InvoiceItem):
+                if i.get('register_uuid') and i.get('child_item', False):
+                    parent_response = next(
+                        (
+                            x for x in items_response if
+                            x.get('register_uuid') == i['register_uuid'] and
+                            not x.get('child_item', False)
+                        ),
+                        None
+                    )
+                    if parent_response:
+                        this_invoice_item.parent_item = parent_response['__item']
+                this_invoice_item.save(updateInvoiceTotals=False)
+            for key, value in i.items():
+                if isinstance(key, str) and key.startswith('__relateditem'):
+                    value.save()
+
+        invoice.updateTotals()
         return invoice
-
-    def link_registration(self, invoice, items):
-        # TODO
-        pass
 
     def get_success_url(self):
         return reverse('getStudentInfo')
