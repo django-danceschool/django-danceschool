@@ -73,17 +73,19 @@ class GuestList(models.Model):
         applies = True
         verbose_response = {}
 
-        applicableEvents = self.individualEvents.all()
-        applicableSessions = self.eventSessions.all()
-        applicableSeriesCats = self.seriesCategories.all()
-        applicableEventCats = self.eventCategories.all()
+        # These use prefetch cache if prefetch_related was used on the GuestList
+        # queryset
+        applicable_event_ids = {e.pk for e in self.individualEvents.all()}
+        applicable_session_ids = {s.pk for s in self.eventSessions.all()}
+        applicable_series_cat_ids = {c.pk for c in self.seriesCategories.all()}
+        applicable_event_cat_ids = {c.pk for c in self.eventCategories.all()}
 
         for event in events:
             if not (
-                event in applicableEvents or
-                event.session in applicableSessions or
-                event.category in applicableSeriesCats or
-                event.category in applicableEventCats
+                event.pk in applicable_event_ids or
+                event.session_id in applicable_session_ids or    # use _id suffix, no extra query
+                event.category_id in applicable_series_cat_ids or  # same
+                event.category_id in applicable_event_cat_ids
             ):
                 applies = False
                 verbose_response[event.id] = False
@@ -98,7 +100,9 @@ class GuestList(models.Model):
         ''' Ensure local time and get the beginning of the day '''
         return ensure_localtime(dateTime).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def getComponentFilters(self, component, events=None, dateTime=None):
+    def getComponentFilters(
+            self, component, events=None, dateTime=None, event_intervals=None
+    ):
         '''
         Get a parsimonious set of intervals and the associated Q() objects
         based on the occurrences of a specified event, and the rule that
@@ -123,7 +127,10 @@ class GuestList(models.Model):
 
         # Start with the event occurrence intervals, or with the specified time.
         if events:
-            intervals = [(x.startTime, x.endTime) for x in EventOccurrence.objects.filter(event__in=events)]
+            intervals = event_intervals if event_intervals is not None else [
+                (x.startTime, x.endTime) for x in
+                EventOccurrence.objects.filter(event__in=events)
+            ]
         elif dateTime:
             intervals = [(dateTime, dateTime)]
         else:
@@ -183,42 +190,56 @@ class GuestList(models.Model):
         return Q(filters & intervalFilters)
 
     def getStaffForEvents(self, events=Event.objects.none(), filters=Q()):
-        '''
-        Get all StaffMembers associated with a specified event.
-        '''
-
-        # Component-by-component, OR append filters to an initial filter that always
-        # evaluates to False.
-        components = self.guestlistcomponent_set.all()
+        components = self.guestlistcomponent_set.all()  # uses prefetch cache
         component_filters = Q(pk__isnull=True)
 
-        # Add prior staff based on the component rule.
+        # Compute once, reuse everywhere
+        applies_to_all = bool(events) and self.appliesToEvents(events)
+        per_event_applies = {}
+        event_intervals = None
+        if bool(events):
+            event_intervals = [
+                (x.startTime, x.endTime) 
+                for x in EventOccurrence.objects.filter(event__in=events)
+            ]
+            if not applies_to_all:
+                per_event_applies = self.appliesToEvents(events, verbose=True)
+
+        today_flag = False
         for component in components:
-            if events and self.appliesToEvents(events):
-                component_filters = component_filters | self.getComponentFilters(component, events=events)
-            elif events:
+            if applies_to_all:
+                component_filters |= self.getComponentFilters(
+                    component, events=events, event_intervals=event_intervals
+                )
+            elif bool(events):
                 for event in events:
-                    today_flag = False
-                    if self.appliesToEvents([event,]):
-                        component_filters = component_filters | self.getComponentFilters(component, events=[event,])
+                    if per_event_applies.get(event.id):
+                        component_filters |= self.getComponentFilters(
+                            component, events=[event],
+                            event_intervals=event_intervals
+                        )
                     elif not today_flag:
-                        component_filters | self.getComponentFilters(component, dateTime=timezone.now())
+                        component_filters |= self.getComponentFilters(
+                            component, dateTime=timezone.now(),
+                            event_intervals=event_intervals
+                        )
                         today_flag = True
             else:
-                component_filters = component_filters | self.getComponentFilters(component, dateTime=timezone.now())
+                component_filters |= self.getComponentFilters(
+                    component, dateTime=timezone.now()
+                )
 
-        # Add all event staff if that box is checked (no need for separate components)
-        if self.includeStaff and events:
-            if self.appliesToEvents(events):
-                component_filters = component_filters | Q(eventstaffmember__event__in=events)
+        if self.includeStaff and bool(events):
+            if applies_to_all:
+                component_filters |= Q(eventstaffmember__event__in=events)
             else:
                 for event in events:
-                    if self.appliesToEvents([event,]):
-                        component_filters = component_filters | Q(eventstaffmember__event=event)
+                    if per_event_applies.get(event.id):
+                        component_filters |= Q(eventstaffmember__event=event)
 
         return StaffMember.objects.filter(component_filters).annotate(
-            first=F('firstName'), last=F('lastName'), contact=F('privateEmail'),
-            email=F('privateEmail'),
+            first=F('firstName'), last=F('lastName'),
+            contact=F('privateEmail'), email=F('privateEmail'),
         ).filter(filters)
 
     def getDescriptionForGuest(self, guest, event=None):

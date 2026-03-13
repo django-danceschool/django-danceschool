@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.core.management import call_command
 
 from huey import crontab
-from huey.contrib.djhuey import task, db_periodic_task
+from huey.contrib.djhuey import task, db_task, db_periodic_task
 from datetime import timedelta
 
 import logging
@@ -15,23 +15,67 @@ from .constants import getConstant
 logger = logging.getLogger(__name__)
 
 
-@db_periodic_task(crontab(minute='*/60'))
-def updateSeriesRegistrationStatus():
-    '''
-    Every hour, check if the series that are currently open for registration
-    should be closed.
-    '''
-    from .models import Series
+@db_task()
+def open_event_registration(event_pk):
+    """
+    Scheduled task to open registration for an event at a pre-set time.
+    Guards against stale state — if the event's status has changed since
+    this task was scheduled, updateRegistrationStatus() will handle it correctly.
+    """
+    from .models import Event
+
+    try:
+        event = Event.objects.get(pk=event_pk)
+    except Event.DoesNotExist:
+        logger.warning('open_event_registration: Event %s not found, skipping.', event_pk)
+        return
+
+    logger.info('Opening registration for event %s (scheduled task).', event_pk)
+    event.updateRegistrationStatus()
+
+
+@db_task()
+def close_event_registration(event_pk):
+    """
+    Scheduled task to close registration for an event when it expires.
+    Same staleness guard as above.
+    """
+    from .models import Event
+
+    try:
+        event = Event.objects.get(pk=event_pk)
+    except Event.DoesNotExist:
+        logger.warning('close_event_registration: Event %s not found, skipping.', event_pk)
+        return
+
+    logger.info('Closing registration for event %s (scheduled task).', event_pk)
+    event.updateRegistrationStatus()
+
+
+@db_periodic_task(crontab(hour='3', minute='0'))
+def dailyRegistrationStatusSafetyNet():
+    """
+    Nightly safety net — catches any events whose registration status has drifted
+    due to missed tasks (e.g. after a Redis restart or worker downtime).
+    Runs at 3am to minimize user-facing impact.
+    """
+    from .models import Event
+    from danceschool.core.constants import getConstant
 
     if not getConstant('general__enableCronTasks'):
         return
 
-    logger.info('Checking status of Series that are open for registration.')
+    logger.info('Running nightly registration status safety net check.')
 
-    open_series = Series.objects.filter().filter(**{'registrationOpen': True})
+    # Check all non-definitively-closed events, not just open ones,
+    # so we catch events that should have opened but didn't.
+    watchable_statuses = ['O', 'H', 'L']  # enabled, heldOpen, linkOnly
+    events = Event.objects.filter(status__in=watchable_statuses)
 
-    for series in open_series:
-        series.updateRegistrationStatus()
+    for event in events:
+        modified, _ = event.updateRegistrationStatus()
+        if modified:
+            logger.info('Safety net corrected registration status for event %s.', event.pk)
 
 
 @db_periodic_task(crontab(minute='*/60'))

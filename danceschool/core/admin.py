@@ -40,6 +40,10 @@ from .forms import LocationWithDataWidget
 from .mixins import ModelTemplateMixin
 
 
+# For split date/time fields
+WIDGET_FORMATS = ['%I:%M%p', '%I:%M %p', '%I:%M', '%H:%M:%S', '%H:%M']
+
+
 ######################################
 # Admin action for repeating events
 
@@ -204,10 +208,12 @@ class EventRegistrationInline(admin.StackedInline):
 
 
 class EventOccurrenceInlineForm(ModelForm):
-    WIDGET_FORMATS = ['%I:%M%p', '%I:%M %p', '%I:%M', '%H:%M:%S', '%H:%M']
-
-    startTime = SplitDateTimeField(required=True, label=_('Start Date/Time'), input_time_formats=WIDGET_FORMATS)
-    endTime = SplitDateTimeField(required=True, label=_('End Date/Time'), input_time_formats=WIDGET_FORMATS)
+    startTime = SplitDateTimeField(
+        required=True, label=_('Start Date/Time'), input_time_formats=WIDGET_FORMATS
+    )
+    endTime = SplitDateTimeField(
+        required=True, label=_('End Date/Time'), input_time_formats=WIDGET_FORMATS
+    )
 
 
 class EventOccurrenceInline(admin.TabularInline):
@@ -890,6 +896,13 @@ class SeriesAdminForm(ModelForm):
         # Series have registration enabled by default
         self.fields['status'].initial = Event.RegStatus.enabled
 
+        # Make registrationOpenDate a split date/time field.
+        self.fields['registrationOpenDate'] = SplitDateTimeField(
+            label=_('Optional opening date/time for registrations'),
+            input_time_formats=WIDGET_FORMATS,
+            required=False
+        )
+
         # Locations are required for Series even though they are not for all events.
         self.fields['location'].required = True
 
@@ -984,7 +997,10 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
         }),
         (_('Override Display/Registration/Capacity'), {
             'classes': ('collapse', ),
-            'fields': (('status', 'calendarEvent'), 'closeAfterDays', 'capacity',),
+            'fields': (
+                ('status', 'calendarEvent'), 'registrationOpenDate',
+                'closeAfterDays', 'capacity',
+            ),
         }),
         (_('Additional data'), {
             'classes': ('collapse', ),
@@ -1012,6 +1028,13 @@ class PublicEventAdminForm(ModelTemplateMixin, ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields['status'].initial = Event.RegStatus.disabled
+
+        # Make registrationOpenDate a split date/time field.
+        self.fields['registrationOpenDate'] = SplitDateTimeField(
+            label=_('Optional opening date/time for registrations'),
+            input_time_formats=WIDGET_FORMATS,
+            required=False
+        )
 
         # Allow adding additional rooms from a popup on Location, but not a popup on Room
         self.fields['room'].widget.can_add_related = False
@@ -1104,7 +1127,11 @@ class PublicEventAdmin(
             )
         }),
         (_('Registration/Visibility'), {
-            'fields': (('status', 'calendarEvent'), ('pricingTier', 'capacity'), ),
+            'fields': (
+                ('status', 'calendarEvent'),
+                ('registrationOpenDate', 'closeAfterDays'),
+                ('pricingTier', 'capacity'),
+            ),
         }),
         (_('Description/Link'), {
             'fields': (

@@ -7,9 +7,10 @@ from django.urls import reverse
 from django.core.serializers.json import DjangoJSONEncoder
 from django.views.generic import (
     FormView, CreateView, UpdateView, DetailView, TemplateView, ListView,
-    RedirectView, View
+    RedirectView
 )
-from django.db.models import Min, Q, Count, F, Case, When, BooleanField
+from django.db.models import Q, Count, F, Case, When, BooleanField, Sum, FloatField
+from django.db.models.functions import Coalesce
 from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -37,8 +38,8 @@ from io import BytesIO
 
 from .models import (
     Event, Series, PublicEvent, EventOccurrence, EventRole, EventRegistration,
-    StaffMember, Instructor, Invoice, Customer, EventCheckIn, Registration,
-    EventStaffMember
+    StaffMember, Instructor, Invoice, InvoiceItem, Customer, EventCheckIn,
+    Registration, EventStaffMember
 )
 from .forms import (
     SubstituteReportingForm, StaffMemberBioChangeForm, RefundForm, EmailContactForm,
@@ -129,22 +130,56 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
         # the view class registrations page.  set_return_page() is in SiteHistoryMixin.
         self.set_return_page('viewregistrations', _('View Registrations'), event_id=self.object.id)
 
-        registrations = EventRegistration.objects.filter(
+        registrations = list(EventRegistration.objects.filter(
             event=self.object, cancelled=False,
             registration__final=True,
         ).select_related(
             'registration', 'event', 'customer',
-            'invoiceItem', 'role', 'registration__invoice',
+            'invoiceItem', 'invoiceItem__revenueitem', 'role',
+            'registration__invoice',
+        ).prefetch_related(
+            'occurrences',
+            'registration__registrationdiscount_set',
+            'registration__registrationdiscount_set__discount',
+            'registration__invoice__voucheruse_set',
+            'registration__invoice__voucheruse_set__voucher',
         ).order_by(
             F('customer__last_name').asc(nulls_last=True),
             F('customer__first_name').asc(nulls_last=True),
+        ))
+
+        # Get all invoice IDs for these registrations
+        invoice_ids = [
+            reg.registration.invoice_id for reg in registrations
+            if reg.registration.invoice_id
+        ]
+
+        # Single query: aggregate all invoice items across all invoices at once,
+        # splitting by whether the item belongs to this registration's
+        # associated invoice
+        invoice_item_aggregates = (
+            InvoiceItem.objects.filter(invoice_id__in=invoice_ids)
+            .values('invoice_id')
+            .annotate(
+                grossTotal=Coalesce(Sum('grossTotal'), 0, output_field=FloatField()),
+                total=Coalesce(Sum('total'), 0, output_field=FloatField()),
+                adjustments=Coalesce(Sum('adjustments'), 0, output_field=FloatField()),
+                taxes=Coalesce(Sum('taxes'), 0, output_field=FloatField()),
+                fees=Coalesce(Sum('fees'), 0, output_field=FloatField()),
+            )
         )
 
-        extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
+        # Build a lookup dict keyed by invoice_id
+        invoice_details_by_invoice = {
+            row['invoice_id']: row for row in invoice_item_aggregates
+        }
+
+        extras_dict = {x.id: [] for x in registrations}
 
         if registrations:
             extras = get_eventregistration_data.send(
-                sender=EventRegistrationSummaryView, eventregistrations=registrations
+                sender=EventRegistrationSummaryView,
+                eventregistrations=[x.id for x in registrations]
             )
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
                 extras_dict[k].extend(v)
@@ -174,7 +209,12 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
 
         context = {
             'event': self.object,
+            'next_occurrence': self.object.nextOccurrenceForToday,
             'registrations': registrations,
+            'invoice_details': {
+                reg.id: invoice_details_by_invoice.get(reg.registration.invoice_id, {})
+                for reg in registrations                
+            },
             'additional_names': additional_names,
             'extras': extras_dict,
             'additional_names_extras': additional_names_extras_dict,
@@ -273,7 +313,7 @@ class SchoolSingleCheckInView(PermissionRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ''' Add the list of event registrations for the given invoice. '''
 
-        registrations = EventRegistration.objects.filter(
+        registrations = list(EventRegistration.objects.filter(
             registration__invoice=self.object, cancelled=False,
             registration__final=True,
         ).select_related(
@@ -282,13 +322,14 @@ class SchoolSingleCheckInView(PermissionRequiredMixin, DetailView):
         ).order_by(
             F('customer__last_name').asc(nulls_last=True),
             F('customer__first_name').asc(nulls_last=True),
-        )
+        ))
 
-        extras_dict = {x: [] for x in registrations.values_list('id', flat=True)}
+        extras_dict = {x.id: [] for x in registrations}
 
         if registrations:
             extras = get_eventregistration_data.send(
-                sender=SchoolSingleCheckInView, eventregistrations=registrations
+                sender=SchoolSingleCheckInView,
+                eventregistrations=[x.id for x in registrations]
             )
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if y[1]]]):
                 extras_dict[k].extend(v)
@@ -403,6 +444,9 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
         if post_data.get('eventList'):
             queryset = queryset.filter(event__id__in=post_data.get('eventList'))
 
+        # Reduce DB calls
+        querylist = list(queryset)
+
         # These are all the various attributes that we want to be populated in the response JSON
         attributeList = [
             'id', 'dropIn', 'refundFlag', 'warningFlag',
@@ -426,10 +470,15 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
 
         extras_dict = {}
 
-        if queryset:
-            extras = get_eventregistration_data.send(sender=EventRegistrationJsonView, eventregistrations=queryset)
-            extras_dict = {x: [] for x in queryset.values_list('id', flat=True)}
-            for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]]):
+        if querylist:
+            extras = get_eventregistration_data.send(
+                sender=EventRegistrationJsonView,
+                eventregistrations=[x.id for x in querylist]
+            )
+            extras_dict = {x.id: [] for x in querylist}
+            for k, v in chain.from_iterable([
+                x.items() for x in [y[1] for y in extras if isinstance(y[1], dict)]
+            ]):
                 extras_dict[k].extend(v)
 
         this_listing = [

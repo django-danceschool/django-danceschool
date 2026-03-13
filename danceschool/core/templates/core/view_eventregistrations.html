@@ -38,7 +38,7 @@
 			<div class="input-group">
 				<select disabled id="occurrenceSelect" class="form-control">
 					{% for occ in event.eventoccurrence_set.all %}
-					<option value="{{ occ.id }}" {% if occ.id == event.nextOccurrenceForToday.id %}selected{% endif %}>{{ occ }}</option>
+					<option value="{{ occ.id }}" {% if occ.id == next_occurrence.id %}selected{% endif %}>{{ occ }}</option>
 					{% endfor %}
 					<option value="event">{% trans "Event-level check-in" %}</option>
 				</select>
@@ -83,7 +83,7 @@
 		{% if 'core.checkin_customers' in perms %}
 		<td>
 			<input type="checkbox" class="regCheckIn personCheckIn" id="reg_id_{{ reg.id }}" name="reg_id_{{ reg.id }}" value="{{ reg.id }}"
-				data-next-occurrence="{{ reg.event.nextOccurrenceForToday.id }}"
+				data-next-occurrence="{{ next_occurrence.id }}"
 				{% if reg.dropIn %}
 					data-drop-in="true"	
 					data-occurrence-ids="{% for occ in reg.occurrences.all %}{{ occ.id }}{% if not forloop.last %}|{% endif %}{% endfor %}"
@@ -157,7 +157,7 @@
 		</td>
 
 		
-		{% with reg.registration.invoiceDetails as details %}
+		{% with invoice_details|get_item:reg.id as details %}
 		<td 
 		{% if reg.warningFlag %}
 			class="warning"

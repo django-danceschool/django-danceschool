@@ -938,15 +938,18 @@ class ExpenseItem(models.Model):
         related_objects = model_class.objects.filter(related_expenses__item=self)
 
         if model_class == EventOccurrence:
-            occurrences = related_objects.select_related('event').annotate(
-                dur=ExpressionWrapper(
-                    F('endTime') - F('startTime'), output_field=DurationField()
-                ),
-            )
-            sum_dur = sum([x.dur.total_seconds() for x in occurrences])
+
+            # Uses prefetch cache if eventoccurrence_set was prefetched
+            occurrences = list(related_objects.select_related('event'))
+
+            # Compute duration in Python instead of via DB annotation
+            for occ in occurrences:
+                occ._dur = (occ.endTime - occ.startTime).total_seconds()
+
+            sum_dur = sum(o._dur for o in occurrences)
 
             return {
-                (x.id, x.event.id): {
+                (x.id, x.event_id): {
                     'allocation': x.dur.total_seconds()/sum_dur,
                     'total_duration': sum_dur,
                     'duration': x.dur.total_seconds(),
@@ -1336,18 +1339,22 @@ class RevenueItem(models.Model):
         if not getattr(getattr(self, 'event', None), 'pk', None):
             return {}
 
-        occurrences = self.event.eventoccurrence_set.annotate(
-            dur=ExpressionWrapper(
-                F('endTime') - F('startTime'), output_field=DurationField()
-            ),
-        )
-        sum_dur = sum([x.dur.total_seconds() for x in occurrences])
+        # Uses prefetch cache if eventoccurrence_set was prefetched
+        occurrences = list(self.event.eventoccurrence_set.all())
+
+        # Compute duration in Python instead of via DB annotation
+        for occ in occurrences:
+            occ._dur = (occ.endTime - occ.startTime).total_seconds()
+
+        sum_dur = sum(o._dur for o in occurrences)
+        if not sum_dur:
+            return {}
 
         return {
-            (x.id, x.event.id): {
-                'allocation': x.dur.total_seconds()/sum_dur,
+            (x.id, x.event_id): {  # use x.event_id (cached FK) not x.event.id
+                'allocation': x._dur / sum_dur,
                 'total_duration': sum_dur,
-                'duration': x.dur.total_seconds(),
+                'duration': x._dur,
             }
             for x in occurrences
         }
