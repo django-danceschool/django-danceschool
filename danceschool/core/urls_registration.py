@@ -7,7 +7,7 @@ from .views import (
 )
 from .classreg import (
     RegistrationOfflineView, ClassRegistrationView, PurchasableItemsView,
-    SingleClassRegistrationView, ClassRegistrationReferralView,
+    CartView, SingleClassRegistrationView, ClassRegistrationReferralView,
     RegistrationSummaryView, StudentInfoView, AjaxClassRegistrationView,
     SingleClassRegistrationReferralView, MultiRegCustomerNameView,
     PartnerRequiredView
@@ -20,6 +20,7 @@ urlpatterns = [
     # so that Referrers can provide a direct URL to get their referral benefits
     path('', ClassRegistrationView.as_view(), name='registration'),
     path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
+    path('cart/', CartView.as_view(), name='cart'),
     path('ajax/', AjaxClassRegistrationView.as_view(), name='ajaxRegistration'),
     path(
         'id/<slug:marketing_id>/',
