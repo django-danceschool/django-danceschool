@@ -14,11 +14,11 @@ class EventRoleSerializer(serializers.ModelSerializer):
         return obj.price(payAtDoor=payAtDoor)
 
     def get_count_registrations(self, obj):
-        includeTemporaryRegs = bool(self.context('includeTemporaryRegs', False))
+        includeTemporaryRegs = bool(self.context.get('includeTemporaryRegs', False))
         return obj.numRegistered(includeTemporaryRegs)
 
     def get_quantity_available(self, obj):
-        includeTemporaryRegs = bool(self.context('includeTemporaryRegs', False))
+        includeTemporaryRegs = bool(self.context.get('includeTemporaryRegs', False))
         return obj.capacity - obj.numRegistered(includeTemporaryRegs)
 
     class Meta:

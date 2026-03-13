@@ -81,7 +81,10 @@ def getPurchasableItems(sender=None, request=None, payAtDoor=False):
     )
 
     collected = []
-    for receiver, (qs, serializer_class) in responses:
+    for receiver, result in responses:
+        if not result:
+            continue
+        qs, serializer_class = result
         if qs.exists():
             collected.append((qs, serializer_class))
     return collected

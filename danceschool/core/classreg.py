@@ -763,7 +763,7 @@ class CartView(APIView):
         new_cart_data = self.validate_cart(request)
         checkout = new_cart_data.pop('checkout', False)
 
-        request.session[REG_VALIDATION_STR]['cart'] = new_cart_data
+        request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = new_cart_data
         request.session.modified = True
 
         # Handle checkout flow
@@ -781,7 +781,7 @@ class CartView(APIView):
         new_cart_data = self.validate_cart(
             request, data=cart
         )
-        request.session[REG_VALIDATION_STR]['cart'] = new_cart_data
+        request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = new_cart_data
         request.session.modified = True
         return Response(cart, status=status.HTTP_200_OK)
 
