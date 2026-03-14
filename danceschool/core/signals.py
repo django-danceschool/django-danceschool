@@ -31,11 +31,11 @@ request_discounts = Signal(
     ''' ['invoice', 'registration', 'customer_final', 'voucher_code'] '''
 )
 
-# Fires in the AjaxClassRegistrationView to check the validity of a voucher code
-# if it is passed.  Unlike the vouchers handler for check_student_info, the vouchers
-# app handler for this signal does not raise ValidationErrors, but instead returns
-# a JSON object that indicates if the voucher is invalid as well as the max.
-# amount that it can be used for.
+# Fires to check the validity of a voucher code if it is passed.  Unlike the
+# vouchers handler for check_student_info, the vouchers app handler for this
+# signal does not raise ValidationErrors, but instead returns a JSON object that
+# indicates if the voucher is invalid as well as the max. amount that it can be
+# used for.
 check_voucher = Signal(
     ''' ['invoice', 'registration', 'voucherId', 'customer', 'validateCustomer'] '''
 )
@@ -66,8 +66,8 @@ apply_price_adjustments = Signal(
 # Fires after a Registration is created.
 post_registration = Signal(''' ['invoice', registration'] ''')
 
-# Fires in AjaxClassRegistrationView so that items related to invoices can be
-# created or updated at the same time as the invoice.
+# Fires so that items related to invoices can be created or updated at the same
+# time as the invoice.
 get_invoice_related = Signal(''' ['invoice', 'post_data', 'prior_response', 'request'] ''')
 get_cart_invoice_related = Signal(''' ['invoice', 'item_data', 'payAtDoor', 'request'] ''')
 get_invoice_item_related = Signal(''' ['item', 'item_data', 'post_data', 'prior_response', 'request'] ''')
