@@ -71,6 +71,7 @@ class RegistrationTest(DefaultSchoolTestCase):
         ec.startTime = timezone.now() + timedelta(days=-1)
         ec.endTime = timezone.now() + timedelta(days=-1, hours=1)
         ec.save()
+        s.refresh_from_db()
 
         self.assertEqual(s.registrationOpen, False)
         response = self.client.get(reverse('registration'))
@@ -118,6 +119,39 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
         self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
+
+    def test_registration_open_date_blocks_opening(self):
+        '''
+        When registrationOpenDate is set to a future time and status is
+        enabled, registrationOpen must remain False until that date arrives.
+        Setting registrationOpenDate to a past time must open registration.
+        '''
+        future_open = timezone.now() + timedelta(days=2)
+        s = self.create_series()
+
+        # Set a future registrationOpenDate and re-save — registration
+        # should be blocked even though status is enabled.
+        s.registrationOpenDate = future_open
+        s.save()
+        self.assertEqual(s.registrationOpen, False)
+
+        # The series must not appear on the public registration page.
+        response = self.client.get(reverse('registration'))
+        self.assertEqual(response.status_code, 200)
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+
+        # Setting registrationOpenDate to a past time should open registration.
+        s.registrationOpenDate = timezone.now() - timedelta(hours=1)
+        s.save()
+        self.assertEqual(s.registrationOpen, True)
+
+        response = self.client.get(reverse('registration'))
+        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
+
+        # Clearing registrationOpenDate entirely should also leave it open.
+        s.registrationOpenDate = None
+        s.save()
+        self.assertEqual(s.registrationOpen, True)
 
     def test_individual_class_page_visibility(self):
         '''

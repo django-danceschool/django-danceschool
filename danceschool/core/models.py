@@ -1109,7 +1109,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             return None
 
         if self.closeAfterDays is not None:
-            return startTime + timedelta(days=self.closeAfterDays)
+            return min(startTime + timedelta(days=self.closeAfterDays), endTime)
         return endTime
 
     def get_default_recipients(self):
