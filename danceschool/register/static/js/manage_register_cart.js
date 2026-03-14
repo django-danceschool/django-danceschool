@@ -172,7 +172,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const tbody = document.getElementById('cartItems');
 
         cart.items.forEach(function (item) {
-            const price = lookupPrice(item.sku);
+            // Prefer catalog price (ensures consistency with the API), but
+            // fall back to the price cached from the button's data-price
+            // attribute when the catalog SKU doesn't match (e.g. DanceRole ID
+            // vs EventRole ID difference between register page and catalog API).
+            const price = lookupPrice(item.sku) || item.price || 0;
             const qty = item.quantity || 1;
             const lineTotal = price * qty;
             grossTotal += lineTotal;
@@ -258,7 +262,17 @@ document.addEventListener('DOMContentLoaded', function () {
             return response.json();
         })
         .then(function (data) {
-            cart.items = data.items || [];
+            // Preserve UI-only fields (choiceId, price) that the server never
+            // stores.  Use the items we SENT (the `items` parameter, which
+            // is already the updated list) as the source — not cart.items,
+            // which still holds the pre-send state.
+            cart.items = (data.items || []).map(function (serverItem) {
+                const sent = items.find(function (o) { return o.sku === serverItem.sku; });
+                return Object.assign({}, serverItem, {
+                    choiceId: sent ? sent.choiceId : null,
+                    price: sent ? sent.price : null,
+                });
+            });
             cart.student = data.student || false;
             cart.discount_preview = data.discount_preview || null;
             refreshCart();
@@ -305,6 +319,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 sku: sku,
                 quantity: parseInt(raw.quantity) || 1,
                 choiceId: raw.choiceId || null,
+                // Cache the door price from data-price so lookupPrice() has a
+                // fallback when the catalog SKU scheme differs (e.g. ROLE ID vs
+                // EventRole ID mismatch between the register page and the API).
+                price: raw.price ? parseFloat(raw.price) : null,
             };
             if (raw.dropIn === 'true' || raw.dropIn === true) { item.dropIn = true; }
             if (raw.requireFull !== undefined) { item.requireFull = (raw.requireFull === 'true'); }

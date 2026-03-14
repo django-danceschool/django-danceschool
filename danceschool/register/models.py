@@ -415,9 +415,13 @@ class RegisterEventPluginModel(RegisterEventLimitedModel):
         broken out by role and nothing else.
         '''
 
-        created = not self.pk
+        # cms.api.add_plugin() assigns the PK via set_base_attr() before
+        # calling save(), so checking ``not self.pk`` alone is not reliable.
+        # We also check whether any choices already exist so that ordinary
+        # re-saves of existing instances do not create spurious duplicates.
+        needs_default_choice = not self.registereventpluginchoice_set.exists() if self.pk else True
         super().save(*args, **kwargs)
-        if created:
+        if needs_default_choice:
             RegisterEventPluginChoice.objects.create(
                 eventPlugin=self,
             )
