@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from .models import Event, EventRole
 
 
@@ -78,7 +79,41 @@ class VariantsField(serializers.ListField):
                 'count_registrations': numRegistered,
             })
 
-        # TODO: Add drop-in registration if applicable
+        # Add drop-in variants for Series that allow drop-ins.
+        # Only included when payAtDoor is True because CartItemSerializer.validate_dropIn
+        # rejects dropIn=True for non-door registrations.
+        from .models import Series
+        if (
+            self.context.get('payAtDoor', False) and
+            isinstance(event, Series) and
+            getattr(event, 'allowDropins', False)
+        ):
+            dropin_price = event.getBasePrice(dropIns=1)
+            if roles:
+                for role_variant in role_data:
+                    synthetic_variants.append({
+                        **role_variant,
+                        'sku': role_variant['sku'],
+                        'description': _('Drop-in: %s') % role_variant.get('description', ''),
+                        'price': dropin_price,
+                        'dropIn': True,
+                    })
+            else:
+                numRegistered = event.getNumRegistered(
+                    includeTemporaryRegs=self.context.get('includeTemporaryRegs', False),
+                    dateTime=self.context.get('cart_datetime', None),
+                )
+                synthetic_variants.append({
+                    'sku': f'EVENT_{event.id}_GENERAL',
+                    'description': _('Drop-in Registration'),
+                    'price': dropin_price,
+                    'quantity_available': (event.capacity - numRegistered),
+                    'model_class': 'Event',
+                    'id': event.id,
+                    'capacity': event.capacity,
+                    'count_registrations': numRegistered,
+                    'dropIn': True,
+                })
 
         # Merge them
         all_variants = role_data + synthetic_variants
@@ -194,4 +229,7 @@ class CartSerializer(serializers.Serializer):
     student = serializers.BooleanField(required=False, default=False)
 
     def validate_discount_code(self, value):
-        pass
+        import re
+        if value and not re.match(r'^[a-zA-Z0-9\-_]+$', value):
+            raise serializers.ValidationError('Invalid discount code format.')
+        return value

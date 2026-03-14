@@ -548,7 +548,7 @@ class PurchasableItemsView(ListAPIView):
         return context
 
 
-class CartView(APIView):
+class CartView(RegistrationAdjustmentsMixin, APIView):
     @cached_property
     def purchasable_registry(self):
         return getPurchasableItems(
@@ -802,7 +802,10 @@ class CartView(APIView):
         # Handle checkout flow
         if checkout:
             invoice = self.create_invoice_from_cart(new_cart_data, request)
-            request.session[REG_VALIDATION_STR]['invoice_id'] = invoice.id
+            reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
+            reg_session['invoice_id'] = str(invoice.id)
+            reg_session['invoice_expiry'] = invoice.expirationDate.isoformat()
+            request.session.modified = True
             return HttpResponseRedirect(self.get_success_url())
 
         return Response(new_cart_data, status=status.HTTP_200_OK)
@@ -1839,7 +1842,7 @@ class RegistrationSummaryView(
         total_discount_amount = 0
         addons = []
 
-        voucherId = invoice.data.get('gift', None)
+        voucherId = invoice.data.get('discount_code') or invoice.data.get('gift')
 
         if reg:
             discount_codes, total_discount_amount, voucherId = self.getDiscounts(
@@ -2049,7 +2052,7 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
         payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
 
         # Get a voucher ID to check from the current contents of the form
-        voucherId = self.invoice.data.get('gift', None)
+        voucherId = self.invoice.data.get('discount_code') or self.invoice.data.get('gift')
 
         discount_codes, total_discount_amount, voucherId = self.getDiscounts(
             self.invoice, registration=reg, voucher_code=voucherId
@@ -2195,7 +2198,7 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
         payAtDoor = self.request.session[REG_VALIDATION_STR].get('payAtDoor', False)
 
         # Get a voucher ID to check from the current contents of the form
-        voucherId = self.invoice.data.get('gift', None)
+        voucherId = self.invoice.data.get('discount_code') or self.invoice.data.get('gift')
 
         discount_codes, total_discount_amount, voucherId = self.getDiscounts(
             self.invoice, registration=reg, voucher_code=voucherId
