@@ -2,6 +2,8 @@
 This file contains basic tests for the core app.
 """
 
+import json
+
 from django.urls import reverse
 from django.utils import timezone
 from django.test import TestCase
@@ -12,8 +14,8 @@ from calendar import month_name
 import dateutil.parser
 from itertools import chain
 
-from .models import EventOccurrence, Event, Registration, Invoice
-from .constants import getConstant, REG_VALIDATION_STR
+from .models import EventOccurrence, Event, Registration, Invoice, EventRole
+from .constants import getConstant, updateConstant, REG_VALIDATION_STR
 from .utils.tests import DefaultSchoolTestCase
 
 
@@ -423,3 +425,296 @@ class AdminTest(TestCase):
             if model.get('add_url'):
                 response = self.client.get(model['add_url'])
                 self.assertEqual(response.status_code, 200)
+
+
+class PurchasableItemsViewTest(DefaultSchoolTestCase):
+    '''
+    Tests for the PurchasableItemsView API endpoint, which returns the set of
+    items available for purchase (events, merch, etc.) along with their
+    serialized variants.
+    '''
+
+    def setUp(self):
+        self.series = self.create_series()
+
+    def test_returns_event_when_registration_enabled(self):
+        response = self.client.get(reverse('purchasableItems'))
+        self.assertEqual(response.status_code, 200)
+        ids = [item.get('id') for item in response.json().get('results', [])]
+        self.assertIn(self.series.id, ids)
+
+    def test_empty_results_when_registration_disabled(self):
+        updateConstant('registration__registrationEnabled', False)
+        try:
+            response = self.client.get(reverse('purchasableItems'))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json().get('results', []), [])
+        finally:
+            updateConstant('registration__registrationEnabled', True)
+
+    def test_event_without_roles_has_general_variant(self):
+        response = self.client.get(reverse('purchasableItems'))
+        item = next(
+            x for x in response.json()['results'] if x.get('id') == self.series.id
+        )
+        skus = [v['sku'] for v in item['variants']]
+        self.assertIn(f'EVENT_{self.series.id}_GENERAL', skus)
+        self.assertFalse(any(v.get('dropIn') for v in item['variants']))
+
+    def test_event_with_roles_exposes_role_variants(self):
+        lead = self.defaultDanceRoles.get(name='Lead')
+        follow = self.defaultDanceRoles.get(name='Follow')
+        er_lead = EventRole.objects.create(event=self.series, role=lead, capacity=10)
+        er_follow = EventRole.objects.create(event=self.series, role=follow, capacity=10)
+
+        response = self.client.get(reverse('purchasableItems'))
+        item = next(
+            x for x in response.json()['results'] if x.get('id') == self.series.id
+        )
+        skus = [v['sku'] for v in item['variants']]
+        self.assertIn(f'EVENT_{self.series.id}_ROLE_{er_lead.id}', skus)
+        self.assertIn(f'EVENT_{self.series.id}_ROLE_{er_follow.id}', skus)
+        # With roles defined there is no general admission variant
+        self.assertNotIn(f'EVENT_{self.series.id}_GENERAL', skus)
+
+    def test_dropin_variant_absent_for_online_registration(self):
+        self.series.allowDropins = True
+        self.series.save()
+        response = self.client.get(reverse('purchasableItems'))
+        item = next(
+            x for x in response.json()['results'] if x.get('id') == self.series.id
+        )
+        self.assertFalse(any(v.get('dropIn') for v in item['variants']))
+
+    def test_dropin_variant_shown_at_door(self):
+        self.series.allowDropins = True
+        self.series.save()
+        self.client.force_login(self.superuser)
+        response = self.client.get(reverse('purchasableItems') + '?payAtDoor=true')
+        item = next(
+            x for x in response.json()['results'] if x.get('id') == self.series.id
+        )
+        self.assertTrue(any(v.get('dropIn') for v in item['variants']))
+
+    def test_dropin_variant_not_shown_without_door_permission(self):
+        '''
+        A non-staff user passing payAtDoor=true should not receive drop-in
+        variants — the permission check must prevent it.
+        '''
+        self.series.allowDropins = True
+        self.series.save()
+        self.client.force_login(self.nonStaffUser)
+        response = self.client.get(reverse('purchasableItems') + '?payAtDoor=true')
+        item = next(
+            x for x in response.json()['results'] if x.get('id') == self.series.id
+        )
+        self.assertFalse(any(v.get('dropIn') for v in item['variants']))
+
+
+class CartViewTest(DefaultSchoolTestCase):
+    '''
+    Tests for the CartView REST endpoint, which provides a persistent
+    JSON-based shopping cart used for both online and at-the-door registration.
+    '''
+
+    def setUp(self):
+        self.series = self.create_series()
+
+    def _cart_post(self, items, checkout=False, extra=None, as_door=False):
+        '''POST JSON to the cart endpoint. Pass as_door=True for door registrations.'''
+        data = {'items': items, 'checkout': checkout}
+        if as_door:
+            data['payAtDoor'] = True
+        if extra:
+            data.update(extra)
+        if as_door:
+            self.client.force_login(self.superuser)
+        return self.client.post(
+            reverse('cart'),
+            data=json.dumps(data),
+            content_type='application/json',
+        )
+
+    def _general_sku(self):
+        return f'EVENT_{self.series.id}_GENERAL'
+
+    # --- Basic cart operations ---
+
+    def test_get_returns_empty_cart(self):
+        response = self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {})
+
+    def test_post_adds_item_and_get_reflects_it(self):
+        self._cart_post([
+            {'item_type': 'Event', 'item_id': self.series.id,
+             'sku': self._general_sku(), 'quantity': 1}
+        ])
+        response = self.client.get(reverse('cart'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json().get('items', [])), 1)
+
+    def test_post_returns_validated_cart(self):
+        sku = self._general_sku()
+        response = self._cart_post([
+            {'item_type': 'Event', 'item_id': self.series.id, 'sku': sku, 'quantity': 1}
+        ])
+        self.assertEqual(response.status_code, 200)
+        items = response.json().get('items', [])
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['sku'], sku)
+
+    def test_post_rejects_nonexistent_item(self):
+        response = self._cart_post([
+            {'item_type': 'Event', 'item_id': 99999,
+             'sku': 'EVENT_99999_GENERAL', 'quantity': 1}
+        ])
+        self.assertEqual(response.status_code, 400)
+
+    def test_delete_removes_item_from_cart(self):
+        self._cart_post([
+            {'item_type': 'Event', 'item_id': self.series.id,
+             'sku': self._general_sku(), 'quantity': 1}
+        ])
+        response = self.client.delete(
+            reverse('cart'),
+            data=json.dumps({'item_id': self.series.id}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json().get('items', [])), 0)
+
+    # --- Checkout ---
+
+    def test_checkout_creates_invoice_and_redirects(self):
+        response = self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': self._general_sku(), 'quantity': 1}],
+            checkout=True,
+        )
+        self.assertRedirects(
+            response, reverse('getStudentInfo'), fetch_redirect_response=False
+        )
+        invoice_id = self.client.session[REG_VALIDATION_STR].get('invoice_id')
+        self.assertIsNotNone(invoice_id)
+        invoice = Invoice.objects.get(id=invoice_id)
+        self.assertEqual(invoice.grossTotal, self.series.getBasePrice())
+
+    def test_checkout_creates_registration_with_event_registration(self):
+        self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': self._general_sku(), 'quantity': 1}],
+            checkout=True,
+        )
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        reg = Registration.objects.filter(invoice=invoice).first()
+        self.assertIsNotNone(reg)
+        self.assertTrue(reg.eventregistration_set.filter(event=self.series).exists())
+        self.assertFalse(reg.final)
+
+    def test_checkout_stores_invoice_expiry_in_session(self):
+        self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': self._general_sku(), 'quantity': 1}],
+            checkout=True,
+        )
+        self.assertIn(
+            'invoice_expiry',
+            self.client.session.get(REG_VALIDATION_STR, {})
+        )
+
+    def test_discount_code_stored_in_invoice_data(self):
+        self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': self._general_sku(), 'quantity': 1}],
+            checkout=True,
+            extra={'discount_code': 'TESTCODE'},
+        )
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        self.assertEqual(invoice.data.get('discount_code'), 'TESTCODE')
+
+    def test_full_checkout_flow_reaches_summary(self):
+        '''Cart checkout -> student info -> registration summary.'''
+        self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': self._general_sku(), 'quantity': 1}],
+            checkout=True,
+        )
+        response = self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Cart',
+            'lastName': 'Tester',
+            'email': 'cart@test.com',
+            'agreeToPolicies': True,
+        }, follow=True)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        self.assertEqual(
+            response.context_data['invoice'].grossTotal, self.series.getBasePrice()
+        )
+
+    # --- Variant handling ---
+
+    def test_role_variant_accepted_in_cart(self):
+        lead = self.defaultDanceRoles.get(name='Lead')
+        er = EventRole.objects.create(event=self.series, role=lead, capacity=10)
+        sku = f'EVENT_{self.series.id}_ROLE_{er.id}'
+        response = self._cart_post([
+            {'item_type': 'Event', 'item_id': self.series.id, 'sku': sku, 'quantity': 1}
+        ])
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['items'][0]['sku'], sku)
+
+    def test_role_variant_creates_correct_event_registration(self):
+        lead = self.defaultDanceRoles.get(name='Lead')
+        er = EventRole.objects.create(event=self.series, role=lead, capacity=10)
+        sku = f'EVENT_{self.series.id}_ROLE_{er.id}'
+        self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': sku, 'quantity': 1}],
+            checkout=True,
+        )
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        reg = Registration.objects.filter(invoice=invoice).first()
+        event_reg = reg.eventregistration_set.filter(event=self.series).first()
+        self.assertIsNotNone(event_reg)
+        self.assertEqual(event_reg.role, lead)
+
+    # --- Drop-in ---
+
+    def test_dropin_rejected_for_online_registration(self):
+        response = self._cart_post([
+            {'item_type': 'Event', 'item_id': self.series.id,
+             'sku': self._general_sku(), 'quantity': 1, 'dropIn': True}
+        ])
+        self.assertEqual(response.status_code, 400)
+
+    def test_dropin_accepted_at_door(self):
+        self.series.allowDropins = True
+        self.series.save()
+        response = self._cart_post(
+            items=[{'item_type': 'Event', 'item_id': self.series.id,
+                    'sku': self._general_sku(), 'quantity': 1, 'dropIn': True}],
+            as_door=True,
+        )
+        self.assertEqual(response.status_code, 200)
+
+    # --- Door permissions ---
+
+    def test_door_registration_rejected_without_permission(self):
+        self.client.force_login(self.nonStaffUser)
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': self.series.id,
+                           'sku': self._general_sku(), 'quantity': 1}],
+                'checkout': False,
+                'payAtDoor': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 403)

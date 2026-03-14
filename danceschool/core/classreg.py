@@ -515,16 +515,20 @@ class PurchasableItemsView(ListAPIView):
 
         self.serializer_map = {}
 
+        # payAtDoor may be requested via query parameter, but only for users
+        # with door payment permissions. Regular users cannot activate door
+        # mode by manipulating the query string.
+        self.payAtDoor = (
+            self.request.query_params.get('payAtDoor', '').lower() in ('true', '1', 'yes')
+            and self.request.user.has_perm('core.accept_door_payments')
+        )
+
         responses = getPurchasableItems(
-            sender=self.__class__, request=self.request
+            sender=self.__class__, request=self.request, payAtDoor=self.payAtDoor
         )
         querysets = []
 
-        for _, result in responses:
-            if not result:
-                continue
-
-            qs, serializer = result
+        for qs, serializer in responses:
             if qs is None or not hasattr(qs, "model"):
                 continue
 
@@ -545,10 +549,13 @@ class PurchasableItemsView(ListAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['serializer_map'] = getattr(self, 'serializer_map', {})
+        context['payAtDoor'] = getattr(self, 'payAtDoor', False)
         return context
 
 
 class CartView(RegistrationAdjustmentsMixin, APIView):
+    permission_classes = [AllowAny]
+
     @cached_property
     def purchasable_registry(self):
         return getPurchasableItems(
@@ -755,7 +762,17 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         cached purchasable registry can access it.
         '''
         mode=kwargs.pop('mode', 'online')
-        data = kwargs.get('data', request.data) or {}
+
+        # request.data is a DRF attribute that only exists after super().dispatch()
+        # wraps the request. Parse the body directly here so that payAtDoor can be
+        # determined before permission checks run.
+        if 'data' in kwargs:
+            data = kwargs.get('data') or {}
+        else:
+            try:
+                data = json.loads(request.body) if request.body else {}
+            except (ValueError, AttributeError):
+                data = {}
 
         # Set the existing cart as a property of the view since it will be used
         # by all subsequent request methods.
@@ -780,12 +797,16 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         self.raw_data = data
         self.payAtDoor = payAtDoor
 
-        # Check for door permissions before validating at-the-door carts.
+        return super().dispatch(request, *args, **kwargs)
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        # Check for door permissions inside DRF's request lifecycle so that
+        # PermissionDenied is handled by DRF's exception handler (returns 403).
         if self.payAtDoor and not request.user.has_perm('core.accept_door_payments'):
             raise exceptions.PermissionDenied(
                 'You lack door registration permissions.'
             )
-        return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
         return Response(self.existing_cart)

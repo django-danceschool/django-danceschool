@@ -1,3 +1,5 @@
+import json
+
 from django.forms.models import model_to_dict
 from django.urls import reverse
 from django.utils import timezone
@@ -575,3 +577,98 @@ class DiscountsTypesTest(BaseDiscountsTest):
 
         discount_codes = response.context_data.get('discount_codes')
         self.assertEqual([x[0] for x in discount_codes], [bigger_combo.name, ])
+
+
+class CartDiscountsTest(BaseDiscountsTest):
+    '''
+    Tests that discounts are correctly applied when the registration goes
+    through the cart-based checkout flow (CartView -> StudentInfoView ->
+    RegistrationSummaryView).
+    '''
+
+    def register_via_cart(self, series, payAtDoor=False, discount_code=None):
+        '''
+        Simulate a full cart-based registration for a single series, stopping
+        just before the summary page. Returns the response from the student
+        info submission (with follow=True so it lands on the summary page).
+        '''
+        sku = f'EVENT_{series.id}_GENERAL'
+        cart_data = {
+            'items': [{'item_type': 'Event', 'item_id': series.id,
+                       'sku': sku, 'quantity': 1}],
+            'checkout': True,
+        }
+        if payAtDoor:
+            cart_data['payAtDoor'] = True
+            self.client.force_login(self.superuser)
+        if discount_code:
+            cart_data['discount_code'] = discount_code
+
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps(cart_data),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('invoice_id', self.client.session.get(REG_VALIDATION_STR, {}))
+
+        return self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Cart',
+            'lastName': 'Discounter',
+            'email': 'cart@discount.com',
+            'agreeToPolicies': True,
+        }, follow=True)
+
+    def test_automatic_discount_applies_via_cart(self):
+        '''
+        An automatic discount (no voucher code required) should apply when
+        the registration is created through the cart checkout flow.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        combo, _ = self.create_discount()
+
+        response = self.register_via_cart(s)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        expected_price = self.defaultPricing.onlinePrice - 5  # flatPrice combo
+        self.assertEqual(invoice.outstandingBalance, expected_price)
+        self.assertGreater(response.context_data.get('total_discount_amount', 0), 0)
+
+    def test_inactive_discount_not_applied_via_cart(self):
+        '''An inactive discount must not be applied in the cart flow.'''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        self.create_discount(active=False)
+
+        response = self.register_via_cart(s)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice())
+        self.assertEqual(response.context_data.get('total_discount_amount', 0), 0)
+
+    def test_voucher_code_discount_applies_via_cart(self):
+        '''
+        A discount gated behind a voucher code should apply when the code is
+        passed as discount_code in the cart payload.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        combo, _ = self.create_discount(voucherId='CARTCODE')
+
+        response = self.register_via_cart(s, discount_code='CARTCODE')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        expected_price = self.defaultPricing.onlinePrice - 5
+        self.assertEqual(invoice.outstandingBalance, expected_price)
+
+    def test_wrong_voucher_code_discount_not_applied_via_cart(self):
+        '''An incorrect voucher code must not unlock a code-gated discount.'''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        self.create_discount(voucherId='REALCODE')
+
+        response = self.register_via_cart(s, discount_code='WRONGCODE')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice())

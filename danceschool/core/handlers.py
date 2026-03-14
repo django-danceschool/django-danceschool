@@ -138,7 +138,7 @@ def linkCartEventRegistration(sender, **kwargs):
     response['parent_item_id'] = item_data.get('parent_item_id', None)
     response['dropIn'] = is_dropin
 
-    # Resolve the dance role from the SKU (e.g. EVENT_5_ROLE_3 → EventRole id=3).
+    # Resolve the dance role from the SKU (e.g. EVENT_5_ROLE_3 -> EventRole id=3).
     this_role = None
     if '_ROLE_' in sku:
         try:
@@ -285,6 +285,7 @@ def linkCartEventRegistration(sender, **kwargs):
 
     if (
         created_eventreg and
+        this_role is not None and
         this_event.soldOutForRole(this_role, includeTemporaryRegs=True) and
         not request.user.has_perm('core.override_register_soldout')
     ):

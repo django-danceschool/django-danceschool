@@ -1,6 +1,7 @@
 from django.apps import apps
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Value, CharField, F
 from django.db.models.query import QuerySet
@@ -194,12 +195,19 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
     logger.debug('Signal fired to apply vouchers preliminarily.')
 
     invoice = kwargs.pop('invoice')
-    voucherId = invoice.data.get('gift', '')
+    voucherId = invoice.data.get('discount_code') or invoice.data.get('gift', '')
 
     try:
         voucher = Voucher.objects.get(voucherId=voucherId)
     except ObjectDoesNotExist:
         logger.debug('No applicable vouchers found.')
+        return
+
+    if voucher.disabled:
+        logger.debug('Voucher %s is disabled; skipping.', voucherId)
+        return
+    if voucher.expirationDate and voucher.expirationDate < timezone.now():
+        logger.debug('Voucher %s has expired; skipping.', voucherId)
         return
 
     tvu = VoucherUse(

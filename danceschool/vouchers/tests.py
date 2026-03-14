@@ -1,3 +1,5 @@
+import json
+
 from django.urls import reverse
 from django.utils import timezone
 
@@ -231,3 +233,107 @@ class VouchersTest(DefaultSchoolTestCase):
         self.assertEqual(reg.invoice, invoice)
         self.assertTrue(invoice.status == Invoice.PaymentStatus.paid)
         self.assertEqual(invoice.outstandingBalance, 0)
+
+
+class CartVouchersTest(VouchersTest):
+    '''
+    Tests that vouchers are correctly applied when the registration goes
+    through the cart-based checkout flow (CartView -> StudentInfoView ->
+    RegistrationSummaryView).
+
+    The cart stores the voucher code in invoice.data['discount_code']. The
+    applyVoucherCodeTemporarily handler (post_student_info) and
+    RegistrationSummaryView both read this key so the voucher is applied
+    the same way as in the legacy flow.
+    '''
+
+    def register_via_cart_with_voucher(self, series, voucher_code):
+        '''
+        Simulate a full cart-based registration that includes a voucher code.
+        Returns the final response (landing on the summary page after following
+        all redirects).
+        '''
+        sku = f'EVENT_{series.id}_GENERAL'
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': series.id,
+                           'sku': sku, 'quantity': 1}],
+                'checkout': True,
+                'discount_code': voucher_code,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('invoice_id', self.client.session.get(REG_VALIDATION_STR, {}))
+
+        # Verify the code was stored in invoice data
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        self.assertEqual(invoice.data.get('discount_code'), voucher_code)
+
+        return self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Voucher',
+            'lastName': 'Cart',
+            'email': 'vouchercart@test.com',
+            'agreeToPolicies': True,
+        }, follow=True)
+
+    def test_valid_voucher_applies_via_cart(self):
+        '''A valid voucher passed as discount_code in the cart reduces the balance.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        v = self.create_voucher(
+            originalAmount=10,
+            expirationDate=timezone.now() + timedelta(days=1),
+        )
+        response = self.register_via_cart_with_voucher(s, v.voucherId)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(
+            invoice.outstandingBalance, s.getBasePrice() - v.originalAmount
+        )
+
+    def test_disabled_voucher_not_applied_via_cart(self):
+        '''A disabled voucher must not reduce the balance even when passed in the cart.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        v = self.create_voucher(disabled=True)
+        response = self.register_via_cart_with_voucher(s, v.voucherId)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice())
+
+    def test_expired_voucher_not_applied_via_cart(self):
+        '''An expired voucher must not reduce the balance.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=-1))
+        response = self.register_via_cart_with_voucher(s, v.voucherId)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice())
+
+    def test_voucher_capped_by_max_amount_per_use(self):
+        '''A voucher with maxAmountPerUse only discounts up to the cap.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        v = self.create_voucher(
+            originalAmount=100,
+            maxAmountPerUse=5,
+            expirationDate=timezone.now() + timedelta(days=1),
+        )
+        response = self.register_via_cart_with_voucher(s, v.voucherId)
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice() - 5)
+
+    def test_invalid_voucher_code_no_discount_applied(self):
+        '''An unrecognised voucher code must not reduce the balance.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        response = self.register_via_cart_with_voucher(s, 'DOESNOTEXIST')
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice())

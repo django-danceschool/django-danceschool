@@ -23,14 +23,16 @@ class MerchItemVariantSerializer(serializers.ModelSerializer):
 
 
 class MerchItemSerializer(serializers.ModelSerializer):
-    variants = MerchItemVariantSerializer(
-        many=True, source='item_variant', read_only=True
-    )
+    variants = serializers.SerializerMethodField()
+
+    def get_variants(self, obj):
+        qs = obj.item_variant.filter(soldOut=False)
+        return MerchItemVariantSerializer(qs, many=True).data
 
     class Meta:
         model = MerchItem
         fields = [
-            'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
+            'id', 'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
             'disabled', 'creationDate', 'soldOut', 'numVariants',
             'variants'
         ]

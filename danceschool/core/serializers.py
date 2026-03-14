@@ -122,7 +122,7 @@ class VariantsField(serializers.ListField):
 
 
 class EventSerializer(serializers.ModelSerializer):
-    variants = VariantsField()
+    variants = VariantsField(source='*')
 
     class Meta:
         model = Event
