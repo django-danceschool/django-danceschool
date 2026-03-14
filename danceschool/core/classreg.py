@@ -37,7 +37,7 @@ from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
     post_student_info, apply_discount, apply_price_adjustments,
     get_invoice_related, get_invoice_item_related, get_cart_invoice_related,
-    get_cart_invoice_item_related
+    get_cart_invoice_item_related, request_discounts
 )
 from .helpers import getPurchasableItems
 from .serializers import PurchasableItemSerializer, CartSerializer
@@ -752,6 +752,95 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         invoice.updateTotals()
         return invoice
 
+    def get_discount_preview(self, cart_items, cart_data):
+        '''
+        Fire the request_discounts signal with a temporary, unsaved Invoice to
+        get a read-only discount preview.  No RegistrationDiscount records are
+        created here — that only happens during checkout via apply_discount.
+
+        Returns a dict with keys ``discounts``, ``gross_total``,
+        ``discounted_total``, and ``total_discount``, or None when no discount
+        applies or the discounts app is not active.
+        '''
+        # Only Event items are eligible for discounts.
+        event_items = [i for i in cart_items if i.get('item_type') == 'Event']
+        if not event_items:
+            return None
+
+        # Find the Event queryset in the purchasable registry so we can compute
+        # prices without an extra DB round-trip.
+        event_qs = None
+        for qs, _ in self.purchasable_registry:
+            if qs.model.__name__ == 'Event':
+                event_qs = qs
+                break
+        if event_qs is None:
+            return None
+
+        event_ids = [i['item_id'] for i in event_items]
+        events_by_id = {e.id: e for e in event_qs.filter(id__in=event_ids)}
+
+        gross_total = sum(
+            events_by_id[i['item_id']].getBasePrice(payAtDoor=self.payAtDoor)
+            * i.get('quantity', 1)
+            for i in event_items
+            if i['item_id'] in events_by_id
+        )
+
+        # Build a temporary, unsaved Invoice.  grossTotal is needed so
+        # getDiscounts() can compute the discount amount.  Customer fields
+        # allow first-time-customer logic to work when provided.
+        tmp_invoice = Invoice(
+            grossTotal=gross_total,
+            firstName=cart_data.get('firstName', ''),
+            lastName=cart_data.get('lastName', ''),
+            email=cart_data.get('email', ''),
+        )
+
+        discount_responses = request_discounts.send(
+            sender=RegistrationAdjustmentsMixin,
+            registration=None,
+            invoice=tmp_invoice,
+            cart_items=event_items,
+            customer_final=False,
+            voucher_code=cart_data.get('discount_code'),
+        )
+        discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
+
+        if not discount_responses:
+            return None
+
+        discount_responses.sort(
+            key=lambda k: min(
+                [getattr(x, 'net_price', gross_total) for x in k.items] +
+                [gross_total]
+            ) if k and hasattr(k, 'items') else gross_total
+        )
+
+        best = discount_responses[0]
+        discount_codes = getattr(best, 'items', [])
+        if not discount_codes:
+            return None
+
+        discounted_total = (
+            min(getattr(x, 'net_price', gross_total) for x in discount_codes)
+            + getattr(best, 'ineligible_total', 0)
+        )
+        total_discount = gross_total - discounted_total
+
+        return {
+            'discounts': [
+                {
+                    'name': getattr(getattr(x, 'code', None), 'name', str(x.code)),
+                    'discount_amount': float(x.discount_amount),
+                }
+                for x in discount_codes
+            ],
+            'gross_total': float(gross_total),
+            'discounted_total': float(discounted_total),
+            'total_discount': float(total_discount),
+        }
+
     def get_success_url(self):
         return reverse('getStudentInfo')
 
@@ -829,7 +918,16 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             request.session.modified = True
             return HttpResponseRedirect(self.get_success_url())
 
-        return Response(new_cart_data, status=status.HTTP_200_OK)
+        # Add a read-only discount preview to the response so the cart UI can
+        # display the expected discount without creating any DB records.
+        response_data = dict(new_cart_data)
+        discount_preview = self.get_discount_preview(
+            new_cart_data.get('items', []), new_cart_data
+        )
+        if discount_preview:
+            response_data['discount_preview'] = discount_preview
+
+        return Response(response_data, status=status.HTTP_200_OK)
 
     def delete(self, request, *args, **kwargs):
         item_id = request.data.get("item_id")
