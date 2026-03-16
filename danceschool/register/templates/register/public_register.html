@@ -1,0 +1,165 @@
+{% extends "cms/home.html" %}
+{% load cms_tags djangocms_alias_tags danceschool_tags sekizai_tags static i18n %}
+
+{% block content %}
+
+  {# Display any warning or error messages associated with the previous form submission #}
+  <div id="message-alerts">
+    {% for message in messages %}
+      <div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">{{ message }}</div>
+    {% endfor %}
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-lg-9">
+      {# "Register Now" submit button — sticky so it stays visible while scrolling #}
+      <button class="btn btn-success btn-lg float-right position-sticky submit-button"
+              style="top: 0.5em"
+              id="publicRegisterSubmit">
+        {% trans "Register now" %} &raquo;
+      </button>
+    </div>
+    <div class="col-lg-3 d-flex justify-content-end align-items-start" id="cart-toggle-container" style="display: none !important;">
+      <a class="btn btn-outline-secondary"
+         data-toggle="collapse"
+         href="#cart-container"
+         role="button"
+         aria-expanded="false"
+         aria-controls="cart-container">
+        <i class="fa fa-shopping-cart fa-2x"></i>&nbsp;{% trans "Your Cart" %}&nbsp;<span id="cartSummary" class="badge badge-success"></span>
+      </a>
+    </div>
+  </div>
+
+  <div id="alert-box"></div>
+
+  {# Door registration toggle — only visible to staff with door payment permission #}
+  {% if perms.core.accept_door_payments %}
+    <div class="alert alert-info mt-2" role="alert">
+      <h5 class="mb-1">{% trans "Is this a door/invoice registration?" %}
+        <small class="text-muted">({% trans "staff only" %})</small>
+      </h5>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="payAtDoorToggle" />
+        <label class="form-check-label" for="payAtDoorToggle">
+          {% trans "Treat this as a door/invoice registration" %}
+        </label>
+      </div>
+    </div>
+  {% endif %}
+
+  {# Collapsible shopping cart — hidden until JS confirms the cart is non-empty #}
+  <div class="row my-1">
+    <div class="col-12" id="shoppingCart">
+      <div class="collapse" id="cart-container">
+        <div class="card">
+          <div class="card-header">
+            <h4>{% trans "Your Shopping Cart" %}
+              <div class="float-right">
+                <button class="btn btn-outline-secondary mx-3" id="emptyCart">{% trans "Empty" %}</button>
+                <button class="btn" id="hideCart"
+                        data-toggle="collapse" href="#cart-container"
+                        role="button" aria-expanded="false" aria-controls="cart-container"
+                        aria-label="Hide Cart" title="Hide Cart">
+                  <i class="fa fa-chevron-up" aria-hidden="true"></i>
+                </button>
+              </div>
+            </h4>
+          </div>
+          <div class="card-body" id="cartItemsContainer">
+            <table class="table">
+              <thead>
+                <tr><th>{% trans "Item" %}</th><th>{% trans "Price" %}</th></tr>
+              </thead>
+              <tbody id="cartItems"></tbody>
+              <tbody id="subtotalLine"></tbody>
+              <tbody id="discountList"></tbody>
+              <tbody id="preTaxVoucherList"></tbody>
+              <tbody id="addonList"></tbody>
+              <tbody id="taxInfo"></tbody>
+              <tbody id="postTaxVoucherList"></tbody>
+              <tbody id="cartTotalContainer">
+                <tr>
+                  <th>{% trans "Total" %}:</th>
+                  <th>{{ currencySymbol }}<span id="cartTotal"></span></th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Plugin region: PublicRegisterEventPlugin, PublicRegisterNavPlugin, text/layout plugins #}
+  <div class="row my-1">
+    <div class="col-12">
+      {% static_alias 'public_register_content' site %}
+    </div>
+  </div>
+
+  {% block content_js %}
+    {% addtoblock "js" %}
+    <script type="text/javascript">
+
+      // Global parameters used by manage_register_cart.js and any plugin extras.
+      var regParams = {
+        payAtDoor: false,
+        currencySymbol: "{{ currencySymbol }}",
+        multipleVoucherString: "{% trans 'You cannot apply two vouchers to this registration. Please remove the existing voucher from your cart and try again.' %}",
+        emptyRegisterVoucherString: "{% trans 'You have applied a voucher to an empty cart. It will be validated once you have added an item.' %}",
+        itemString: "{% trans 'Item' %}",
+        itemStringPlural: "{% trans 'Items' %}",
+        customerString: "{% trans 'Customer' %}",
+        subtotalString: "{% trans 'Subtotal' %}",
+        taxesString: "{% trans 'Taxes' %}",
+        adjustmentsString: "{% trans 'Adjustments' %}",
+        addonString: "{% trans 'Free Add-On' %}",
+        discountString: "{% trans 'Discount' %}",
+        discountTotalString: "{% trans 'Total Discounts' %}",
+        outstandingBalanceString: "{% trans 'Balance' %}",
+        voucherString: "{% trans 'Voucher' %}",
+        dropInString: "{% trans 'Drop-in' %}",
+        roleString: "{% trans 'Role' %}",
+        cartUrl: "{% url 'cart' %}",
+        purchasableItemsUrl: "{% url 'purchasableItems' %}",
+        customerLookupUrl: "{% url 'viewregistrations_json' %}",
+      };
+
+      // Plugin extras scripts may push functions into this array to render
+      // additional columns in the customer info table.
+      var regExtrasFunctions = [];
+
+      // Show the cart toggle button only when the session cart is non-empty.
+      // This runs independently of manage_register_cart.js so it can act as
+      // soon as the response arrives.
+      fetch(regParams.cartUrl, {credentials: 'same-origin'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.items && data.items.length > 0) {
+            document.getElementById('cart-toggle-container').style.removeProperty('display');
+            document.getElementById('cart-toggle-container').classList.remove('d-none');
+          }
+        })
+        .catch(function() {});
+
+      {% if perms.core.accept_door_payments %}
+      // Ephemeral payAtDoor toggle for staff: updates regParams in-place so
+      // the next syncCart / checkout call picks up the correct flag.
+      document.getElementById('payAtDoorToggle').addEventListener('change', function() {
+        regParams.payAtDoor = this.checked;
+      });
+      {% endif %}
+
+    </script>
+    {% endaddtoblock %}
+
+    {% addtoblock "js" %}
+      <script type="text/javascript" src="{% static 'js/register_cart_common.js' %}"></script>
+    {% endaddtoblock %}
+    {% addtoblock "js" %}
+      <script type="text/javascript" src="{% static 'js/public_register_cart.js' %}"></script>
+    {% endaddtoblock %}
+  {% endblock %}
+
+{% endblock %}

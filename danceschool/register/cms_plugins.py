@@ -11,7 +11,9 @@ from adminsortable2.admin import SortableInlineAdminMixin
 
 from .models import (
     RegisterEventPluginModel, RegisterEventPluginChoice,
-    RegisterGuestSearchPluginModel
+    RegisterGuestSearchPluginModel,
+    PublicRegisterNavPluginModel,
+    PublicRegisterEventPluginModel, PublicRegisterEventPluginChoice,
 )
 from danceschool.core.models import Event
 from danceschool.core.mixins import PluginTemplateMixin
@@ -185,6 +187,86 @@ class RegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
         return context
 
 
+class PublicRegisterNavPlugin(CMSPluginBase):
+    model = PublicRegisterNavPluginModel
+    name = _('Public Register: Navigation bar')
+    module = _('Public Register')
+    render_template = 'register/plugins/public_register_nav.html'
+    cache = False
+
+
+class PublicRegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
+    model = PublicRegisterEventPluginChoice
+    min_num = 1
+    extra = 1
+    fields = ['optionLabel', 'soldOutRule', 'data']
+
+
+class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
+    model = PublicRegisterEventPluginModel
+    name = _('Public Register: Event listing')
+    cache = False
+    module = _('Public Register')
+    render_template = 'register/plugins/public_event_register.html'
+    inlines = [PublicRegisterEventChoiceInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'eventType', 'registrationOpenLimit', 'occursWithinDays'),
+        }),
+        (_('Limit Start Date'), {
+            'classes': ('collapse',),
+            'fields': ('limitTypeStart', 'daysStart', 'startDate'),
+        }),
+        (_('Limit End Date'), {
+            'classes': ('collapse',),
+            'fields': ('limitTypeEnd', 'daysEnd', 'endDate'),
+        }),
+        (_('Limit Number'), {
+            'classes': ('collapse',),
+            'fields': ('limitNumber', 'sortOrder'),
+        }),
+        (_('Other Limit Restrictions'), {
+            'classes': ('collapse',),
+            'fields': ('eventCategories', 'seriesCategories', 'levels', 'location', 'weekday'),
+        }),
+        (_('Display Options'), {
+            'classes': ('collapse',),
+            'fields': ('template', 'cssClasses'),
+        }),
+    )
+
+    def render(self, context, instance, placeholder):
+        context = super().render(context, instance, placeholder)
+
+        today_start = ensure_localtime(timezone.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        listing = instance.getEvents(
+            dateTime=today_start,
+            initial=context.get('allEvents', Event.objects.none()),
+        )
+
+        register_choices = OrderedDict()
+        for event in listing:
+            all_choices = []
+            for choice_rule in instance.publicregistereventpluginchoice_set.all():
+                all_choices += choice_rule.addChoices(event)
+            register_choices[event.id] = {
+                'event': event,
+                'all_choices': all_choices,
+            }
+
+        context.update({
+            'event_list': listing,
+            'register_choices': register_choices,
+        })
+        return context
+
+
 plugin_pool.register_plugin(RegisterVoucherPlugin)
 plugin_pool.register_plugin(RegisterGuestSearchPlugin)
 plugin_pool.register_plugin(RegisterEventPlugin)
+plugin_pool.register_plugin(PublicRegisterEventPlugin)
+plugin_pool.register_plugin(PublicRegisterNavPlugin)

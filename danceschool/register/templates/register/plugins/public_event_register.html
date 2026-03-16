@@ -1,0 +1,76 @@
+{% load i18n %}
+
+{#
+  Each plugin instance is wrapped in .public-register-section so that the
+  PublicRegisterNavPlugin (Increment 3) can discover sections after page load.
+  data-section-title is used to populate nav link text.
+#}
+<div class="col-12 my-1 public-register-section event-register-set {{ instance.cssClasses }}"
+     id="section-{{ instance.pk }}"
+     data-section-title="{{ instance.title }}">
+
+  {% if instance.title and register_choices %}
+    <h4 class="event-register-set-title">{{ instance.title }}</h4>
+  {% endif %}
+
+  {% for key, item in register_choices.items %}
+    <div class="card my-2">
+      <div class="card-body">
+        <h5 class="card-title">{{ item.event.name }}</h5>
+
+        {% if item.all_choices %}
+          <div class="form-group mb-0">
+            {% for choice in item.all_choices %}
+              <div class="row align-items-center my-1">
+                <label class="col-sm-6 col-form-label"
+                       for="{{ choice.choiceId }}">
+                  {{ choice.label }}
+                  {% if choice.price %}
+                    <small class="text-muted">
+                      ({{ currencySymbol }}{{ choice.price }})
+                    </small>
+                  {% endif %}
+                  {% if choice.soldOut %}
+                    <span class="badge badge-secondary ml-1">
+                      {% trans "Sold out" %}
+                    </span>
+                  {% endif %}
+                </label>
+                <div class="col-sm-4 col-6">
+                  {% if not choice.soldOut %}
+                    <input type="number"
+                           class="form-control register-quantity"
+                           id="{{ choice.choiceId }}"
+                           min="0"
+                           value="0"
+                           data-event-id="{{ item.event.id }}"
+                           data-role-id="{{ choice.roleId|default_if_none:'' }}"
+                           data-price="{{ choice.price }}"
+                           aria-label="{{ choice.label }}"
+                    />
+                  {% else %}
+                    {# Render a disabled placeholder so layout stays consistent #}
+                    <input type="number"
+                           class="form-control"
+                           value="0"
+                           disabled
+                           aria-label="{{ choice.label }}"
+                    />
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+        {% else %}
+          {# No choices means the event has no open registration slots #}
+          <p class="text-muted mb-0">{% trans "Registration is not currently available." %}</p>
+        {% endif %}
+
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-muted">{% trans "No upcoming events are currently available for registration." %}</p>
+  {% endfor %}
+
+</div>

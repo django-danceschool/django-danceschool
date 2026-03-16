@@ -444,6 +444,177 @@ class RegisterGuestSearchPluginModel(RegisterEventLimitedModel):
     pass
 
 
+class PublicRegisterNavPluginModel(CMSPlugin):
+    '''
+    Model for the public register navigation bar plugin.  The plugin renders
+    a sticky Bootstrap navbar whose links are populated by JavaScript after
+    page load by reading the data-section-title attributes of
+    .public-register-section elements (produced by PublicRegisterEventPlugin).
+
+    No sections are stored here; this is purely a display/UX plugin.
+    '''
+
+    title = models.CharField(
+        _('Navbar brand text'), max_length=200, blank=True, default='',
+        help_text=_(
+            'Optional text displayed at the left edge of the navbar. '
+            'Leave blank to show navigation links only.'
+        )
+    )
+
+    def __str__(self):
+        return self.title or str(_('Public register navigation bar'))
+
+    class Meta:
+        verbose_name = _('Public register navigation bar')
+        verbose_name_plural = _('Public register navigation bars')
+
+
+class PublicRegisterEventPluginModel(RegisterEventLimitedModel):
+    '''
+    CMS plugin model for the public-facing registration page.  Like
+    RegisterEventPluginModel, it provides filterable event listings, but
+    without at-the-door-specific options (payment methods,
+    requireFullRegistration, autoCheckIn).
+
+    Unlike RegisterEventPluginModel it does not expose at-the-door-specific
+    options (payment methods, requireFullRegistration, autoCheckIn).
+    registrationOpenLimit is exposed in the admin and defaults to 'O' so that
+    staff can optionally create a section that surfaces closed/ongoing events.
+    '''
+
+    title = models.CharField(
+        _('Section title'), max_length=250, default=_('Upcoming Events'), blank=True
+    )
+
+    cssClasses = models.CharField(
+        _('Custom CSS classes'), max_length=250, null=True, blank=True,
+        help_text=_('Classes are applied to the surrounding &lt;div&gt;')
+    )
+
+    template = models.CharField(
+        _('Plugin template'), max_length=250, null=True, blank=True
+    )
+
+    def copy_relations(self, oldinstance):
+        super().copy_relations(oldinstance)
+        self.publicregistereventpluginchoice_set.all().delete()
+        for choice in oldinstance.publicregistereventpluginchoice_set.all():
+            choice.pk = None
+            choice.eventPlugin = self
+            choice.save()
+
+    def get_short_description(self):
+        return self.title or self.id
+
+    def save(self, *args, **kwargs):
+        needs_default_choice = (
+            not self.publicregistereventpluginchoice_set.exists() if self.pk else True
+        )
+        super().save(*args, **kwargs)
+        if needs_default_choice:
+            PublicRegisterEventPluginChoice.objects.create(eventPlugin=self)
+
+    class Meta:
+        permissions = (
+            (
+                'choose_custom_public_plugin_template',
+                _('Can enter a custom plugin template for public register plugins.')
+            ),
+        )
+
+
+class PublicRegisterEventPluginChoice(models.Model):
+    '''
+    Configuration for how PublicRegisterEventPluginModel renders registration
+    inputs.  Each instance produces a labelled number input per available role
+    (or a single "General admission" input when no roles are defined).
+
+    The data JSONField is stored server-side only and is never sent to the
+    browser, so it cannot be tampered with by users.  It will be attached to
+    the resulting EventRegistration by a signal handler (to be implemented).
+    '''
+
+    SOLDOUT_CHOICES = [
+        ('D', _('Display with sold-out label')),
+        ('H', _('Hide sold-out choices')),
+    ]
+
+    eventPlugin = models.ForeignKey(
+        PublicRegisterEventPluginModel,
+        verbose_name=_('Plugin'),
+        on_delete=models.CASCADE,
+    )
+
+    optionLabel = models.CharField(
+        _('Label prefix'), max_length=100, blank=True, default='',
+        help_text=_(
+            'Optional prefix shown before the role name, e.g. "Sign up as". '
+            'Leave blank to show only the role name.'
+        )
+    )
+
+    soldOutRule = models.CharField(
+        _('Rule for sold-out choices'), max_length=1, default='D',
+        choices=SOLDOUT_CHOICES,
+    )
+
+    data = models.JSONField(
+        _('Additional data attached to registrations'), default=dict, blank=True,
+        help_text=_(
+            'Custom JSON stored with each registration produced by this choice. '
+            'This value is kept server-side and is never transmitted through '
+            'the browser, so it cannot be modified by users.'
+        )
+    )
+
+    order = models.PositiveSmallIntegerField(default=0, blank=False, null=False)
+
+    def addChoices(self, event):
+        '''
+        Return a list of choice dicts for the given event — one entry per
+        available role, or a single "General admission" entry when the event
+        has no roles defined.  Each dict carries only the attributes needed
+        to render a number input and, at checkout time, to construct a
+        CartView item.  The data field is deliberately excluded from the
+        output so it is never exposed to the client.
+        '''
+        choices = []
+
+        roles = [
+            {
+                'name': x.name,
+                'id': x.id,
+                'soldOut': event.soldOutForRole(x),
+            } for x in event.availableRoles
+        ]
+        if not roles:
+            roles = [{'name': None, 'id': None, 'soldOut': event.soldOut}]
+
+        for i, role in enumerate(roles):
+            if role['soldOut'] and self.soldOutRule == 'H':
+                continue
+
+            label = ' '.join(filter(None, [
+                self.optionLabel,
+                role['name'] or str(_('General admission')),
+            ]))
+
+            choices.append({
+                'label': label,
+                'price': event.pricingTier.onlinePrice,
+                'roleName': role['name'],
+                'roleId': role['id'],
+                'soldOut': role['soldOut'],
+                'choiceId': 'pubchoice_{}_{}_{}'.format(event.id, self.id, i),
+            })
+
+        return choices
+
+    class Meta:
+        ordering = ['order']
+
+
 class RegisterEventPluginChoice(models.Model):
     '''
     Individual register sections may have custom rules for the types and display

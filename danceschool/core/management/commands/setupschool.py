@@ -679,6 +679,9 @@ Remember, all page settings and content can be changed later via the admin inter
             )
             self.stdout.write('Logout link added.\n')
 
+        if apps.is_installed('danceschool.register'):
+            call_command('setup_public_register')
+
         if apps.is_installed('danceschool.payments.payatdoor'):
             call_command('setup_payatdoor')
 

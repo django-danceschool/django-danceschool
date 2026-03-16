@@ -27,11 +27,13 @@ from django.utils import timezone
 
 from cms.api import add_plugin
 
+from dynamic_preferences.registries import global_preferences_registry
+
 from danceschool.core.constants import getConstant
 from danceschool.core.models import (
     DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier,
-    Location, StaffMember, Instructor, Event, Series, EventStaffMember,
-    EventOccurrence,
+    Location, StaffMember, Instructor, Event, Series, PublicEvent,
+    EventStaffMember, EventOccurrence,
 )
 from danceschool.core.utils.tests import DefaultSchoolTestCase
 
@@ -473,3 +475,185 @@ class RegisterCartTest(StaticLiveServerTestCase):
         pw_expect(
             self.page.locator('.badge-choice-counter').first
         ).to_have_text('1', timeout=8_000)
+
+
+# ---------------------------------------------------------------------------
+# 3. PublicRegisterView server-side rendering tests (no browser)
+# ---------------------------------------------------------------------------
+
+class PublicRegisterRenderTest(DefaultSchoolTestCase):
+    """
+    Verify that the public-facing registration page renders correctly.
+
+    The setup replicates the default three-plugin layout produced by
+    setup_public_register: an open-series section, an open-public-events
+    section, and a closed/ongoing-series section.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+
+        from django.contrib.sites.models import Site
+        from danceschool.core.management.commands.migrate_static_placeholders import (
+            _get_or_create_alias_category,
+            _get_or_create_alias,
+            _get_or_create_alias_content,
+        )
+
+        site = Site.objects.get_current()
+        cat = _get_or_create_alias_category()
+        alias = _get_or_create_alias(cat, 'public_register_content', site)
+        alias_content = _get_or_create_alias_content(
+            alias, 'public_register_content', 'en', cls.superuser
+        )
+        placeholder = alias_content.placeholder
+
+        add_plugin(placeholder, 'PublicRegisterNavPlugin', 'en')
+
+        cls.open_series_plugin = add_plugin(
+            placeholder, 'PublicRegisterEventPlugin', 'en',
+            title='Upcoming Classes',
+            eventType='S',
+            registrationOpenLimit='O',
+            occursWithinDays=None,
+        )
+        cls.open_events_plugin = add_plugin(
+            placeholder, 'PublicRegisterEventPlugin', 'en',
+            title='Upcoming Events',
+            eventType='P',
+            registrationOpenLimit='O',
+            occursWithinDays=None,
+        )
+        cls.closed_series_plugin = add_plugin(
+            placeholder, 'PublicRegisterEventPlugin', 'en',
+            title='Ongoing Classes',
+            eventType='S',
+            registrationOpenLimit='C',
+            occursWithinDays=None,
+        )
+
+    def _url(self):
+        return reverse('publicRegistration')
+
+    def _open_series(self, **kwargs):
+        kwargs.setdefault('startTime', timezone.now() + timedelta(hours=2))
+        return self.create_series(**kwargs)
+
+    def _open_public_event(self):
+        start = timezone.now() + timedelta(hours=2)
+        pe = PublicEvent(
+            title='Test Public Event',
+            slug='test-public-event',
+            pricingTier=self.defaultPricing,
+            location=self.defaultLocation,
+            status=Event.RegStatus.enabled,
+        )
+        pe.save()
+        EventOccurrence.objects.create(
+            event=pe,
+            startTime=start,
+            endTime=start + timedelta(hours=1),
+        )
+        pe.save()
+        return pe
+
+    # -- Access control -------------------------------------------------------
+
+    def test_anonymous_user_can_access(self):
+        """The public register page must be accessible without login."""
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_registration_offline_redirects_public(self):
+        """When registration is disabled, anonymous users must be sent to the offline page."""
+        gp = global_preferences_registry.manager()
+        gp['registration__registrationEnabled'] = False
+        try:
+            response = self.client.get(self._url())
+            self.assertRedirects(
+                response,
+                reverse('registrationOffline'),
+                fetch_redirect_response=False,
+            )
+        finally:
+            gp['registration__registrationEnabled'] = True
+
+    def test_registration_offline_staff_can_access(self):
+        """Staff with accept_door_payments must still see the page when registration is disabled."""
+        gp = global_preferences_registry.manager()
+        gp['registration__registrationEnabled'] = False
+        try:
+            self.client.force_login(self.superuser)
+            response = self.client.get(self._url())
+            self.assertEqual(response.status_code, 200)
+        finally:
+            gp['registration__registrationEnabled'] = True
+
+    # -- Content --------------------------------------------------------------
+
+    def test_open_series_appears_with_quantity_inputs(self):
+        """A series open for registration must appear with quantity inputs."""
+        self._open_series()
+        response = self.client.get(self._url())
+        self.assertContains(response, self.levelOneClassDescription.title)
+        self.assertContains(response, 'register-quantity')
+
+    def test_open_public_event_appears(self):
+        """A public event open for registration must appear on the page."""
+        self._open_public_event()
+        response = self.client.get(self._url())
+        self.assertContains(response, 'Test Public Event')
+
+    def test_closed_series_appears(self):
+        """A series closed for registration must appear in the ongoing-classes section."""
+        self.create_series(status=Event.RegStatus.disabled)
+        response = self.client.get(self._url())
+        self.assertContains(response, 'Ongoing Classes')
+        self.assertContains(response, self.levelOneClassDescription.title)
+
+    def test_open_series_absent_from_closed_section(self):
+        """
+        An open series must not appear in the closed/ongoing section.
+        When only an open series exists the 'Ongoing Classes' section must
+        contain no event cards.
+        """
+        self._open_series()
+        response = self.client.get(self._url())
+        # The section heading is rendered regardless of whether it has events;
+        # verify that the class description title does NOT appear after
+        # 'Ongoing Classes' in the response.
+        content = response.content.decode()
+        ongoing_idx = content.find('Ongoing Classes')
+        self.assertNotEqual(ongoing_idx, -1, 'Ongoing Classes section missing')
+        tail = content[ongoing_idx:]
+        self.assertNotIn(self.levelOneClassDescription.title, tail)
+
+    # -- Sold-out behaviour ---------------------------------------------------
+
+    def test_sold_out_badge_displayed(self):
+        """A sold-out series must show the 'Sold out' badge."""
+        s = self._open_series()
+        # Use update() to bypass Event.save() which would restore capacity
+        # from the location's defaultCapacity.  capacity=0 ensures
+        # numRegistered (0) >= capacity (0) → soldOut is True.
+        Series.objects.filter(pk=s.pk).update(capacity=0)
+        response = self.client.get(self._url())
+        self.assertContains(response, 'Sold out')
+
+    def test_sold_out_choice_hidden_when_rule_is_hide(self):
+        """When soldOutRule='H', sold-out choices must be absent from the page."""
+        from .models import PublicRegisterEventPluginChoice
+        PublicRegisterEventPluginChoice.objects.filter(
+            eventPlugin=self.open_series_plugin
+        ).update(soldOutRule='H')
+        try:
+            s = self._open_series()
+            Series.objects.filter(pk=s.pk).update(capacity=0)
+            response = self.client.get(self._url())
+            self.assertNotContains(response, 'register-quantity')
+            self.assertNotContains(response, 'Sold out')
+        finally:
+            PublicRegisterEventPluginChoice.objects.filter(
+                eventPlugin=self.open_series_plugin
+            ).update(soldOutRule='D')

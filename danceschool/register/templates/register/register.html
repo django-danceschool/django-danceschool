@@ -96,6 +96,7 @@
 </script>
 {% endaddtoblock %}
 
+{% addtoblock "js" %}<script type="text/javascript" src="{% static 'js/register_cart_common.js' %}"></script>{% endaddtoblock %}
 {% addtoblock "js" %}<script type="text/javascript" src="{% static 'js/manage_register_cart.js' %}"></script>{% endaddtoblock %}
 {% addtoblock "js" %}
 {% for k,t in extras_templates_registry.items %}
