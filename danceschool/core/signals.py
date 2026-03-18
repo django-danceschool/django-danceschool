@@ -6,6 +6,17 @@ collect_purchasable_items = Signal(
     ''' ['request', 'payAtDoor', 'date'] '''
 )
 
+# Fires during RegistrationContactForm.__init__() to allow other apps to
+# inject additional fields into the mid-section of the form (below
+# agreeToPolicies).  Each connected handler should return either None or a
+# list of (field_name, field, layout_element) tuples, where field is a
+# Django form field instance and layout_element is a crispy-forms layout
+# object.  All returned fields are added to the form and their layout
+# elements are appended inside the mid-section card.
+collect_student_info_fields = Signal(
+    ''' ['instance', 'request', 'eventRegs', 'registration', 'invoice'] '''
+)
+
 # Fires during the clean process of the StudentInfoView form or the
 # MultiRegCustomerNameForm, allowing hooked in apps to validate the form data
 # and raise ValidationErrors or send warnings (messages) to the user by adding

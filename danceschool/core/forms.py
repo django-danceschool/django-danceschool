@@ -29,7 +29,7 @@ from .models import (
     get_defaultEmailFrom
 )
 from .constants import HOW_HEARD_CHOICES, getConstant, REG_VALIDATION_STR
-from .signals import check_student_info
+from .signals import check_student_info, collect_student_info_fields
 from .utils.emails import get_text_for_html
 from .utils.timezone import ensure_localtime
 
@@ -730,8 +730,9 @@ class RegistrationContactForm(RegistrationForm):
         if getConstant('registration__addStudentField'):
             fields += ['student',]
 
+        extra = getattr(self, '_extra_mid_layout', [])
         mid_layout = Layout(
-            Div(*fields, css_class='card card-body bg-light my-2'),
+            Div(*fields, *extra, css_class='card card-body bg-light my-2'),
         )
         return mid_layout
 
@@ -760,6 +761,26 @@ class RegistrationContactForm(RegistrationForm):
             self.fields['phone'].initial = user.customer.phone
 
         self.fields['student'].label = _('I am a {label}'.format(label=getConstant('registration__studentFieldLabel')))
+
+        # Let other apps inject extra fields into the mid-section of the form.
+        # Each handler returns None or a list of (field_name, field, layout_element).
+        self._extra_mid_layout = []
+        eventRegs = (
+            self._registration.eventregistration_set.all()
+            if self._registration else []
+        )
+        for _handler, result in collect_student_info_fields.send(
+            sender=RegistrationContactForm,
+            instance=self,
+            registration=self._registration,
+            invoice=self._invoice,
+            request=self._request,
+            eventRegs=eventRegs,
+        ):
+            if result:
+                for field_name, field, layout_element in result:
+                    self.fields[field_name] = field
+                    self._extra_mid_layout.append(layout_element)
 
         self.helper.layout = Layout(
             self.get_top_layout(),

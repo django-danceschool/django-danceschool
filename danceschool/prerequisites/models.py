@@ -26,6 +26,7 @@ class Requirement(models.Model):
         none = ('N', _('Enforcement disabled'))
         warning = ('W', _('Allow registration with warning'))
         error = ('E', _('Raise error and do not allow registration'))
+        acknowledgement = ('A', _('Require acknowledgement checkbox'))
 
     name = models.CharField(
         _('Requirement name/description'), max_length=300,
