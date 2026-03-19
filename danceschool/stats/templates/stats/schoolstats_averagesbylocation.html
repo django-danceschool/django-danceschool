@@ -1,9 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Performance By Location" %}
   <a class="btn btn-sm btn-outline-secondary" href="{% url 'LocationPerformanceCSV' %}">{% trans "Download Data" %}</a>
 </h3>
@@ -13,84 +9,92 @@
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showLocationButton active">{% trans "Last 12 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.12 }}" class="nav-link showLocationButton active">{% trans "Last 12 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-year="{{ prior_year }}" class="nav-link showLocationButton">{% trans "All Time" %}</a>
+        <a href="#" data-start-date="" class="nav-link showLocationButton">{% trans "All Time" %}</a>
       </li>
     </ul>
   </div>
   <div class="card-body">
-    <div id="LocationPerformance"></div>
+    <canvas id="LocationPerformance" style="max-height:400px;"></canvas>
   </div>
 
 </div>
 
-
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  var locationPerformanceChart = c3.generate({
-      bindto: '#LocationPerformance',
-    data: {
-      url: "{% url 'LocationPerformanceJSON' %}?startDate={{ limitMonthDates.12 }}",
-      mimeType: 'json',
+  var locationChart = null;
+
+  function buildLocationChart(data) {
+    var labels = data.map(function (d) { return d.name; });
+
+    var ctx = document.getElementById('LocationPerformance');
+    if (locationChart) { locationChart.destroy(); }
+    locationChart = new Chart(ctx, {
       type: 'bar',
-      keys: {
-        x: 'name',
-        value: ['series','registrations']
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: '{% trans "# Series" %}',
+            data: data.map(function (d) { return d.series; }),
+            yAxisID: 'y',
+          },
+          {
+            label: '{% trans "# Registrations" %}',
+            data: data.map(function (d) { return d.registrations; }),
+            yAxisID: 'y1',
+          },
+        ],
       },
-      axes: {
-        series: 'y',
-        registrations: 'y2',
-      }
-    },
-    axis: {
-        labels: {
-          y: '{% trans "# Series" %}',
-          y2: '{% trans "# Registrations" %}',
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          y: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            title: { display: true, text: '{% trans "# Series" %}' },
+          },
+          y1: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: true,
+            title: { display: true, text: '{% trans "# Registrations" %}' },
+            grid: { drawOnChartArea: false },
+          },
         },
-        x: {
-            type: 'category' // this needed to load string x value
-        },
-        y2: {
-          show: true,
-        },
-    },
+      },
+    });
+  }
+
+  function loadLocationChart(startDate) {
+    var url = '{% url "LocationPerformanceJSON" %}';
+    if (startDate) { url += '?startDate=' + startDate; }
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildLocationChart(data); });
+  }
+
+  loadLocationChart('{{ limitMonthDates.12 }}');
+
+  document.querySelectorAll('.showLocationButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      loadLocationChart(btn.dataset.startDate);
+      document.querySelectorAll('.showLocationButton').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
   });
 
-
-
-  $(".showLocationButton").click(function(event) {
-      var startDate = $(this).attr('data-startDate');
-
-      locationPerformanceChart.load({
-        url: "{% url 'LocationPerformanceJSON' %}?startDate=" + startDate,
-        mimeType: 'json',
-        unload: true,
-        type: 'bar',
-        keys: {
-          x: 'name',
-          value: ['series','registrations']
-        },
-        axes: {
-          series: 'y',
-          registrations: 'y2',
-        },
-      });
-      $('.showLocationButton').removeClass('active');
-      $(this).addClass('active');
-      event.preventDefault();
-  });
-
-
-});
+}());
 </script>
 {% endaddtoblock %}

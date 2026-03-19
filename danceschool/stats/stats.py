@@ -871,8 +871,13 @@ def AdvanceRegistrationDaysJSON(request):
 
     for x in advance_days_sorted:
         cumulative += x[1]
+        # The ORM subtraction of two truncated dates returns a timedelta on
+        # most backends. Convert to a plain integer so it serializes cleanly.
+        days = x[0]
+        if hasattr(days, 'days'):
+            days = days.days
         results_list.append({
-            'days': x[0], 'count': x[1], 'cumulative': cumulative,
+            'days': days, 'count': x[1], 'cumulative': cumulative,
             'pct': 100 * (x[1] / total), 'cumulative_pct': 100 * (cumulative / total)
         })
     return JsonResponse(results_list, safe=False)

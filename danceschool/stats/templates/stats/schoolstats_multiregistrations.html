@@ -1,9 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Multi-Series Registrations and Hours Registered" %}</h3>
 
 <div class="card">
@@ -11,122 +7,131 @@
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.1 }}" class="nav-link showMultiSeriesButton active">{% trans "Last Month" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.1 }}" class="nav-link showMultiSeriesButton active">{% trans "Last Month" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.3 }}" class="nav-link showMultiSeriesButton">{% trans "Last 3 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.3 }}" class="nav-link showMultiSeriesButton">{% trans "Last 3 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.6 }}" class="nav-link showMultiSeriesButton">{% trans "Last 6 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.6 }}" class="nav-link showMultiSeriesButton">{% trans "Last 6 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showMultiSeriesButton">{% trans "Last 12 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.12 }}" class="nav-link showMultiSeriesButton">{% trans "Last 12 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" class="nav-link showMultiSeriesButton">{% trans "All Time" %}</a>
+        <a href="#" data-start-date="" class="nav-link showMultiSeriesButton">{% trans "All Time" %}</a>
       </li>
     </ul>
   </div>
   <div class="card-body row">
     <div class="col-md-6">
-      <h4 class="card-title">{% trans "Number of Series Registered" %}</h4>      
-      <div id="multiSeriesChart"></div>      
+      <h4 class="card-title">{% trans "Number of Series Registered" %}</h4>
+      <canvas id="multiSeriesChart" style="max-height:350px;"></canvas>
     </div>
     <div class="col-md-6">
       <h4 class="card-title">{% trans "Hours of Class Registered" %}</h4>
-      <div id="registrationHoursChart"></div>
+      <canvas id="registrationHoursChart" style="max-height:350px;"></canvas>
     </div>
-
   </div>
+
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  var multiSeriesChart = c3.generate({
-      bindto: '#multiSeriesChart',
-    data: {
-      url: "{% url 'MultiRegistrationJSON' %}?startDate={{ limitMonthDates.1 }}",
-      mimeType: 'json',
-      types: {
-        pct: 'bar',
-        cumulative_pct: 'bar',
+  var multiChart = null;
+  var hoursChart = null;
+
+  function buildMultiChart(data) {
+    var ctx = document.getElementById('multiSeriesChart');
+    if (multiChart) { multiChart.destroy(); }
+    multiChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: data.map(function (d) { return d.items; }),
+        datasets: [
+          {
+            label: '{% trans "% of Students" %}',
+            data: data.map(function (d) { return d.pct; }),
+          },
+          {
+            label: '{% trans "Cumulative %" %}',
+            data: data.map(function (d) { return d.cumulative_pct; }),
+          },
+        ],
       },
-      keys: {
-        x: 'items',
-        value: ['pct','cumulative_pct']
-      }
-    },
-    axis: {
-        x: {
-            type: 'category', // this needed to load string x value
-        },
-    }
-  });
-
-  var registrationHoursChart = c3.generate({
-      bindto: '#registrationHoursChart',
-    data: {
-      url: "{% url 'RegistrationHoursJSON' %}?startDate={{ limitMonthDates.1 }}",
-      mimeType: 'json',
-      types: {
-        pct: 'step',
-        cumulative_pct: 'area-step',
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } },
       },
-      keys: {
-        x: 'hours',
-        value: ['pct','cumulative_pct']
-      }
-    },
-    axis: {
-        x: {
-            type: 'indexed', // this needed to load string x value
+    });
+  }
+
+  function buildHoursChart(data) {
+    var ctx = document.getElementById('registrationHoursChart');
+    if (hoursChart) { hoursChart.destroy(); }
+    hoursChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: '{% trans "% of Students" %}',
+            data: data.map(function (d) { return { x: d.hours, y: d.pct }; }),
+            stepped: 'before',
+            pointRadius: 2,
+          },
+          {
+            label: '{% trans "Cumulative %" %}',
+            data: data.map(function (d) { return { x: d.hours, y: d.cumulative_pct }; }),
+            stepped: 'before',
+            fill: true,
+            pointRadius: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          x: { type: 'linear', title: { display: true, text: '{% trans "Hours" %}' } },
+          y: { beginAtZero: true },
         },
+      },
+    });
+  }
+
+  function loadMultiCharts(startDate) {
+    var multiUrl = '{% url "MultiRegistrationJSON" %}';
+    var hoursUrl = '{% url "RegistrationHoursJSON" %}';
+    if (startDate) {
+      multiUrl += '?startDate=' + startDate;
+      hoursUrl += '?startDate=' + startDate;
     }
-  });
+    fetch(multiUrl)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildMultiChart(data); });
+    fetch(hoursUrl)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildHoursChart(data); });
+  }
 
+  loadMultiCharts('{{ limitMonthDates.1 }}');
 
-  $('.showMultiSeriesButton').click(function(e) {
-      var startDate = $(this).attr('data-startDate');
-
-      multiSeriesChart.load({
-      url: "{% url 'MultiRegistrationJSON' %}?startDate=" + startDate,
-        mimeType: 'json',
-        types: {
-          pct: 'bar',
-          cumulative_pct: 'bar',
-        },
-        keys: {
-          x: 'items',
-          value: ['pct','cumulative_pct'],
-        },
-      });
-
-      registrationHoursChart.load({
-      url: "{% url 'RegistrationHoursJSON' %}?startDate=" + startDate,
-        mimeType: 'json',
-        types: {
-          pct: 'step',
-          cumulative_pct: 'area-step',
-        },
-        keys: {
-          x: 'hours',
-          value: ['pct','cumulative_pct'],
-        },
-      });
-
-      $('.showMultiSeriesButton').removeClass('active');
-      $(this).addClass('active');
+  document.querySelectorAll('.showMultiSeriesButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
       e.preventDefault();
+      loadMultiCharts(btn.dataset.startDate);
+      document.querySelectorAll('.showMultiSeriesButton').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
   });
 
-});
+}());
 </script>
 {% endaddtoblock %}

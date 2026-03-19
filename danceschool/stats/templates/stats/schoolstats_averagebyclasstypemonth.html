@@ -1,10 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
-
 <h3 class="mt-4">{% trans "Performance by Class Type and Month (Student-Hours)" %}</h3>
 
 <div class="card">
@@ -14,86 +9,92 @@
       {% for prior_year in recentYears reversed %}
         <li class="nav-item">
           <a href="#" data-year="{{ prior_year }}" class="nav-link classTypeMonthlyButton {% if forloop.first %}active{% endif %}">{{ prior_year }}</a>
-
         </li>
       {% endfor %}
     </ul>
   </div>
   <div class="card-body">
-    <div id="ClassTypeMonthlyPerformance"></div>
+    <canvas id="ClassTypeMonthlyPerformance" style="max-height:400px;"></canvas>
   </div>
+
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  // This function allows the classTypeMonthly chart to dynamically
-  // update which series are displayed.
-  function getClassTypeMonthlyJSON(url) {
-    d3.json(url, function(data) {
-        var keys = Object.keys(data[0]);
-        keys.splice(keys.indexOf("month_name"),1);
-        keys.splice(keys.indexOf("month"),1);
+  var classTypeMonthlyChart = null;
 
-        // Get totals for sorting of keys
-        var totals = $.grep(data, function(e){ 
-             return e.month == "Totals"; 
-        });
-
-        // Remove Totals from final data
-        var data = $.grep(data, function(e){ 
-             return e.month != "Totals"; 
-        });
-
-        // Sort the keys in reverse by the annual totals
-        keys.sort(function(a,b) {
-            var totalA = totals[0][a];
-            var totalB = totals[0][b];
-
-            if (totalA > totalB) return -1;
-            if (totalA < totalB) return 1;
-            return 0;
-        });
-
-        var classTypeMonthlyChart = c3.generate({
-            bindto: '#ClassTypeMonthlyPerformance',
-          data: {
-            json: data,
-            type: 'bar',
-            keys: {
-              x: 'month_name',
-                value: keys,
-            }
-          },
-          axis: {
-              x: {
-                  type: 'category' // this needed to load string x value
-              }
-          }
-        });
+  function buildClassTypeMonthlyChart(data) {
+    // Separate out the Totals row for sorting
+    var totalsRow = null;
+    var rows = data.filter(function (d) {
+      if (d.month === 'Totals') { totalsRow = d; return false; }
+      return true;
     });
 
+    if (!rows.length) return;
+
+    var typeKeys = Object.keys(rows[0]).filter(function (k) {
+      return k !== 'month' && k !== 'month_name';
+    });
+
+    // Sort class types by descending annual total
+    if (totalsRow) {
+      typeKeys.sort(function (a, b) {
+        return (totalsRow[b] || 0) - (totalsRow[a] || 0);
+      });
+    }
+
+    var labels = rows.map(function (d) { return d.month_name; });
+    var datasets = typeKeys.map(function (key) {
+      return {
+        label: key,
+        data: rows.map(function (d) { return d[key] != null ? d[key] : 0; }),
+        stack: 'stack',
+      };
+    });
+
+    var ctx = document.getElementById('ClassTypeMonthlyPerformance');
+    if (classTypeMonthlyChart) { classTypeMonthlyChart.destroy(); }
+    classTypeMonthlyChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true },
+        },
+      },
+    });
   }
 
-  getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours");
+  function loadClassTypeMonthlyChart(year) {
+    var url = '{% url "ClassTypeMonthlyJSON" %}?typeLimit=4&series=studenthours';
+    if (year) { url += '&year=' + year; }
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildClassTypeMonthlyChart(data); });
+  }
 
-  $('.classTypeMonthlyButton').click(function(e){
-      var year = $(this).attr('data-year');
-      
-      getClassTypeMonthlyJSON("{% url 'ClassTypeMonthlyJSON' %}?typeLimit=4&series=studenthours&year=" + year);
+  var initialBtn = document.querySelector('.classTypeMonthlyButton.active');
+  loadClassTypeMonthlyChart(initialBtn ? initialBtn.dataset.year : '');
 
-      $('.classTypeMonthlyButton').removeClass('active');
-      $(this).addClass('active');
+  document.querySelectorAll('.classTypeMonthlyButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
       e.preventDefault();
+      loadClassTypeMonthlyChart(btn.dataset.year);
+      document.querySelectorAll('.classTypeMonthlyButton').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
   });
 
-});
+}());
 </script>
 {% endaddtoblock %}

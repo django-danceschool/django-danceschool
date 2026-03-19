@@ -1,28 +1,17 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <style type="text/css" scoped>
-    .c3-line-MonthlyAverage {
-        stroke-width: 3px;
-    }
-  </style>
-{% endaddtoblock %}
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Students By Month of the Year" %}
   <a class="btn btn-sm btn-outline-secondary" href="{% url 'MonthlyPerformanceCSV' %}">{% trans "Download Data" %}</a>
 </h3>
 
-<p>{% blocktrans %}Which months of the year are the most successful?  Click the legend at the bottom to show/hide previous years.{% endblocktrans %}</p>
+<p>{% blocktrans %}Which months of the year are the most successful?  Click the legend to show/hide individual years.{% endblocktrans %}</p>
 
 <div class="card">
 
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
       <li class="nav-item">
-        <a href="#" class="nav-link active monthlyPerformanceButton" data-series="SeriesRegistrations">{% trans "Total Series Registrations" %}</a>
+        <a href="#" class="nav-link active monthlyPerformanceButton" data-series="EventRegistrations">{% trans "Total Series Registrations" %}</a>
       </li>
       <li class="nav-item">
         <a href="#" class="nav-link monthlyPerformanceButton" data-series="Registrations">{% trans "Total Registrations (unique students)" %}</a>
@@ -39,60 +28,85 @@
     </ul>
   </div>
   <div class="card-body">
-
-    <div id="MonthlyPerformance"></div>
-
+    <canvas id="MonthlyPerformance" style="max-height:400px;"></canvas>
   </div>
 
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  // Create the base monthly performance chart, then load the JSON data in
-  var monthlyPerformanceChart = c3.generate({
-    bindto: '#MonthlyPerformance',
-    data: {
-      url: "{% url 'MonthlyPerformanceJSON' %}",
-      mimeType: 'json',
-      hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
-      keys: {
-        x: 'month_name',
-        value: ['MonthlyAverage','{{ allYears|join:"','" }}'],
-      }
-    },
-    axis: {
-      x: {
-        type: 'category' // this needed to load string x value
-      }
-    }
-  });
+  var allYears = [{{ allYears|join:', ' }}];
+  var monthlyChart = null;
 
-  $('.monthlyPerformanceButton').click(function(e){
-    var series = $(this).attr('data-series')
+  function buildMonthlyChart(data) {
+    var labels = data.map(function (d) { return d.month_name; });
+    var datasets = [];
 
-    monthlyPerformanceChart.load({
-        unload: true,
-        url: "{% url 'MonthlyPerformanceJSON' %}?series=" + series,
-        mimeType: 'json',
-        hide: ['{{ allYears.0 }}','{{ allYears.1 }}','{{ allYears.2 }}','{{ allYears.3 }}','{{ allYears.4 }}'],
-        keys: {
-          x: 'month_name',
-          value: ['MonthlyAverage','{{ allYears|join:"','" }}']
-        }
+    // Bold "Monthly Average" line shown by default
+    datasets.push({
+      label: '{% trans "Monthly Average" %}',
+      data: data.map(function (d) { return d.MonthlyAverage; }),
+      borderWidth: 3,
+      pointRadius: 4,
+      tension: 0.2,
+      spanGaps: false,
     });
 
-    $('.monthlyPerformanceButton').removeClass('active');
-    $(this).addClass('active');
-    e.preventDefault();
+    // One line per year — show only the two most recent by default
+    var recentSet = {};
+    if (allYears.length) {
+      allYears.slice(-2).forEach(function (y) { recentSet[String(y)] = true; });
+    }
+    allYears.forEach(function (year) {
+      var yr = String(year);
+      datasets.push({
+        label: yr,
+        data: data.map(function (d) { return d[yr] != null ? d[yr] : null; }),
+        tension: 0.2,
+        hidden: !recentSet[yr],
+        spanGaps: false,
+      });
+    });
+
+    var ctx = document.getElementById('MonthlyPerformance');
+    if (monthlyChart) { monthlyChart.destroy(); }
+    monthlyChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: false } },
+      },
+    });
+  }
+
+  function loadMonthlyChart(url) {
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildMonthlyChart(data); });
+  }
+
+  loadMonthlyChart('{% url "MonthlyPerformanceJSON" %}');
+
+  document.querySelectorAll('.monthlyPerformanceButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var series = btn.dataset.series;
+      loadMonthlyChart('{% url "MonthlyPerformanceJSON" %}?series=' + series);
+      document.querySelectorAll('.monthlyPerformanceButton').forEach(function (b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+    });
   });
 
-});</script>
+}());
+</script>
 {% endaddtoblock %}

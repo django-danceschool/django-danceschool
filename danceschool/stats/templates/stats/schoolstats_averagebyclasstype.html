@@ -1,104 +1,85 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
-
 <h3 class="mt-4">{% trans "Performance by Class Type" %}
   <a class="btn btn-sm btn-outline-secondary" href="{% url 'AveragesByClassTypeCSV' %}">{% trans "Download Data" %}</a>
 </h3>
-
 
 <div class="card">
 
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
       <li class="nav-item">
-        <a href="#" class="nav-link active classTypeButton" data-startDate="{{ limitMonthDates.12 }}">{% trans "Last 12 Months" %}</a>
+        <a href="#" class="nav-link active classTypeButton" data-start-date="{{ limitMonthDates.12 }}">{% trans "Last 12 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" class="nav-link classTypeButton">{% trans "All Time" %}</a>
+        <a href="#" class="nav-link classTypeButton" data-start-date="">{% trans "All Time" %}</a>
       </li>
     </ul>
   </div>
 
   <div class="card-body">
-    <div id="ClassTypePerformance"></div>
+    <canvas id="ClassTypePerformance" style="max-height:400px;"></canvas>
   </div>
 
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  var avgAttendanceChart = null;
-  var initialShowList = ['Average Registrations']
-  var dataKey = 'type'
+  var classTypeChart = null;
+  var SHOW_DEFAULT = '{% trans "Average Registrations" %}';
 
-  function loadClassPerformanceChart(url) {
+  function buildClassTypeChart(data) {
+    if (!data.length) return;
 
-    $.getJSON(url, function(data) {
+    var labels = data.map(function (d) { return d.type; });
+    var keys = Object.keys(data[0]).filter(function (k) { return k !== 'type'; });
 
-        xKeySet = {}
-        for(var i in data) for(var k in data[i]) xKeySet[k] = true;
+    var datasets = keys.map(function (key) {
+      return {
+        label: key,
+        data: data.map(function (d) { return d[key] != null ? d[key] : null; }),
+        hidden: key !== SHOW_DEFAULT,
+      };
+    });
 
-        xkeys = []
-        for(var i in xKeySet) if (i != dataKey) xkeys.push(i);
-
-        var hideList = xkeys.slice();
-
-        for (var s in initialShowList) {
-           var index = hideList.indexOf(initialShowList[s]);
-           if (index > -1) hideList.splice(index, 1);
-        }
-
-        var chartData = {
-          json: data,
-          type: 'bar',
-          hide: hideList,
-          keys: {
-            x: dataKey,
-            value: xkeys,
-          }
-        }
-
-        if(avgAttendanceChart == null) {
-          avgAttendanceChart = c3.generate({
-            bindto: '#ClassTypePerformance',
-            data: chartData,
-            axis: {
-              x: {
-                type: 'category' // this needed to load string x value
-              }
-            },
-          });
-        }
-        else {
-          avgAttendanceChart.load(chartData);
-        }
-
+    var ctx = document.getElementById('ClassTypePerformance');
+    if (classTypeChart) { classTypeChart.destroy(); }
+    classTypeChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true } },
+      },
     });
   }
 
-  // Set the initial data on load
-  loadClassPerformanceChart("{% url 'AveragesByClassTypeJSON' %}?startDate={{ limitMonthDates.12 }}");
+  function loadClassTypeChart(startDate) {
+    var url = '{% url "AveragesByClassTypeJSON" %}';
+    if (startDate) { url += '?startDate=' + startDate; }
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildClassTypeChart(data); });
+  }
 
-  $('.classTypeButton').click(function(e){
-      var startDate = $(this).attr('data-startDate');
-      loadClassPerformanceChart("{% url 'AveragesByClassTypeJSON' %}?startDate=" + startDate);
-      $('.classTypeButton').removeClass('active');
-      $(this).addClass('active');
+  loadClassTypeChart('{{ limitMonthDates.12 }}');
+
+  document.querySelectorAll('.classTypeButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
       e.preventDefault();
+      loadClassTypeChart(btn.dataset.startDate);
+      document.querySelectorAll('.classTypeButton').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
   });
 
-});
+}());
 </script>
 {% endaddtoblock %}

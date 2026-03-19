@@ -650,7 +650,10 @@ Remember, all page settings and content can be changed later via the admin inter
                     'stats/schoolstats_averagebyclasstypemonth.html',
                     'stats/schoolstats_cohortretention.html',
                     'stats/schoolstats_averagesbylocation.html',
+                    'stats/schoolstats_advanceregistration.html',
+                    'stats/schoolstats_multiregistrations.html',
                     'stats/schoolstats_registrationtypes.html',
+                    'stats/schoolstats_referralcounts.html',
                     'stats/schoolstats_bestcustomers.html',
                 ]
                 for template in template_list:

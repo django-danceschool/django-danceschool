@@ -1,9 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Characteristics of Series Registrations" %}</h3>
 
 <p>{% blocktrans %}This chart indicates the proportion of series registrations that receive the student discount, the proportion of series registrations that are paid for at the door, etc.{% endblocktrans %}</p>
@@ -11,40 +7,45 @@
 <div class="card">
 
   <div class="card-body">
-    <div id="RegistrationTypeAverages"></div>
+    <canvas id="RegistrationTypeAverages" style="max-height:400px;"></canvas>
   </div>
 
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  var registrationTypeAveragesChart = c3.generate({
-      bindto: '#RegistrationTypeAverages',
-    data: {
-      url: "{% url 'RegistrationTypeAveragesJSON' %}",
-      mimeType: 'json',
-      type: 'bar',
-      hide: ['DropIn','Cancelled'],
-      keys: {
-        x: 'year',
-        value: ['Student','Door','DropIn','Cancelled']
-      }
-    },
-    axis: {
-        x: {
-            type: 'category', // this needed to load string x value
+  var SERIES_KEYS = ['Student', 'Door', 'DropIn', 'Cancelled'];
+  var HIDDEN_BY_DEFAULT = { DropIn: true, Cancelled: true };
+
+  fetch('{% url "RegistrationTypeAveragesJSON" %}')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      var labels = data.map(function (d) { return String(d.year); });
+      var datasets = SERIES_KEYS.map(function (key) {
+        return {
+          label: key,
+          data: data.map(function (d) { return d[key] != null ? d[key] : null; }),
+          hidden: !!HIDDEN_BY_DEFAULT[key],
+        };
+      });
+
+      new Chart(document.getElementById('RegistrationTypeAverages'), {
+        type: 'bar',
+        data: { labels: labels, datasets: datasets },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          scales: { y: { beginAtZero: true } },
         },
-    }
-  });
+      });
+    });
 
-});
+}());
 </script>
 {% endaddtoblock %}

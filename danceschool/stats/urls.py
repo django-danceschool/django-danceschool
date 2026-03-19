@@ -4,7 +4,6 @@ from . import stats
 from .views import SchoolStatsView
 
 urlpatterns = [
-    # These are stats CSV queries that will be eventually moved to the management app
     path('', SchoolStatsView.as_view(), name='schoolStatsView'),
 
     path('monthlyperformance/csv/', stats.MonthlyPerformanceCSV, name='MonthlyPerformanceCSV'),
