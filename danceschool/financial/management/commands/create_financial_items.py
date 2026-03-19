@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = 'Create expense items for recurring expenses and generate revenue items for registrations'
 
     def handle(self, *args, **options):
-        if getConstant('financial__autoGenerateExpensesEventStaff'):
+        if getConstant('financial__autoGenerateExpensesEventStaff') != 'disabled':
             self.stdout.write('Generating expense items for event staff...')
             createExpenseItemsForEvents()
             self.stdout.write('...done.')

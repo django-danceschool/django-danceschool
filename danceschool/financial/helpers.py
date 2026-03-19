@@ -448,56 +448,121 @@ def createExpenseItemsForEvents(request=None, datetimeTuple=None, rule=None, eve
         ).prefetch_related('occurrences').distinct()
 
         if rule.applyRateRule == rule.RateRuleChoices.hourly:
-            for staffer in staffers:
-                # Hourly expenses are always generated without checking for
-                # overlapping windows, because the periods over which hourly
-                # expenses are defined are disjoint.  However, hourly expenses
-                # are allocated directly to events, so we just need to create
-                # expenses for any events that do not already have an Expense
-                # Item generated under this rule.
-                replacements['event'] = staffer.event.name
-                replacements['name'] = staffer.staffMember.fullName
-                replacements['dates'] = staffer.event.localStartTime.strftime('%Y-%m-%d')
-                if (
-                        staffer.event.localStartTime.strftime('%Y-%m-%d') !=
-                        staffer.event.localEndTime.strftime('%Y-%m-%d')
-                ):
-                    replacements['dates'] += ' %s %s' % (
-                        _('to'), staffer.event.localEndTime.strftime('%Y-%m-%d')
+            if getConstant('financial__autoGenerateExpensesEventStaff') == 'per_occurrence':
+                # Per-occurrence mode: create one ExpenseItem per staffer per
+                # occurrence, with hours proportional to occurrence duration.
+                # Re-query without the whole-staffer exclusion so we can check
+                # at the individual occurrence level inside the loop.
+                staffers_per_occ = EventStaffMember.objects.filter(
+                    eventstaff_filter & event_timefilters
+                ).select_related('staffMember').prefetch_related('occurrences').distinct()
+
+                for staffer in staffers_per_occ:
+                    allocation = staffer.allocationByOccurrence
+                    relevant_occs = (
+                        staffer.occurrences.filter(cancelled=False) or
+                        staffer.event.eventoccurrence_set.filter(cancelled=False)
                     )
 
-                # Find or create the TransactionParty associated with the staff member.
-                staffer_party = TransactionParty.objects.get_or_create(
-                    staffMember=staffer.staffMember,
-                    defaults={
-                        'name': staffer.staffMember.fullName,
-                        'user': getattr(staffer.staffMember, 'userAccount', None)
+                    staffer_party = TransactionParty.objects.get_or_create(
+                        staffMember=staffer.staffMember,
+                        defaults={
+                            'name': staffer.staffMember.fullName,
+                            'user': getattr(staffer.staffMember, 'userAccount', None)
+                        }
+                    )[0]
+
+                    for occ in relevant_occs:
+                        # Skip if an expense already exists for this
+                        # staffer + occurrence + rule combination.
+                        if staffer.related_expenses.filter(
+                            item__expenseRule=rule,
+                            occurrence=occ,
+                        ).exists():
+                            continue
+
+                        occ_hours = (
+                            allocation.get((occ.id, staffer.event.id), {}).get('duration', 0) / 3600
+                        )
+                        if not occ_hours:
+                            continue
+
+                        replacements['event'] = staffer.event.name
+                        replacements['name'] = staffer.staffMember.fullName
+                        replacements['dates'] = occ.localStartTime.strftime('%Y-%m-%d')
+
+                        new_item = ExpenseItem.objects.create(
+                            event=staffer.event,
+                            category=getExpenseCategoryForStaffer(staffer),
+                            expenseRule=rule,
+                            description='%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
+                            submissionUser=submissionUser,
+                            hours=occ_hours,
+                            wageRate=rule.rentalRate,
+                            total=occ_hours * rule.rentalRate,
+                            accrualDate=occ.startTime,
+                            payTo=staffer_party,
+                        )
+
+                        ExpensePurpose.objects.create(
+                            item=new_item,
+                            purpose=staffer,
+                            occurrence=occ,
+                        )
+
+                        generate_count += 1
+            else:
+                # Per-event mode (default): one ExpenseItem per EventStaffMember.
+                for staffer in staffers:
+                    # Hourly expenses are always generated without checking for
+                    # overlapping windows, because the periods over which hourly
+                    # expenses are defined are disjoint.  However, hourly expenses
+                    # are allocated directly to events, so we just need to create
+                    # expenses for any events that do not already have an Expense
+                    # Item generated under this rule.
+                    replacements['event'] = staffer.event.name
+                    replacements['name'] = staffer.staffMember.fullName
+                    replacements['dates'] = staffer.event.localStartTime.strftime('%Y-%m-%d')
+                    if (
+                            staffer.event.localStartTime.strftime('%Y-%m-%d') !=
+                            staffer.event.localEndTime.strftime('%Y-%m-%d')
+                    ):
+                        replacements['dates'] += ' %s %s' % (
+                            _('to'), staffer.event.localEndTime.strftime('%Y-%m-%d')
+                        )
+
+                    # Find or create the TransactionParty associated with the staff member.
+                    staffer_party = TransactionParty.objects.get_or_create(
+                        staffMember=staffer.staffMember,
+                        defaults={
+                            'name': staffer.staffMember.fullName,
+                            'user': getattr(staffer.staffMember, 'userAccount', None)
+                        }
+                    )[0]
+
+                    params = {
+                        'event': staffer.event,
+                        'category': getExpenseCategoryForStaffer(staffer),
+                        'expenseRule': rule,
+                        'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
+                        'submissionUser': submissionUser,
+                        'hours': staffer.netHours,
+                        'wageRate': rule.rentalRate,
+                        'total': staffer.netHours * rule.rentalRate,
+                        'accrualDate': staffer.event.startTime,
+                        'payTo': staffer_party,
                     }
-                )[0]
 
-                params = {
-                    'event': staffer.event,
-                    'category': getExpenseCategoryForStaffer(staffer),
-                    'expenseRule': rule,
-                    'description': '%(type)s %(to)s %(name)s %(for)s: %(event)s, %(dates)s' % replacements,
-                    'submissionUser': submissionUser,
-                    'hours': staffer.netHours,
-                    'wageRate': rule.rentalRate,
-                    'total': staffer.netHours * rule.rentalRate,
-                    'accrualDate': staffer.event.startTime,
-                    'payTo': staffer_party,
-                }
+                    new_item = ExpenseItem.objects.create(**params)
 
-                new_item = ExpenseItem.objects.create(**params)
+                    # Record that this staffing was the purpose of the
+                    # newly-generated expense item.
+                    ExpensePurpose.objects.create(
+                        item=new_item,
+                        purpose=staffer
+                    )
 
-                # Record that this staffing was the purpose of the
-                # newly-generated expense item.
-                ExpensePurpose.objects.create(
-                    item=new_item,
-                    purpose=staffer
-                )
-
-                generate_count += 1
+                    generate_count += 1
         else:
             # Non-hourly expenses are generated by constructing the time
             # intervals in which the occurrence occurs, and removing from that

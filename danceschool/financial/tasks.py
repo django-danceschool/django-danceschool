@@ -25,7 +25,7 @@ def updateFinancialItems():
 
     logger.info('Creating automatically-generated financial items.')
 
-    if getConstant('financial__autoGenerateExpensesEventStaff'):
+    if getConstant('financial__autoGenerateExpensesEventStaff') != 'disabled':
         createExpenseItemsForEvents()
     if getConstant('financial__autoGenerateExpensesVenueRental'):
         createExpenseItemsForVenueRental()

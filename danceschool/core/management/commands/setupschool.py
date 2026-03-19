@@ -409,7 +409,7 @@ a daily/weekly/monthly ongoing basis as well.
             )
 
             generate_staff = self.boolean_input('Auto-generate staff expense items for completed events [Y/n]', True)
-            prefs['financial__autoGenerateExpensesEventStaff'] = generate_staff
+            prefs['financial__autoGenerateExpensesEventStaff'] = 'per_event' if generate_staff else 'disabled'
 
             if generate_staff:
                 # This just ensures that the standard staff categories are created before launch

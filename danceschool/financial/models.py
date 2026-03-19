@@ -1499,6 +1499,17 @@ class ExpensePurpose(models.Model):
     object_id = models.PositiveIntegerField()
     purpose = GenericForeignKey('content_type', 'object_id')
 
+    # Set when the expense item was generated for a specific occurrence
+    # (per-occurrence mode). Null means the item covers the whole event.
+    occurrence = models.ForeignKey(
+        EventOccurrence,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='expense_purposes',
+        verbose_name=_('Event occurrence'),
+    )
+
     def __str__(self):
         return str(_(
             'Purpose for expense item #{item_id}: {purpose}'.format(
