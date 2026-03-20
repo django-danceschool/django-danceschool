@@ -269,7 +269,10 @@ def linkCartEventRegistration(sender, **kwargs):
         item.data['_initial_total'] = allocated_totals.get(this_event.id, item.grossTotal)
 
     item.total = item.data.get('_initial_total', item.grossTotal)
-    item.taxRate = getConstant('registration__salesTaxRate') or 0
+    if isinstance(this_event, Series):
+        item.taxRate = getConstant('registration__seriesSalesTaxRate') or 0
+    else:
+        item.taxRate = getConstant('registration__publicEventSalesTaxRate') or 0
     item.calculateTaxes()
     item.description = this_event.name
 

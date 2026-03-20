@@ -3330,7 +3330,7 @@ class Invoice(EmailRecipientMixin, models.Model):
         calculate_taxes = kwargs.pop('calculate_taxes', False)
         grossTotal = kwargs.pop('grossTotal', None)
         status = kwargs.pop('status', cls.PaymentStatus.preliminary)
-        tax_rate = kwargs.pop('tax_rate', None) or getConstant('registration__salesTaxRate')
+        tax_rate = kwargs.pop('tax_rate', None) or 0
 
         new_invoice = cls(
             grossTotal=grossTotal or amount,
@@ -3515,7 +3515,11 @@ class InvoiceItem(models.Model):
         '''
 
         if not self.taxRate:
-            self.taxRate = (getConstant('registration__salesTaxRate') or 0)
+            er = getattr(self, 'eventRegistration', None)
+            if er and isinstance(er.event, Series):
+                self.taxRate = getConstant('registration__seriesSalesTaxRate') or 0
+            elif er:
+                self.taxRate = getConstant('registration__publicEventSalesTaxRate') or 0
 
         if self.taxRate > 0:
             if self.invoice.buyerPaysSalesTax:
@@ -4199,9 +4203,14 @@ class EventRegistration(EmailRecipientMixin, models.Model):
             if total is None:
                 total = grossTotal
 
+            if isinstance(self.event, Series):
+                _tax_rate = getConstant('registration__seriesSalesTaxRate') or 0
+            else:
+                _tax_rate = getConstant('registration__publicEventSalesTaxRate') or 0
+
             new_item = InvoiceItem(
                 invoice=invoice, fees=0, grossTotal=grossTotal, total=total,
-                taxRate=getConstant('registration__salesTaxRate') or 0
+                taxRate=_tax_rate
             )
 
             # Attach the new invoice item to its parent if the event registration
