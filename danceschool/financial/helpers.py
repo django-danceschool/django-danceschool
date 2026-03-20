@@ -1273,11 +1273,24 @@ def prepareFinancialDetails(**kwargs):
             RevenueItem.objects.filter(**rev_timeFilters).annotate(
                 basisDate=Min(rev_basis)
             ).select_related(
-                'category', 'event', 'invoiceItem', 'receivedFrom'
+                'category', 'invoiceItem', 'receivedFrom'
             ).prefetch_related(
                 'event__eventoccurrence_set'
             ).order_by(rev_basis)
         )
+
+        # select_related('event') returns bare base Event instances, bypassing
+        # django-polymorphic dispatch.  Re-fetch using the polymorphic manager so
+        # that each item.event is the correct subclass (Series, PublicEvent, etc.)
+        # and its __str__ / name reflect the actual event name.
+        revenue_event_ids = list({item.event_id for item in revenueItems if item.event_id})
+        if revenue_event_ids:
+            real_events = {
+                e.id: e for e in Event.objects.filter(id__in=revenue_event_ids)
+            }
+            for item in revenueItems:
+                if item.event_id:
+                    item.event = real_events.get(item.event_id, item.event)
 
         context['expenseItems'] = expenseItems
         context['revenueItems'] = revenueItems
