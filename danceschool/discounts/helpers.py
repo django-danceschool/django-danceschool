@@ -168,11 +168,11 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
                 item.get('quantity', 1)
             )
 
-    # TODO: Student status
-    # student = getattr(eligible_it.first(), 'student', False)
+    student = reg is not None and reg.eventregistration_set.filter(student=True).exists()
     return {
         'cart_object_list': eligible_items,
-        'ineligible_total': ineligible_total
+        'ineligible_total': ineligible_total,
+        'student': student,
     }
 
 

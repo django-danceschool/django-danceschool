@@ -83,6 +83,7 @@ def linkCartEventRegistration(sender, **kwargs):
 
     item_id = item_data.get('item_id')
     sku = item_data.get('sku', '')
+    cart_student = kwargs.get('cart_student', False)
 
     # Find the event in the purchasable registry (uses already-fetched querysets).
     this_event = None
@@ -244,6 +245,7 @@ def linkCartEventRegistration(sender, **kwargs):
         event=this_event,
         invoiceItem=item,
         registration=registration,
+        student=cart_student,
     )
     created_eventreg = True
 

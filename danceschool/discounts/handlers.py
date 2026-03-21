@@ -60,14 +60,17 @@ def getBestDiscount(sender, **kwargs):
     if (customer and customer.numEventRegistrations > 0) or not customer_final:
         newCustomer = False
 
+    # student=True if the signal caller explicitly flagged it (e.g. CartView
+    # discount preview) OR if any EventRegistration on this reg has student=True.
+    student = kwargs.get('student', False) or cart_kwargs.get('student', False)
+
     # Get the applicable discounts and sort them in ascending category order
     # so that the best discounts are always listed in the order that they will
     # be applied.
     discountCodesApplicable = getApplicableDiscountCombos(
         cart_object_list=eligible_list,
         customer=customer, newCustomer=newCustomer,
-        # TODO fix student status
-        student=cart_kwargs.get('student', False),
+        student=student,
         dateTime=getattr(reg, 'dateTime', timezone.now()),
         payAtDoor=getattr(reg, 'payAtDoor', False),
         voucher_code=voucher_code, addOn=False, cannotCombine=False,
@@ -137,7 +140,7 @@ def getBestDiscount(sender, **kwargs):
     uncombinedCodesApplicable = getApplicableDiscountCombos(
         cart_object_list=cart_kwargs.get('cart_object_list'),
         customer=customer, newCustomer=newCustomer,
-        student=cart_kwargs.get('student', False),
+        student=student,
         dateTime=getattr(reg, 'dateTime', timezone.now()),
         payAtDoor=getattr(reg, 'payAtDoor', False),
         voucher_code=voucher_code, addOn=False, cannotCombine=True,

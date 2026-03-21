@@ -94,6 +94,12 @@ document.addEventListener('DOMContentLoaded', function () {
             delete raw.voucherId;
         }
 
+        // Student flag: propagate to cart-level state so the server can
+        // apply student-only discounts.
+        if (raw.student === 'True' || raw.student === 'true' || raw.student === true) {
+            cart.student = true;
+        }
+
         const newItem = translateButtonData(raw);
         const existingIdx = cart.items.findIndex(function (i) { return i.sku === newItem.sku; });
         let updatedItems;

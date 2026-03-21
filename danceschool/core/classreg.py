@@ -708,6 +708,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
                 prior_response=response,
                 purchasable_registry=self.purchasable_registry,
                 request=request,
+                cart_student=cart.get('student', False),
             )
 
             for s in item_signal_responses:
@@ -804,6 +805,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             cart_items=event_items,
             customer_final=False,
             voucher_code=cart_data.get('discount_code'),
+            student=cart_data.get('student', False),
         )
         discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 
@@ -907,6 +909,10 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         checkout = new_cart_data.pop('checkout', False)
 
         request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = new_cart_data
+        # Persist the student flag at the session top level so StudentInfoView
+        # can pre-populate the student checkbox even before checkout.
+        if new_cart_data.get('student'):
+            request.session[REG_VALIDATION_STR]['student'] = True
         request.session.modified = True
 
         # Handle checkout flow
