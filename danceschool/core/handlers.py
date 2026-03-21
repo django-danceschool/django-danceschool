@@ -139,14 +139,23 @@ def linkCartEventRegistration(sender, **kwargs):
     response['parent_item_id'] = item_data.get('parent_item_id', None)
     response['dropIn'] = is_dropin
 
-    # Resolve the dance role from the SKU (e.g. EVENT_5_ROLE_3 -> EventRole id=3).
+    # Resolve the dance role from the SKU.  The numeric suffix is the
+    # DanceRole id (role_id) — not the EventRole pk — so that the SKU format
+    # is stable even when EventRole records do not exist for the event.
     this_role = None
     if '_ROLE_' in sku:
         try:
-            eventrole_id = int(sku.rsplit('_ROLE_', 1)[-1])
-            eventrole = EventRole.objects.get(id=eventrole_id, event=this_event)
-            this_role = eventrole.role
-            response.update({'roleId': eventrole.id, 'roleName': this_role.name})
+            role_id = int(sku.rsplit('_ROLE_', 1)[-1])
+            try:
+                # Prefer the EventRole when one exists (gives us capacity info).
+                eventrole = EventRole.objects.get(role__id=role_id, event=this_event)
+                this_role = eventrole.role
+            except ObjectDoesNotExist:
+                # No EventRole record (e.g. roles come from the DanceType);
+                # look up the DanceRole directly.
+                from .models import DanceRole
+                this_role = DanceRole.objects.get(id=role_id)
+            response.update({'roleId': role_id, 'roleName': this_role.name})
         except (ValueError, ObjectDoesNotExist):
             errors.append({'code': 'invalid_role', 'message': _('Invalid role specified.')})
 

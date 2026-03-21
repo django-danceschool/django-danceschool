@@ -136,8 +136,8 @@ document.addEventListener('DOMContentLoaded', function () {
         return catalog[sku] ? catalog[sku].price : 0;
     }
 
-    function lookupDescription(sku) {
-        return catalog[sku] ? catalog[sku].description : sku;
+    function lookupDescription(sku, fallback) {
+        return catalog[sku] ? catalog[sku].description : (fallback || sku);
     }
 
     // ===== Local cart state =====
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (item.choiceId) { tr.dataset.choiceId = item.choiceId; }
 
             tr.innerHTML =
-                '<td>' + lookupDescription(item.sku) + '</td>' +
+                '<td>' + lookupDescription(item.sku, item.description) + '</td>' +
                 '<td>' + regParams.currencySymbol + fmt(lineTotal) +
                 '<button type="button" class="close remove-item" aria-label="Remove"' +
                 ' data-sku="' + item.sku + '">' +

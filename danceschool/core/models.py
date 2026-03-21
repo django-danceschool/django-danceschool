@@ -1873,7 +1873,7 @@ class EventRole(models.Model):
 
     @property
     def sku(self):
-        return f'EVENT_{self.event.id}_ROLE_{self.id}'
+        return f'EVENT_{self.event.id}_ROLE_{self.role_id}'
 
     def price(self, payAtDoor):
         return self.event.getBasePrice(payAtDoor=payAtDoor)

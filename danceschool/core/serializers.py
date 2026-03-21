@@ -5,7 +5,7 @@ from .models import Event, EventRole
 
 class EventRoleSerializer(serializers.ModelSerializer):
     model_class = serializers.CharField(default='EventRole', read_only=True)
-    description = serializers.CharField(source='role__name', read_only=True)
+    description = serializers.CharField(source='role.name', read_only=True)
     price = serializers.SerializerMethodField()
     count_registrations = serializers.SerializerMethodField()
     quantity_available = serializers.SerializerMethodField()

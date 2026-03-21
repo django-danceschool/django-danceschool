@@ -48,9 +48,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 sku: sku,
                 quantity: parseInt(raw.quantity) || 1,
                 choiceId: raw.choiceId || null,
+                // Cache the event name so lookupDescription() can fall back to
+                // it when the SKU is not yet in the catalog.
+                description: raw.name || raw.description || null,
                 // Cache the door price from data-price so lookupPrice() has a
-                // fallback when the catalog SKU scheme differs (e.g. ROLE ID vs
-                // EventRole ID mismatch between the register page and the API).
+                // fallback when the catalog SKU is not yet populated.
                 price: raw.price ? parseFloat(raw.price) : null,
             };
             if (raw.dropIn === 'true' || raw.dropIn === true) { item.dropIn = true; }
