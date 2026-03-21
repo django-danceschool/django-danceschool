@@ -85,6 +85,7 @@ class RegisterMerchPlugin(PluginTemplateMixin, CMSPluginBase):
                     'choiceId': choiceId,
                     'itemId': choice.item.id,
                     'variantId': choice.id,
+                    'sku': choice.sku,
                 })
                 counter += 1
 

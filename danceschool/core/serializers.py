@@ -56,11 +56,39 @@ class VariantsField(serializers.ListField):
 
         role_data = EventRoleSerializer(roles, many=True).data
 
+        # For Series events with no EventRole records, fall back to DanceType
+        # roles so that the catalog SKUs match the buttons the template renders.
+        if not roles:
+            from .models import Series
+            if isinstance(event, Series):
+                try:
+                    dtype_roles = list(
+                        event.classDescription.danceTypeLevel.danceType.roles.all()
+                    )
+                except Exception:
+                    dtype_roles = []
+                if dtype_roles:
+                    payAtDoor = self.context.get('payAtDoor', False)
+                    price = event.getBasePrice(payAtDoor=payAtDoor)
+                    role_data = [
+                        {
+                            'sku': f'EVENT_{event.id}_ROLE_{role.id}',
+                            'description': role.name,
+                            'price': price,
+                            'quantity_available': None,
+                            'model_class': 'Event',
+                            'id': event.id,
+                            'capacity': event.capacity,
+                            'count_registrations': None,
+                        }
+                        for role in dtype_roles
+                    ]
+
         # Now compute synthetic ones
         synthetic_variants = []
 
         # Add general admission if no roles have been specified
-        if not roles:
+        if not roles and not role_data:
             numRegistered = event.getNumRegistered(
                 includeTemporaryRegs=self.context.get(
                     'includeTemporaryRegs', False
@@ -89,7 +117,7 @@ class VariantsField(serializers.ListField):
             getattr(event, 'allowDropins', False)
         ):
             dropin_price = event.getBasePrice(dropIns=1)
-            if roles:
+            if role_data:
                 for role_variant in role_data:
                     synthetic_variants.append({
                         **role_variant,
@@ -99,6 +127,7 @@ class VariantsField(serializers.ListField):
                         'dropIn': True,
                     })
             else:
+                # No roles at all — add a single general drop-in variant.
                 numRegistered = event.getNumRegistered(
                     includeTemporaryRegs=self.context.get('includeTemporaryRegs', False),
                     dateTime=self.context.get('cart_datetime', None),

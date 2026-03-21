@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return Object.assign({}, serverItem, {
                     choiceId: sent ? sent.choiceId : null,
                     price: sent ? sent.price : null,
+                    description: sent ? sent.description : null,
                 });
             });
             cart.student = data.student || false;

@@ -62,13 +62,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return item;
         }
 
-        if (raw.type === 'MerchItem' || raw.type === 'merch') {
+        if (raw.type === 'MerchItem' || raw.type === 'merch' || raw.type === 'merchItem') {
             return {
                 item_type: 'MerchItem',
                 item_id: parseInt(raw.itemId),
                 sku: raw.sku,
                 quantity: parseInt(raw.quantity) || 1,
                 choiceId: raw.choiceId || null,
+                description: raw.description || null,
             };
         }
 
