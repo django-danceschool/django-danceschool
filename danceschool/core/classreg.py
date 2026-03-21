@@ -806,6 +806,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             customer_final=False,
             voucher_code=cart_data.get('discount_code'),
             student=cart_data.get('student', False),
+            payAtDoor=self.payAtDoor,
         )
         discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
 

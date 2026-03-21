@@ -44,12 +44,16 @@ def getBestDiscount(sender, **kwargs):
     reg = kwargs.pop('registration', None)
     invoice = kwargs.get('invoice', None)
     cart_items = kwargs.get('cart_items', [])
-    cart_kwargs = prepareCartObjects(reg, invoice, cart_items)
-    eligible_list = cart_kwargs.get('cart_object_list')
     customer_final = kwargs.pop('customer_final', False)
 
-    # TODO: Update logic on this (also needs to be passed to prepareCartObjects)
-    payAtDoor = getattr(reg, 'payAtDoor', False)
+    # Use payAtDoor from the Registration when available; fall back to the
+    # value passed explicitly by the caller (e.g. CartView preview).
+    payAtDoor = getattr(reg, 'payAtDoor', None)
+    if payAtDoor is None:
+        payAtDoor = kwargs.get('payAtDoor', False)
+
+    cart_kwargs = prepareCartObjects(reg, invoice, cart_items, payAtDoor=payAtDoor)
+    eligible_list = cart_kwargs.get('cart_object_list')
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
     customer = Customer.objects.filter(
@@ -72,7 +76,7 @@ def getBestDiscount(sender, **kwargs):
         customer=customer, newCustomer=newCustomer,
         student=student,
         dateTime=getattr(reg, 'dateTime', timezone.now()),
-        payAtDoor=getattr(reg, 'payAtDoor', False),
+        payAtDoor=payAtDoor,
         voucher_code=voucher_code, addOn=False, cannotCombine=False,
     )
     discountCodesApplicable.sort(key=lambda x: x.code.category.order)
@@ -142,7 +146,7 @@ def getBestDiscount(sender, **kwargs):
         customer=customer, newCustomer=newCustomer,
         student=student,
         dateTime=getattr(reg, 'dateTime', timezone.now()),
-        payAtDoor=getattr(reg, 'payAtDoor', False),
+        payAtDoor=payAtDoor,
         voucher_code=voucher_code, addOn=False, cannotCombine=True,
     )
 
