@@ -371,7 +371,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const btn = e.target.closest('.remove-item');
             if (!btn) { return; }
             const sku = btn.dataset.sku;
-            syncCart(cart.items.filter(function (i) { return i.sku !== sku; }));
+            const remainingItems = cart.items.filter(function (i) { return i.sku !== sku; });
+            if (remainingItems.length === 0) {
+                cart.discount_code = '';
+                cart.voucher_preview = null;
+                cart.student = false;
+            }
+            syncCart(remainingItems);
         });
 
         // Remove voucher.
