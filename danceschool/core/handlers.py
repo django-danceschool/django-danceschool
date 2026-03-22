@@ -265,6 +265,31 @@ def linkCartEventRegistration(sender, **kwargs):
         this_eventreg.dropIn = True
         this_eventreg.role = this_role
         item.grossTotal = this_event.getBasePrice(dropIns=1)
+
+        # Store the occurrence ID(s) so Registration.finalize() can link
+        # this drop-in to the correct EventOccurrence.
+        dropin_occurrence_id = item_data.get('dropInOccurrence')
+        if dropin_occurrence_id:
+            this_eventreg.data['__dropInOccurrences'] = [dropin_occurrence_id]
+
+        # Replicate the door check-in logic from create_event_registration.
+        checkin_rule = getConstant('registration__doorCheckInRule')
+        if registration.payAtDoor and checkin_rule == 'E':
+            this_eventreg.data['__checkInEvent'] = True
+        elif registration.payAtDoor and checkin_rule == 'O' and dropin_occurrence_id:
+            best_occ = this_event.eventoccurrence_set.filter(
+                id=dropin_occurrence_id,
+                startTime__gte=ensure_localtime(timezone.now()) - timedelta(minutes=45)
+            ).first()
+            this_eventreg.data['__checkInOccurrence'] = getattr(best_occ, 'id', None)
+        elif registration.payAtDoor and checkin_rule == 'O':
+            this_eventreg.data['__checkInOccurrence'] = getattr(
+                this_event.getNextOccurrence(
+                    ensure_localtime(timezone.now()) - timedelta(minutes=45)
+                ),
+                'id',
+                None
+            )
     else:
         this_eventreg.dropIn = False
         this_eventreg.role = this_role

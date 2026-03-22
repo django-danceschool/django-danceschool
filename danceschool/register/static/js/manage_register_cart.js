@@ -22,6 +22,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Translates the data attributes from .add-item buttons (legacy format used
     // by existing register plugin templates) into CartView item format.
 
+    // Template data attributes use Python-style booleans ("True"/"False").
+    // This helper matches both "True" and "true" (and the boolean true).
+    function isTruthy(v) {
+        return v === true || (typeof v === 'string' && v.toLowerCase() === 'true');
+    }
+
     function translateButtonData(raw) {
         // Already in CartView format.
         if (raw.itemType || raw.item_type) {
@@ -55,10 +61,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 // fallback when the catalog SKU is not yet populated.
                 price: raw.price ? parseFloat(raw.price) : null,
             };
-            if (raw.dropIn === 'true' || raw.dropIn === true) { item.dropIn = true; }
-            if (raw.requireFull !== undefined) { item.requireFull = (raw.requireFull === 'true'); }
-            if (raw.autoSubmit !== undefined) { item.autoSubmit = (raw.autoSubmit === 'true'); }
-            if (raw.autoFulfill !== undefined) { item.autoFulfill = (raw.autoFulfill === 'true'); }
+            if (isTruthy(raw.dropIn)) {
+                item.dropIn = true;
+                if (raw.dropInOccurrence) {
+                    item.dropInOccurrence = parseInt(raw.dropInOccurrence);
+                }
+            }
+            if (raw.requireFull !== undefined) { item.requireFull = isTruthy(raw.requireFull); }
+            if (raw.autoSubmit !== undefined) { item.autoSubmit = isTruthy(raw.autoSubmit); }
+            if (raw.autoFulfill !== undefined) { item.autoFulfill = isTruthy(raw.autoFulfill); }
             return item;
         }
 

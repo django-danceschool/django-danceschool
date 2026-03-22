@@ -198,6 +198,7 @@ class CartItemSerializer(serializers.Serializer):
 
     # These are properties that can only be set for door registrations:
     dropIn = serializers.BooleanField(required=False)
+    dropInOccurrence = serializers.IntegerField(required=False, allow_null=True)
     requireFull = serializers.BooleanField(required=False)
     autoSubmit = serializers.BooleanField(required=False)
     autoFulfill = serializers.BooleanField(required=False)
