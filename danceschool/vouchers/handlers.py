@@ -127,6 +127,7 @@ def checkVoucherCode(sender, **kwargs):
     voucherId = kwargs.get('voucherId', None)
     customer = kwargs.get('customer', None)
     validate_customer = kwargs.get('validateCustomer', False)
+    pay_at_door = kwargs.get('payAtDoor', None)
 
     errors = []
 
@@ -177,9 +178,14 @@ def checkVoucherCode(sender, **kwargs):
             ]
         )
 
+    # Use the explicitly-passed payAtDoor when available (e.g. cart preview);
+    # fall back to the registration's attribute when we have one.
+    if pay_at_door is None:
+        pay_at_door = getattr(registration, 'payAtDoor', False)
+
     return obj.validate(
         customer=customer, events=events,
-        payAtDoor=getattr(registration, 'payAtDoor', False),
+        payAtDoor=pay_at_door,
         raise_errors=False, return_amount=True,
         validate_customer=validate_customer
     )

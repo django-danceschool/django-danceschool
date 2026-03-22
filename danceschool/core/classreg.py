@@ -863,6 +863,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             customer=None,
             validateCustomer=False,
             invoice=None,
+            payAtDoor=self.payAtDoor,
         )
         responses = [r[1] for r in responses if len(r) > 1 and r[1]]
         if not responses:
