@@ -169,8 +169,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const nameSelect = document.getElementById('id_name');
     if (nameSelect) {
         nameSelect.addEventListener('change', function () {
-            const opt = this.options[this.selectedIndex];
-            const optData = opt ? opt.dataset : {};
+            // Select2 (via django-autocomplete-light) stores result data in
+            // jQuery's internal data store on the <option> element, not as
+            // plain HTML data-* attributes.  jQuery is always present on the
+            // CMS admin page, so use it to read the option data.
+            const $ = window.jQuery;
+            const optData = $ ? ($(this).find('option:selected').data() || {}) : {};
+
 
             if (!optData.type) {
                 clearCustomerPanels();
