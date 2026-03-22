@@ -952,8 +952,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = new_cart_data
         # Persist the student flag at the session top level so StudentInfoView
         # can pre-populate the student checkbox even before checkout.
-        if new_cart_data.get('student'):
-            request.session[REG_VALIDATION_STR]['student'] = True
+        request.session[REG_VALIDATION_STR]['student'] = bool(new_cart_data.get('student'))
         request.session.modified = True
 
         # Handle checkout flow

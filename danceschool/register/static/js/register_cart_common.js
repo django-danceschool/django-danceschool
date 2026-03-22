@@ -359,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function () {
         emptyCartBtn.addEventListener('click', function () {
             cart.discount_code = '';
             cart.voucher_preview = null;
+            cart.student = false;
             syncCart([]);
         });
     }
