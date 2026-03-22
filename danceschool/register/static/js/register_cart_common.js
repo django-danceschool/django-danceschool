@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
         student: false,
         payAtDoor: regParams.payAtDoor,
         discount_preview: null,
+        voucher_preview: null,
     };
 
     // ===== Cart display =====
@@ -229,6 +230,35 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
+        // Voucher preview rows.
+        const voucherPreview = cart.voucher_preview;
+        const preTaxVoucherList = document.getElementById('preTaxVoucherList');
+        const postTaxVoucherList = document.getElementById('postTaxVoucherList');
+        if (voucherPreview) {
+            if (voucherPreview.error) {
+                addAlert(voucherPreview.error);
+                cart.discount_code = '';
+                cart.voucher_preview = null;
+            } else {
+                const targetList = voucherPreview.before_tax ? preTaxVoucherList : postTaxVoucherList;
+                if (targetList) {
+                    const tr = document.createElement('tr');
+                    tr.className = 'voucher-row text-success';
+                    const label = (regParams.voucherString || 'Voucher') +
+                        (voucherPreview.voucher_name ? ': ' + voucherPreview.voucher_name : '');
+                    tr.innerHTML =
+                        '<td>' + label + '</td>' +
+                        '<td>-' + regParams.currencySymbol + fmt(voucherPreview.voucher_amount) +
+                        '<button type="button" class="close remove-voucher" aria-label="Remove">' +
+                        '<span aria-hidden="true">&times;</span></button></td>';
+                    targetList.appendChild(tr);
+                }
+                if (voucherPreview.before_tax) {
+                    displayTotal = Math.max(0, displayTotal - voucherPreview.voucher_amount);
+                }
+            }
+        }
+
         if (totalEl) { totalEl.textContent = fmt(displayTotal); }
 
         const itemCount = cart.items.length;
@@ -286,6 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             cart.student = data.student || false;
             cart.discount_preview = data.discount_preview || null;
+            cart.voucher_preview = data.voucher_preview || null;
             refreshCart();
         })
         .catch(function (errors) {
@@ -311,6 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.student !== undefined) { cart.student = data.student; }
                 if (data.discount_code) { cart.discount_code = data.discount_code; }
                 if (data.discount_preview) { cart.discount_preview = data.discount_preview; }
+                if (data.voucher_preview) { cart.voucher_preview = data.voucher_preview; }
             }
             refreshCart();
         })
@@ -326,6 +358,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (emptyCartBtn) {
         emptyCartBtn.addEventListener('click', function () {
             cart.discount_code = '';
+            cart.voucher_preview = null;
             syncCart([]);
         });
     }
@@ -345,6 +378,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const btn = e.target.closest('.remove-voucher');
             if (!btn) { return; }
             cart.discount_code = '';
+            cart.voucher_preview = null;
             syncCart(cart.items);
         });
     }

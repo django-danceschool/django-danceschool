@@ -797,6 +797,14 @@ class RegistrationContactForm(RegistrationForm):
             session.pop('voucher_id', None)
             session.pop('voucher_names', None)
             session.pop('total_voucher_amount', None)
+        # If a voucher code was submitted via the cart (new CartView path), pre-fill
+        # the gift field so StudentInfoView can preview and validate it.
+        elif (
+            self._invoice and
+            self._invoice.data.get('discount_code') and
+            self.fields.get('gift', None)
+        ):
+            self.fields['gift'].initial = self._invoice.data.get('discount_code')
 
         # Pass along whether the individual is a student if this has already
         # been set in the session data.

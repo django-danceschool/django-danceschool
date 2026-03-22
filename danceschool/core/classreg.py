@@ -37,7 +37,7 @@ from .constants import getConstant, REG_VALIDATION_STR
 from .signals import (
     post_student_info, apply_discount, apply_price_adjustments,
     get_invoice_related, get_invoice_item_related, get_cart_invoice_related,
-    get_cart_invoice_item_related, request_discounts
+    get_cart_invoice_item_related, request_discounts, check_voucher
 )
 from .helpers import getPurchasableItems
 from .serializers import PurchasableItemSerializer, CartSerializer
@@ -844,6 +844,46 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             'total_discount': float(total_discount),
         }
 
+    def get_voucher_preview(self, cart_items, discount_code):
+        '''
+        Fire the check_voucher signal with the given discount_code to get a
+        read-only voucher preview.  No VoucherUse records are created here.
+
+        Returns a dict with keys ``voucher_id``, ``voucher_name``,
+        ``voucher_amount``, and ``before_tax``, or None when the code is absent
+        or the vouchers app is not active.
+        '''
+        if not discount_code:
+            return None
+
+        responses = check_voucher.send(
+            sender=self.__class__,
+            voucherId=discount_code,
+            cart_items=cart_items,
+            customer=None,
+            validateCustomer=False,
+            invoice=None,
+        )
+        responses = [r[1] for r in responses if len(r) > 1 and r[1]]
+        if not responses:
+            return None
+
+        result = responses[0]
+        if result.get('status') == 'valid':
+            return {
+                'voucher_id': result.get('id'),
+                'voucher_name': result.get('name'),
+                'voucher_amount': float(result.get('available', 0)),
+                'before_tax': result.get('beforeTax', True),
+            }
+        elif result.get('status') == 'invalid':
+            errors = result.get('errors', [])
+            return {
+                'voucher_id': discount_code,
+                'error': errors[0].get('message', '') if errors else '',
+            }
+        return None
+
     def get_success_url(self):
         return reverse('getStudentInfo')
 
@@ -925,14 +965,20 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             request.session.modified = True
             return HttpResponseRedirect(self.get_success_url())
 
-        # Add a read-only discount preview to the response so the cart UI can
-        # display the expected discount without creating any DB records.
+        # Add a read-only discount/voucher preview to the response so the cart
+        # UI can display the expected savings without creating any DB records.
         response_data = dict(new_cart_data)
         discount_preview = self.get_discount_preview(
             new_cart_data.get('items', []), new_cart_data
         )
         if discount_preview:
             response_data['discount_preview'] = discount_preview
+
+        voucher_preview = self.get_voucher_preview(
+            new_cart_data.get('items', []), new_cart_data.get('discount_code')
+        )
+        if voucher_preview:
+            response_data['voucher_preview'] = voucher_preview
 
         return Response(response_data, status=status.HTTP_200_OK)
 
