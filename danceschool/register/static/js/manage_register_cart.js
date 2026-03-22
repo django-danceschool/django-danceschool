@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 quantity: parseInt(raw.quantity) || 1,
                 choiceId: raw.choiceId || null,
                 description: raw.description || null,
+                price: raw.price ? parseFloat(raw.price) : null,
             };
         }
 
