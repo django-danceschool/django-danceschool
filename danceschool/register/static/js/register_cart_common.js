@@ -241,6 +241,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 cart.voucher_preview = null;
             } else {
                 const targetList = voucherPreview.before_tax ? preTaxVoucherList : postTaxVoucherList;
+                const appliedAmount = Math.min(voucherPreview.voucher_amount, displayTotal);
                 if (targetList) {
                     const tr = document.createElement('tr');
                     tr.className = 'voucher-row text-success';
@@ -248,13 +249,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         (voucherPreview.voucher_name ? ': ' + voucherPreview.voucher_name : '');
                     tr.innerHTML =
                         '<td>' + label + '</td>' +
-                        '<td>-' + regParams.currencySymbol + fmt(voucherPreview.voucher_amount) +
+                        '<td>-' + regParams.currencySymbol + fmt(appliedAmount) +
                         '<button type="button" class="close remove-voucher" aria-label="Remove">' +
                         '<span aria-hidden="true">&times;</span></button></td>';
                     targetList.appendChild(tr);
                 }
                 if (voucherPreview.before_tax) {
-                    displayTotal = Math.max(0, displayTotal - voucherPreview.voucher_amount);
+                    displayTotal = Math.max(0, displayTotal - appliedAmount);
                 }
             }
         }
