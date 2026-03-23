@@ -183,6 +183,10 @@ def checkVoucherCode(sender, **kwargs):
     if pay_at_door is None:
         pay_at_door = getattr(registration, 'payAtDoor', False)
 
+    logger.info(
+        'checkVoucherCode: voucherId=%s pay_at_door=%s (from kwargs: %s)',
+        voucherId, pay_at_door, kwargs.get('payAtDoor'),
+    )
     return obj.validate(
         customer=customer, events=events,
         payAtDoor=pay_at_door,

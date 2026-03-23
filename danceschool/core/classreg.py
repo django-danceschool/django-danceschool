@@ -856,6 +856,10 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         if not discount_code:
             return None
 
+        logger.info(
+            'get_voucher_preview: discount_code=%s payAtDoor=%s',
+            discount_code, self.payAtDoor,
+        )
         responses = check_voucher.send(
             sender=self.__class__,
             voucherId=discount_code,
@@ -951,8 +955,9 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         checkout = new_cart_data.pop('checkout', False)
 
         request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = new_cart_data
-        # Persist the student flag at the session top level so StudentInfoView
-        # can pre-populate the student checkbox even before checkout.
+        # Persist door status and student flag at the session top level so that
+        # StudentInfoView can read them without relying on the POST body.
+        request.session[REG_VALIDATION_STR]['payAtDoor'] = self.payAtDoor
         request.session[REG_VALIDATION_STR]['student'] = bool(new_cart_data.get('student'))
         request.session.modified = True
 
