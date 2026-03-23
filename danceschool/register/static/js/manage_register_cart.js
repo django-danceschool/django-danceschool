@@ -167,16 +167,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== Customer lookup =====
 
     const nameSelect = document.getElementById('id_name');
-    if (nameSelect) {
-        nameSelect.addEventListener('change', function () {
-            // Select2 (via django-autocomplete-light) stores the rendered label
-            // HTML as the <option>'s text content, not as plain data-* attributes
-            // on the element.  The label is a <span data-id="..." data-type="...">
-            // string (see get_result_label in autocomplete_light_registry.py).
-            // Parse that text as HTML and read the data-* attributes from it.
-            const $ = window.jQuery;
-            const optData = $ ? ($($(this).find(':selected').text()).data() || {}) : {};
+    if (nameSelect && window.jQuery) {
+        const $ = window.jQuery;
 
+        // Use select2:select (Select2 v4) which provides result data directly in
+        // e.params.data.  The text field contains the HTML from get_result_label,
+        // e.g. '<span data-id="123" data-type="Customer" ...>John Doe</span>'.
+        // Parse it to read the custom data-* attributes.
+        $(nameSelect).on('select2:select', function (e) {
+            const labelHtml = e.params.data.text || '';
+            const optData = labelHtml ? ($(labelHtml).data() || {}) : {};
 
             if (!optData.type) {
                 clearCustomerPanels();
@@ -311,6 +311,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                 });
             }
+        });
+
+        // Clear the info panel when the selection is removed.
+        $(nameSelect).on('select2:unselect select2:clear', function () {
+            clearCustomerPanels();
         });
     }
 
