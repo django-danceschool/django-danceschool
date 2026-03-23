@@ -169,12 +169,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const nameSelect = document.getElementById('id_name');
     if (nameSelect) {
         nameSelect.addEventListener('change', function () {
-            // Select2 (via django-autocomplete-light) stores result data in
-            // jQuery's internal data store on the <option> element, not as
-            // plain HTML data-* attributes.  jQuery is always present on the
-            // CMS admin page, so use it to read the option data.
+            // Select2 (via django-autocomplete-light) stores the rendered label
+            // HTML as the <option>'s text content, not as plain data-* attributes
+            // on the element.  The label is a <span data-id="..." data-type="...">
+            // string (see get_result_label in autocomplete_light_registry.py).
+            // Parse that text as HTML and read the data-* attributes from it.
             const $ = window.jQuery;
-            const optData = $ ? ($(this).find('option:selected').data() || {}) : {};
+            const optData = $ ? ($($(this).find(':selected').text()).data() || {}) : {};
 
 
             if (!optData.type) {
