@@ -856,10 +856,6 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         if not discount_code:
             return None
 
-        logger.info(
-            'get_voucher_preview: discount_code=%s payAtDoor=%s',
-            discount_code, self.payAtDoor,
-        )
         responses = check_voucher.send(
             sender=self.__class__,
             voucherId=discount_code,
