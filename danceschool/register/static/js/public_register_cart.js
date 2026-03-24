@@ -20,27 +20,23 @@
  */
 
 regParams.preSubmit = function (currentCart) {
+    var buildEventItem = window.registerCart.buildEventItem;
     var items = [];
 
     document.querySelectorAll('input.register-quantity').forEach(function (input) {
         var qty = parseInt(input.value, 10) || 0;
         if (qty <= 0) { return; }
 
-        var eventId = input.dataset.eventId;
-        var roleId  = input.dataset.roleId;
-        var sku = (roleId && !isNaN(parseInt(roleId, 10)))
-            ? 'EVENT_' + eventId + '_ROLE_' + roleId
-            : 'EVENT_' + eventId + '_GENERAL';
+        var eventId     = input.dataset.eventId;
+        var roleId      = input.dataset.roleId || null;
+        var price       = input.dataset.price ? parseFloat(input.dataset.price) : null;
+        var isDropIn    = input.dataset.dropIn === 'true';
+        var occurrenceId = input.dataset.occurrenceId || null;
 
-        items.push({
-            item_type: 'Event',
-            item_id:   parseInt(eventId, 10),
-            sku:       sku,
-            quantity:  qty,
-            // Cache the displayed price as a fallback for the cart description
-            // table, in case the catalog SKU and this SKU differ.
-            price: input.dataset.price ? parseFloat(input.dataset.price) : null,
-        });
+        items.push(buildEventItem(eventId, roleId, qty, price, {
+            dropIn:           isDropIn,
+            dropInOccurrence: isDropIn ? occurrenceId : null,
+        }));
     });
 
     // Fall back to the existing session cart if no inputs were filled in

@@ -438,19 +438,55 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // ===== Shared item builders =====
+
+    // Build a CartView-compatible Event item from raw field values.  Both the
+    // door register (manage_register_cart.js, via translateButtonData) and the
+    // public register (public_register_cart.js, via preSubmit) use this so the
+    // SKU construction and drop-in flag logic stay in one place.
+    //
+    // opts (all optional):
+    //   dropIn          {boolean} – set item.dropIn = true
+    //   dropInOccurrence {number}  – set item.dropInOccurrence
+    //   choiceId        {string}  – UI element ID, used by door register badges
+    //   description     {string}  – cached description fallback
+    function buildEventItem(eventId, roleId, quantity, price, opts) {
+        opts = opts || {};
+        var sku = (roleId && !isNaN(parseInt(roleId, 10)))
+            ? 'EVENT_' + eventId + '_ROLE_' + roleId
+            : 'EVENT_' + eventId + '_GENERAL';
+        var item = {
+            item_type: 'Event',
+            item_id:   parseInt(eventId, 10),
+            sku:       sku,
+            quantity:  parseInt(quantity) || 1,
+            price:     (price != null) ? parseFloat(price) : null,
+        };
+        if (opts.dropIn) {
+            item.dropIn = true;
+            if (opts.dropInOccurrence != null) {
+                item.dropInOccurrence = parseInt(opts.dropInOccurrence);
+            }
+        }
+        if (opts.choiceId !== undefined) { item.choiceId = opts.choiceId || null; }
+        if (opts.description !== undefined) { item.description = opts.description || null; }
+        return item;
+    }
+
     // ===== Expose shared API for extension scripts =====
     window.registerCart = {
-        cart:          cart,
-        syncCart:      syncCart,
-        refreshCart:   refreshCart,
-        addAlert:      addAlert,
-        clearAlerts:   clearAlerts,
-        displayErrors: displayErrors,
-        jsonFetch:     jsonFetch,
-        csrfToken:     csrfToken,
-        fmt:           fmt,
-        toTitleCase:   toTitleCase,
-        htmlToNodes:   htmlToNodes,
+        cart:            cart,
+        syncCart:        syncCart,
+        refreshCart:     refreshCart,
+        addAlert:        addAlert,
+        clearAlerts:     clearAlerts,
+        displayErrors:   displayErrors,
+        jsonFetch:       jsonFetch,
+        csrfToken:       csrfToken,
+        fmt:             fmt,
+        toTitleCase:     toTitleCase,
+        htmlToNodes:     htmlToNodes,
+        buildEventItem:  buildEventItem,
     };
 
 });

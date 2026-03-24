@@ -212,7 +212,19 @@ class CartItemSerializer(serializers.Serializer):
         return value
 
     def validate_dropIn(self, value):
-        return self.check_door_only_field(value)  
+        # Drop-in requires both user-level permissions and for the door
+        # context check to pass
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if value and user and (
+            user.has_perm('core.register_dropins') or
+            user.has_perm('core.override_register_dropins')
+        ):
+            return self.check_door_only_field(value)
+        elif value:
+            raise serializers.ValidationError(
+                'You do not have permission to register for drop-ins'
+            )
 
     def validate_requireFull(self, value):
         return self.check_door_only_field(value, permitted=True)

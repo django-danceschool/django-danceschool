@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const {
         cart, syncCart, addAlert, jsonFetch,
-        fmt, toTitleCase, htmlToNodes,
+        fmt, toTitleCase, htmlToNodes, buildEventItem,
     } = window.registerCart;
 
     // ===== Item format translation =====
@@ -41,32 +41,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (raw.type === 'eventRegistration') {
-            const eventId = raw.event;
-            let sku;
-            if (raw.roleId && !isNaN(parseInt(raw.roleId))) {
-                sku = 'EVENT_' + eventId + '_ROLE_' + raw.roleId;
-            } else {
-                sku = 'EVENT_' + eventId + '_GENERAL';
-            }
-            const item = {
-                item_type: 'Event',
-                item_id: parseInt(eventId),
-                sku: sku,
-                quantity: parseInt(raw.quantity) || 1,
-                choiceId: raw.choiceId || null,
-                // Cache the event name so lookupDescription() can fall back to
-                // it when the SKU is not yet in the catalog.
-                description: raw.name || raw.description || null,
-                // Cache the door price from data-price so lookupPrice() has a
-                // fallback when the catalog SKU is not yet populated.
-                price: raw.price ? parseFloat(raw.price) : null,
-            };
-            if (isTruthy(raw.dropIn)) {
-                item.dropIn = true;
-                if (raw.dropInOccurrence) {
-                    item.dropInOccurrence = parseInt(raw.dropInOccurrence);
+            const item = buildEventItem(
+                raw.event,
+                raw.roleId,
+                raw.quantity,
+                raw.price ? parseFloat(raw.price) : null,
+                {
+                    dropIn: isTruthy(raw.dropIn),
+                    dropInOccurrence: raw.dropInOccurrence || null,
+                    // Cache the element ID so the door register can update
+                    // the badge counter on the source button.
+                    choiceId: raw.choiceId || null,
+                    // Cache the event name so lookupDescription() can fall
+                    // back to it when the SKU is not yet in the catalog.
+                    description: raw.name || raw.description || null,
                 }
-            }
+            );
+            // Door-only flags are not shared with the public register.
             if (raw.requireFull !== undefined) { item.requireFull = isTruthy(raw.requireFull); }
             if (raw.autoSubmit !== undefined) { item.autoSubmit = isTruthy(raw.autoSubmit); }
             if (raw.autoFulfill !== undefined) { item.autoFulfill = isTruthy(raw.autoFulfill); }

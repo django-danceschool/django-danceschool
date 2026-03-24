@@ -15,7 +15,7 @@ from .models import (
     PublicRegisterNavPluginModel,
     PublicRegisterEventPluginModel, PublicRegisterEventPluginChoice,
 )
-from danceschool.core.models import Event
+from danceschool.core.models import Event, Series
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.utils.timezone import ensure_localtime
 
@@ -248,14 +248,37 @@ class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
             initial=context.get('allEvents', Event.objects.none()),
         )
 
+        request = context.get('request')
+        user = getattr(request, 'user', None)
+        can_dropin = user and (
+            user.has_perm('core.register_dropins') or
+            user.has_perm('core.override_register_dropins')
+        )
+
+        now = timezone.now()
+
         register_choices = OrderedDict()
         for event in listing:
             all_choices = []
             for choice_rule in instance.publicregistereventpluginchoice_set.all():
                 all_choices += choice_rule.addChoices(event)
+
+            # Drop-in choices: one entry per upcoming occurrence, shown only to
+            # users with drop-in registration permissions.
+            dropin_choices = []
+            if can_dropin and isinstance(event, Series) and getattr(event, 'allowDropins', False):
+                dropin_price = event.getBasePrice(dropIns=1)
+                for occ in event.eventoccurrence_set.filter(endTime__gte=now).order_by('startTime'):
+                    dropin_choices.append({
+                        'occurrence': occ,
+                        'price': dropin_price,
+                        'choiceId': 'pubdropin_{}_{}'.format(event.id, occ.id),
+                    })
+
             register_choices[event.id] = {
                 'event': event,
                 'all_choices': all_choices,
+                'dropin_choices': dropin_choices,
             }
 
         context.update({
