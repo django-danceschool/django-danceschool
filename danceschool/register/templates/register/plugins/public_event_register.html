@@ -1,10 +1,10 @@
 {% load i18n %}
 
-{#
+{% comment %}
   Each plugin instance is wrapped in .public-register-section so that the
-  PublicRegisterNavPlugin (Increment 3) can discover sections after page load.
+  PublicRegisterNavPlugin can discover sections after page load.
   data-section-title is used to populate nav link text.
-#}
+{% endcomment %}
 <div class="col-12 my-1 public-register-section event-register-set {{ instance.cssClasses }}"
      id="section-{{ instance.pk }}"
      data-section-title="{{ instance.title }}">

@@ -198,8 +198,8 @@ CMS_PLACEHOLDER_CONF = {
     'public_register_content': {
         'name': 'Public Registration Content',
         # Exclude splash image and all staff-only / merch register plugins.
-        # PublicRegisterEventPlugin and PublicRegisterNavPlugin (added in
-        # Increment 2) are intentionally absent from this list so that they
+        # PublicRegisterEventPlugin and PublicRegisterNavPlugin are
+        # intentionally absent from this list so that they
         # remain available here but nowhere else.
         'excluded_plugins': [
             'PictureSplashTemplatePlugin',

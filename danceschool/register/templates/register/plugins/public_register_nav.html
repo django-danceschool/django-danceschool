@@ -1,12 +1,12 @@
 {% load i18n sekizai_tags %}
 
-{#
+{% comment %}
   Sticky Bootstrap 4 navbar for the public register page.  The <ul> is left
   empty here; JavaScript populates it after DOMContentLoaded by scanning the
   page for .public-register-section elements that carry a data-section-title
   attribute (set by PublicRegisterEventPlugin).  If no titled sections are
   found the entire <nav> is hidden.
-#}
+{% endcomment %}
 <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top public-register-navbar"
      id="public-register-nav-{{ instance.pk }}"
      aria-label="{% trans 'Registration sections' %}">
