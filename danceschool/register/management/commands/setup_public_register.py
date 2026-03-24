@@ -75,13 +75,17 @@ PUBLIC REGISTRATION PAGE
         )
         self.stdout.write('Upcoming events plugin added.')
 
-        # Section 3: ongoing series closed for registration
+        # Section 3: ongoing series closed for registration.
+        # daysStart=0 → endTime__gte=now (exclude already-ended series).
+        # daysEnd=0   → startTime__lte=now (exclude not-yet-started series).
         add_plugin(
             placeholder, 'PublicRegisterEventPlugin', initial_language,
             title='Ongoing Classes',
             eventType='S',
             registrationOpenLimit='C',
             occursWithinDays=None,
+            daysStart=0,
+            daysEnd=0,
         )
         self.stdout.write('Ongoing classes plugin added.')
 

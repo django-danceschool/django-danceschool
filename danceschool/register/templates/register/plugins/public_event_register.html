@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load danceschool_tags i18n %}
 
 {% comment %}
   Each plugin instance is wrapped in .public-register-section so that the
@@ -18,53 +18,85 @@
       <div class="card-body">
         <h5 class="card-title">{{ item.event.name }}</h5>
 
-        {% if item.all_choices %}
-          <div class="form-group mb-0">
-            {% for choice in item.all_choices %}
-              <div class="row align-items-center my-1">
-                <label class="col-sm-6 col-form-label"
-                       for="{{ choice.choiceId }}">
-                  {{ choice.label }}
-                  {% if choice.price %}
-                    <small class="text-muted">
-                      ({{ currencySymbol }}{{ choice.price }})
-                    </small>
-                  {% endif %}
-                  {% if choice.soldOut %}
-                    <span class="badge badge-secondary ml-1">
-                      {% trans "Sold out" %}
-                    </span>
-                  {% endif %}
-                </label>
-                <div class="col-sm-4 col-6">
-                  {% if not choice.soldOut %}
-                    <input type="number"
-                           class="form-control register-quantity"
-                           id="{{ choice.choiceId }}"
-                           min="0"
-                           value="0"
-                           data-event-id="{{ item.event.id }}"
-                           data-role-id="{{ choice.roleId|default_if_none:'' }}"
-                           data-price="{{ choice.price }}"
-                           aria-label="{{ choice.label }}"
-                    />
-                  {% else %}
-                    {# Render a disabled placeholder so layout stays consistent #}
-                    <input type="number"
-                           class="form-control"
-                           value="0"
-                           disabled
-                           aria-label="{{ choice.label }}"
-                    />
-                  {% endif %}
+        {% if item.event.registrationOpen %}
+          {# Event is open for registration — show number inputs. #}
+          {% if item.all_choices %}
+            <div class="form-group mb-0">
+              {% for choice in item.all_choices %}
+                <div class="row align-items-center my-1">
+                  <label class="col-sm-6 col-form-label"
+                         for="{{ choice.choiceId }}">
+                    {{ choice.label }}
+                    {% if choice.price %}
+                      <small class="text-muted">
+                        ({{ currencySymbol }}{{ choice.price }})
+                      </small>
+                    {% endif %}
+                    {% if choice.soldOut %}
+                      <span class="badge badge-secondary ml-1">
+                        {% trans "Sold out" %}
+                      </span>
+                    {% endif %}
+                  </label>
+                  <div class="col-sm-4 col-6">
+                    {% if not choice.soldOut %}
+                      <input type="number"
+                             class="form-control register-quantity"
+                             id="{{ choice.choiceId }}"
+                             min="0"
+                             value="0"
+                             data-event-id="{{ item.event.id }}"
+                             data-role-id="{{ choice.roleId|default_if_none:'' }}"
+                             data-price="{{ choice.price }}"
+                             aria-label="{{ choice.label }}"
+                      />
+                    {% else %}
+                      {# Render a disabled placeholder so layout stays consistent #}
+                      <input type="number"
+                             class="form-control"
+                             value="0"
+                             disabled
+                             aria-label="{{ choice.label }}"
+                      />
+                    {% endif %}
+                  </div>
                 </div>
-              </div>
-            {% endfor %}
-          </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <p class="text-muted mb-0">{% trans "Registration is not currently available." %}</p>
+          {% endif %}
 
         {% else %}
-          {# No choices means the event has no open registration slots #}
-          <p class="text-muted mb-0">{% trans "Registration is not currently available." %}</p>
+          {# Event is closed for registration — show info and registrant counts. #}
+          <div class="card-subtitle text-muted mb-2">
+            {% if item.event.teachers %}
+              {% trans "with" %} {{ item.event.teachers|join:" &amp; " }}
+            {% endif %}
+            {% if item.event.location %}
+              {% trans "at" %} {{ item.event.location.name }}{% if item.event.room %} &ndash; {{ item.event.room.name }}{% endif %}
+            {% endif %}
+            <div class="mt-1">
+              <small>
+                {% if item.event.numOccurrences > 1 %}
+                  {% readable_weekday item.event.weekday %}s
+                  {{ item.event.startTime|date:"g:i A" }} &ndash; {{ item.event.endTime|date:"g:i A" }} &mdash;
+                  {% for occ in item.event.eventoccurrence_set.all %}
+                    {{ occ.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% else %}
+                  {{ item.event.startTime|date:"l, N jS, g:i A" }}
+                {% endif %}
+              </small>
+            </div>
+          </div>
+          <ul class="list-unstyled mb-0">
+            {% for role in item.event.availableRoles %}
+              <li>{{ role.pluralName }} ({% numRegisteredForRole item.event role %} {% trans "registered" %})</li>
+            {% empty %}
+              <li>({{ item.event.numRegistered }} {% trans "registered" %})</li>
+            {% endfor %}
+          </ul>
         {% endif %}
 
       </div>
