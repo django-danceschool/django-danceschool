@@ -16,7 +16,7 @@ from itertools import chain
 
 from dynamic_preferences.registries import global_preferences_registry
 
-from .models import EventOccurrence, Event, Series, PublicEvent, Registration, Invoice, InvoiceItem, EventRole
+from .models import EventOccurrence, Event, Series, PublicEvent, Registration, Invoice, InvoiceItem, EventRole, EventStaffMember
 from .constants import getConstant, updateConstant, REG_VALIDATION_STR
 from .utils.tests import DefaultSchoolTestCase
 
@@ -351,6 +351,14 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
 
         s = self.create_series()
         i = self.create_instructor()
+        # create_series adds defaultInstructor as an EventStaffMember (Instructor
+        # category).  updateSeriesAttributes returns EventStaffMember PKs, not
+        # StaffMember PKs, so look that up here for use throughout the test.
+        esm = EventStaffMember.objects.get(
+            event=s,
+            staffMember=self.defaultInstructor,
+            category=getConstant('general__eventStaffCategoryInstructor'),
+        )
 
         # Login and access the form
         self.client.login(username=self.superuser.username, password='pass')
@@ -366,7 +374,7 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
         )
         self.assertEqual(ajax_response.status_code, 200)
         self.assertIn(
-            str(self.defaultInstructor.id),
+            str(esm.id),
             ajax_response.json()['id_replacedStaffMember'].keys()
         )
         self.assertIn(
@@ -380,7 +388,7 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
             'category': getConstant('general__eventStaffCategorySubstitute').id,
             'event': s.id,
             'staffMember': self.defaultInstructor.id,
-            'replacedStaffMember': self.defaultInstructor.id,
+            'replacedStaffMember': esm.id,
             'occurrences': [s.eventoccurrence_set.first().id, ],
             'submissionUser': self.superuser.id,
         }
@@ -401,7 +409,7 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
         )
 
         # Now update and ensure that it worked
-        post_data.update({'staffMember': i.id, 'replacedStaffMember': self.defaultInstructor.id})
+        post_data.update({'staffMember': i.id, 'replacedStaffMember': esm.id})
         response = self.client.post(reverse('substituteTeacherForm'), post_data)
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
@@ -488,13 +496,22 @@ class PurchasableItemsViewTest(DefaultSchoolTestCase):
         finally:
             updateConstant('registration__registrationEnabled', True)
 
-    def test_event_without_roles_has_general_variant(self):
+    def test_event_without_explicit_roles_uses_dancetype_roles(self):
+        '''
+        When no EventRole records exist, VariantsField falls back to the
+        DanceType roles. The default test DanceType (Lindy Hop) has Lead and
+        Follow, so those SKUs should appear instead of a GENERAL variant.
+        '''
+        lead = self.defaultDanceRoles.get(name='Lead')
+        follow = self.defaultDanceRoles.get(name='Follow')
         response = self.client.get(reverse('purchasableItems'))
         item = next(
             x for x in response.json()['results'] if x.get('id') == self.series.id
         )
         skus = [v['sku'] for v in item['variants']]
-        self.assertIn(f'EVENT_{self.series.id}_GENERAL', skus)
+        self.assertIn(f'EVENT_{self.series.id}_ROLE_{lead.id}', skus)
+        self.assertIn(f'EVENT_{self.series.id}_ROLE_{follow.id}', skus)
+        self.assertNotIn(f'EVENT_{self.series.id}_GENERAL', skus)
         self.assertFalse(any(v.get('dropIn') for v in item['variants']))
 
     def test_event_with_roles_exposes_role_variants(self):
@@ -508,8 +525,8 @@ class PurchasableItemsViewTest(DefaultSchoolTestCase):
             x for x in response.json()['results'] if x.get('id') == self.series.id
         )
         skus = [v['sku'] for v in item['variants']]
-        self.assertIn(f'EVENT_{self.series.id}_ROLE_{er_lead.id}', skus)
-        self.assertIn(f'EVENT_{self.series.id}_ROLE_{er_follow.id}', skus)
+        self.assertIn(f'EVENT_{self.series.id}_ROLE_{lead.id}', skus)
+        self.assertIn(f'EVENT_{self.series.id}_ROLE_{follow.id}', skus)
         # With roles defined there is no general admission variant
         self.assertNotIn(f'EVENT_{self.series.id}_GENERAL', skus)
 
@@ -705,8 +722,8 @@ class CartViewTest(DefaultSchoolTestCase):
 
     def test_role_variant_creates_correct_event_registration(self):
         lead = self.defaultDanceRoles.get(name='Lead')
-        er = EventRole.objects.create(event=self.series, role=lead, capacity=10)
-        sku = f'EVENT_{self.series.id}_ROLE_{er.id}'
+        EventRole.objects.create(event=self.series, role=lead, capacity=10)
+        sku = f'EVENT_{self.series.id}_ROLE_{lead.id}'
         self._cart_post(
             items=[{'item_type': 'Event', 'item_id': self.series.id,
                     'sku': sku, 'quantity': 1}],
