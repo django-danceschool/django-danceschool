@@ -250,23 +250,24 @@ class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
 
         request = context.get('request')
         user = getattr(request, 'user', None)
-        can_dropin = user and (
-            user.has_perm('core.register_dropins') or
-            user.has_perm('core.override_register_dropins')
-        )
+        can_dropin = user and user.has_perm('core.register_dropins')
+        can_always_dropin = user and user.has_perm('core.override_register_dropins')
 
         now = timezone.now()
 
         register_choices = OrderedDict()
         for event in listing:
-            all_choices = []
+            choices = []
             for choice_rule in instance.publicregistereventpluginchoice_set.all():
-                all_choices += choice_rule.addChoices(event)
+                choices += choice_rule.addChoices(event)
 
             # Drop-in choices: one entry per upcoming occurrence, shown only to
             # users with drop-in registration permissions.
             dropin_choices = []
-            if can_dropin and isinstance(event, Series) and getattr(event, 'allowDropins', False):
+            if isinstance(event, Series) and (
+                (can_dropin and getattr(event, 'allowDropins', False)) or
+                can_always_dropin
+            ):
                 dropin_price = event.getBasePrice(dropIns=1)
                 for occ in event.eventoccurrence_set.filter(endTime__gte=now).order_by('startTime'):
                     dropin_choices.append({
@@ -277,7 +278,7 @@ class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
 
             register_choices[event.id] = {
                 'event': event,
-                'all_choices': all_choices,
+                'choices': choices,
                 'dropin_choices': dropin_choices,
             }
 

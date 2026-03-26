@@ -659,6 +659,15 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         if invoice.pk:
             invoice.invoiceitem_set.all().delete()
 
+        # Expand items with quantity > 1 into multiple single-quantity items so
+        # that each person in a group registration gets their own EventRegistration.
+        expanded = []
+        for item in item_data:
+            qty = max(1, int(item.get('quantity') or 1))
+            for _qty_i in range(qty):
+                expanded.append({**item, 'quantity': 1})
+        item_data = expanded
+
         # Collect related objects (e.g. Registration, MerchOrder) that need to
         # be created or retrieved for this invoice before processing items.
         # Signal handlers return these under __relateditem_* keys so they can
@@ -959,6 +968,11 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
 
         # Handle checkout flow
         if checkout:
+            if not new_cart_data.get('items'):
+                return Response(
+                    [{'message': str(_('Please select at least one item before checking out.'))}],
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             invoice = self.create_invoice_from_cart(new_cart_data, request)
             reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
             reg_session['invoice_id'] = str(invoice.id)

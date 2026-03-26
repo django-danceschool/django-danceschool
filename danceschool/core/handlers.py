@@ -87,7 +87,7 @@ def linkCartEventRegistration(sender, **kwargs):
 
     # Find the event in the purchasable registry (uses already-fetched querysets).
     this_event = None
-    for qs, _ in purchasable_registry:
+    for qs, _serializer in purchasable_registry:
         if issubclass(qs.model, Event):
             try:
                 this_event = qs.get(id=item_id)
@@ -182,10 +182,16 @@ def linkCartEventRegistration(sender, **kwargs):
             if child_items:
                 response['child_items'] = child_items
 
-    # Check for duplicate registrations for the same event in this cart.
+    # Check for duplicate registrations for the same event AND role in this cart.
+    # Only consider items that have already been processed (have a register_uuid
+    # assigned), so we don't flag legitimate multi-role carts as duplicates.
     same_event_items = [
         x for x in cart_data
-        if x.get('item_id') == this_event.id and x.get('register_uuid') != register_uuid
+        if (
+            x.get('item_id') == this_event.id and
+            x.get('sku') == sku and
+            x.get('register_uuid') not in (None, register_uuid)
+        )
     ]
     if same_event_items:
         if not is_dropin:

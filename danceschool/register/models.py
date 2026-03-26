@@ -1,10 +1,11 @@
 from django.db import models
-from django.db.models import Value, OuterRef, Subquery
+from django.db.models import Value, OuterRef, Subquery, Count
 from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 from calendar import day_name
+from math import ceil
 import logging
 import json
 from datetime import datetime, timedelta
@@ -578,21 +579,67 @@ class PublicRegisterEventPluginChoice(models.Model):
         to render a number input and, at checkout time, to construct a
         CartView item.  The data field is deliberately excluded from the
         output so it is never exposed to the client.
+
+        Registration counts and sold-out status are computed here in two
+        queries (one for EventRole records, one for registration counts) to
+        avoid N+1 queries when the template renders multiple roles.
         '''
         choices = []
 
-        roles = [
-            {
-                'name': x.name,
-                'id': x.id,
-                'soldOut': event.soldOutForRole(x),
-            } for x in event.availableRoles
-        ]
-        if not roles:
-            roles = [{'name': None, 'id': None, 'soldOut': event.soldOut}]
+        # --- Step 1: build roles_data with capacity in 1–2 queries -----------
+        # Fetch all EventRole records for this event at once.
+        event_roles = list(
+            event.eventrole_set.filter(capacity__gt=0).select_related('role')
+        )
 
-        for i, role in enumerate(roles):
-            if role['soldOut'] and self.soldOutRule == 'H':
+        if event_roles:
+            roles_data = [
+                {
+                    'name': er.role.name,
+                    'id': er.role.id,
+                    'capacity': er.capacity,
+                }
+                for er in event_roles
+            ]
+        elif isinstance(event, Series):
+            # Fall back to DanceType roles with evenly-divided capacity.
+            try:
+                dtype_roles = list(
+                    event.classDescription.danceTypeLevel.danceType.roles.all()
+                )
+            except Exception:
+                dtype_roles = []
+            if dtype_roles:
+                per_role_cap = ceil(event.capacity / len(dtype_roles))
+                roles_data = [
+                    {'name': r.name, 'id': r.id, 'capacity': per_role_cap}
+                    for r in dtype_roles
+                ]
+            else:
+                roles_data = []
+        else:
+            roles_data = []
+
+        # --- Step 2: fetch registration counts in a single query -------------
+        if roles_data:
+            count_rows = event.eventregistration_set.filter(
+                cancelled=False, dropIn=False, registration__final=True
+            ).values('role_id').annotate(count=Count('id'))
+            count_map = {row['role_id']: row['count'] for row in count_rows}
+        else:
+            # General admission — count all non-cancelled, non-drop-in regs.
+            roles_data = [{'name': None, 'id': None, 'capacity': event.capacity}]
+            count_map = {None: event.eventregistration_set.filter(
+                cancelled=False, dropIn=False, registration__final=True
+            ).count()}
+
+        # --- Step 3: build choice dicts --------------------------------------
+        for i, role in enumerate(roles_data):
+            num_registered = count_map.get(role['id'], 0)
+            capacity = role['capacity'] or 0
+            sold_out = num_registered >= capacity
+
+            if sold_out and self.soldOutRule == 'H':
                 continue
 
             label = ' '.join(filter(None, [
@@ -602,10 +649,12 @@ class PublicRegisterEventPluginChoice(models.Model):
 
             choices.append({
                 'label': label,
-                'price': event.pricingTier.onlinePrice,
+                'price': event.pricingTier.onlinePrice if event.pricingTier else 0,
                 'roleName': role['name'],
                 'roleId': role['id'],
-                'soldOut': role['soldOut'],
+                'numRegistered': num_registered,
+                'capacity': capacity,
+                'soldOut': sold_out,
                 'choiceId': 'pubchoice_{}_{}_{}'.format(event.id, self.id, i),
             })
 

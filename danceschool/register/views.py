@@ -137,6 +137,7 @@ class PublicRegisterView(
     def get_context_data(self, **kwargs):
         context = {
             'allEvents': self.get_allEvents(),
+            'showDescriptionRule': getConstant('registration__showDescriptionRule') or 'all',
             'registrationEnabled': getConstant('registration__registrationEnabled'),
         }
         context.update(kwargs)

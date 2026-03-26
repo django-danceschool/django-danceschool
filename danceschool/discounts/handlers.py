@@ -53,6 +53,9 @@ def getBestDiscount(sender, **kwargs):
         payAtDoor = kwargs.get('payAtDoor', False)
 
     cart_kwargs = prepareCartObjects(reg, invoice, cart_items, payAtDoor=payAtDoor)
+    if cart_kwargs is None:
+        logger.debug('No cart objects available; skipping discount calculation.')
+        return
     eligible_list = cart_kwargs.get('cart_object_list')
     # Check if this is a new customer, who may be eligible for special discounts
     newCustomer = True
