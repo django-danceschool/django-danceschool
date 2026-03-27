@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load cms_tags danceschool_tags thumbnail i18n %}
+{% load cms_tags danceschool_tags thumbnail i18n sekizai_tags static %}
 
 {% block title %}
 	{{ event_set.0.name }}
@@ -32,7 +32,7 @@
 			<p>
 			{% block register_link %}
 			{% if event.registrationOpen and not event.soldOut and not event.registrationPassed %}
-				<a class="btn btn-primary btn-lg" href="{% url 'registration' %}">{% trans "Register for this event!" %}</a>
+				<button data-id="{{ event.id }}" data-event-type="publicevent" class="btn btn-primary btn-lg register-ajax">{% trans "Register for this event!" %}</button>	
 			{% elif event.soldOut %}
 				<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{% trans "Sold Out!" %}</button>
 			{% elif event.registrationEnabled and not event.status == event.RegStatus.linkOnly %}
@@ -76,5 +76,6 @@
 			</div>
 		</div>
 	</div>
-	
+
+	{% addtoblock "js" %}<script type="text/javascript" data-cart-url="{% url 'cartSummary' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
 {% endblock %}

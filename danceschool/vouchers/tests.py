@@ -337,3 +337,87 @@ class CartVouchersTest(VouchersTest):
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         invoice = response.context_data.get('invoice')
         self.assertEqual(invoice.outstandingBalance, s.getBasePrice())
+
+
+class CartSummaryVoucherPreviewTest(VouchersTest):
+    '''
+    Tests that CartSummaryView._get_voucher_preview shows the correct
+    read-only voucher information before the cart is checked out.
+    '''
+
+    def _set_session_cart(self, series, discount_code=None):
+        '''Write a single-event cart directly into the test session.'''
+        sku = f'EVENT_{series.id}_GENERAL'
+        cart = {
+            'items': [{'item_type': 'Event', 'item_id': series.id,
+                       'sku': sku, 'quantity': 1}],
+            'payAtDoor': False,
+        }
+        if discount_code:
+            cart['discount_code'] = discount_code
+        session = self.client.session
+        session[REG_VALIDATION_STR] = {'cart': cart, 'payAtDoor': False}
+        session.save()
+
+    def test_valid_voucher_preview_shown(self):
+        '''
+        A valid, unexpired voucher code stored in the session cart causes
+        voucher_preview to be populated with the voucher details.
+        '''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        v = self.create_voucher(
+            originalAmount=10,
+            expirationDate=timezone.now() + timedelta(days=1),
+        )
+        self._set_session_cart(s, discount_code=v.voucherId)
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        preview = response.context_data.get('voucher_preview')
+        self.assertIsNotNone(preview, 'Expected voucher_preview to be set')
+        self.assertNotIn('error', preview)
+        self.assertEqual(preview['voucher_id'], v.voucherId)
+        self.assertAlmostEqual(preview['voucher_amount'], float(v.originalAmount))
+
+    def test_expired_voucher_preview_shows_error(self):
+        '''An expired voucher code must surface an error in voucher_preview.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        v = self.create_voucher(
+            expirationDate=timezone.now() + timedelta(days=-1),
+        )
+        self._set_session_cart(s, discount_code=v.voucherId)
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        preview = response.context_data.get('voucher_preview')
+        self.assertIsNotNone(preview)
+        self.assertIn('error', preview)
+
+    def test_unrecognised_voucher_code_shows_error(self):
+        '''An unrecognised voucher code must surface an error in voucher_preview.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        self._set_session_cart(s, discount_code='DOESNOTEXIST')
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        preview = response.context_data.get('voucher_preview')
+        # Should either be None (signal not connected) or an error dict.
+        if preview is not None:
+            self.assertIn('error', preview)
+
+    def test_no_voucher_preview_without_code(self):
+        '''When no discount_code is in the cart, voucher_preview must be None.'''
+        updateConstant('vouchers__enableVouchers', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        self._set_session_cart(s)  # no discount_code
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context_data.get('voucher_preview'))

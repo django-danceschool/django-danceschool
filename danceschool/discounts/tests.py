@@ -672,3 +672,97 @@ class CartDiscountsTest(BaseDiscountsTest):
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
         invoice = response.context_data.get('invoice')
         self.assertEqual(invoice.outstandingBalance, s.getBasePrice())
+
+
+class CartSummaryDiscountPreviewTest(BaseDiscountsTest):
+    '''
+    Tests that CartSummaryView._get_discount_preview shows the correct
+    read-only discount information before the cart is checked out.
+    '''
+
+    def _set_session_cart(self, series, discount_code=None):
+        '''Write a single-event cart directly into the test session.'''
+        sku = f'EVENT_{series.id}_GENERAL'
+        cart = {
+            'items': [{'item_type': 'Event', 'item_id': series.id,
+                       'sku': sku, 'quantity': 1}],
+            'payAtDoor': False,
+        }
+        if discount_code:
+            cart['discount_code'] = discount_code
+        session = self.client.session
+        session[REG_VALIDATION_STR] = {'cart': cart, 'payAtDoor': False}
+        session.save()
+
+    def test_discount_preview_shown_for_matching_discount(self):
+        '''
+        When an active discount applies to the items in the cart,
+        discount_preview in the context must contain the expected savings.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        # Default create_discount() creates a flatPrice combo that reduces the
+        # online price by $5 for a single class (see BaseDiscountsTest).
+        combo, _ = self.create_discount(
+            discountType=DiscountCombo.DiscountType.dollarDiscount,
+            dollarDiscount=10,
+        )
+        self._set_session_cart(s)
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        preview = response.context_data.get('discount_preview')
+        self.assertIsNotNone(preview, 'Expected discount_preview to be set')
+        self.assertGreater(preview['total_discount'], 0)
+        discount_names = [d['name'] for d in preview['discounts']]
+        self.assertIn(combo.name, discount_names)
+
+    def test_no_discount_preview_when_discounts_disabled(self):
+        '''
+        When the discounts feature is disabled, discount_preview must be None.
+        '''
+        updateConstant('general__discountsEnabled', False)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        self.create_discount()
+        self._set_session_cart(s)
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context_data.get('discount_preview'))
+
+    def test_no_discount_preview_without_matching_discount(self):
+        '''
+        When no discount is configured, discount_preview must be None.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        # No discount created.
+        self._set_session_cart(s)
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.context_data.get('discount_preview'))
+
+    def test_voucher_code_gated_discount_preview(self):
+        '''
+        A discount requiring a voucher code only appears in the preview when
+        the correct code is present in the cart.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        s = self.create_series(pricingTier=self.defaultPricing)
+        combo, _ = self.create_discount(voucherId='SUMMARYCODE')
+
+        # Without the code: no preview.
+        self._set_session_cart(s)
+        response = self.client.get(reverse('cartSummary'))
+        self.assertIsNone(response.context_data.get('discount_preview'))
+
+        # With the correct code: preview shows the discount.
+        self._set_session_cart(s, discount_code='SUMMARYCODE')
+        response = self.client.get(reverse('cartSummary'))
+        preview = response.context_data.get('discount_preview')
+        self.assertIsNotNone(preview)
+        self.assertGreater(preview['total_discount'], 0)

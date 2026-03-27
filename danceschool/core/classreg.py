@@ -27,7 +27,7 @@ from rest_framework.views import APIView
 
 from .models import (
     Event, Series, PublicEvent, Invoice, InvoiceItem, Customer,
-    CashPaymentRecord, DanceRole, Registration, EventRegistration
+    CashPaymentRecord, DanceRole, EventRole, Registration, EventRegistration
 )
 from .forms import (
     ClassChoiceForm, RegistrationContactForm, MultiRegCustomerNameForm,
@@ -1007,6 +1007,310 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = new_cart_data
         request.session.modified = True
         return Response(cart, status=status.HTTP_200_OK)
+
+
+class CartSummaryView(RegistrationAdjustmentsMixin, TemplateView):
+    '''
+    Displays a summary of the current session cart, with per-item remove
+    buttons, a discount/voucher preview, and navigation buttons to either
+    return to PublicRegisterView (add more items) or proceed to checkout
+    (StudentInfoView).
+
+    This view is intentionally outside the main registration flow.  It is
+    meant to serve as an interstitial page when items are added to the cart
+    from outside ClassRegistrationView / PublicRegisterView (e.g. a
+    "Register Now" button on an event detail page) and the user should be
+    given the opportunity to review or extend their cart before continuing.
+    '''
+    template_name = 'core/cart_summary.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        reg_session = request.session.get(REG_VALIDATION_STR, {})
+        # Work on a shallow copy so we don't accidentally mutate the session.
+        self.cart = dict(reg_session.get('cart', {}))
+        self.payAtDoor = self.cart.get('payAtDoor', reg_session.get('payAtDoor', False))
+        return super().dispatch(request, *args, **kwargs)
+
+    def _enrich_cart_items(self):
+        '''
+        Return a list of dicts augmenting each session cart item with display
+        information: the Event object, role name, per-unit price, event URL,
+        and whether the registration is a drop-in.
+
+        Only the events referenced by items currently in the cart are queried.
+        '''
+        cart_items = self.cart.get('items', [])
+
+        event_ids = [i['item_id'] for i in cart_items if i.get('item_type') == 'Event']
+        events_by_id = {
+            e.id: e for e in Event.objects.filter(id__in=event_ids)
+        } if event_ids else {}
+
+        enriched = []
+        for item in cart_items:
+            d = dict(item)
+            sku = d.get('sku', '')
+            if d.get('item_type') == 'Event':
+                event = events_by_id.get(d['item_id'])
+                if event:
+                    d['event'] = event
+                    d['event_url'] = event.get_absolute_url()
+                    d['price'] = event.getBasePrice(payAtDoor=self.payAtDoor)
+                    d['is_dropin'] = 'DROPIN' in sku
+                    if '_ROLE_' in sku:
+                        try:
+                            role_id = int(sku.rsplit('_ROLE_', 1)[-1])
+                            try:
+                                eventrole = EventRole.objects.get(
+                                    role__id=role_id, event=event
+                                )
+                                d['role'] = eventrole.role
+                            except ObjectDoesNotExist:
+                                d['role'] = DanceRole.objects.filter(id=role_id).first()
+                        except (ValueError, ObjectDoesNotExist):
+                            pass
+            enriched.append(d)
+        return enriched
+
+    def _get_discount_preview(self, events_by_id):
+        '''
+        Fire the request_discounts signal with a temporary, unsaved Invoice to
+        get a read-only discount preview.  Returns the same dict format as
+        CartView.get_discount_preview, or None when no discount applies.
+
+        ``events_by_id`` is the already-fetched {id: event} mapping built in
+        _enrich_cart_items so we avoid a second database round-trip.
+        '''
+        cart_items = self.cart.get('items', [])
+        event_items = [i for i in cart_items if i.get('item_type') == 'Event']
+        if not event_items:
+            return None
+
+        gross_total = sum(
+            events_by_id[i['item_id']].getBasePrice(payAtDoor=self.payAtDoor)
+            * i.get('quantity', 1)
+            for i in event_items
+            if i['item_id'] in events_by_id
+        )
+
+        tmp_invoice = Invoice(
+            grossTotal=gross_total,
+            firstName=self.cart.get('firstName', ''),
+            lastName=self.cart.get('lastName', ''),
+            email=self.cart.get('email', ''),
+        )
+
+        discount_responses = request_discounts.send(
+            sender=RegistrationAdjustmentsMixin,
+            registration=None,
+            invoice=tmp_invoice,
+            cart_items=event_items,
+            customer_final=False,
+            voucher_code=self.cart.get('discount_code'),
+            student=self.cart.get('student', False),
+            payAtDoor=self.payAtDoor,
+        )
+        discount_responses = [x[1] for x in discount_responses if len(x) > 1 and x[1]]
+        if not discount_responses:
+            return None
+
+        discount_responses.sort(
+            key=lambda k: min(
+                [getattr(x, 'net_price', gross_total) for x in k.items] + [gross_total]
+            ) if k and hasattr(k, 'items') else gross_total
+        )
+
+        best = discount_responses[0]
+        discount_codes = getattr(best, 'items', [])
+        if not discount_codes:
+            return None
+
+        discounted_total = (
+            min(getattr(x, 'net_price', gross_total) for x in discount_codes)
+            + getattr(best, 'ineligible_total', 0)
+        )
+
+        return {
+            'discounts': [
+                {
+                    'name': getattr(getattr(x, 'code', None), 'name', str(x.code)),
+                    'discount_amount': float(x.discount_amount),
+                }
+                for x in discount_codes
+            ],
+            'gross_total': float(gross_total),
+            'discounted_total': float(discounted_total),
+            'total_discount': float(gross_total - discounted_total),
+        }
+
+    def _get_voucher_preview(self):
+        '''
+        Fire the check_voucher signal to get a read-only voucher preview.
+        Returns the same dict format as CartView.get_voucher_preview, or None.
+        '''
+        discount_code = self.cart.get('discount_code')
+        if not discount_code:
+            return None
+
+        cart_items = self.cart.get('items', [])
+        responses = check_voucher.send(
+            sender=self.__class__,
+            voucherId=discount_code,
+            cart_items=cart_items,
+            customer=None,
+            validateCustomer=False,
+            invoice=None,
+            payAtDoor=self.payAtDoor,
+        )
+        responses = [r[1] for r in responses if len(r) > 1 and r[1]]
+        if not responses:
+            return None
+
+        result = responses[0]
+        if result.get('status') == 'valid':
+            return {
+                'voucher_id': result.get('id'),
+                'voucher_name': result.get('name'),
+                'voucher_amount': float(result.get('available', 0)),
+                'before_tax': result.get('beforeTax', True),
+            }
+        elif result.get('status') == 'invalid':
+            errors = result.get('errors', [])
+            return {
+                'voucher_id': discount_code,
+                'error': errors[0].get('message', '') if errors else '',
+            }
+        return None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        cart_items = self._enrich_cart_items()
+
+        # Build the events_by_id map from the already-enriched items so the
+        # discount preview doesn't issue a second DB query.
+        events_by_id = {
+            d['item_id']: d['event']
+            for d in cart_items
+            if d.get('item_type') == 'Event' and d.get('event')
+        }
+
+        discount_preview = self._get_discount_preview(events_by_id)
+        voucher_preview = self._get_voucher_preview()
+
+        gross_total = sum(
+            d.get('price', 0) * d.get('quantity', 1)
+            for d in cart_items
+            if d.get('price') is not None
+        )
+        net_total = gross_total
+        if discount_preview:
+            net_total -= discount_preview.get('total_discount', 0)
+        if voucher_preview and not voucher_preview.get('error'):
+            net_total -= voucher_preview.get('voucher_amount', 0)
+
+        from django.urls import NoReverseMatch
+        try:
+            add_more_url = reverse('publicRegistration')
+        except NoReverseMatch:
+            add_more_url = reverse('registration')
+
+        context.update({
+            'cart_items': cart_items,
+            'discount_preview': discount_preview,
+            'voucher_preview': voucher_preview,
+            'gross_total': gross_total,
+            'net_total': max(net_total, 0),
+            'currencySymbol': getConstant('general__currencySymbol'),
+            'payAtDoor': self.payAtDoor,
+            'add_more_url': add_more_url,
+        })
+        return context
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action', '')
+
+        if action == 'add':
+            try:
+                item_id = int(request.POST.get('item_id', ''))
+            except (ValueError, TypeError):
+                messages.error(request, _('Invalid item.'))
+                return HttpResponseRedirect(reverse('cartSummary'))
+
+            # Build the new item dict from the POST fields.
+            sku = request.POST.get('sku') or f'EVENT_{item_id}_GENERAL'
+            try:
+                quantity = max(1, int(request.POST.get('quantity', 1)))
+            except (ValueError, TypeError):
+                quantity = 1
+
+            new_item = {
+                'item_type': 'Event',
+                'item_id': item_id,
+                'sku': sku,
+                'quantity': quantity,
+            }
+            if request.POST.get('dropIn') == 'true':
+                new_item['dropIn'] = True
+                try:
+                    occurrence_id = int(request.POST.get('dropInOccurrence', ''))
+                    new_item['dropInOccurrence'] = occurrence_id
+                except (ValueError, TypeError):
+                    pass
+
+            cart = request.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+            cart.setdefault('items', []).append(new_item)
+            request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = cart
+            request.session.modified = True
+            return HttpResponseRedirect(reverse('cartSummary'))
+
+        if action == 'remove':
+            item_id = request.POST.get('item_id')
+            if item_id:
+                try:
+                    item_id_int = int(item_id)
+                    cart = request.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+                    cart['items'] = [
+                        i for i in cart.get('items', [])
+                        if i.get('item_id') != item_id_int
+                    ]
+                    request.session.setdefault(REG_VALIDATION_STR, {})['cart'] = cart
+                    request.session.modified = True
+                except (ValueError, TypeError):
+                    pass
+            return HttpResponseRedirect(reverse('cartSummary'))
+
+        if action == 'checkout':
+            cart = request.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+            if not cart.get('items'):
+                messages.error(
+                    request,
+                    _('Please add at least one item before checking out.')
+                )
+                return HttpResponseRedirect(reverse('cartSummary'))
+
+            # Delegate invoice creation to CartView, which owns that logic.
+            # CartView.create_invoice_from_cart only needs request, payAtDoor,
+            # and purchasable_registry on the instance.  We build a minimal
+            # stand-in rather than going through the full API dispatch cycle.
+            cart_view = CartView()
+            cart_view.request = request
+            cart_view.payAtDoor = self.payAtDoor
+            cart_view.args = ()
+            cart_view.kwargs = {}
+            try:
+                invoice = cart_view.create_invoice_from_cart(deepcopy(cart), request)
+            except (ValidationError, exceptions.ValidationError) as exc:
+                messages.error(request, str(exc))
+                return HttpResponseRedirect(reverse('cartSummary'))
+
+            reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
+            reg_session['invoice_id'] = str(invoice.id)
+            reg_session['invoice_expiry'] = invoice.expirationDate.isoformat()
+            reg_session['payAtDoor'] = self.payAtDoor
+            request.session.modified = True
+            return HttpResponseRedirect(reverse('getStudentInfo'))
+
+        return HttpResponseRedirect(reverse('cartSummary'))
 
 
 class SingleClassRegistrationReferralView(ReferralInfoMixin, RedirectView):

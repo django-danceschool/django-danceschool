@@ -903,3 +903,239 @@ class SalesTaxDifferentiationTest(DefaultSchoolTestCase):
         items = self._get_invoice_items()
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].taxRate, self.EVENT_TAX_RATE)
+
+
+class CartSummaryViewTest(DefaultSchoolTestCase):
+    '''
+    Tests for CartSummaryView (/cart/summary/).  These tests cover the basic
+    page rendering and the item-removal POST action.  Discount and voucher
+    preview behaviour is tested in the discounts and vouchers apps respectively.
+    '''
+
+    def _set_session_cart(self, items, discount_code=None, payAtDoor=False):
+        '''Helper: write a cart directly into the test session.'''
+        cart = {'items': items, 'payAtDoor': payAtDoor}
+        if discount_code:
+            cart['discount_code'] = discount_code
+        session = self.client.session
+        session[REG_VALIDATION_STR] = {'cart': cart, 'payAtDoor': payAtDoor}
+        session.save()
+
+    def test_empty_cart_renders(self):
+        '''CartSummaryView renders even when the session cart is empty.'''
+        self._set_session_cart([])
+        response = self.client.get(reverse('cartSummary'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context_data['cart_items'], [])
+        self.assertEqual(response.context_data['gross_total'], 0)
+
+    def test_event_item_shown_in_summary(self):
+        '''An event added to the session cart appears in cart_items with the expected fields.'''
+        series = self.create_series()
+        sku = f'EVENT_{series.id}_GENERAL'
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': series.id, 'sku': sku, 'quantity': 1}
+        ])
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        cart_items = response.context_data['cart_items']
+        self.assertEqual(len(cart_items), 1)
+        item = cart_items[0]
+        self.assertEqual(item['item_id'], series.id)
+        self.assertEqual(item['event'], series)
+        self.assertAlmostEqual(item['price'], series.getBasePrice(payAtDoor=False))
+        self.assertFalse(item['is_dropin'])
+        # No _ROLE_ in sku, so role should not be set
+        self.assertNotIn('role', item)
+
+    def test_multiple_items_shown(self):
+        '''Multiple events in the session cart each appear in cart_items.'''
+        s1 = self.create_series()
+        s2 = self.create_series(classDescription=self.levelTwoClassDescription)
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': s1.id, 'sku': f'EVENT_{s1.id}_GENERAL', 'quantity': 1},
+            {'item_type': 'Event', 'item_id': s2.id, 'sku': f'EVENT_{s2.id}_GENERAL', 'quantity': 1},
+        ])
+
+        response = self.client.get(reverse('cartSummary'))
+
+        self.assertEqual(response.status_code, 200)
+        cart_items = response.context_data['cart_items']
+        self.assertEqual(len(cart_items), 2)
+        item_ids = {item['item_id'] for item in cart_items}
+        self.assertEqual(item_ids, {s1.id, s2.id})
+
+    def test_gross_total_reflects_item_prices(self):
+        '''gross_total in context equals sum of (price × quantity) across all items.'''
+        series = self.create_series()
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': series.id,
+             'sku': f'EVENT_{series.id}_GENERAL', 'quantity': 2}
+        ])
+
+        response = self.client.get(reverse('cartSummary'))
+
+        expected = series.getBasePrice(payAtDoor=False) * 2
+        self.assertAlmostEqual(response.context_data['gross_total'], expected)
+
+    def test_remove_item_updates_session(self):
+        '''POSTing action=remove removes the targeted item from the session cart.'''
+        series = self.create_series()
+        sku = f'EVENT_{series.id}_GENERAL'
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': series.id, 'sku': sku, 'quantity': 1}
+        ])
+
+        response = self.client.post(
+            reverse('cartSummary'),
+            data={'action': 'remove', 'item_id': str(series.id)},
+        )
+
+        self.assertRedirects(response, reverse('cartSummary'), fetch_redirect_response=False)
+        updated_items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(updated_items, [])
+
+    def test_remove_one_of_two_items(self):
+        '''Removing one item leaves the other intact in the session.'''
+        s1 = self.create_series()
+        s2 = self.create_series(classDescription=self.levelTwoClassDescription)
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': s1.id, 'sku': f'EVENT_{s1.id}_GENERAL', 'quantity': 1},
+            {'item_type': 'Event', 'item_id': s2.id, 'sku': f'EVENT_{s2.id}_GENERAL', 'quantity': 1},
+        ])
+
+        self.client.post(
+            reverse('cartSummary'),
+            data={'action': 'remove', 'item_id': str(s1.id)},
+        )
+
+        remaining = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(remaining), 1)
+        self.assertEqual(remaining[0]['item_id'], s2.id)
+
+    def test_unknown_action_is_safe(self):
+        '''An unrecognised POST action redirects back without modifying the cart.'''
+        series = self.create_series()
+        sku = f'EVENT_{series.id}_GENERAL'
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': series.id, 'sku': sku, 'quantity': 1}
+        ])
+
+        response = self.client.post(
+            reverse('cartSummary'),
+            data={'action': 'bogus'},
+        )
+
+        self.assertRedirects(response, reverse('cartSummary'), fetch_redirect_response=False)
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(items), 1)
+
+    # --- action=add tests ---------------------------------------------------
+
+    def test_add_item_to_empty_cart(self):
+        '''POSTing action=add to an empty session creates the cart and adds the item.'''
+        series = self.create_series()
+        sku = f'EVENT_{series.id}_GENERAL'
+
+        response = self.client.post(reverse('cartSummary'), data={
+            'action': 'add',
+            'item_id': str(series.id),
+            'sku': sku,
+            'quantity': '1',
+        })
+
+        self.assertRedirects(response, reverse('cartSummary'), fetch_redirect_response=False)
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['item_id'], series.id)
+        self.assertEqual(items[0]['sku'], sku)
+        self.assertEqual(items[0]['quantity'], 1)
+        self.assertEqual(items[0]['item_type'], 'Event')
+
+    def test_add_item_to_existing_cart(self):
+        '''POSTing action=add appends to a cart that already contains items.'''
+        s1 = self.create_series()
+        s2 = self.create_series(classDescription=self.levelTwoClassDescription)
+        self._set_session_cart([
+            {'item_type': 'Event', 'item_id': s1.id,
+             'sku': f'EVENT_{s1.id}_GENERAL', 'quantity': 1},
+        ])
+
+        self.client.post(reverse('cartSummary'), data={
+            'action': 'add',
+            'item_id': str(s2.id),
+            'sku': f'EVENT_{s2.id}_GENERAL',
+            'quantity': '1',
+        })
+
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(items), 2)
+        item_ids = {i['item_id'] for i in items}
+        self.assertEqual(item_ids, {s1.id, s2.id})
+
+    def test_add_item_with_role(self):
+        '''action=add stores the role-bearing SKU and item_type correctly.'''
+        series = self.create_series()
+        lead_role = self.defaultDanceRoles.get(name='Lead')
+        sku = f'EVENT_{series.id}_ROLE_{lead_role.id}'
+
+        self.client.post(reverse('cartSummary'), data={
+            'action': 'add',
+            'item_id': str(series.id),
+            'sku': sku,
+            'quantity': '1',
+        })
+
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['sku'], sku)
+
+    def test_add_dropin_item(self):
+        '''action=add with dropIn=true stores the dropIn and dropInOccurrence fields.'''
+        series = self.create_series()
+        occurrence = series.eventoccurrence_set.first()
+        sku = f'EVENT_{series.id}_DROPIN_GENERAL'
+
+        self.client.post(reverse('cartSummary'), data={
+            'action': 'add',
+            'item_id': str(series.id),
+            'sku': sku,
+            'quantity': '1',
+            'dropIn': 'true',
+            'dropInOccurrence': str(occurrence.id),
+        })
+
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(items), 1)
+        self.assertTrue(items[0].get('dropIn'))
+        self.assertEqual(items[0].get('dropInOccurrence'), occurrence.id)
+
+    def test_add_item_missing_id_shows_error(self):
+        '''action=add with no item_id redirects back without modifying the cart.'''
+        self._set_session_cart([])
+
+        response = self.client.post(reverse('cartSummary'), data={
+            'action': 'add',
+            'item_id': 'notanumber',
+            'sku': 'EVENT_0_GENERAL',
+        })
+
+        self.assertRedirects(response, reverse('cartSummary'), fetch_redirect_response=False)
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(items, [])
+
+    def test_add_item_falls_back_to_general_sku(self):
+        '''action=add with no sku posted defaults to EVENT_{id}_GENERAL.'''
+        series = self.create_series()
+
+        self.client.post(reverse('cartSummary'), data={
+            'action': 'add',
+            'item_id': str(series.id),
+            'quantity': '1',
+        })
+
+        items = self.client.session[REG_VALIDATION_STR]['cart']['items']
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]['sku'], f'EVENT_{series.id}_GENERAL')

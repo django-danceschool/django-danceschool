@@ -7,8 +7,8 @@ from .views import (
 )
 from .classreg import (
     RegistrationOfflineView, ClassRegistrationView, PurchasableItemsView,
-    CartView, SingleClassRegistrationView, ClassRegistrationReferralView,
-    RegistrationSummaryView, StudentInfoView,
+    CartView, CartSummaryView, SingleClassRegistrationView,
+    ClassRegistrationReferralView, RegistrationSummaryView, StudentInfoView,
     SingleClassRegistrationReferralView, MultiRegCustomerNameView,
     PartnerRequiredView
 )
@@ -21,6 +21,7 @@ urlpatterns = [
     path('', ClassRegistrationView.as_view(), name='registration'),
     path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
     path('cart/', CartView.as_view(), name='cart'),
+    path('cart/summary/', CartSummaryView.as_view(), name='cartSummary'),
     path(
         'id/<slug:marketing_id>/',
         ClassRegistrationReferralView.as_view(),

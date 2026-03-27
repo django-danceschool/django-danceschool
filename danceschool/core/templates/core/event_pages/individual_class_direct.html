@@ -23,5 +23,5 @@
 {% block content %}
 	{{ block.super }}
 
-	{% addtoblock "js" %}<script type="text/javascript" data-registration-url="{% url 'registration' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
+	{% addtoblock "js" %}<script type="text/javascript" data-cart-url="{% url 'cartSummary' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
 {% endblock %}
