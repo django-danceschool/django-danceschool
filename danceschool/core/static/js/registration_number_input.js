@@ -20,13 +20,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (type === 'minus') {
                 if (currentVal > minVal && clicked) {
                     input.value = currentVal - 1;
-                    input.dispatchEvent(new Event('change'));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
                 }
                 button.disabled = parseInt(input.value, 10) <= minVal;
             } else if (type === 'plus') {
                 if (currentVal < maxVal && clicked) {
                     input.value = currentVal + 1;
-                    input.dispatchEvent(new Event('change'));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
                 }
                 button.disabled = isFinite(maxVal) && parseInt(input.value, 10) >= maxVal;
             }

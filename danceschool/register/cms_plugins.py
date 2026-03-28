@@ -18,6 +18,7 @@ from .models import (
 from danceschool.core.models import Event, Series
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.utils.timezone import ensure_localtime
+from danceschool.core.constants import getConstant
 
 
 class RegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
@@ -285,6 +286,7 @@ class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
         context.update({
             'event_list': listing,
             'register_choices': register_choices,
+            'showDescriptionRule': getConstant('registration__showDescriptionRule') or 'all',
         })
         return context
 

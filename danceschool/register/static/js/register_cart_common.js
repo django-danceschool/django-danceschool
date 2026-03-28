@@ -79,20 +79,29 @@ document.addEventListener('DOMContentLoaded', function () {
         if (box) { box.innerHTML = ''; }
     }
 
-    function displayErrors(errors) {
-        let html = '<ul>';
-        if (Array.isArray(errors)) {
-            errors.forEach(function (e) {
-                html += '<li>' + (e.message || e) + '</li>';
-            });
-        } else if (errors && typeof errors === 'object') {
-            Object.values(errors).forEach(function (msgs) {
-                const list = Array.isArray(msgs) ? msgs : [msgs];
-                list.forEach(function (m) { html += '<li>' + (m.message || m) + '</li>'; });
-            });
-        } else {
-            html += '<li>' + errors + '</li>';
+    // Recursively extract all leaf string messages from a DRF error response,
+    // which may be a string, an array, or a (possibly deeply nested) object.
+    function extractMessages(val, out) {
+        out = out || [];
+        if (!val) { return out; }
+        if (typeof val === 'string') {
+            out.push(val);
+        } else if (Array.isArray(val)) {
+            val.forEach(function (v) { extractMessages(v, out); });
+        } else if (typeof val === 'object') {
+            if (val.message) {
+                out.push(String(val.message));
+            } else {
+                Object.values(val).forEach(function (v) { extractMessages(v, out); });
+            }
         }
+        return out;
+    }
+
+    function displayErrors(errors) {
+        const msgs = extractMessages(errors);
+        let html = '<ul>';
+        msgs.forEach(function (m) { html += '<li>' + m + '</li>'; });
         html += '</ul>';
         addAlert(html);
     }
@@ -136,8 +145,12 @@ document.addEventListener('DOMContentLoaded', function () {
         return catalog[sku] ? catalog[sku].price : 0;
     }
 
-    function lookupDescription(sku, fallback) {
-        return catalog[sku] ? catalog[sku].description : (fallback || sku);
+    function lookupDescription(sku, description) {
+        // An explicitly cached description (e.g. set by a page-specific script
+        // with occurrence-level detail) takes priority over the catalog entry,
+        // which only carries event-level names.
+        if (description) { return description; }
+        return catalog[sku] ? catalog[sku].description : sku;
     }
 
     // ===== Local cart state =====
@@ -176,6 +189,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (!cart.items || cart.items.length === 0) {
             if (totalEl) { totalEl.textContent = fmt(0); }
+            if (typeof regParams.onCartRefresh === 'function') {
+                regParams.onCartRefresh(cart);
+            }
             return;
         }
 
@@ -271,6 +287,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (submitBtn) { submitBtn.classList.remove('invisible'); }
+
+        if (typeof regParams.onCartRefresh === 'function') {
+            regParams.onCartRefresh(cart);
+        }
     }
 
     // ===== CartView API =====
@@ -478,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cart:            cart,
         syncCart:        syncCart,
         refreshCart:     refreshCart,
+        buildCatalog:    buildCatalog,
         addAlert:        addAlert,
         clearAlerts:     clearAlerts,
         displayErrors:   displayErrors,

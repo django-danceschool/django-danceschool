@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load i18n %}
+{% load i18n danceschool_tags %}
 
 {% block title %}{% trans "Your Cart" %}{% endblock %}
 
@@ -13,7 +13,7 @@
 </div>
 {% endfor %}
 
-<h3 class="mb-4">{% trans "Your Cart" %}</h3>
+<h3 class="mb-4">{% trans "Your Shopping Cart" %}</h3>
 
 {% if cart_items %}
 <div class="card card-body bg-light pb-0 mb-4">
@@ -27,11 +27,22 @@
                     {{ item.event.name }}
                     {% if item.role %} &ndash; {{ item.role.name }}{% endif %}
                     {% if item.quantity > 1 %}&times;{{ item.quantity }}{% endif %}
-                    {% if item.event_url %}
-                        <small class="ms-2">
-                            <a href="{{ item.event_url }}" target="_blank" rel="noopener">{% trans "more info" %}</a>
+                    <div class="mt-1 mb-1 text-muted">
+                        <small>
+                        {% if item.event.numOccurrences > 1 %}
+                            {% readable_weekday item.event.weekday %}s
+                            {{ item.event.startTime|date:"g:i A" }} &ndash; {{ item.event.endTime|date:"g:i A" }} &mdash;
+                            {% for occ in item.event.eventoccurrence_set.all %}
+                            {{ occ.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {{ item.event.startTime|date:"l, N jS, g:i A" }}
+                        {% endif %}
+                        {% if item.event_url %}
+                        <span class="ml-2"><a href="{{ item.event_url }}" target="_blank" rel="noopener">{% trans "more info" %}</a></span>
+                        {% endif %}
                         </small>
-                    {% endif %}
+                    </div>
                 </td>
                 <td class="text-nowrap">
                     {% if item.price is not None %}
@@ -46,8 +57,8 @@
                         {% csrf_token %}
                         <input type="hidden" name="action" value="remove">
                         <input type="hidden" name="item_id" value="{{ item.item_id }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                            {% trans "Remove" %}
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="fa fa-trash" aria-hidden="true" title="{% trans 'Remove' %}"></i>
                         </button>
                     </form>
                 </td>
@@ -125,8 +136,8 @@
     </table>
 </div>
 
-<div class="d-flex gap-2 mt-3">
-    <a href="{{ add_more_url }}" class="btn btn-outline-secondary">
+<div class="d-flex mt-3">
+    <a href="{{ add_more_url }}" class="btn btn-outline-secondary mr-2">
         {% trans "Add more items" %}
     </a>
     <form method="post" action="" class="d-inline">
@@ -141,7 +152,7 @@
 {% else %}
 <p class="text-muted">{% trans "Your cart is empty." %}</p>
 <a href="{{ add_more_url }}" class="btn btn-outline-secondary mt-2">
-    {% trans "Browse classes" %}
+    {% trans "Add more items" %}
 </a>
 {% endif %}
 
