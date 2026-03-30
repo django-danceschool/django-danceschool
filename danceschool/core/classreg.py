@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import redirect
 from django.views.generic import FormView, RedirectView, TemplateView, View
+from django.urls import NoReverseMatch
 from django.utils.functional import cached_property
 from django.utils.translation import gettext, gettext_lazy as _
 from django.utils import timezone
@@ -50,6 +51,17 @@ from .utils.timezone import ensure_localtime
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+def clear_reg_cart(request):
+    '''
+    Remove only the 'cart' key from the registration session, leaving all
+    other session state (invoice_id, payAtDoor, link_authorized, etc.) intact.
+    '''
+    reg_session = request.session.get(REG_VALIDATION_STR)
+    if reg_session and 'cart' in reg_session:
+        del reg_session['cart']
+        request.session.modified = True
 
 
 class RegistrationOfflineView(TemplateView):
@@ -973,7 +985,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
                     [{'message': str(_('Please select at least one item before checking out.'))}],
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            invoice = self.create_invoice_from_cart(new_cart_data, request)
+            invoice = self.create_invoice_from_cart(dict(new_cart_data), request)
             reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
             reg_session['invoice_id'] = str(invoice.id)
             reg_session['invoice_expiry'] = invoice.expirationDate.isoformat()
@@ -1372,6 +1384,7 @@ class RegistrationSummaryView(
             self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
+            clear_reg_cart(request)
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
@@ -1568,6 +1581,7 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
             self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
+            clear_reg_cart(request)
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
@@ -1713,6 +1727,7 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
             self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
+            clear_reg_cart(request)
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
@@ -1874,6 +1889,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             self.request.session[REG_VALIDATION_STR].get('invoice_expiry', ''),
         )
         if not expiry or expiry < timezone.now():
+            clear_reg_cart(request)
             messages.info(request, _('Your registration session has expired. Please try again.'))
             return HttpResponseRedirect(reverse('registration'))
 
@@ -1983,6 +1999,10 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         kwargs['registration'] = self.registration
         kwargs['invoice'] = self.invoice
         kwargs['multiReg'] = self.multiReg
+        try:
+            kwargs['add_more_url'] = reverse('publicRegistration')
+        except NoReverseMatch:
+            kwargs['add_more_url'] = None
         return kwargs
 
     def get_success_url(self):

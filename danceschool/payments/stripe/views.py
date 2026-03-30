@@ -11,6 +11,7 @@ from django.views.generic import TemplateView
 
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.models import Invoice
+from danceschool.core.classreg import clear_reg_cart
 
 from .models import StripeCharge
 
@@ -175,6 +176,7 @@ def handle_stripe_checkout(request):
             submissionUser=submissionUser,
             notify=stripeEmail,
         )
+        clear_reg_cart(request)
 
         if addSessionInfo:
             paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
@@ -409,6 +411,7 @@ def finish_order(charge, metadata, request):
         submissionUser=user,
         notify=metadata['stripeEmail'],
     )
+    clear_reg_cart(request)
 
     if 'addSessionInfo' in metadata:
         paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})

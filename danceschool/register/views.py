@@ -19,6 +19,7 @@ from danceschool.core.mixins import (
 )
 from danceschool.core.registries import extras_templates_registry
 from danceschool.core.signals import check_voucher
+from danceschool.core.classreg import clear_reg_cart
 
 from .forms import CustomerGuestAutocompleteForm
 from .models import Register
@@ -33,6 +34,14 @@ class PointOfSaleRegisterView(
 
     # For Restricting to this day's register only.
     today = False
+
+    def dispatch(self, request, *args, **kwargs):
+        # Always start with a clean registration session so that a previous
+        # customer's cart/invoice data cannot bleed into the next transaction.
+        if REG_VALIDATION_STR in request.session:
+            del request.session[REG_VALIDATION_STR]
+            request.session.modified = True
+        return super().dispatch(request, *args, **kwargs)
 
     def get_allEvents(self):
         '''

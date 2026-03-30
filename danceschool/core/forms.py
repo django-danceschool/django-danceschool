@@ -748,6 +748,7 @@ class RegistrationContactForm(RegistrationForm):
         return bottom_layout
 
     def __init__(self, *args, **kwargs):
+        self._add_more_url = kwargs.pop('add_more_url', None)
         super().__init__(*args, **kwargs)
 
         user = getattr(self._request, 'user', None)
@@ -782,11 +783,18 @@ class RegistrationContactForm(RegistrationForm):
                     self.fields[field_name] = field
                     self._extra_mid_layout.append(layout_element)
 
+        buttons = [Submit('submit', _('Proceed with Registration'))]
+        if self._add_more_url:
+            buttons.append(HTML(
+                '<a href="%s" class="btn btn-outline-secondary mr-2">%s</a>' % (
+                    self._add_more_url, gettext('Add more items')
+                )
+            ))
         self.helper.layout = Layout(
             self.get_top_layout(),
             self.get_mid_layout(),
             self.get_bottom_layout(),
-            Submit('submit', _('Proceed with Registration'))
+            *buttons,
         )
 
         # If a voucher ID was passed (i.e. a referral code), then populate the form
