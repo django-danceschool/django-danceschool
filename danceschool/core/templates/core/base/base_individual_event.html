@@ -32,7 +32,11 @@
 			<p>
 			{% block register_link %}
 			{% if event.registrationOpen and not event.soldOut and not event.registrationPassed %}
-				<button data-id="{{ event.id }}" data-event-type="publicevent" class="btn btn-primary btn-lg register-ajax">{% trans "Register for this event!" %}</button>	
+				{% if event.status == event.RegStatus.linkOnly and not link_authorized %}
+				{# linkOnly event reached without the private UUID link — suppress the button #}
+				{% else %}
+				<button data-id="{{ event.id }}" data-event-type="publicevent" class="btn btn-primary btn-lg register-ajax">{% trans "Register for this event!" %}</button>
+				{% endif %}	
 			{% elif event.soldOut %}
 				<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{% trans "Sold Out!" %}</button>
 			{% elif event.registrationEnabled and not event.status == event.RegStatus.linkOnly %}

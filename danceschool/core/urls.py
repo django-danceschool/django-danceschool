@@ -87,6 +87,28 @@ urlpatterns = [
         IndividualPublicEventView.as_view(), name='eventViewSessionMonth'
     ),
 
+    # UUID-based private links for link-only events.  These are the only URLs
+    # that can display (and authorize cart access to) linkOnly events.
+    # Variants also accept an optional voucher code or marketing ID in the path.
+    path('classes/link/<uuid:uuid>/', IndividualClassView.as_view(), name='classViewUUID'),
+    path('events/link/<uuid:uuid>/', IndividualPublicEventView.as_view(), name='eventViewUUID'),
+    path(
+        'classes/link/<uuid:uuid>/referral/<slug:voucher_id>/',
+        IndividualClassView.as_view(), name='classViewUUIDVoucher',
+    ),
+    path(
+        'events/link/<uuid:uuid>/referral/<slug:voucher_id>/',
+        IndividualPublicEventView.as_view(), name='eventViewUUIDVoucher',
+    ),
+    path(
+        'classes/link/<uuid:uuid>/id/<slug:marketing_id>/',
+        IndividualClassView.as_view(), name='classViewUUIDMarketing',
+    ),
+    path(
+        'events/link/<uuid:uuid>/id/<slug:marketing_id>/',
+        IndividualPublicEventView.as_view(), name='eventViewUUIDMarketing',
+    ),
+
     # Pass along a marketing ID to an individual event view
     path(
         'classes/<int:year>/<slug:month>/<slug:slug>/id/<slug:marketing_id>/',

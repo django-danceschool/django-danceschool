@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
+from .constants import REG_VALIDATION_STR
 from .models import Event, EventRole
 
 
@@ -240,15 +241,32 @@ class CartItemSerializer(serializers.Serializer):
 
         valid = False
         for qs, _ in purchasable_items:
-            model = qs.model
             if qs.filter(id=data["item_id"]).exists():
-                # If variants are relevant, validate variant_id as well
                 instance = qs.get(id=data["item_id"])
+
+                # If variants are relevant, validate variant_id as well.
                 if hasattr(instance, "variants"):
                     variants = [v["id"] for v in instance.variants] if isinstance(instance.variants, list) \
                                else instance.variants.values_list("id", flat=True)
                     if data.get("variant_id") and str(data["variant_id"]) not in map(str, variants):
                         raise serializers.ValidationError("Invalid variant for selected item.")
+
+                # linkOnly events may only be added to the cart by users who
+                # arrived via the event's private UUID link in this session.
+                if (
+                    isinstance(instance, Event) and
+                    instance.status == Event.RegStatus.linkOnly
+                ):
+                    request = self.context.get('request')
+                    session = getattr(request, 'session', {})
+                    authorized_ids = session.get(REG_VALIDATION_STR, {}).get(
+                        'link_authorized', []
+                    )
+                    if instance.pk not in authorized_ids:
+                        raise serializers.ValidationError(
+                            _('Registration for this event requires a direct link.')
+                        )
+
                 valid = True
                 break
 

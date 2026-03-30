@@ -46,7 +46,7 @@ from .forms import (
     RepeatEventForm, InvoiceNotificationForm, EventAutocompleteForm,
     RegistrationTransferForm
 )
-from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR
+from .constants import getConstant, EMAIL_VALIDATION_STR, REFUND_VALIDATION_STR, REG_VALIDATION_STR
 from .mixins import (
     EmailRecipientMixin, StaffMemberObjectMixin, FinancialContextMixin,
     AdminSuccessURLMixin, EventOrderMixin, SiteHistoryMixin,
@@ -1418,26 +1418,9 @@ class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView
         month = self.kwargs.get('month')
         session_slug = self.kwargs.get('session_slug')
         slug = self.kwargs.get('slug', '')
-
-        if month:
-            try:
-                month_number = list(month_name).index(month or 0)
-            except ValueError:
-                raise Http404(_('Invalid month.'))
+        event_uuid = self.kwargs.get('uuid')
 
         model_class = getattr(self, 'model_class', Event)
-
-        filters = ~Q(status=Event.RegStatus.hidden) \
-            & ~Q(status=Event.RegStatus.linkOnly)
-        if model_class == Series:
-            filters = filters & Q(classDescription__slug=slug)
-        elif model_class == PublicEvent:
-            filters = filters & Q(slug=slug)
-
-        if year and month:
-            filters = filters & Q(year=year or None) & Q(month=month_number or None)
-        if session_slug:
-            filters = filters & Q(session__slug=session_slug)
 
         passedCase = Q(endTime__lt=timezone.now())
         if getConstant('registration__displayLimitDays') or 0 > 0:
@@ -1447,14 +1430,47 @@ class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView
                 )
             )
 
-        self.event_set = model_class.objects.filter(
-            filters
-        ).annotate(
+        annotate_kwargs = dict(
             registrationPassed=Case(
                 When(passedCase, then=True), default=False,
                 output_field=BooleanField()
             )
         )
+
+        if event_uuid:
+            # UUID-based lookup: allow linkOnly events (they are specifically
+            # accessed via their private link), but still exclude hidden events.
+            self.event_set = model_class.objects.filter(
+                uuid=event_uuid
+            ).exclude(
+                status=Event.RegStatus.hidden
+            ).annotate(**annotate_kwargs)
+            self.link_uuid = event_uuid
+        else:
+            if month:
+                try:
+                    month_number = list(month_name).index(month or 0)
+                except ValueError:
+                    raise Http404(_('Invalid month.'))
+
+            # Slug-based lookup: linkOnly events are intentionally excluded so
+            # that they cannot be reached without their private UUID link.
+            filters = ~Q(status=Event.RegStatus.hidden) \
+                & ~Q(status=Event.RegStatus.linkOnly)
+            if model_class == Series:
+                filters = filters & Q(classDescription__slug=slug)
+            elif model_class == PublicEvent:
+                filters = filters & Q(slug=slug)
+
+            if year and month:
+                filters = filters & Q(year=year or None) & Q(month=month_number or None)
+            if session_slug:
+                filters = filters & Q(session__slug=session_slug)
+
+            self.event_set = model_class.objects.filter(
+                filters
+            ).annotate(**annotate_kwargs)
+            self.link_uuid = None
 
         if not self.event_set:
             raise Http404(_('No events found.'))
@@ -1472,6 +1488,21 @@ class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView
 
         # This will pass through to the context data by default
         kwargs.update({'event_set': self.event_set})
+
+        # If the user arrived via a UUID link, authorize any linkOnly events in
+        # this event_set for cart addition (stored in session for the duration
+        # of the registration session).
+        link_authorized = False
+        if self.link_uuid:
+            for event in self.event_set:
+                if event.status == Event.RegStatus.linkOnly:
+                    reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
+                    authorized_ids = reg_session.setdefault('link_authorized', [])
+                    if event.pk not in authorized_ids:
+                        authorized_ids.append(event.pk)
+                    request.session.modified = True
+                    link_authorized = True
+        kwargs['link_authorized'] = link_authorized
 
         model_lower = getattr(self, 'model_class', Event).__name__.lower()
         app_name = getattr(self, 'app_name', 'core')
