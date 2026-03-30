@@ -1,7 +1,7 @@
 """
 Tests for danceschool.register.
 
-Split into two sections:
+Split into three sections:
 
 1. RegisterRenderTest  — uses Django's test client to verify server-side HTML
    (no browser required, runs as part of the normal test suite).
@@ -9,12 +9,16 @@ Split into two sections:
 2. RegisterCartTest    — uses Playwright to drive a real browser and verify
    that cart interactions (add, remove, total display) work end-to-end.
 
+3. PublicRegisterReferralTest — verifies the voucher_id and marketing_id
+   referral URL patterns on PublicRegisterView (no browser required).
+
 Dependencies for the browser tests:
     pip install playwright
     playwright install chromium
     playwright install-deps   # installs OS-level libraries for headless Chrome
 """
 
+import json
 import re
 import unittest
 from datetime import timedelta
@@ -29,8 +33,9 @@ from cms.api import add_plugin
 
 from dynamic_preferences.registries import global_preferences_registry
 
-from danceschool.core.constants import getConstant
+from danceschool.core.constants import getConstant, REG_VALIDATION_STR, updateConstant
 from danceschool.core.models import (
+    Invoice,
     DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier,
     Location, StaffMember, Instructor, Event, Series, PublicEvent,
     EventStaffMember, EventOccurrence,
@@ -657,3 +662,212 @@ class PublicRegisterRenderTest(DefaultSchoolTestCase):
             PublicRegisterEventPluginChoice.objects.filter(
                 eventPlugin=self.open_series_plugin
             ).update(soldOutRule='D')
+
+
+# ---------------------------------------------------------------------------
+# 4. PublicRegisterView referral URL tests (no browser)
+# ---------------------------------------------------------------------------
+
+class PublicRegisterReferralTest(PublicRegisterRenderTest):
+    """
+    Tests for voucher_id and marketing_id referral URL parameters on
+    PublicRegisterView.
+
+    Voucher codes passed via the URL are validated immediately: valid codes are
+    stored in the session cart as discount_code (reducing the checkout price);
+    invalid codes produce a warning message and are not stored.
+
+    Marketing IDs are stored in the session and are written to invoice.data
+    when the cart is checked out.
+    """
+
+    def create_voucher(self, **kwargs):
+        from danceschool.vouchers.models import Voucher
+        v = Voucher(
+            voucherId=kwargs.get('voucherId', 'TEST_VOUCHER'),
+            name=kwargs.get('name', 'Test Voucher'),
+            originalAmount=kwargs.get('originalAmount', 10),
+            maxAmountPerUse=kwargs.get('maxAmountPerUse', None),
+            disabled=kwargs.get('disabled', False),
+            expirationDate=kwargs.get('expirationDate', None),
+            forPreviousCustomersOnly=kwargs.get('forPreviousCustomersOnly', False),
+            forFirstTimeCustomersOnly=kwargs.get('forFirstTimeCustomersOnly', False),
+        )
+        v.save()
+        return v
+
+    # -- voucher_id tests ---------------------------------------------------
+
+    def test_valid_voucher_url_stores_discount_code_in_session(self):
+        """
+        A valid voucher code in the URL is validated immediately and stored as
+        discount_code in the session cart.
+        """
+        updateConstant('vouchers__enableVouchers', True)
+        v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=1))
+
+        response = self.client.get(
+            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        session_cart = self.client.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+        self.assertEqual(session_cart.get('discount_code'), v.voucherId)
+
+    def test_invalid_voucher_url_shows_warning_and_is_not_stored(self):
+        """
+        An unrecognised voucher code in the URL produces a warning message and
+        is not written to the session cart.
+        """
+        updateConstant('vouchers__enableVouchers', True)
+
+        response = self.client.get(
+            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': 'DOESNOTEXIST'})
+        )
+        self.assertEqual(response.status_code, 200)
+
+        messages_list = list(response.wsgi_request._messages)
+        self.assertTrue(
+            any('DOESNOTEXIST' in str(m) for m in messages_list),
+            'Expected a warning message containing the invalid voucher code',
+        )
+        session_cart = self.client.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+        self.assertIsNone(session_cart.get('discount_code'))
+
+    def test_voucher_url_cart_get_returns_discount_code(self):
+        """
+        After visiting the voucher referral URL, GET /cart/ returns the
+        pre-populated discount_code so the frontend JS can include it in
+        subsequent cart POSTs.
+        """
+        updateConstant('vouchers__enableVouchers', True)
+        v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=1))
+
+        self.client.get(
+            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+        )
+
+        cart_response = self.client.get(reverse('cart'))
+        self.assertEqual(cart_response.status_code, 200)
+        self.assertEqual(
+            json.loads(cart_response.content).get('discount_code'), v.voucherId
+        )
+
+    def test_voucher_url_reduces_checkout_price(self):
+        """
+        Full referral-URL flow: visiting publicRegistrationWithVoucher
+        pre-populates discount_code in the session cart, the frontend JS reads
+        it back via GET /cart/ and forwards it when submitting, and the
+        outstanding balance is reduced by the voucher amount after checkout.
+
+        Steps:
+        1. Visit publicRegistrationWithVoucher → discount_code stored in session.
+        2. GET /cart/ → retrieve discount_code (simulates what the JS does).
+        3. POST items + discount_code + checkout=True to CartView.
+        4. POST to StudentInfoView to complete registration.
+        5. Verify outstanding balance is reduced by the voucher's originalAmount.
+        """
+        updateConstant('vouchers__enableVouchers', True)
+        s = self._open_series()
+        v = self.create_voucher(
+            originalAmount=10,
+            expirationDate=timezone.now() + timedelta(days=1),
+        )
+
+        # Step 1
+        self.client.get(
+            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+        )
+
+        # Step 2
+        prefilled_code = json.loads(
+            self.client.get(reverse('cart')).content
+        ).get('discount_code')
+        self.assertEqual(prefilled_code, v.voucherId)
+
+        # Step 3
+        sku = f'EVENT_{s.id}_GENERAL'
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': s.id,
+                           'sku': sku, 'quantity': 1}],
+                'discount_code': prefilled_code,
+                'checkout': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Step 4
+        response = self.client.post(
+            reverse('getStudentInfo'),
+            {
+                'firstName': 'Referral',
+                'lastName': 'Customer',
+                'email': 'referral@test.com',
+                'agreeToPolicies': True,
+            },
+            follow=True,
+        )
+
+        # Step 5
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        invoice = response.context_data.get('invoice')
+        self.assertEqual(
+            invoice.outstandingBalance,
+            s.getBasePrice() - v.originalAmount,
+        )
+
+    # -- marketing_id tests -------------------------------------------------
+
+    def test_marketing_id_url_stores_in_session(self):
+        """
+        Visiting the marketing ID URL stores marketing_id in the session so
+        that create_invoice_from_cart can later write it to invoice.data.
+        """
+        marketing_id = 'SUMMER2024'
+
+        response = self.client.get(
+            reverse('publicRegistrationWithMarketingId',
+                    kwargs={'marketing_id': marketing_id})
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            self.client.session.get(REG_VALIDATION_STR, {}).get('marketing_id'),
+            marketing_id,
+        )
+
+    def test_marketing_id_flows_to_invoice_on_cart_submit(self):
+        """
+        After visiting the marketing ID URL, submitting the cart with
+        checkout=True creates an invoice whose data dict contains marketing_id.
+        """
+        s = self._open_series()
+        marketing_id = 'SUMMER2024'
+
+        # Step 1: Prime the session with the marketing ID.
+        self.client.get(
+            reverse('publicRegistrationWithMarketingId',
+                    kwargs={'marketing_id': marketing_id})
+        )
+
+        # Step 2: Submit the cart (no marketing_id in the POST body —
+        # create_invoice_from_cart reads it from the session).
+        sku = f'EVENT_{s.id}_GENERAL'
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': s.id,
+                           'sku': sku, 'quantity': 1}],
+                'checkout': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Step 3: Verify invoice.data has the marketing_id.
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        self.assertEqual(invoice.data.get('marketing_id'), marketing_id)

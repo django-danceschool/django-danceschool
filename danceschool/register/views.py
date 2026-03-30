@@ -1,3 +1,6 @@
+import re
+
+from django.contrib import messages
 from django.utils.translation import gettext_lazy as _
 from django.http import Http404
 from django.db.models import Q
@@ -12,9 +15,10 @@ from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.models import Event, Series, PublicEvent
 from danceschool.core.mixins import (
-    FinancialContextMixin, EventOrderMixin, SiteHistoryMixin, ReferralInfoMixin,
+    FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
 )
 from danceschool.core.registries import extras_templates_registry
+from danceschool.core.signals import check_voucher
 
 from .forms import CustomerGuestAutocompleteForm
 from .models import Register
@@ -96,8 +100,7 @@ class PointOfSaleRegisterView(
 
 
 class PublicRegisterView(
-    FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
-    ReferralInfoMixin, TemplateView
+    FinancialContextMixin, EventOrderMixin, SiteHistoryMixin, TemplateView
 ):
     '''
     Public-facing registration page backed by a CMS alias placeholder
@@ -107,8 +110,11 @@ class PublicRegisterView(
     the page when registration is disabled, and may toggle a door-registration
     checkbox (ephemeral, client-side only) to enable payAtDoor mode.
 
-    Referral/voucher codes are supported via the ?referral= query parameter
-    (handled by ReferralInfoMixin) without a separate redirect view.
+    Referral/voucher codes are supported via the ?referral= query parameter or
+    the public/referral/<voucher_id>/ URL pattern.  Valid codes are stored
+    directly in the cart session data as discount_code; invalid codes produce a
+    warning message.  Marketing IDs (?id= or public/id/<marketing_id>/) are
+    stored in session data for later use.
     '''
     template_name = 'register/public_register.html'
 
@@ -125,6 +131,60 @@ class PublicRegisterView(
                 Q(status=Event.RegStatus.linkOnly)
             ).order_by(*self.get_ordering()).distinct()
         return self.allEvents
+
+    def get(self, request, *args, **kwargs):
+        voucher_id = kwargs.pop('voucher_id', None)
+        marketing_id = kwargs.pop('marketing_id', None)
+
+        # GET parameters are also usable, but URL kwargs take precedence.
+        if not voucher_id:
+            voucher_id = request.GET.get('referral', None)
+        if not marketing_id:
+            marketing_id = request.GET.get('id', None)
+
+        # Ignore IDs that contain disallowed characters.
+        pattern = re.compile(r'^[a-zA-Z\-_0-9]+$')
+        if voucher_id and not pattern.match(voucher_id):
+            voucher_id = None
+        if marketing_id and not pattern.match(marketing_id):
+            marketing_id = None
+
+        if marketing_id:
+            reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
+            reg_session['marketing_id'] = marketing_id
+            request.session.modified = True
+
+        if voucher_id:
+            responses = check_voucher.send(
+                sender=self.__class__,
+                voucherId=voucher_id,
+                cart_items=[],
+                customer=None,
+                validateCustomer=False,
+                invoice=None,
+                payAtDoor=False,
+            )
+            results = [r[1] for r in responses if len(r) > 1 and r[1]]
+            result = results[0] if results else {}
+
+            if result.get('status') == 'valid':
+                reg_session = request.session.setdefault(REG_VALIDATION_STR, {})
+                reg_session.setdefault('cart', {})['discount_code'] = voucher_id
+                request.session.modified = True
+            else:
+                errors = result.get('errors', [])
+                error_detail = errors[0].get('message', '') if errors else ''
+                messages.warning(
+                    request,
+                    _(
+                        'The voucher code "%(code)s" is not valid.%(detail)s'
+                    ) % {
+                        'code': voucher_id,
+                        'detail': ' ' + str(error_detail) if error_detail else '',
+                    }
+                )
+
+        return super().get(request, *args, **kwargs)
 
     def dispatch(self, request, *args, **kwargs):
         if (
