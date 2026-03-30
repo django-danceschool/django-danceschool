@@ -1139,3 +1139,101 @@ class CartSummaryViewTest(DefaultSchoolTestCase):
         items = self.client.session[REG_VALIDATION_STR]['cart']['items']
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['sku'], f'EVENT_{series.id}_GENERAL')
+
+
+class LinkOnlyViewTest(DefaultSchoolTestCase):
+    """
+    Diagnostic tests for the UUID-based private link URLs for linkOnly events.
+    """
+
+    def _linkonly_series(self):
+        s = self.create_series(status=Event.RegStatus.linkOnly)
+        # Refresh from DB so we have the canonical uuid value
+        s.refresh_from_db()
+        return s
+
+    def _linkonly_public_event(self):
+        from datetime import timedelta
+        start = timezone.now() + timedelta(hours=2)
+        pe = PublicEvent(
+            title='Link-Only Event',
+            slug='link-only-event',
+            pricingTier=self.defaultPricing,
+            location=self.defaultLocation,
+            status=Event.RegStatus.linkOnly,
+        )
+        pe.save()
+        EventOccurrence.objects.create(
+            event=pe,
+            startTime=start,
+            endTime=start + timedelta(hours=1),
+        )
+        pe.save()
+        pe.refresh_from_db()
+        return pe
+
+    # --- classViewUUID ---
+
+    def test_linkonly_series_uuid_url_returns_200(self):
+        """GET classes/link/<uuid>/ returns 200 for a linkOnly series."""
+        s = self._linkonly_series()
+        url = reverse('classViewUUID', kwargs={'uuid': s.uuid})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_normal_series_uuid_url_returns_200(self):
+        """GET classes/link/<uuid>/ also works for an enabled (non-linkOnly) series."""
+        s = self.create_series()
+        s.refresh_from_db()
+        url = reverse('classViewUUID', kwargs={'uuid': s.uuid})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_linkonly_series_slug_url_returns_404(self):
+        """A linkOnly series must NOT be reachable via the normal slug URL."""
+        s = self._linkonly_series()
+        from calendar import month_name as mn
+        url = reverse('classView', kwargs={
+            'year': s.year,
+            'month': list(mn)[s.month],
+            'slug': s.classDescription.slug,
+        })
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_uuid_url_sets_link_authorized_in_session(self):
+        """Visiting classes/link/<uuid>/ adds the event pk to session link_authorized."""
+        s = self._linkonly_series()
+        url = reverse('classViewUUID', kwargs={'uuid': s.uuid})
+        self.client.get(url)
+        link_authorized = self.client.session.get(REG_VALIDATION_STR, {}).get('link_authorized', [])
+        self.assertIn(s.pk, link_authorized)
+
+    def test_uuid_url_passes_link_authorized_context(self):
+        """Visiting classes/link/<uuid>/ sets link_authorized=True in template context."""
+        s = self._linkonly_series()
+        url = reverse('classViewUUID', kwargs={'uuid': s.uuid})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context.get('link_authorized'))
+
+    # --- eventViewUUID ---
+
+    def test_linkonly_event_uuid_url_returns_200(self):
+        """GET events/link/<uuid>/ returns 200 for a linkOnly public event."""
+        pe = self._linkonly_public_event()
+        url = reverse('eventViewUUID', kwargs={'uuid': pe.uuid})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_linkonly_event_slug_url_returns_404(self):
+        """A linkOnly public event must NOT be reachable via the normal slug URL."""
+        pe = self._linkonly_public_event()
+        from calendar import month_name as mn
+        url = reverse('eventView', kwargs={
+            'year': pe.year,
+            'month': list(mn)[pe.month],
+            'slug': pe.slug,
+        })
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)

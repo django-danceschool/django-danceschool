@@ -73,22 +73,14 @@ urlpatterns = [
     # This allows creation of duplicate offset events from admin
     path('events/repeat/', RepeatEventsView.as_view(), name='repeatEvents'),
 
-    # These are for individual class views and event views
+    # These are for individual class views and event views.
+    # UUID-based private link patterns must come before session-slug patterns
+    # because <slug:session_slug> would otherwise match the literal "link"
+    # segment and shadow the UUID URLs.
     path('classes/<int:year>/<slug:month>/<slug:slug>/', IndividualClassView.as_view(), name='classView'),
     path('events/<int:year>/<slug:month>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventView'),
-    path('classes/<slug:session_slug>/<slug:slug>/', IndividualClassView.as_view(), name='classViewSession'),
-    path('events/<slug:session_slug>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventViewSession'),
-    path(
-        'classes/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/',
-        IndividualClassView.as_view(), name='classViewSessionMonth'
-    ),
-    path(
-        'events/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/',
-        IndividualPublicEventView.as_view(), name='eventViewSessionMonth'
-    ),
 
-    # UUID-based private links for link-only events.  These are the only URLs
-    # that can display (and authorize cart access to) linkOnly events.
+    # UUID-based private links for link-only events.
     # Variants also accept an optional voucher code or marketing ID in the path.
     path('classes/link/<uuid:uuid>/', IndividualClassView.as_view(), name='classViewUUID'),
     path('events/link/<uuid:uuid>/', IndividualPublicEventView.as_view(), name='eventViewUUID'),
@@ -107,6 +99,17 @@ urlpatterns = [
     path(
         'events/link/<uuid:uuid>/id/<slug:marketing_id>/',
         IndividualPublicEventView.as_view(), name='eventViewUUIDMarketing',
+    ),
+
+    path('classes/<slug:session_slug>/<slug:slug>/', IndividualClassView.as_view(), name='classViewSession'),
+    path('events/<slug:session_slug>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventViewSession'),
+    path(
+        'classes/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/',
+        IndividualClassView.as_view(), name='classViewSessionMonth'
+    ),
+    path(
+        'events/<slug:session_slug>/<int:year>/<slug:month>/<slug:slug>/',
+        IndividualPublicEventView.as_view(), name='eventViewSessionMonth'
     ),
 
     # Pass along a marketing ID to an individual event view

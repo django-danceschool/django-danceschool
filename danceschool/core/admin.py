@@ -881,8 +881,10 @@ class EventChildAdmin(PolymorphicChildModelAdmin):
 
     actions = [repeat_events, ]
 
+    uuid_link_view_name = 'eventViewUUID'
+
     def uuidLink(self, obj):
-        address = reverse('singleClassRegistration', args=[obj.uuid, ])
+        address = reverse(self.uuid_link_view_name, args=[obj.uuid, ])
         return mark_safe('<a href="%s">%s</a>' % (address, address))
     uuidLink.short_description = _('Direct Registration Link')
     uuidLink.allow_tags = True
@@ -956,6 +958,8 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
     base_model = Series
     form = SeriesAdminForm
     show_in_index = True
+
+    uuid_link_view_name = 'classViewUUID'
 
     inlines = [
         EventRoleInline, EventOccurrenceInline, EventStaffMemberInline
@@ -1096,6 +1100,8 @@ class PublicEventAdmin(
     base_model = PublicEvent
     form = PublicEventAdminForm
     show_in_index = True
+
+    uuid_link_view_name = 'eventViewUUID'
 
     list_display = (
         'name', 'numOccurrences', 'firstOccurrenceTime', 'lastOccurrenceTime',
