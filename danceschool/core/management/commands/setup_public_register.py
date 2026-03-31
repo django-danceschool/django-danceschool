@@ -18,7 +18,6 @@ class Command(SetupMixin, BaseCommand):
         required_apps = [
             ('cms', 'Django CMS'),
             ('danceschool.core', 'Core danceschool app'),
-            ('danceschool.register', 'Register app'),
         ]
         for this_app in required_apps:
             if not apps.is_installed(this_app[0]):
