@@ -11,8 +11,6 @@ from cms.models.fields import PlaceholderField
 
 from danceschool.core.models import (
     Event, PublicEvent, Series, RegisterEventLimitedModel,
-    PublicRegisterNavPluginModel, PublicRegisterEventPluginModel,
-    PublicRegisterEventPluginChoice,
 )
 
 # Define logger for this file
