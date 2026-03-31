@@ -210,5 +210,5 @@ class PublicRegisterView(
             'registrationEnabled': getConstant('registration__registrationEnabled'),
         }
         context.update(kwargs)
-        self.set_return_page('publicRegistration', pageName=_('Registration'))
+        self.set_return_page('registration', pageName=_('Registration'))
         return super().get_context_data(**context)

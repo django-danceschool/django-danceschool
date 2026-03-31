@@ -5,21 +5,16 @@ from .views import PointOfSaleRegisterView, PublicRegisterView
 from .autocomplete_light_registry import RegisterAutoComplete
 
 urlpatterns = [
-    # This is kept to avoid breaking the path to the prior traditional registration URL.
-    path('', ClassRegistrationView.as_view(), name='registration'),
-
-    # New plugin-based public registration page.  Will replace the path above
-    # once ClassRegistrationView is retired.
-    path('public/', PublicRegisterView.as_view(), name='publicRegistration'),
+    path('', PublicRegisterView.as_view(), name='registration'),
     path(
-        'public/referral/<slug:voucher_id>/',
+        'referral/<slug:voucher_id>/',
         PublicRegisterView.as_view(),
-        name='publicRegistrationWithVoucher',
+        name='registrationWithVoucher',
     ),
     path(
-        'public/id/<slug:marketing_id>/',
+        'id/<slug:marketing_id>/',
         PublicRegisterView.as_view(),
-        name='publicRegistrationWithMarketingId',
+        name='registrationWithMarketingId',
     ),
 
     path('autocomplete/', RegisterAutoComplete.as_view(), name='registerAutocomplete'),

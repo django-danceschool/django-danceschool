@@ -15,10 +15,6 @@ from .classreg import (
 from .ajax import ProcessCheckInView
 
 urlpatterns = [
-
-    # This view allows the passing of a voucher code in the URL to the class registration page
-    # so that Referrers can provide a direct URL to get their referral benefits
-    path('', ClassRegistrationView.as_view(), name='registration'),
     path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
     path('cart/', CartView.as_view(), name='cart'),
     path('cart/summary/', CartSummaryView.as_view(), name='cartSummary'),

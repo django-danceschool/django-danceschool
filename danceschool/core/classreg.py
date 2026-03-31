@@ -1222,9 +1222,9 @@ class CartSummaryView(RegistrationAdjustmentsMixin, TemplateView):
 
         from django.urls import NoReverseMatch
         try:
-            add_more_url = reverse('publicRegistration')
-        except NoReverseMatch:
             add_more_url = reverse('registration')
+        except NoReverseMatch:
+            add_more_url = '/'
 
         context.update({
             'cart_items': cart_items,
@@ -2000,7 +2000,7 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         kwargs['invoice'] = self.invoice
         kwargs['multiReg'] = self.multiReg
         try:
-            kwargs['add_more_url'] = reverse('publicRegistration')
+            kwargs['add_more_url'] = reverse('registration')
         except NoReverseMatch:
             kwargs['add_more_url'] = None
         return kwargs

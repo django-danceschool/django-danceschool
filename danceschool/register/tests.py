@@ -539,7 +539,7 @@ class PublicRegisterRenderTest(DefaultSchoolTestCase):
         )
 
     def _url(self):
-        return reverse('publicRegistration')
+        return reverse('registration')
 
     def _open_series(self, **kwargs):
         kwargs.setdefault('startTime', timezone.now() + timedelta(hours=2))
@@ -707,7 +707,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=1))
 
         response = self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': v.voucherId})
         )
         self.assertEqual(response.status_code, 200)
 
@@ -722,7 +722,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         updateConstant('vouchers__enableVouchers', True)
 
         response = self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': 'DOESNOTEXIST'})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': 'DOESNOTEXIST'})
         )
         self.assertEqual(response.status_code, 200)
 
@@ -744,7 +744,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=1))
 
         self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': v.voucherId})
         )
 
         cart_response = self.client.get(reverse('cart'))
@@ -755,13 +755,13 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
 
     def test_voucher_url_reduces_checkout_price(self):
         """
-        Full referral-URL flow: visiting publicRegistrationWithVoucher
+        Full referral-URL flow: visiting registrationWithVoucher
         pre-populates discount_code in the session cart, the frontend JS reads
         it back via GET /cart/ and forwards it when submitting, and the
         outstanding balance is reduced by the voucher amount after checkout.
 
         Steps:
-        1. Visit publicRegistrationWithVoucher → discount_code stored in session.
+        1. Visit registrationWithVoucher → discount_code stored in session.
         2. GET /cart/ → retrieve discount_code (simulates what the JS does).
         3. POST items + discount_code + checkout=True to CartView.
         4. POST to StudentInfoView to complete registration.
@@ -776,7 +776,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
 
         # Step 1
         self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': v.voucherId})
         )
 
         # Step 2
@@ -829,7 +829,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         marketing_id = 'SUMMER2024'
 
         response = self.client.get(
-            reverse('publicRegistrationWithMarketingId',
+            reverse('registrationWithMarketingId',
                     kwargs={'marketing_id': marketing_id})
         )
         self.assertEqual(response.status_code, 200)
@@ -848,7 +848,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
 
         # Step 1: Prime the session with the marketing ID.
         self.client.get(
-            reverse('publicRegistrationWithMarketingId',
+            reverse('registrationWithMarketingId',
                     kwargs={'marketing_id': marketing_id})
         )
 
