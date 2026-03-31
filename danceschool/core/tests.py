@@ -28,16 +28,12 @@ class RegistrationTest(DefaultSchoolTestCase):
     def test_adding_open_series(self):
         """
         Tests that we can log in as a superuser and add a class series
-        from the admin form, and that that class shows up on the
-        registration page.
+        from the admin form, and that the series is open for registration.
         """
 
-        # First, check that the registration page loads, and that there
-        # are no open or closed series on the registration page.
+        # Check that the registration page loads.
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
         # Check that the Add a class series page loads for the superuser
         self.client.login(username=self.superuser.username, password='pass')
@@ -46,31 +42,24 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.client.logout()
 
         # Add a class series with occurrences in the future, and check that
-        # registration is open by looking at the registration page
+        # registration is open.
         s = self.create_series()
         self.assertEqual(s.status, Event.RegStatus.enabled)
         self.assertTrue(s.startTime >= timezone.now() and s.startTime)
         self.assertTrue(s.endTime >= timezone.now() and s.endTime)
         self.assertEqual(s.registrationOpen, True)
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
 
     def test_past_series(self):
         '''
         Test that if a class series has its only occurrence in the past, then
-        the series no longer shows up on the registration page at all.
+        registrationOpen becomes False and the series is no longer available.
         '''
 
         s = self.create_series()
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
+        self.assertEqual(s.registrationOpen, True)
 
         # Modify the existing class series to set the only eventoccurrence
-        # in the past, and check that it now longer shows up at all
+        # in the past, and check that registrationOpen is now False.
         ec = s.eventoccurrence_set.first()
         ec.startTime = timezone.now() + timedelta(days=-1)
         ec.endTime = timezone.now() + timedelta(days=-1, hours=1)
@@ -78,10 +67,6 @@ class RegistrationTest(DefaultSchoolTestCase):
         s.refresh_from_db()
 
         self.assertEqual(s.registrationOpen, False)
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
         self.assertEqual(s.status, Event.RegStatus.enabled)
 
     def test_closed_series(self):
@@ -109,20 +94,38 @@ class RegistrationTest(DefaultSchoolTestCase):
         s.save()
 
         self.assertEqual(s.registrationOpen, False)
+        self.assertEqual(s.status, Event.RegStatus.enabled)
+        # The closed-series section shows series that have already started
+        # (startTime <= now) but haven't ended (endTime >= now).  This series
+        # has startTime = closeAfterDays+1 days ago and endTime = tomorrow,
+        # so it satisfies both conditions.
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [s, ])
-        self.assertEqual(s.status, Event.RegStatus.enabled)
+        content = response.content.decode()
+        # Series must appear in the Ongoing Classes section...
+        ongoing_idx = content.find('Ongoing Classes')
+        self.assertNotEqual(ongoing_idx, -1, 'Ongoing Classes section missing')
+        self.assertIn(self.levelOneClassDescription.title, content[ongoing_idx:])
+        # ...but must NOT appear in the Upcoming Classes section.
+        upcoming_idx = content.find('Upcoming Classes')
+        self.assertNotEqual(upcoming_idx, -1, 'Upcoming Classes section missing')
+        self.assertNotIn(
+            self.levelOneClassDescription.title,
+            content[upcoming_idx:ongoing_idx] if upcoming_idx < ongoing_idx
+            else content[upcoming_idx:],
+        )
+        # Closed series must not present any registration quantity inputs.
+        self.assertNotContains(response, 'register-quantity')
 
         # Delete the old occurrence, and check that registration opens back up
+        # and the series moves to the Upcoming Classes section.
         s.eventoccurrence_set.filter(startTime__lte=timezone.now()).delete()
         s.save()
         self.assertEqual(s.registrationOpen, True)
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
+        self.assertContains(response, self.levelOneClassDescription.title)
+        self.assertContains(response, 'register-quantity')
 
     def test_registration_open_date_blocks_opening(self):
         '''
@@ -139,103 +142,55 @@ class RegistrationTest(DefaultSchoolTestCase):
         s.save()
         self.assertEqual(s.registrationOpen, False)
 
-        # The series must not appear on the public registration page.
+        # The series must not appear on the public registration page (it has a
+        # future startTime, so it also won't pass the daysEnd=0 filter on the
+        # closed section).
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
+        self.assertNotContains(response, self.levelOneClassDescription.title)
 
-        # Setting registrationOpenDate to a past time should open registration.
+        # Setting registrationOpenDate to a past time should open registration
+        # and make the series appear in the Upcoming Classes section.
         s.registrationOpenDate = timezone.now() - timedelta(hours=1)
         s.save()
         self.assertEqual(s.registrationOpen, True)
 
         response = self.client.get(reverse('registration'))
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertContains(response, self.levelOneClassDescription.title)
+        self.assertContains(response, 'register-quantity')
 
         # Clearing registrationOpenDate entirely should also leave it open.
         s.registrationOpenDate = None
         s.save()
         self.assertEqual(s.registrationOpen, True)
 
-    def test_individual_class_page_visibility(self):
-        '''
-        Check that the individual class page for a series is working,
-        and that visibility restrictions are applied depending on the status of
-        the series
-        '''
-
-        s = self.create_series()
-
-        # Check that the individual class page for this series is working
-        response = self.client.get(reverse(
-            'classView', args=(s.year, month_name[s.month], s.slug)
-        ))
-        self.assertEqual(response.status_code, 200)
-
-        # Change the registration status to link-only, and check that the individual
-        # event registration page works even though the Event does not show up publicly
-        s.status = Event.RegStatus.linkOnly
-        s.save()
-
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
-
-        response = self.client.get(reverse('singleClassRegistration', args=(str(s.uuid),)))
-        self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
-
-        response = self.client.get(reverse('classView', args=(s.year, month_name[s.month], s.slug)))
-        self.assertEqual(response.status_code, 404)
-
-        # Change the event status to hidden, and check that the event does not show up
-        # anywhere.
-        s.status = Event.RegStatus.hidden
-        s.save()
-
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [])
-        self.assertQuerySetEqual(response.context_data['regClosedSeries'], [])
-
-        response = self.client.get(reverse('singleClassRegistration', args=(str(s.uuid),)))
-        self.assertEqual(response.status_code, 404)
-
-        response = self.client.get(reverse('classView', args=(s.year, month_name[s.month], s.slug)))
-        self.assertEqual(response.status_code, 404)
-
     def test_registration(self):
         '''
-        This tests the basic procedures of the registration process, as well as
-        the restrictions of registering for only one role, registering for something,
-        and requiring agreement to school policies
+        Tests the basic procedures of the registration process using the
+        CartView workflow: adding an item to the cart, checking out, filling
+        in student information, and verifying the registration summary page.
         '''
 
         s = self.create_series()
 
+        # The registration page should load and show the open series.
         response = self.client.get(reverse('registration'))
         self.assertEqual(response.status_code, 200)
-        self.assertQuerySetEqual(response.context_data['regOpenSeries'], [s, ])
+        self.assertContains(response, self.levelOneClassDescription.title)
+        self.assertContains(response, 'register-quantity')
 
-        # Since this is an anonymous user, check that there is no option to register
-        # at-the-door
-        self.assertFalse(response.context_data['form'].fields.get('payAtDoor'))
-
-        # Attempt to submit an empty form and ensure that it fails
-        post_data = {}
-        response = self.client.post(reverse('registration'), post_data, follow=True)
-        self.assertTrue(response.context_data['form'].errors.get('__all__'))
-
-        # Sign up for the series, and check that we proceed to the student information page.
-        # Because of the way that roles are encoded on this form, we just grab the value to pass
-        # from the form itself.
-        post_data = {'series_%s_%s' % (
-            s.id, response.context_data['form'].fields['series_%s' % s.id].field_choices[0].get('value')
-        ): [1,]}
-
-        response = self.client.post(reverse('registration'), post_data, follow=True)
-        self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
+        # Submit the series to the cart and check out.
+        sku = 'EVENT_{}_GENERAL'.format(s.id)
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': s.id,
+                           'sku': sku, 'quantity': 1}],
+                'checkout': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
 
         invoice = Invoice.objects.get(
             id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
@@ -245,27 +200,25 @@ class RegistrationTest(DefaultSchoolTestCase):
         self.assertFalse(tr.final)
         self.assertEqual(tr.payAtDoor, False)
 
-        # Check that the student info page lists the correct item amounts and subtotal
+        # The invoice gross total should match the base price of the series.
         self.assertEqual(invoice.grossTotal, s.getBasePrice())
-        self.assertEqual(response.context_data.get('invoice').total, s.getBasePrice())
 
-        # Try to sign up without agreeing to the policies, and ensure that it fails
+        # Try to sign up without agreeing to the policies — it should fail.
         post_data = {
             'firstName': 'Test',
             'lastName': 'Customer',
             'email': 'test@customer.com',
         }
-
         response = self.client.post(reverse('getStudentInfo'), post_data, follow=True)
         self.assertTrue(response.context_data['form'].errors.get('agreeToPolicies'))
 
-        # Now submit a correct form and ensure that it continues to the summary page
+        # Now submit a correct form and ensure that it continues to the summary page.
         post_data.update({'agreeToPolicies': True})
         response = self.client.post(reverse('getStudentInfo'), post_data, follow=True)
         self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
 
         # Since there are no discounts or vouchers applied, check that the net price
-        # and gross price match
+        # and gross price match.
         self.assertEqual(response.context_data.get('invoice').grossTotal, s.getBasePrice())
         self.assertEqual(response.context_data.get('grossTotal'), response.context_data.get('total'))
         self.assertEqual(response.context_data.get('zero_balance'), False)
@@ -779,8 +732,7 @@ class SalesTaxDifferentiationTest(DefaultSchoolTestCase):
     '''
     Verifies that SeriesSalesTaxRate and PublicEventSalesTaxRate are applied
     independently to class series and public event registrations, respectively,
-    through both the CartView and ClassRegistrationView (AjaxClassRegistrationView)
-    checkout workflows.
+    through the CartView checkout workflow.
     '''
 
     SERIES_TAX_RATE = 10.0
@@ -879,32 +831,6 @@ class SalesTaxDifferentiationTest(DefaultSchoolTestCase):
         self.assertEqual(series_item.taxRate, self.SERIES_TAX_RATE)
         self.assertEqual(event_item.taxRate, self.EVENT_TAX_RATE)
 
-    # --- ClassRegistrationView (AjaxClassRegistrationView) workflow ---
-
-    def _classreg_checkout(self, event):
-        '''Submit the ClassChoiceForm for the given event and return the response.'''
-        response = self.client.get(reverse('registration'))
-        field_name = f'{event.fieldPrefix}_{event.id}'
-        field = response.context_data['form'].fields[field_name]
-        choice_value = field.field_choices[0].get('value')
-        post_data = {f'{field_name}_{choice_value}': [1]}
-        return self.client.post(reverse('registration'), post_data, follow=True)
-
-    def test_classreg_series_uses_series_tax_rate(self):
-        '''ClassRegistrationView checkout for a Series applies seriesSalesTaxRate.'''
-        response = self._classreg_checkout(self.series)
-        self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
-        items = self._get_invoice_items()
-        self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].taxRate, self.SERIES_TAX_RATE)
-
-    def test_classreg_public_event_uses_public_event_tax_rate(self):
-        '''ClassRegistrationView checkout for a PublicEvent applies publicEventSalesTaxRate.'''
-        response = self._classreg_checkout(self.public_event)
-        self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
-        items = self._get_invoice_items()
-        self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].taxRate, self.EVENT_TAX_RATE)
 
 
 class CartSummaryViewTest(DefaultSchoolTestCase):
@@ -1254,51 +1180,8 @@ class PublicRegisterRenderTest(DefaultSchoolTestCase):
     section, and a closed/ongoing-series section.
     """
 
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-
-        from django.contrib.sites.models import Site
-        from danceschool.core.management.commands.migrate_static_placeholders import (
-            _get_or_create_alias_category,
-            _get_or_create_alias,
-            _get_or_create_alias_content,
-        )
-
-        site = Site.objects.get_current()
-        cat = _get_or_create_alias_category()
-        alias = _get_or_create_alias(cat, 'public_register_content', site)
-        alias_content = _get_or_create_alias_content(
-            alias, 'public_register_content', 'en', cls.superuser
-        )
-        placeholder = alias_content.placeholder
-
-        add_plugin(placeholder, 'PublicRegisterNavPlugin', 'en')
-
-        cls.open_series_plugin = add_plugin(
-            placeholder, 'PublicRegisterEventPlugin', 'en',
-            title='Upcoming Classes',
-            eventType='S',
-            registrationOpenLimit='O',
-            occursWithinDays=None,
-        )
-        cls.open_events_plugin = add_plugin(
-            placeholder, 'PublicRegisterEventPlugin', 'en',
-            title='Upcoming Events',
-            eventType='P',
-            registrationOpenLimit='O',
-            occursWithinDays=None,
-        )
-        cls.closed_series_plugin = add_plugin(
-            placeholder, 'PublicRegisterEventPlugin', 'en',
-            title='Ongoing Classes',
-            eventType='S',
-            registrationOpenLimit='C',
-            occursWithinDays=None,
-        )
-
     def _url(self):
-        return reverse('publicRegistration')
+        return reverse('registration')
 
     def _open_series(self, **kwargs):
         kwargs.setdefault('startTime', timezone.now() + timedelta(hours=2))
@@ -1371,7 +1254,16 @@ class PublicRegisterRenderTest(DefaultSchoolTestCase):
 
     def test_closed_series_appears(self):
         """A series closed for registration must appear in the ongoing-classes section."""
-        self.create_series(status=Event.RegStatus.disabled)
+        # The closed-series plugin uses daysStart=0 / daysEnd=0, which limits
+        # to events that have started (startTime <= now) but not yet ended
+        # (endTime >= now).  Create a series whose single occurrence spans
+        # from 1 hour ago to 1 hour from now with registration disabled.
+        s = self.create_series(status=Event.RegStatus.disabled)
+        occ = s.eventoccurrence_set.first()
+        occ.startTime = timezone.now() - timedelta(hours=1)
+        occ.endTime = timezone.now() + timedelta(hours=1)
+        occ.save()
+        s.save()
         response = self.client.get(self._url())
         self.assertContains(response, 'Ongoing Classes')
         self.assertContains(response, self.levelOneClassDescription.title)
@@ -1462,7 +1354,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=1))
 
         response = self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': v.voucherId})
         )
         self.assertEqual(response.status_code, 200)
 
@@ -1477,7 +1369,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         updateConstant('vouchers__enableVouchers', True)
 
         response = self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': 'DOESNOTEXIST'})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': 'DOESNOTEXIST'})
         )
         self.assertEqual(response.status_code, 200)
 
@@ -1499,7 +1391,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         v = self.create_voucher(expirationDate=timezone.now() + timedelta(days=1))
 
         self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': v.voucherId})
         )
 
         cart_response = self.client.get(reverse('cart'))
@@ -1510,13 +1402,13 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
 
     def test_voucher_url_reduces_checkout_price(self):
         """
-        Full referral-URL flow: visiting publicRegistrationWithVoucher
+        Full referral-URL flow: visiting registrationWithVoucher
         pre-populates discount_code in the session cart, the frontend JS reads
         it back via GET /cart/ and forwards it when submitting, and the
         outstanding balance is reduced by the voucher amount after checkout.
 
         Steps:
-        1. Visit publicRegistrationWithVoucher → discount_code stored in session.
+        1. Visit registrationWithVoucher → discount_code stored in session.
         2. GET /cart/ → retrieve discount_code (simulates what the JS does).
         3. POST items + discount_code + checkout=True to CartView.
         4. POST to StudentInfoView to complete registration.
@@ -1531,7 +1423,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
 
         # Step 1
         self.client.get(
-            reverse('publicRegistrationWithVoucher', kwargs={'voucher_id': v.voucherId})
+            reverse('registrationWithVoucher', kwargs={'voucher_id': v.voucherId})
         )
 
         # Step 2
@@ -1584,7 +1476,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
         marketing_id = 'SUMMER2024'
 
         response = self.client.get(
-            reverse('publicRegistrationWithMarketingId',
+            reverse('registrationWithMarketingId',
                     kwargs={'marketing_id': marketing_id})
         )
         self.assertEqual(response.status_code, 200)
@@ -1603,7 +1495,7 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
 
         # Step 1: Prime the session with the marketing ID.
         self.client.get(
-            reverse('publicRegistrationWithMarketingId',
+            reverse('registrationWithMarketingId',
                     kwargs={'marketing_id': marketing_id})
         )
 

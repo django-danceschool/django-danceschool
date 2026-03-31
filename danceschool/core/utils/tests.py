@@ -5,6 +5,8 @@ from django.utils import timezone
 from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
+from cms.api import add_plugin
+
 from danceschool.core.models import (
     DanceRole, DanceType, DanceTypeLevel, ClassDescription, PricingTier,
     Location, StaffMember, Instructor, Event, Series, EventStaffMember,
@@ -103,6 +105,51 @@ class DefaultSchoolTestCase(TestCase):
         Instructor.objects.create(
             staffMember=cls.defaultInstructor,
             status=Instructor.InstructorStatus.roster,
+        )
+
+        # Set up the default public registration page alias with three plugins:
+        # open series, open public events, and closed/ongoing series.  These
+        # mirror what setup_public_register creates and allow tests to verify
+        # event visibility on the PublicRegisterView page.
+        from django.contrib.sites.models import Site
+        from danceschool.core.management.commands.migrate_static_placeholders import (
+            _get_or_create_alias_category,
+            _get_or_create_alias,
+            _get_or_create_alias_content,
+        )
+        site = Site.objects.get_current()
+        cat = _get_or_create_alias_category()
+        alias = _get_or_create_alias(cat, 'public_register_content', site)
+        alias_content = _get_or_create_alias_content(
+            alias, 'public_register_content', 'en', cls.superuser
+        )
+        placeholder = alias_content.placeholder
+
+        add_plugin(placeholder, 'PublicRegisterNavPlugin', 'en')
+        cls.open_series_plugin = add_plugin(
+            placeholder, 'PublicRegisterEventPlugin', 'en',
+            title='Upcoming Classes',
+            eventType='S',
+            registrationOpenLimit='O',
+            occursWithinDays=None,
+        )
+        cls.open_events_plugin = add_plugin(
+            placeholder, 'PublicRegisterEventPlugin', 'en',
+            title='Upcoming Events',
+            eventType='P',
+            registrationOpenLimit='O',
+            occursWithinDays=None,
+        )
+        # daysStart=0 → endTime__gte=now (event hasn't finished yet)
+        # daysEnd=0   → startTime__lte=now (event has already started)
+        cls.closed_series_plugin = add_plugin(
+            placeholder, 'PublicRegisterEventPlugin', 'en',
+            title='Ongoing Classes',
+            eventType='S',
+            registrationOpenLimit='C',
+            occursWithinDays=None,
+            daysStart=0,
+            daysEnd=0,
         )
 
     def create_series(self, **kwargs):
