@@ -12,9 +12,23 @@ from .classreg import (
     SingleClassRegistrationReferralView, MultiRegCustomerNameView,
     PartnerRequiredView
 )
+from .registration import PublicRegisterView
 from .ajax import ProcessCheckInView
 
 urlpatterns = [
+    # Public-facing registration page and referral variants
+    path('', PublicRegisterView.as_view(), name='publicRegistration'),
+    path(
+        'referral/<slug:voucher_id>/',
+        PublicRegisterView.as_view(),
+        name='publicRegistrationWithVoucher',
+    ),
+    path(
+        'id/<slug:marketing_id>/',
+        PublicRegisterView.as_view(),
+        name='publicRegistrationWithMarketingId',
+    ),
+
     path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
     path('cart/', CartView.as_view(), name='cart'),
     path('cart/summary/', CartSummaryView.as_view(), name='cartSummary'),
