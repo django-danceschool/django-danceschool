@@ -376,7 +376,7 @@ class LocationRentalInfo(RepeatedExpenseRule):
     ruleName.fget.short_description = _('Rule name')
 
     def generateExpenses(self, request=None, datetimeTuple=None):
-        from danceschool.financial.helpers import createExpenseItemsForVenueRental
+        from danceschool.financial.helpers.expenses import createExpenseItemsForVenueRental
         return createExpenseItemsForVenueRental(
             rule=self, request=request, datetimeTuple=datetimeTuple
         )
@@ -408,7 +408,7 @@ class RoomRentalInfo(RepeatedExpenseRule):
     ruleName.fget.short_description = _('Rule name')
 
     def generateExpenses(self, request=None, datetimeTuple=None):
-        from danceschool.financial.helpers import createExpenseItemsForVenueRental
+        from danceschool.financial.helpers.expenses import createExpenseItemsForVenueRental
         return createExpenseItemsForVenueRental(
             rule=self, request=request, datetimeTuple=datetimeTuple
         )
@@ -450,7 +450,7 @@ class StaffDefaultWage(RepeatedExpenseRule):
     ruleName.fget.short_description = _('Rule name')
 
     def generateExpenses(self, request=None, datetimeTuple=None):
-        from danceschool.financial.helpers import createExpenseItemsForEvents
+        from danceschool.financial.helpers.expenses import createExpenseItemsForEvents
         return createExpenseItemsForEvents(rule=self, request=request, datetimeTuple=datetimeTuple)
 
     def __str__(self):
@@ -492,7 +492,7 @@ class StaffMemberWageInfo(RepeatedExpenseRule):
     ruleName.fget.short_description = _('Rule name')
 
     def generateExpenses(self, request=None, datetimeTuple=None):
-        from danceschool.financial.helpers import createExpenseItemsForEvents
+        from danceschool.financial.helpers.expenses import createExpenseItemsForEvents
         return createExpenseItemsForEvents(
             rule=self, request=request, datetimeTuple=datetimeTuple
         )
@@ -553,7 +553,7 @@ class GenericRepeatedExpense(RepeatedExpenseRule):
         super().clean()
 
     def generateExpenses(self, request=None, datetimeTuple=None):
-        from danceschool.financial.helpers import createGenericExpenseItems
+        from danceschool.financial.helpers.expenses import createGenericExpenseItems
         return createGenericExpenseItems(rule=self, request=request, datetimeTuple=datetimeTuple)
 
     def __str__(self):

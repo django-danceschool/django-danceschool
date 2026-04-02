@@ -13,7 +13,7 @@ from danceschool.core.models import EventOccurrence, EventStaffMember, Series
 from danceschool.core.utils.tests import DefaultSchoolTestCase
 from danceschool.core.utils.timezone import ensure_localtime
 
-from .helpers import createExpenseItemsForEvents
+from .helpers.expenses import createExpenseItemsForEvents
 from .models import (
     ExpenseItem, ExpenseCategory, ExpensePurpose,
     RevenueItem, RevenueCategory, RepeatedExpenseRule,
