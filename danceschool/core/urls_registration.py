@@ -6,10 +6,8 @@ from .views import (
     SchoolSingleCheckInView
 )
 from .classreg import (
-    RegistrationOfflineView, ClassRegistrationView, PurchasableItemsView,
-    CartView, CartSummaryView, SingleClassRegistrationView,
-    ClassRegistrationReferralView, RegistrationSummaryView, StudentInfoView,
-    SingleClassRegistrationReferralView, MultiRegCustomerNameView,
+    RegistrationOfflineView, PurchasableItemsView, CartView, CartSummaryView,
+    RegistrationSummaryView, StudentInfoView, MultiRegCustomerNameView,
     PartnerRequiredView
 )
 from .registration import PublicRegisterView
@@ -17,46 +15,21 @@ from .ajax import ProcessCheckInView
 
 urlpatterns = [
     # Public-facing registration page and referral variants
-    path('', PublicRegisterView.as_view(), name='publicRegistration'),
+    path('', PublicRegisterView.as_view(), name='registration'),
     path(
         'referral/<slug:voucher_id>/',
         PublicRegisterView.as_view(),
-        name='publicRegistrationWithVoucher',
+        name='registrationWithVoucher',
     ),
     path(
         'id/<slug:marketing_id>/',
         PublicRegisterView.as_view(),
-        name='publicRegistrationWithMarketingId',
+        name='registrationWithMarketingId',
     ),
 
     path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
     path('cart/', CartView.as_view(), name='cart'),
     path('cart/summary/', CartSummaryView.as_view(), name='cartSummary'),
-    path(
-        'id/<slug:marketing_id>/',
-        ClassRegistrationReferralView.as_view(),
-        name='registrationWithMarketingId'
-    ),
-    path(
-        'referral/<slug:voucher_id>/',
-        ClassRegistrationReferralView.as_view(),
-        name='registrationWithVoucher'
-    ),
-    path(
-        'event/<uuid:uuid>/',
-        SingleClassRegistrationView.as_view(),
-        name='singleClassRegistration'
-    ),
-    path(
-        'event/<uuid:uuid>/id/<slug:marketing_id>/',
-        SingleClassRegistrationReferralView.as_view(),
-        name='singleClassReferralRegistration'
-    ),
-    path(
-        'event/<uuid:uuid>/referral/<slug:voucher_id>/',
-        SingleClassRegistrationReferralView.as_view(),
-        name='singleClassReferralRegistration'
-    ),
 
     # This is the view that is redirected to when registration is offline.
     path('offline/', RegistrationOfflineView.as_view(), name='registrationOffline'),

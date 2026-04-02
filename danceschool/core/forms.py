@@ -11,11 +11,9 @@ from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _, gettext
 from django.urls import reverse_lazy
 
-from itertools import chain
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Field, HTML, Hidden, Submit
 from dal import autocomplete
-from random import random
 import json
 import logging
 from django_addanother.widgets import AddAnotherWidgetWrapper
@@ -258,113 +256,6 @@ class EventChoiceField(forms.MultiValueField):
             for i in range(len(data_list))
         ]
         return compressed
-
-
-class ClassChoiceForm(forms.Form):
-    '''
-    This is the form that customers use to select classes.
-    '''
-
-    def __init__(self, *args, **kwargs):
-        openEvents = kwargs.pop('openEvents', Event.objects.none())
-        closedEvents = kwargs.pop('closedEvents', Event.objects.none())
-        user = kwargs.pop('user', None)
-        interval = kwargs.pop('interval', None)
-        voucherField = kwargs.pop('voucherField', False)
-
-        # Only the keys passed in this property will be entered into session data.
-        # This prevents injection of unknown values into the registration process.
-        self.permitted_event_keys = kwargs.pop('permittedEventKeys', ['role', ])
-
-        # Initialize a default (empty) form to fill
-        super().__init__(*args, **kwargs)
-
-        # Allow users with appropriate permissions to process door registrations.
-        if user and user.has_perm('core.accept_door_payments'):
-            self.fields['payAtDoor'] = forms.BooleanField(
-                required=False, label=_('Door/Invoice Registration')
-            )
-
-        # If specified in form kwargs, add a voucher code field.
-        if voucherField:
-            self.fields['gift'] = forms.CharField(required=False, label=_('Voucher ID'))
-
-        if user and user.has_perm('core.override_register_closed'):
-            choice_set = openEvents | closedEvents
-        else:
-            choice_set = openEvents
-
-        field_type_rule = getConstant('registration__widgetType')
-
-        for event in choice_set:
-            event_field_type = forms.IntegerField
-            if (
-                field_type_rule == 'AC' or
-                (field_type_rule == 'SC' and event.polymorphic_ctype.model == 'series') or
-                (field_type_rule == 'SQ' and event.polymorphic_ctype.model != 'series')
-            ):
-                event_field_type = forms.BooleanField
-
-            self.fields[event.fieldPrefix + '_' + str(event.id)] = EventChoiceField(
-                event=event, label=event.name, required=False, user=user,
-                regClosed=(event in closedEvents), interval=interval,
-                field_type=event_field_type
-            )
-
-    def clean(self):
-        '''
-        Check that the registration is not empty and that restrictions on
-        duplicate choices are not being violated.
-        '''
-        cleaned_data = super().clean()
-        hasContent = False
-
-        payAtDoor = cleaned_data.get('payAtDoor', False)
-
-        for key, value in cleaned_data.items():
-            if key.split('_')[0] in [
-                'event', 'series', 'publicevent', 'privatelessonevent',
-            ]:
-                reg_list = []
-                dropin_list = []
-
-                for v in value:
-                    if v[0].startswith('dropin_'):
-                        dropin_list += [v[0] for i in range(v[1])]
-                    else:
-                        reg_list += [v[0] for i in range(v[1])]
-
-                if reg_list or dropin_list:
-                    hasContent = True
-
-                if (
-                    len(reg_list) > 1 and ((
-                        'series_' in key and (
-                            (getConstant('registration__multiRegSeriesRule') == 'N') or
-                            (getConstant('registration__multiRegSeriesRule') == 'D' and not payAtDoor)
-                        )) or (
-                        ('publicevent_' in key) and (
-                            (getConstant('registration__multiRegPublicEventRule') == 'N') or
-                            (getConstant('registration__multiRegPublicEventRule') == 'D' and not payAtDoor)
-                        ))
-                    ) and (
-                        getConstant('registration__multiRegNameFormRule') == 'N' or
-                        (getConstant('registration__multiRegNameFormRule') == 'O' and payAtDoor)
-                    )
-                ):
-                    raise ValidationError(_('Must select only one role.'), code='invalid')
-                elif len(reg_list) >= 1 and len(dropin_list) > 0 and (
-                    getConstant('registration__multiRegNameFormRule') == 'N' or
-                    (getConstant('registration__multiRegNameFormRule') == 'O' and payAtDoor)
-                ):
-                    raise ValidationError(_(
-                        'Cannot register for drop-in classes and also for the entire series.'
-                    ), code='invalid')
-        if not hasContent:
-            raise ValidationError(_('Must register for at least one class or series.'))
-
-    class Media:
-        js = ('js/registration_number_input.js',)
 
 
 class PartnerRequiredForm(forms.Form):

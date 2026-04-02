@@ -31,23 +31,21 @@ class VouchersTest(DefaultSchoolTestCase):
 
     def register_to_check_voucher(self, voucherCode, series):
         '''
-        This method makes it easy to determine whether discounts are working
+        This method makes it easy to determine whether vouchers are working
         correctly for a single class registration
         '''
         s = series
 
-        response = self.client.get(reverse('registration'))
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(s, response.context_data['regOpenSeries'])
-
-        # Sign up for the series, and check that we proceed to the student information page.
-        # Because of the way that roles are encoded on this form, we just grab the value to pass
-        # from the form itself.
-        post_data = {'series_%s_%s' % (
-            s.id, response.context_data['form'].fields['series_%s' % s.id].field_choices[0].get('value')
-        ): [1,]}
-
-        response = self.client.post(reverse('registration'), post_data, follow=True)
+        sku = 'EVENT_{}_GENERAL'.format(s.id)
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': s.id, 'sku': sku, 'quantity': 1}],
+                'checkout': True,
+            }),
+            content_type='application/json',
+            follow=True,
+        )
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
         invoice = Invoice.objects.get(

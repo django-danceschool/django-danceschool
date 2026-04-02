@@ -71,28 +71,25 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
 
         s = series
 
-        if voucherId:
-            response = self.client.get(reverse('registrationWithVoucher', args=(voucherId,)), follow=True)
-            self.assertEqual(response.redirect_chain, [(reverse('registration'), 302)])
-            regSession = self.client.session.get(REG_VALIDATION_STR, {})
-            self.assertEqual(regSession.get('voucher_id'), voucherId)
-        else:
-            response = self.client.get(reverse('registration'))
-            self.assertEqual(response.status_code, 200)
-        self.assertIn(s, response.context_data.get('regOpenSeries'))
+        if payAtDoor:
+            self.client.force_login(self.superuser)
 
-        # Sign up for the series, and check that we proceed to the student information page.
-        # Because of the way that roles are encoded on this form, we just grab the value to pass
-        # from the form itself.
-        post_data = {
-            'series_%s_%s' % (
-                s.id, response.context_data['form'].fields['series_%s' % s.id].field_choices[0].get('value')
-            ): [1,],
+        sku = 'EVENT_{}_GENERAL'.format(s.id)
+        cart_data = {
+            'items': [{'item_type': 'Event', 'item_id': s.id, 'sku': sku, 'quantity': 1}],
+            'checkout': True,
         }
         if payAtDoor:
-            post_data['payAtDoor'] = 'on'
+            cart_data['payAtDoor'] = True
+        if voucherId:
+            cart_data['discount_code'] = voucherId
 
-        response = self.client.post(reverse('registration'), post_data, follow=True)
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps(cart_data),
+            content_type='application/json',
+            follow=True,
+        )
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
         invoice = Invoice.objects.get(
@@ -102,15 +99,13 @@ class BaseDiscountsTest(DefaultSchoolTestCase):
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
         self.assertFalse(tr.final)
 
-        if voucherId:
-            regSession = self.client.session.get(REG_VALIDATION_STR, {})
-            self.assertEqual(response.context['form'].fields['gift'].initial, voucherId)
-
         # Check that the student info page lists the correct subtotal with
         # the discount applied
         self.assertEqual(invoice.grossTotal, s.getBasePrice(payAtDoor=payAtDoor))
         if expected_amount is not None:
-            self.assertEqual(response.context_data.get('invoice').outstandingBalance, expected_amount)
+            self.assertEqual(
+                response.context_data.get('invoice').outstandingBalance, expected_amount
+            )
 
         # Continue to the summary page
         post_data = {
