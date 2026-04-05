@@ -248,7 +248,7 @@ class GuestList(models.Model):
         that was used to add the guest to the list.
         '''
         if isinstance(guest, GuestListName):
-            return guest.notes or gettext('Manually Added')
+            return guest.notes or gettext('Manually Added Guest')
         elif isinstance(guest, Registration):
             return gettext('Registered')
         elif isinstance(guest, StaffMember):
