@@ -6,6 +6,7 @@ from dateutil.relativedelta import relativedelta
 from intervaltree import IntervalTree
 
 from django.db import models
+from django.db.models import Q
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils.translation import gettext_lazy as _
