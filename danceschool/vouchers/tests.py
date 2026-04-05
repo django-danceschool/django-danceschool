@@ -6,8 +6,8 @@ from django.utils import timezone
 from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
-from danceschool.core.utils.tests import DefaultSchoolTestCase
 from danceschool.core.models import Registration, Invoice
+from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 from .models import Voucher
 

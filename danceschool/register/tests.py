@@ -38,7 +38,7 @@ from danceschool.core.models import (
     Location, StaffMember, Instructor, Event, Series,
     EventStaffMember, EventOccurrence,
 )
-from danceschool.core.utils.tests import DefaultSchoolTestCase
+from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 from .models import Register
 

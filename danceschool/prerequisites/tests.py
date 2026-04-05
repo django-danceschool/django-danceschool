@@ -17,7 +17,7 @@ from danceschool.core.constants import REG_VALIDATION_STR
 from danceschool.core.models import (
     Invoice, InvoiceItem, Registration, EventRegistration,
 )
-from danceschool.core.utils.tests import DefaultSchoolTestCase
+from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 from .models import Requirement
 

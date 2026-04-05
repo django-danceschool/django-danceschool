@@ -4,7 +4,7 @@ from django.urls import reverse
 
 from danceschool.core.constants import REG_VALIDATION_STR
 from danceschool.core.models import Invoice, Registration
-from danceschool.core.utils.tests import DefaultSchoolTestCase
+from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 from .models import MerchItem, MerchItemVariant
 

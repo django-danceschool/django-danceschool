@@ -10,8 +10,8 @@ from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
 from danceschool.core.models import EventOccurrence, EventStaffMember, Series
-from danceschool.core.utils.tests import DefaultSchoolTestCase
 from danceschool.core.utils.timezone import ensure_localtime
+from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 from .helpers.expenses import createExpenseItemsForEvents
 from .models import (
