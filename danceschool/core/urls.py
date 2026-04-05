@@ -1,17 +1,14 @@
 from django.urls import path, re_path
 from django.contrib import admin
 
-from .feeds import EventFeed, json_event_feed
-from .views import (
-    SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView,
-    IndividualClassView, IndividualPublicEventView, StaffDirectoryView,
-    EmailConfirmationView, SendEmailView, SubstituteReportingView,
-    StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView,
-    RepeatEventsView, IndividualClassReferralView, IndividualPublicEventReferralView,
-    RefundProcessingView, RefundConfirmationView, ViewInvoiceView,
-    InvoicePDFView, InvoiceNotificationView, RegistrationTransferProcessingView
-)
-from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
+from .views.feed import EventFeed, json_event_feed
+from .views.actions import SubmissionRedirectView, RepeatEventsView
+from .views.event import IndividualClassView, IndividualPublicEventView, IndividualClassReferralView, IndividualPublicEventReferralView
+from .views.invoice import ViewInvoiceView, InvoiceNotificationView, InvoicePDFView
+from .views.adjustments import RefundProcessingView, RefundConfirmationView, RegistrationTransferProcessingView
+from .views.email import EmailConfirmationView, SendEmailView, getEmailTemplate
+from .views.account import AccountProfileView, OtherAccountProfileView, UserAccountInfo
+from .views.staff import InstructorStatsView, OtherInstructorStatsView, StaffDirectoryView, StaffMemberBioChangeView, SubstituteReportingView, updateSeriesAttributes
 from .autocomplete_light_registry import (
     CustomerAutoComplete, UserAutoComplete, StaffMemberAutoComplete,
     EventAutoComplete, ClassDescriptionAutoComplete

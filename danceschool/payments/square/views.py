@@ -26,7 +26,7 @@ from time import sleep
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.helpers import getReturnPage
-from danceschool.core.classreg import clear_reg_cart
+from danceschool.core.views.cart import clear_reg_cart
 
 
 from .api_client import api_client

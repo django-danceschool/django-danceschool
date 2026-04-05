@@ -1,17 +1,9 @@
 from django.urls import path
 
-from .views import (
-    EventRegistrationSummaryView, EventRegistrationSelectView,
-    EventRegistrationJsonView, CustomerSingleCheckInView, CustomerQrCodeView,
-    SchoolSingleCheckInView
-)
-from .classreg import (
-    RegistrationOfflineView, PurchasableItemsView, CartView, CartSummaryView,
-    RegistrationSummaryView, StudentInfoView, MultiRegCustomerNameView,
-    PartnerRequiredView
-)
-from .registration import PublicRegisterView
-from .ajax import ProcessCheckInView
+from .views.registration_summary import EventRegistrationSummaryView, EventRegistrationSelectView, EventRegistrationJsonView
+from .views.checkin import CustomerSingleCheckInView, CustomerQrCodeView, SchoolSingleCheckInView, ProcessCheckInView
+from .views.cart import PurchasableItemsView, CartView, CartSummaryView
+from .views.registration import RegistrationOfflineView, PublicRegisterView, RegistrationSummaryView, StudentInfoView, MultiRegCustomerNameView, PartnerRequiredView
 
 urlpatterns = [
     # Public-facing registration page and referral variants

@@ -13,7 +13,7 @@ from datetime import timedelta
 
 from danceschool.core.models import Invoice
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
-from danceschool.core.classreg import clear_reg_cart
+from danceschool.core.views.cart import clear_reg_cart
 
 from .models import PaypalPaymentRecord
 

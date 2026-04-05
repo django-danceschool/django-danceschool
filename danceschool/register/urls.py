@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import PointOfSaleRegisterView
 from .autocomplete_light_registry import RegisterAutoComplete
-from danceschool.core.registration import PublicRegisterView
+from danceschool.core.views.registration import PublicRegisterView
 
 urlpatterns = [
     path('', PublicRegisterView.as_view(), name='registration'),

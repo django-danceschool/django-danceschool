@@ -5,7 +5,7 @@ from django.views.generic import FormView
 
 from danceschool.core.models import CashPaymentRecord, Invoice
 from danceschool.core.helpers import getReturnPage
-from danceschool.core.classreg import clear_reg_cart
+from danceschool.core.views.cart import clear_reg_cart
 
 from .forms import WillPayAtDoorForm, DoorPaymentForm
 
