@@ -9,7 +9,7 @@ from django.utils import timezone
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin
 
 from ..models import Invoice, Registration, EventRegistration
-from ..forms import RefundForm, RegistrationTransferForm
+from ..forms.adjustments import RefundForm, RegistrationTransferForm
 from ..constants import REFUND_VALIDATION_STR
 from ..mixins import FinancialContextMixin, AdminSuccessURLMixin
 from ..utils.timezone import ensure_localtime

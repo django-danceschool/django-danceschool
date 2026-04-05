@@ -11,7 +11,7 @@ from calendar import month_name
 import re
 
 from ..models import StaffMember, Instructor, Event, EventOccurrence, EventStaffMember
-from ..forms import SubstituteReportingForm, StaffMemberBioChangeForm
+from ..forms.staff import SubstituteReportingForm, StaffMemberBioChangeForm
 from ..constants import getConstant
 from ..mixins import StaffMemberObjectMixin, AdminSuccessURLMixin
 

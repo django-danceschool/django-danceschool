@@ -13,7 +13,7 @@ from .models import (
 from danceschool.core.models import Instructor, EventStaffMember, StaffMember
 from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline, EventRegistrationInline
 from danceschool.core.constants import getConstant
-from danceschool.core.forms import LocationWithDataWidget
+from danceschool.core.forms.inputs import LocationWithDataWidget
 
 
 class InstructorPrivateLessonDetailsInline(admin.TabularInline):

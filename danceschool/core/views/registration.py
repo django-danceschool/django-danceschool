@@ -1,26 +1,25 @@
 import re
 
 from django.urls import reverse
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib import messages
 from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.views.generic import FormView, TemplateView
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 import logging
 from allauth.account.forms import LoginForm, SignupForm
 from datetime import timedelta
-from braces.views import PermissionRequiredMixin
 
 from ..models import (
     Event, Series, PublicEvent, Invoice, Customer, CashPaymentRecord,
-    Registration, EventRegistration
+    Registration
 )
-from ..forms import (
+from ..forms.registration import (
     RegistrationContactForm, MultiRegCustomerNameForm, PartnerRequiredForm
 )
 from ..constants import getConstant, REG_VALIDATION_STR
@@ -29,7 +28,7 @@ from ..signals import (
 )
 from ..mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
-    RegistrationAdjustmentsMixin, ReferralInfoMixin
+    RegistrationAdjustmentsMixin
 )
 
 # Define logger for this file

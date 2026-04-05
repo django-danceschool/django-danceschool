@@ -10,7 +10,7 @@ from braces.views import PermissionRequiredMixin, UserFormKwargsMixin
 import re
 
 from ..models import Event, Customer, EventRegistration, EventStaffMember, EmailTemplate
-from ..forms import EmailContactForm
+from ..forms.email import EmailContactForm
 from ..constants import getConstant, EMAIL_VALIDATION_STR
 from ..mixins import AdminSuccessURLMixin, EmailRecipientMixin
 

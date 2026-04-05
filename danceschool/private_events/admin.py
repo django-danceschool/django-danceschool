@@ -4,7 +4,7 @@ from django.forms import ModelForm
 
 from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline
 from danceschool.core.models import Event
-from danceschool.core.forms import LocationWithDataWidget
+from danceschool.core.forms.inputs import LocationWithDataWidget
 
 from .models import PrivateEvent, PrivateEventCategory, EventReminder
 

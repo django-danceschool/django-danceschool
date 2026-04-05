@@ -19,7 +19,7 @@ from .models import (
 )
 from .mixins import PluginTemplateMixin
 from .registries import plugin_templates_registry, PluginTemplateBase
-from .forms import CreateInvoiceForm
+from .forms.invoice import CreateInvoiceForm
 from .utils.timezone import ensure_localtime
 
 

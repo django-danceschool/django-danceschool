@@ -13,9 +13,9 @@ from braces.views import PermissionRequiredMixin
 import json
 
 from ..models import (
-    Event, EventRegistration, Invoice, InvoiceItem, Customer, EventCheckIn
+    Event, EventRegistration, InvoiceItem, Customer, EventCheckIn
 )
-from ..forms import EventAutocompleteForm
+from ..forms.event import EventAutocompleteForm
 from ..constants import getConstant
 from ..mixins import EventOrderMixin, SiteHistoryMixin
 from ..signals import get_eventregistration_data, get_additional_event_names, get_person_data

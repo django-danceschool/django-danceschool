@@ -1,9 +1,7 @@
-from django.http import HttpResponseRedirect, HttpResponseBadRequest
+from django.http import HttpResponseBadRequest
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.urls import reverse
 from django.views.generic import FormView, TemplateView
-from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.messages.views import SuccessMessageMixin
@@ -13,7 +11,7 @@ from dateutil.relativedelta import relativedelta
 from datetime import datetime
 from cms.models import Page
 
-from ..forms import RepeatEventForm
+from ..forms.event import RepeatEventForm
 from ..constants import getConstant
 from ..mixins import AdminSuccessURLMixin, SiteHistoryMixin
 from ..models import Event, EventOccurrence, EventRole

@@ -36,7 +36,7 @@ from .models import (
     EventStaffCategory, EventRole, Invoice, InvoiceItem, Room
 )
 from .constants import getConstant
-from .forms import LocationWithDataWidget
+from .forms.inputs import LocationWithDataWidget
 from .mixins import ModelTemplateMixin
 
 
