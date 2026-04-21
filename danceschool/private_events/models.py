@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User, Group
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from colorful.fields import RGBColorField
@@ -115,6 +116,33 @@ class EventReminder(models.Model):
     completed = models.BooleanField(
         _('Completed'), default=False, help_text=_('This will be set to true once the reminder has been sent.')
     )
+    scheduledTaskId = models.CharField(
+        _('Scheduled task ID'), max_length=100, null=True, blank=True, editable=False
+    )
+
+    def scheduleTask(self):
+        from .tasks import sendReminderEmail
+        from huey.contrib.djhuey import HUEY as huey
+
+        # Revoke any previously scheduled task for this reminder
+        if self.scheduledTaskId:
+            try:
+                huey.revoke_by_id(self.scheduledTaskId)
+            except Exception:
+                pass
+
+        new_task_id = None
+
+        if not self.completed:
+            if self.time <= timezone.now():
+                sendReminderEmail(self.pk)
+            else:
+                result = sendReminderEmail.schedule(args=(self.pk,), eta=self.time)
+                new_task_id = result.id
+
+        # Use .update() to avoid triggering another save() / scheduleTask() cycle
+        EventReminder.objects.filter(pk=self.pk).update(scheduledTaskId=new_task_id)
+        self.scheduledTaskId = new_task_id
 
     def save(self, *args, **kwargs):
         if hasattr(self, 'event') and not hasattr(self, 'eventOccurrence'):
@@ -124,6 +152,10 @@ class EventReminder(models.Model):
         if self.eventOccurrence.event != self.event:
             raise ValidationError(_('Event and EventOccurrence must match!'))
         super().save(*args, **kwargs)
+        try:
+            self.scheduleTask()
+        except Exception:
+            pass
 
     def __str__(self):
         return _(
