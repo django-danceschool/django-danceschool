@@ -364,10 +364,10 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                 'checkins': [
                     {
                         'id': x.id,
-                        'event': x.event.id,
-                        'occurrence': getattr(x.occurrence, 'id', None),
+                        'event': x.event_id,
+                        'occurrence': x.occurrence_id,
                         'checkInType': x.checkInType,
-                        'eventRegistration': getattr(x.eventRegistration, 'id', None),
+                        'eventRegistration': x.eventRegistration_id,
                         'cancelled': x.cancelled,
                         'firstName': x.firstName,
                         'lastName': x.lastName,

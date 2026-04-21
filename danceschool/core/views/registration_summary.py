@@ -1,3 +1,4 @@
+from django.apps import apps as django_apps
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
@@ -87,7 +88,12 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
 
     def get_object(self, queryset=None):
         return get_object_or_404(
-            Event.objects.filter(id=self.kwargs.get('event_id')))
+            Event.objects.select_related(
+                'location', 'room',
+            ).prefetch_related(
+                'eventoccurrence_set',
+            ).filter(id=self.kwargs.get('event_id'))
+        )
 
     def get_context_data(self, **kwargs):
         ''' Add the list of registrations for the given series '''
@@ -101,7 +107,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             registration__final=True,
         ).select_related(
             'registration', 'event', 'customer',
-            'invoiceItem', 'invoiceItem__revenueitem', 'role',
+            'invoiceItem', 'invoiceItem__invoice', 'invoiceItem__revenueitem', 'role',
             'registration__invoice',
         ).prefetch_related(
             'occurrences',
@@ -109,6 +115,10 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'registration__registrationdiscount_set__discount',
             'registration__invoice__voucheruse_set',
             'registration__invoice__voucheruse_set__voucher',
+            # Needed for invoice.revenueNotYetReceived / invoice.revenueMismatch
+            # (financial app iterates invoiceitem_set; prefetch avoids per-reg queries)
+            'registration__invoice__invoiceitem_set',
+            'registration__invoice__invoiceitem_set__revenueitem',
         ).order_by(
             F('customer__last_name').asc(nulls_last=True),
             F('customer__first_name').asc(nulls_last=True),
@@ -173,14 +183,63 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extra_names_data if y[1]]]):
                 additional_names_extras_dict[k].extend(v)
 
+        # Compute next_occurrence from prefetched eventoccurrence_set (avoids DB query)
+        now_floor = ensure_localtime(timezone.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        all_occs = sorted(self.object.eventoccurrence_set.all(), key=lambda o: o.startTime)
+        next_occurrence = next((o for o in all_occs if o.startTime >= now_floor), None)
+
+        # Build per-registration invoice flags using already-fetched data, avoiding
+        # per-row queries from Registration.warningFlag (invoice.itemTotalMismatch)
+        # and Registration.refundFlag (invoice.revenueRefundsReported).
+        invoice_registration_flags = {}
+        financial_installed = django_apps.is_installed('danceschool.financial')
+        for reg in registrations:
+            invoice = getattr(reg.registration, 'invoice', None)
+            if not invoice:
+                invoice_registration_flags[reg.id] = {'warningFlag': True, 'refundFlag': False}
+                continue
+
+            details = invoice_details_by_invoice.get(reg.registration.invoice_id, {})
+
+            # itemTotalMismatch: compare invoice header totals vs sum of item totals
+            item_mismatch = (
+                round(invoice.grossTotal, 2) != round(details.get('grossTotal', 0), 2) or
+                round(invoice.total, 2) != round(details.get('total', 0), 2)
+            )
+            warning = item_mismatch or invoice.unpaid or invoice.outstandingBalance != 0
+            refund = details.get('adjustments', 0) != 0
+
+            # Financial app adds per-invoiceitem revenue checks. Using the
+            # registration's own invoiceItem (select_related + revenueitem prefetched)
+            # is accurate for single-item invoices; multi-item invoices are handled
+            # by the invoiceitem_set prefetch above which makes the invoice-level
+            # properties use the prefetch cache instead of issuing extra queries.
+            if financial_installed and not warning:
+                item = getattr(reg, 'invoiceItem', None)
+                if item:
+                    warning = (
+                        getattr(item, 'revenueNotYetReceived', False) or
+                        getattr(item, 'revenueMismatch', False)
+                    )
+            if financial_installed and not refund:
+                item = getattr(reg, 'invoiceItem', None)
+                if item:
+                    refund = getattr(item, 'revenueRefundsReported', 0) != 0
+
+            invoice_registration_flags[reg.id] = {'warningFlag': warning, 'refundFlag': refund}
+
         context = {
             'event': self.object,
-            'next_occurrence': self.object.nextOccurrenceForToday,
+            'next_occurrence': next_occurrence,
+            'num_registered': len(registrations),
             'registrations': registrations,
             'invoice_details': {
                 reg.id: invoice_details_by_invoice.get(reg.registration.invoice_id, {})
                 for reg in registrations
             },
+            'invoice_registration_flags': invoice_registration_flags,
             'additional_names': additional_names,
             'extras': extras_dict,
             'additional_names_extras': additional_names_extras_dict,
