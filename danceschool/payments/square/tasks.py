@@ -25,7 +25,7 @@ def updateSquareFees(paymentRecordId):
     # Get payments and refunds and simultaneously update the cache for each.
     # This ensures that fees are calculated properly.
     from .models import SquarePaymentRecord
-    paymentRecord = SquarePaymentRecord.objects.filter(id=paymentRecordId)
+    paymentRecord = SquarePaymentRecord.objects.get(id=paymentRecordId)
 
     payment=paymentRecord.getPayment(use_cache=False, commit=False)
     refunds=paymentRecord.getRefunds(
