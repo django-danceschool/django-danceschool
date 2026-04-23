@@ -65,12 +65,15 @@ def getList(
             guestType=Value(None, output_field=CharField()),
         ).none()
 
+    list_kwargs = kwargs.copy()
+    list_kwargs.update({'startTime': startTime, 'endTime': endTime})
+
     for this_list in applicable_lists:
         if not queryset:
-            queryset = this_list.getListForEvents(events, **kwargs).order_by()
+            queryset = this_list.getListForEvents(events, **list_kwargs).order_by()
         else:
             queryset = queryset.union(
-                this_list.getListForEvents(events, **kwargs).order_by()
+                this_list.getListForEvents(events, **list_kwargs).order_by()
             )
 
     return queryset

@@ -121,8 +121,11 @@ class GuestList(models.Model):
             # Skip the analysis of intervals and include only those who are
             # staffed for the event.
             return Q(filters & Q(eventstaffmember__event__in=events))
+        elif component.admissionRule == 'Always' and events:
+            # If 'Always' with events, include associated staff for those events
+            return Q(filters & Q(eventstaffmember__event__in=events))
         elif component.admissionRule in ['Always', 'EventOnly']:
-            # If 'Always' or no event is specified, include all associated staff
+            # If 'Always' or 'EventOnly' without events, include all associated staff
             return Q(filters)
 
         # Start with the event occurrence intervals, or with the specified time.
@@ -189,7 +192,10 @@ class GuestList(models.Model):
 
         return Q(filters & intervalFilters)
 
-    def getStaffForEvents(self, events=Event.objects.none(), filters=Q()):
+    def getStaffForEvents(
+            self, events=Event.objects.none(), filters=Q(),
+            startTime=None, endTime=None
+        ):
         components = self.guestlistcomponent_set.all()  # uses prefetch cache
         component_filters = Q(pk__isnull=True)
 
@@ -198,14 +204,16 @@ class GuestList(models.Model):
         per_event_applies = {}
         event_intervals = None
         if bool(events):
+            occ_query = EventOccurrence.objects.filter(event__in=events)
+            if startTime is not None and endTime is not None:
+                occ_query = occ_query.filter(endTime__gte=startTime, startTime__lte=endTime)
+
             event_intervals = [
-                (x.startTime, x.endTime) 
-                for x in EventOccurrence.objects.filter(event__in=events)
+                (x.startTime, x.endTime)
+                for x in occ_query
             ]
             if not applies_to_all:
                 per_event_applies = self.appliesToEvents(events, verbose=True)
-
-        today_flag = False
         for component in components:
             if applies_to_all:
                 component_filters |= self.getComponentFilters(
@@ -218,12 +226,6 @@ class GuestList(models.Model):
                             component, events=[event],
                             event_intervals=event_intervals
                         )
-                    elif not today_flag:
-                        component_filters |= self.getComponentFilters(
-                            component, dateTime=timezone.now(),
-                            event_intervals=event_intervals
-                        )
-                        today_flag = True
             else:
                 component_filters |= self.getComponentFilters(
                     component, dateTime=timezone.now()
@@ -260,7 +262,10 @@ class GuestList(models.Model):
                     )
             return gettext('Other Staff')
 
-    def getListForEvents(self, events=Event.objects.none(), filters=Q(), includeRegistrants=True):
+    def getListForEvents(
+        self, events=Event.objects.none(), filters=Q(),
+        includeRegistrants=True, startTime=None, endTime=None
+    ):
         '''
         Get a union-ed queryset with a list of names associated with a particular event.
         Use annotations for everything to avoid potential issues with query ordering.
@@ -281,7 +286,7 @@ class GuestList(models.Model):
         ).order_by()
 
         # Execute the constructed query and add the names of staff
-        names = names.union(self.getStaffForEvents(events, filters).annotate(
+        names = names.union(self.getStaffForEvents(events, filters, startTime=startTime, endTime=endTime).annotate(
             first=F('firstName'), last=F('lastName'), contact=F('email'),
             modelType=Value('StaffMember', output_field=models.CharField()),
             guestListId=Value(self.id, output_field=models.IntegerField()),
