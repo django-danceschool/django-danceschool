@@ -29,7 +29,7 @@ def getList(
 
     if guestList:
         applicable_lists = GuestList.objects.filter(
-            id__in=getattr(guestList, 'id', guestList)
+            id__in=[getattr(guestList, 'id', guestList)]
         )
     else:
         # This is the same logic as the appliesToEvents() method of GuestList
