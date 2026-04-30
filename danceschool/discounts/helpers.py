@@ -1,7 +1,7 @@
 
 from django.utils import timezone
 from django.db.models import Q, Value, F, FloatField, IntegerField, Count
-from django.db.models.functions import Coalesce, Cast
+from django.db.models.functions import Coalesce, Cast, NullIf
 from django.apps import apps
 
 from datetime import timedelta
@@ -49,8 +49,15 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
 
     if reg:
         if apps.is_installed('danceschool.private_lessons'):
+            # For PrivateLessonEvents the quantity is the number of booked slots.
+            # For all other event types (Series, PublicEvent) the join returns no
+            # rows so COUNT returns 0, not NULL. NullIf converts that 0 to NULL so
+            # Coalesce can fall back to 1.
             quantity_expression = Coalesce(
-                Count('event__privatelessonevent__instructoravailability'),
+                NullIf(
+                    Count('event__privatelessonevent__instructoravailabilityslot'),
+                    Value(0),
+                ),
                 Value(1),
                 output_field=IntegerField()
             )

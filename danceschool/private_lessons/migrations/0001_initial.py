@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('status', models.CharField(choices=[('A', 'Available'), ('B', 'Booked'), ('T', 'Tentative Booking'), ('U', 'Unavailable')], default='A', max_length=1)),
                 ('creationDate', models.DateTimeField(auto_now_add=True)),
                 ('modifiedDate', models.DateTimeField(auto_now=True)),
-                ('eventRegistration', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.EventRegistration', verbose_name='Final event registration')),
+                ('eventRegistration', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.EventRegistration', verbose_name='Event registration')),
                 ('instructor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.Instructor', verbose_name='Instructor')),
             ],
             options={'ordering': ('-startTime', 'instructor__lastName', 'instructor__firstName'), 'permissions': (('edit_own_availability', "Can edit one's own private lesson availability."), ('edit_others_availability', "Can edit other instructors' private lesson availability.")), 'verbose_name': 'Private lesson availability slot', 'verbose_name_plural': 'Private lesson availability slots'},
@@ -78,11 +78,6 @@ class Migration(migrations.Migration):
             model_name='instructoravailabilityslot',
             name='pricingTier',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='core.PricingTier', verbose_name='Pricing Tier'),
-        ),
-        migrations.AddField(
-            model_name='instructoravailabilityslot',
-            name='eventRegistration',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='privateLessonSlots', to='core.EventRegistration', verbose_name='Temporary event registration'),
         ),
         migrations.AlterUniqueTogether(
             name='privatelessoncustomer',

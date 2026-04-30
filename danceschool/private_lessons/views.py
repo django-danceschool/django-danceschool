@@ -1,5 +1,6 @@
 from django.views.generic import FormView, TemplateView
 from django.http import JsonResponse, HttpResponseRedirect, Http404
+from django.contrib.auth.views import redirect_to_login
 from django.contrib import messages
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.urls import reverse
@@ -129,6 +130,11 @@ class UpdateAvailabilitySlotView(FormView):
 class BookPrivateLessonView(FormView):
     template_name = 'private_lessons/private_lesson_fullcalendar.html'
     form_class = SlotBookingForm
+
+    def dispatch(self, request, *args, **kwargs):
+        if not getConstant('privateLessons__allowPublicBooking') and not request.user.is_staff:
+            return redirect_to_login(request.get_full_path())
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -298,6 +304,14 @@ class BookPrivateLessonView(FormView):
             reg.save()
             tr.registration = reg
             tr.save(grossTotal=price, total=price)
+
+            # Override the default public-event tax rate with the private-lesson
+            # specific rate. buyerPaysSalesTax is already set on the invoice by
+            # link_invoice() and calculateTaxes() reads it from there.
+            pl_tax_rate = getConstant('privateLessons__salesTaxRate') or 0
+            tr.invoiceItem.taxRate = pl_tax_rate
+            tr.invoiceItem.calculateTaxes()
+            tr.invoiceItem.save(updateInvoiceTotals=True)
 
             affectedSlots.update(
                 lessonEvent=lesson,
