@@ -120,9 +120,14 @@ class VariantsField(serializers.ListField):
             dropin_price = event.getBasePrice(dropIns=1)
             if role_data:
                 for role_variant in role_data:
+                    role_id = role_variant.get('id')
+                    dropin_sku = (
+                        f'EVENT_{event.id}_DROPIN_ROLE_{role_id}'
+                        if role_id else f'EVENT_{event.id}_DROPIN_GENERAL'
+                    )
                     synthetic_variants.append({
                         **role_variant,
-                        'sku': role_variant['sku'],
+                        'sku': dropin_sku,
                         'description': _('Drop-in: %s') % role_variant.get('description', ''),
                         'price': dropin_price,
                         'dropIn': True,
@@ -134,7 +139,7 @@ class VariantsField(serializers.ListField):
                     dateTime=self.context.get('cart_datetime', None),
                 )
                 synthetic_variants.append({
-                    'sku': f'EVENT_{event.id}_GENERAL',
+                    'sku': f'EVENT_{event.id}_DROPIN_GENERAL',
                     'description': _('Drop-in Registration'),
                     'price': dropin_price,
                     'quantity_available': (event.capacity - numRegistered),
