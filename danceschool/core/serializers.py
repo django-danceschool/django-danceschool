@@ -55,7 +55,7 @@ class VariantsField(serializers.ListField):
         if hasattr(roles, "all"):  # If it's a RelatedManager
             roles = list(roles.filter(capacity__gt=0))
 
-        role_data = EventRoleSerializer(roles, many=True).data
+        role_data = EventRoleSerializer(roles, many=True, context=self.context).data
 
         # For Series events with no EventRole records, fall back to DanceType
         # roles so that the catalog SKUs match the buttons the template renders.
