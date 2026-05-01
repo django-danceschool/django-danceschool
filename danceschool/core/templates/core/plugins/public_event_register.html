@@ -7,7 +7,7 @@
 {% endcomment %}
 <div class="col-12 my-1 public-register-section event-register-set {{ instance.cssClasses }}"
      id="section-{{ instance.pk }}"
-     data-section-title="{{ instance.title }}">
+     {% if register_choices %}data-section-title="{{ instance.title }}"{% endif %}>
 
   {% if instance.title and register_choices %}
     <h3 class="event-register-set-title">{{ instance.title }}</h3>
