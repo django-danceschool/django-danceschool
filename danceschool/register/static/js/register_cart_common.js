@@ -472,9 +472,10 @@ document.addEventListener('DOMContentLoaded', function () {
     //   description     {string}  – cached description fallback
     function buildEventItem(eventId, roleId, quantity, price, opts) {
         opts = opts || {};
+        var middle = opts.dropIn ? '_DROPIN' : '';
         var sku = (roleId && !isNaN(parseInt(roleId, 10)))
-            ? 'EVENT_' + eventId + '_ROLE_' + roleId
-            : 'EVENT_' + eventId + '_GENERAL';
+            ? 'EVENT_' + eventId + middle + '_ROLE_' + roleId
+            : 'EVENT_' + eventId + middle + '_GENERAL';
         var item = {
             item_type: 'Event',
             item_id:   parseInt(eventId, 10),
