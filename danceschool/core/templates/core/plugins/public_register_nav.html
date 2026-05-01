@@ -1,0 +1,141 @@
+{% load i18n sekizai_tags %}
+
+{% comment %}
+  Sticky Bootstrap 4 navbar for the public register page.  The <ul> is left
+  empty here; JavaScript populates it after DOMContentLoaded by scanning the
+  page for .public-register-section elements that carry a data-section-title
+  attribute (set by PublicRegisterEventPlugin).  If no titled sections are
+  found the entire <nav> is hidden.
+{% endcomment %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top public-register-navbar"
+     id="public-register-nav-{{ instance.pk }}"
+     aria-label="{% trans 'Registration sections' %}">
+  <div class="container-fluid">
+
+    {% if instance.title %}
+      <span class="navbar-brand">{{ instance.title }}</span>
+    {% endif %}
+
+    <button class="navbar-toggler"
+            type="button"
+            data-toggle="collapse"
+            data-target="#publicNavLinks-{{ instance.pk }}"
+            aria-controls="publicNavLinks-{{ instance.pk }}"
+            aria-expanded="false"
+            aria-label="{% trans 'Toggle navigation' %}">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="publicNavLinks-{{ instance.pk }}">
+      <ul class="navbar-nav mr-auto" id="publicNavItems-{{ instance.pk }}">
+        {# Populated by the inline script below #}
+      </ul>
+    </div>
+
+  </div>
+</nav>
+
+{% addtoblock "js" %}
+<script type="text/javascript">
+(function () {
+    var NAV_ID       = 'public-register-nav-{{ instance.pk }}';
+    var LIST_ID      = 'publicNavItems-{{ instance.pk }}';
+    var COLLAPSE_ID  = 'publicNavLinks-{{ instance.pk }}';
+
+    function buildNav() {
+        var nav      = document.getElementById(NAV_ID);
+        var navList  = document.getElementById(LIST_ID);
+        if (!nav || !navList) { return; }
+
+        var sections = document.querySelectorAll(
+            '.public-register-section[data-section-title]'
+        );
+        var added = 0;
+
+        sections.forEach(function (section) {
+            var title = (section.getAttribute('data-section-title') || '').trim();
+            var id    = section.getAttribute('id');
+            if (!title || !id) { return; }
+
+            var li = document.createElement('li');
+            li.className = 'nav-item';
+
+            var a = document.createElement('a');
+            a.className = 'nav-link';
+            a.href = '#' + id;
+            a.textContent = title;
+
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                var target = document.getElementById(id);
+                if (!target) { return; }
+
+                // Offset scroll by the navbar's rendered height so the
+                // section heading lands just below the bar.
+                var navHeight = nav.getBoundingClientRect().height;
+                var top = target.getBoundingClientRect().top +
+                          window.pageYOffset - navHeight;
+                window.scrollTo({ top: top, behavior: 'smooth' });
+
+                // Close the mobile collapse after clicking a link.
+                var collapse = document.getElementById(COLLAPSE_ID);
+                if (collapse && collapse.classList.contains('show')) {
+                    collapse.classList.remove('show');
+                    nav.querySelector('.navbar-toggler')
+                       .setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            li.appendChild(a);
+            navList.appendChild(li);
+            added++;
+        });
+
+        // Nothing to navigate to — hide the bar entirely.
+        if (added === 0) {
+            nav.style.display = 'none';
+            return;
+        }
+
+        // Highlight the nav link whose section is currently in the viewport.
+        // rootMargin '-10% 0px -80% 0px' triggers when a section enters the
+        // top ~10–20 % of the viewport, giving a natural "you are here" feel.
+        if ('IntersectionObserver' in window) {
+            var observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (!entry.isIntersecting) { return; }
+                    navList.querySelectorAll('.nav-link').forEach(function (link) {
+                        link.classList.toggle(
+                            'active',
+                            link.getAttribute('href') === '#' + entry.target.id
+                        );
+                    });
+                });
+            }, { rootMargin: '-10% 0px -80% 0px' });
+
+            sections.forEach(function (section) {
+                if ((section.getAttribute('data-section-title') || '').trim()) {
+                    observer.observe(section);
+                }
+            });
+        }
+    }
+
+    // Run immediately if the DOM is already ready, otherwise wait.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildNav);
+    } else {
+        buildNav();
+    }
+}());
+</script>
+{% endaddtoblock %}
+
+{% addtoblock "css" %}
+<style type="text/css">
+/* Prevent section headings from scrolling under the sticky navbar. */
+.public-register-section {
+    scroll-margin-top: 4rem;
+}
+</style>
+{% endaddtoblock %}

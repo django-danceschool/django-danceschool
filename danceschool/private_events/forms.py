@@ -13,7 +13,7 @@ from crispy_forms.bootstrap import Accordion, AccordionGroup
 
 from danceschool.core.models import EventOccurrence, Event
 from danceschool.core.utils.timezone import ensure_timezone
-from danceschool.core.forms import LocationWithDataWidget
+from danceschool.core.forms.inputs import LocationWithDataWidget
 
 from .models import PrivateEvent, EventReminder
 

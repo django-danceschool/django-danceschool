@@ -1,5 +1,5 @@
 {% extends "cms/home.html" %}
-{% load cms_tags danceschool_tags sekizai_tags thumbnail i18n %}
+{% load cms_tags danceschool_tags sekizai_tags thumbnail i18n static %}
 
 {% block title %}
 	{% blocktrans with month=event_set.0.month|readable_month year=event_set.0.year title=event_set.0.classDescription.title %}
@@ -48,7 +48,29 @@
 
 			{% block register_link %}
 				{% if not series.soldOut and not series.registrationClosed and not series.registrationPassed %}
-					<a class="btn btn-primary btn-lg" href="{% url 'registration' %}">{% trans "Register for this class!" %}</a>
+					{% if series.status == series.RegStatus.linkOnly and not link_authorized %}
+					{# linkOnly event reached without the private UUID link — suppress the button #}
+					{% elif series.availableRoles|length > 1 %}
+					<div class="dropdown">
+						<button class="btn btn-primary btn-lg dropdown-toggle" type="button" id="registerNowButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+							{% trans "Register for this class!" %}
+						</button>
+						<div class="dropdown-menu" aria-labelledby="registerNowButton">
+						{% for role in series.availableRoles %}
+							{% soldOutForRole series role as roleSoldOut %}
+							<a class="dropdown-item register-ajax {% if roleSoldOut %}disabled{% endif %}" data-role-id="{{ role.id }}" data-id="{{ series.id }}" data-event-type="series">
+								{{ role.name }}
+							</a>
+						{% endfor %}
+						</div>
+					</div>
+					{% else %}
+						{% for role in series.availableRoles %}
+						<button class="btn btn-primary btn-lg register-ajax" type="button" data-role-id="{{ role.id }}" data-id="{{ series.id }}" data-event-type="series">
+							{% trans "Register for this class!" %}
+						</button>
+						{% endfor %}
+					{% endif %}
 				{% elif series.soldOut %}
 					<button class="btn btn-secondary btn-lg disabled">{% trans "Sold Out!" %}</button>
 				{% elif series.registrationEnabled and not series.status == series.RegStatus.linkOnly %}
@@ -122,9 +144,10 @@
 	{% addtoblock "js" %}
 		<script type="text/javascript">
 		$( document ).ready(function() {
-			$('.pricingPopover').popover();	
+			$('.pricingPopover').popover();
 		});
 		</script>
 	{% endaddtoblock %}
 	
+	{% addtoblock "js" %}<script type="text/javascript" data-cart-url="{% url 'cartSummary' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
 {% endblock %}

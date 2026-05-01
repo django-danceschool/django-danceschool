@@ -10,7 +10,7 @@ from cms.models import StaticPlaceholder
 
 from danceschool.core.models import Registration, Invoice
 from danceschool.core.constants import REG_VALIDATION_STR
-from danceschool.core.utils.tests import DefaultSchoolTestCase
+from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 # from .cms_plugins import PayAtDoorFormPlugin
 from .constants import ATTHEDOOR_PAYMENTMETHOD_CHOICES
@@ -69,7 +69,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
         invoice = Invoice.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
+            id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
         )
         tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())
@@ -181,7 +181,7 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(response.redirect_chain, [(reverse('getStudentInfo'), 302)])
 
         invoice = Invoice.objects.get(
-            id=self.client.session[REG_VALIDATION_STR].get('invoiceId')
+            id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
         )
         tr = Registration.objects.filter(invoice=invoice).first()
         self.assertTrue(tr.eventregistration_set.filter(event__id=s.id).exists())

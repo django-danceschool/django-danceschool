@@ -10,7 +10,7 @@ from crispy_forms.layout import Layout, Div, Submit
 from danceschool.core.constants import getConstant
 from danceschool.core.models import DanceRole, Location, Room, Instructor, PricingTier
 from danceschool.core.utils.timezone import ensure_localtime
-from danceschool.core.forms import LocationWithDataWidget
+from danceschool.core.forms.inputs import LocationWithDataWidget
 
 from .models import InstructorAvailabilitySlot
 

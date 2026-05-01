@@ -1,49 +1,27 @@
 from django.urls import path
 
-from .views import (
-    EventRegistrationSummaryView, EventRegistrationSelectView,
-    EventRegistrationJsonView, CustomerSingleCheckInView, CustomerQrCodeView,
-    SchoolSingleCheckInView
-)
-from .classreg import (
-    RegistrationOfflineView, ClassRegistrationView, SingleClassRegistrationView,
-    ClassRegistrationReferralView, RegistrationSummaryView, StudentInfoView,
-    AjaxClassRegistrationView, SingleClassRegistrationReferralView,
-    MultiRegCustomerNameView, PartnerRequiredView
-)
-from .ajax import ProcessCheckInView
+from .views.registration_summary import EventRegistrationSummaryView, EventRegistrationSelectView, EventRegistrationJsonView
+from .views.checkin import CustomerSingleCheckInView, CustomerQrCodeView, SchoolSingleCheckInView, ProcessCheckInView
+from .views.cart import PurchasableItemsView, CartView, CartSummaryView
+from .views.registration import RegistrationOfflineView, PublicRegisterView, RegistrationSummaryView, StudentInfoView, MultiRegCustomerNameView, PartnerRequiredView
 
 urlpatterns = [
-
-    # This view allows the passing of a voucher code in the URL to the class registration page
-    # so that Referrers can provide a direct URL to get their referral benefits
-    path('', ClassRegistrationView.as_view(), name='registration'),
-    path('ajax/', AjaxClassRegistrationView.as_view(), name='ajaxRegistration'),
-    path(
-        'id/<slug:marketing_id>/',
-        ClassRegistrationReferralView.as_view(),
-        name='registrationWithMarketingId'
-    ),
+    # Public-facing registration page and referral variants
+    path('', PublicRegisterView.as_view(), name='registration'),
     path(
         'referral/<slug:voucher_id>/',
-        ClassRegistrationReferralView.as_view(),
-        name='registrationWithVoucher'
+        PublicRegisterView.as_view(),
+        name='registrationWithVoucher',
     ),
     path(
-        'event/<uuid:uuid>/',
-        SingleClassRegistrationView.as_view(),
-        name='singleClassRegistration'
+        'id/<slug:marketing_id>/',
+        PublicRegisterView.as_view(),
+        name='registrationWithMarketingId',
     ),
-    path(
-        'event/<uuid:uuid>/id/<slug:marketing_id>/',
-        SingleClassRegistrationReferralView.as_view(),
-        name='singleClassReferralRegistration'
-    ),
-    path(
-        'event/<uuid:uuid>/referral/<slug:voucher_id>/',
-        SingleClassRegistrationReferralView.as_view(),
-        name='singleClassReferralRegistration'
-    ),
+
+    path('api/', PurchasableItemsView.as_view(), name='purchasableItems'),
+    path('cart/', CartView.as_view(), name='cart'),
+    path('cart/summary/', CartSummaryView.as_view(), name='cartSummary'),
 
     # This is the view that is redirected to when registration is offline.
     path('offline/', RegistrationOfflineView.as_view(), name='registrationOffline'),

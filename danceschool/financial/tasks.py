@@ -4,10 +4,8 @@ import logging
 
 from danceschool.core.constants import getConstant
 
-from .helpers import (
-    createExpenseItemsForEvents, createExpenseItemsForVenueRental,
-    createRevenueItemsForRegistrations
-)
+from .helpers.expenses import createExpenseItemsForEvents, createExpenseItemsForVenueRental
+from .helpers.revenues import createRevenueItemsForRegistrations
 
 
 # Define logger for this file
@@ -25,7 +23,7 @@ def updateFinancialItems():
 
     logger.info('Creating automatically-generated financial items.')
 
-    if getConstant('financial__autoGenerateExpensesEventStaff'):
+    if getConstant('financial__autoGenerateExpensesEventStaff') != 'disabled':
         createExpenseItemsForEvents()
     if getConstant('financial__autoGenerateExpensesVenueRental'):
         createExpenseItemsForVenueRental()

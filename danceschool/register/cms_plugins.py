@@ -11,11 +11,12 @@ from adminsortable2.admin import SortableInlineAdminMixin
 
 from .models import (
     RegisterEventPluginModel, RegisterEventPluginChoice,
-    RegisterGuestSearchPluginModel
+    RegisterGuestSearchPluginModel,
 )
-from danceschool.core.models import Event
+from danceschool.core.models import Event, Series
 from danceschool.core.mixins import PluginTemplateMixin
 from danceschool.core.utils.timezone import ensure_localtime
+from danceschool.core.constants import getConstant
 
 
 class RegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):

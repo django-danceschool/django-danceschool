@@ -26,6 +26,7 @@ from time import sleep
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.helpers import getReturnPage
+from danceschool.core.views.cart import clear_reg_cart
 
 
 from .api_client import api_client
@@ -224,6 +225,7 @@ class ProcessSquarePaymentView(View):
             methodTxn=payment.get('id'),
             notify=customerEmail,
         )
+        clear_reg_cart(request)
         updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)
 
         if addSessionInfo:
@@ -501,6 +503,7 @@ class ProcessPointOfSalePaymentView(View):
                 methodTxn=payment.get('id'),
                 notify=customerEmail,
             )
+            clear_reg_cart(request)
         updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)
 
         if addSessionInfo:

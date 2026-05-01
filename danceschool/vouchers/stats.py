@@ -44,7 +44,7 @@ def voucherFrequencyJSON(request):
 
     # Percentage of registrations using discounts
     vouchers_counter_sorted = sorted(Counter(Registration.objects.filter(timeLimit).annotate(
-        vouchers_applied=Count('voucheruse')).values_list('vouchers_applied', flat=True)).items())
+        vouchers_applied=Count('invoice__voucheruse')).values_list('vouchers_applied', flat=True)).items())
 
     results_list = [{'vouchers': x[0], 'count': x[1]} for x in vouchers_counter_sorted]
     return JsonResponse(results_list, safe=False)

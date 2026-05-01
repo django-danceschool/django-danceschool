@@ -1,5 +1,5 @@
-from django.utils.translation import gettext_lazy as _
 from django.http import Http404
+from django.utils.translation import gettext_lazy as _
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 from django.views.generic import TemplateView
@@ -19,7 +19,7 @@ from .forms import CustomerGuestAutocompleteForm
 from .models import Register
 
 
-class RegisterView(
+class PointOfSaleRegisterView(
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
     PermissionRequiredMixin, TemplateView
 ):
@@ -28,6 +28,14 @@ class RegisterView(
 
     # For Restricting to this day's register only.
     today = False
+
+    def dispatch(self, request, *args, **kwargs):
+        # Always start with a clean registration session so that a previous
+        # customer's cart/invoice data cannot bleed into the next transaction.
+        if REG_VALIDATION_STR in request.session:
+            del request.session[REG_VALIDATION_STR]
+            request.session.modified = True
+        return super().dispatch(request, *args, **kwargs)
 
     def get_allEvents(self):
         '''
@@ -51,7 +59,7 @@ class RegisterView(
 
     def get_context_data(self, **kwargs):
         '''
-        Add the event and series listing data.  If If "today" is specified,
+        Add the event and series listing data.  If "today" is specified,
         then use today instead of passed arguments.
         '''
 

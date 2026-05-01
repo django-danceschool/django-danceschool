@@ -1,6 +1,7 @@
 from django.apps import apps
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Value, CharField, F
 from django.db.models.query import QuerySet
@@ -39,6 +40,7 @@ def checkVoucherField(sender, **kwargs):
     invoice = kwargs.get('invoice', None)
     registration = kwargs.get('registration', None)
     session = getattr(request, 'session', {}).get(REG_VALIDATION_STR, {})
+    cart_items = session.get('cart', {}).get('items', [])
 
     id = formData.get('gift', '')
     first = formData.get('firstName')
@@ -59,7 +61,7 @@ def checkVoucherField(sender, **kwargs):
     if session.get('gift', '') != '':
         raise ValidationError({'gift': _('Can\'t have more than one voucher')})
 
-    if not registration:
+    if invoice and (not registration):
         registration = Registration.objects.filter(invoice=invoice).first()
     events = Event.objects.none()
 
@@ -67,6 +69,16 @@ def checkVoucherField(sender, **kwargs):
         events = Event.objects.filter(
             eventregistration__registration=registration
         ).exclude(eventregistration__dropIn=True).values_list('id', flat=True)
+    elif cart_items:
+        events = Event.objects.filter(
+            id__in=[
+                x.get('item_id') for x in cart_items
+                if (
+                    (x.get('item_type') == 'Event') and
+                    (not x.get('drop_in', False))
+                )
+            ]
+        ).values_list('id', flat=True)
 
     # If a discount code with this ID exists, then no further validation can be
     # performed here. Otherwise, ensure that a voucher ID exists matching this
@@ -111,9 +123,11 @@ def checkVoucherCode(sender, **kwargs):
 
     invoice = kwargs.get('invoice', None)
     registration = kwargs.get('registration', None)
+    cart_items = kwargs.get('cart_items', [])
     voucherId = kwargs.get('voucherId', None)
     customer = kwargs.get('customer', None)
     validate_customer = kwargs.get('validateCustomer', False)
+    pay_at_door = kwargs.get('payAtDoor', None)
 
     errors = []
 
@@ -145,7 +159,7 @@ def checkVoucherCode(sender, **kwargs):
     # If we got this far, then we can just use the model-level validation. The
     # dictionary that it returns takes the same form as the one that is returned
     # above if an error has already been found.
-    if not registration:
+    if invoice and (not registration):
         registration = Registration.objects.filter(invoice=invoice).first()
     events = Event.objects.none()
 
@@ -153,10 +167,25 @@ def checkVoucherCode(sender, **kwargs):
         events = Event.objects.filter(
             eventregistration__registration=registration
         ).exclude(eventregistration__dropIn=True)
+    elif cart_items:
+        events = Event.objects.filter(
+            id__in=[
+                x.get('item_id') for x in cart_items
+                if (
+                    (x.get('item_type') == 'Event') and
+                    (not x.get('drop_in', False))
+                )
+            ]
+        )
+
+    # Use the explicitly-passed payAtDoor when available (e.g. cart preview);
+    # fall back to the registration's attribute when we have one.
+    if pay_at_door is None:
+        pay_at_door = getattr(registration, 'payAtDoor', False)
 
     return obj.validate(
         customer=customer, events=events,
-        payAtDoor=getattr(registration, 'payAtDoor', False),
+        payAtDoor=pay_at_door,
         raise_errors=False, return_amount=True,
         validate_customer=validate_customer
     )
@@ -172,12 +201,19 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
     logger.debug('Signal fired to apply vouchers preliminarily.')
 
     invoice = kwargs.pop('invoice')
-    voucherId = invoice.data.get('gift', '')
+    voucherId = invoice.data.get('discount_code') or invoice.data.get('gift', '')
 
     try:
         voucher = Voucher.objects.get(voucherId=voucherId)
     except ObjectDoesNotExist:
         logger.debug('No applicable vouchers found.')
+        return
+
+    if voucher.disabled:
+        logger.debug('Voucher %s is disabled; skipping.', voucherId)
+        return
+    if voucher.expirationDate and voucher.expirationDate < timezone.now():
+        logger.debug('Voucher %s has expired; skipping.', voucherId)
         return
 
     tvu = VoucherUse(

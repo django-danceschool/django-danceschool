@@ -1,75 +1,77 @@
-document.addEventListener("DOMContentLoaded", function(event) { 
+(function () {
+    'use strict';
 
-	// The code below requires jQuery
-	var $ = django.jQuery;
+    // Capture currentScript synchronously before any async callbacks run.
+    var scriptTag = document.currentScript;
 
-    var this_js_script = $('script[src*=classregistration_ajax]');
-    var registration_url = this_js_script.attr('data-registration-url');
-    if (typeof registration_url === "undefined" ) {
-        var registration_url = '/register/';
-     }
-
-    // Use Jquery to get the cookie value of the CSRF token
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = $.trim(cookies[i]);
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    var csrftoken = getCookie('csrftoken');
-
-    function csrfSafeMethod(method) {
-        // these HTTP methods do not require CSRF protection
-        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    function getCsrfToken() {
+        var match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
     }
 
-    // Ensure that CSRF token is passed
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", csrftoken);
-            }
+    /**
+     * Build the canonical SKU string for a cart item.
+     *
+     * Format:  EVENT_{id}[_DROPIN]_ROLE_{roleId}
+     *       or EVENT_{id}[_DROPIN]_GENERAL
+     *
+     * The DROPIN segment is inserted when data-dropin-id is present, and the
+     * ROLE segment is inserted when data-role-id is present.  The two are
+     * independent and can appear together (e.g. a drop-in for a specific role).
+     */
+    function buildSku(dataset) {
+        var id = dataset.id;
+        var middle = dataset.dropinId ? '_DROPIN' : '';
+        if (dataset.roleId) {
+            return 'EVENT_' + id + middle + '_ROLE_' + dataset.roleId;
         }
-    });
+        return 'EVENT_' + id + middle + '_GENERAL';
+    }
 
-    $('.register-ajax').click(function(event) {
-        event.preventDefault();
-        var this_data = $(this).data();
-        var this_type = (typeof this_data['eventType'] === 'undefined') ? 'event' : this_data['eventType'];
-        var regData = {json: true};
+    function submitAddToCart(cartUrl, fields) {
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = cartUrl;
 
-        // Allow drop-ins or roles, but not both.
-        if (this_data['dropinId']) {
-            regData[this_type + '_' + this_data['id'] + '_dropin_' + this_data['dropinId']] = '1';
-        }
-        else if (this_data['roleId']) {
-            regData[this_type + '_' + this_data['id'] + '_role_' + this_data['roleId']] = '1';
-        }
-        else {
-            regData[this_type + '_' + this_data['id'] + '_general'] = '1';
+        Object.keys(fields).forEach(function (name) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = fields[name];
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var cartUrl = scriptTag && scriptTag.getAttribute('data-cart-url');
+        if (!cartUrl) {
+            console.error('classregistration_ajax.js: data-cart-url is not set on the script tag.');
+            return;
         }
 
-        $.ajax({
-            url: registration_url,
-            type: "POST",
-            data: regData,
-            success: function(response){
-                if(response.status == "success" && response.redirect) {
-                    window.location.href = response.redirect;
+        document.querySelectorAll('.register-ajax').forEach(function (button) {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                var d = this.dataset;
+
+                var fields = {
+                    csrfmiddlewaretoken: getCsrfToken(),
+                    action: 'add',
+                    item_id: d.id,
+                    sku: buildSku(d),
+                    quantity: '1',
+                };
+
+                if (d.dropinId) {
+                    fields.dropIn = 'true';
+                    fields.dropInOccurrence = d.dropinId;
                 }
-                else {
-                    window.location.href = registration_url;
-                }
-            },
+
+                submitAddToCart(cartUrl, fields);
+            });
         });
     });
-});
+}());

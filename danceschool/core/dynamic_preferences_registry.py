@@ -564,12 +564,23 @@ class DoorCheckInRule(ChoicePreference):
 
 
 @global_preferences_registry.register
-class SalesTaxRate(FloatPreference):
+class SeriesSalesTaxRate(FloatPreference):
     section = registration
-    name = 'salesTaxRate'
-    verbose_name = _('Sales tax percentage rate to be applied to registrations')
+    name = 'seriesSalesTaxRate'
+    verbose_name = _('Sales tax percentage rate to be applied to class series registrations')
     help_text = _(
-        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all class and event registrations.'
+        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all class series registrations.'
+    )
+    default = 0.0
+
+
+@global_preferences_registry.register
+class PublicEventSalesTaxRate(FloatPreference):
+    section = registration
+    name = 'publicEventSalesTaxRate'
+    verbose_name = _('Sales tax percentage rate to be applied to public event registrations')
+    help_text = _(
+        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all public event registrations.'
     )
     default = 0.0
 

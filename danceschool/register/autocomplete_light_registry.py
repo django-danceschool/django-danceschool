@@ -101,7 +101,8 @@ class RegisterAutoComplete(autocomplete.Select2QuerySetView):
             helpers = importlib.import_module('danceschool.guestlist.helpers')
 
             guests = helpers.getList(
-                events=today_events, includeRegistrants=False
+                events=today_events, startTime=start, endTime=end,
+                includeRegistrants=False
             ).values(
                 'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
                 'guestType'

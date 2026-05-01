@@ -141,16 +141,6 @@ class PrivateLessonEvent(Event):
         ''' Used for various pricing discounts related things '''
         return self.instructoravailabilityslot_set.count()
 
-    @property
-    def discountPointsMultiplier(self):
-        '''
-        If installed, the discounts app looks for this property to determine
-        how many points this lesson is worth toward a discount.  Since private
-        lesson points are based on the number of slots booked, this just returns
-        the number of slots associated with this event (or 1).
-        '''
-        return max(self.numSlots, 1)
-
     def nameAndDate(self, withDate=True):
         teacherNames = ' and '.join([x.staffMember.fullName for x in self.eventstaffmember_set.all()])
         if self.customers:

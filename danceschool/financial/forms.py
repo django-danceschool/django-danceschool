@@ -22,14 +22,13 @@ from dal import autocomplete
 import logging
 import re
 
-from danceschool.core.models import (
-    InvoiceItem, StaffMember, EventStaffCategory, Event, PublicEvent, Series
-)
-from danceschool.core.forms import EventAutocompleteForm
+from danceschool.core.models import InvoiceItem, StaffMember, EventStaffCategory
+from danceschool.core.forms.event import EventAutocompleteForm
 
 from .models import (
-    ExpenseItem, ExpenseCategory, RevenueItem, RepeatedExpenseRule, GenericRepeatedExpense,
-    LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo, TransactionParty
+    ExpenseItem, ExpenseCategory, RevenueItem, RepeatedExpenseRule,
+    LocationRentalInfo, RoomRentalInfo, StaffDefaultWage, StaffMemberWageInfo,
+    TransactionParty
 )
 from .autocomplete_light_registry import get_method_list, get_approval_status_list
 

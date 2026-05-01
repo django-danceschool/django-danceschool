@@ -9,7 +9,7 @@
 	<h3>{{ event.name }}</h3>
 
 	<dl>
-		<dt>{% trans "Total Students" %}:</dt><dd>{{ event.numRegistered }}</dd>
+		<dt>{% trans "Total Students" %}:</dt><dd>{{ num_registered }}</dd>
 		<dt>{% trans "Location" %}:</dt><dd>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</dd>
 		<dt>{% trans "Time" %}:</dt><dd>{{ event.startTime|date:'l, h:i A' }}</dd>
 		<dt>{% trans "Partner Required" %}:</dt><dd>{{ event.partnerRequired|yesno }}</dd>
@@ -157,33 +157,33 @@
 		</td>
 
 		
-		{% with invoice_details|get_item:reg.id as details %}
-		<td 
+		{% with invoice_details|get_item:reg.id as details %}{% with invoice_registration_flags|get_item:reg.id as reg_flags %}
+		<td
 		{% if reg.warningFlag %}
 			class="warning"
 		{% elif reg.refundFlag %}
 			class="info"
 		{% endif %}>
-			{% if reg.registration.warningFlag or reg.registration.refundFlag %}
+			{% if reg_flags.warningFlag or reg_flags.refundFlag %}
 				<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 				<strong>{% trans "Net Price" %}:</strong>
 				{% if details.grossTotal != details.total %}
 					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
-							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }}, 
-						{% endif %}					
+							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }},
+						{% endif %}
 					{% endfor %}
 					{% for v in reg.registration.invoice.voucheruse_set.all %}
 						{% if v.amount > 0 %}
-					 		{% trans 'Voucher' %}: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
+					 		{% trans 'Voucher' %}: {{ v.voucher.voucherId }} = -{{ v.amount }},
 						{% endif %}
 					{% endfor %}">
 					{{ details.total|floatformat:2 }}</a>
 				{% else %}
 				 	{{ details.total|floatformat:2 }}
 				{% endif %}
-				{% if reg.registration.refundFlag %}<br />
+				{% if reg_flags.refundFlag %}<br />
 				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ details.adjustments|floatformat:2 }}
 				{% endif %}
 				{% if reg.registration.invoice.outstandingBalance != 0 %}<br />
@@ -197,12 +197,12 @@
 					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
-							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }}, 
-						{% endif %}					
+							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }},
+						{% endif %}
 					{% endfor %}
 					{% for v in reg.registration.invoice.voucheruse_set.all %}
 						{% if v.amount > 0 %}
-					 		{% trans 'Voucher' %}: {{ v.voucher.voucherId }} = -{{ v.amount }}, 
+					 		{% trans 'Voucher' %}: {{ v.voucher.voucherId }} = -{{ v.amount }},
 						{% endif %}
 					{% endfor %}">
 					{{ details.total|floatformat:2 }}</a>
@@ -211,7 +211,7 @@
 				{% endif %}
 			{% endif %}
 		</td>
-		{% endwith %}
+		{% endwith %}{% endwith %}
 
 		<td>
 		<div class="dropdown show">

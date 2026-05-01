@@ -164,6 +164,9 @@ CMS_PLACEHOLDER_CONF = {
             'RegisterGuestSearchPlugin',
             'RegisterEventPlugin',
             'RegisterMerchPlugin',
+            # Public-register-only plugins; excluded from all other placeholders.
+            'PublicRegisterEventPlugin',
+            'PublicRegisterNavPlugin',
         ],
     },
     'splash_image': {
@@ -191,7 +194,21 @@ CMS_PLACEHOLDER_CONF = {
     'register_placeholder': {
         'name': 'Door Register',
         'excluded_plugins': ['PictureSplashTemplatePlugin'],
-    }
+    },
+    'public_register_content': {
+        'name': 'Public Registration Content',
+        # Exclude splash image and all staff-only / merch register plugins.
+        # PublicRegisterEventPlugin and PublicRegisterNavPlugin are
+        # intentionally absent from this list so that they
+        # remain available here but nowhere else.
+        'excluded_plugins': [
+            'PictureSplashTemplatePlugin',
+            'RegisterVoucherPlugin',
+            'RegisterGuestSearchPlugin',
+            'RegisterEventPlugin',
+            'RegisterMerchPlugin',
+        ],
+    },
 }
 
 # DJANGOCMS_PICTURE_TEMPLATES = []

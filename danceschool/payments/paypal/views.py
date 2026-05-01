@@ -13,6 +13,7 @@ from datetime import timedelta
 
 from danceschool.core.models import Invoice
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
+from danceschool.core.views.cart import clear_reg_cart
 
 from .models import PaypalPaymentRecord
 
@@ -228,6 +229,7 @@ def executePaypalPayment(request):
             methodTxn=paymentId,
             notify=payment.payer.payer_info.email,
         )
+        clear_reg_cart(request)
 
         if addSessionInfo:
             paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})

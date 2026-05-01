@@ -2,21 +2,25 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.middleware.csrf import get_token
 
-
 from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
 from cms.models.pluginmodel import CMSPlugin
 
+from adminsortable2.admin import SortableInlineAdminMixin
+from django.contrib.admin import TabularInline
 from datetime import datetime, timedelta
 
 from .models import (
     StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel,
     EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent,
-    Location
+    Location,
+    PublicRegisterNavPluginModel, PublicRegisterEventPluginModel,
+    PublicRegisterEventPluginChoice,
 )
 from .mixins import PluginTemplateMixin
 from .registries import plugin_templates_registry, PluginTemplateBase
-from .forms import CreateInvoiceForm
+from .forms.invoice import CreateInvoiceForm
+from .utils.timezone import ensure_localtime
 
 
 class StaffMemberListPlugin(PluginTemplateMixin, CMSPluginBase):
@@ -219,12 +223,117 @@ class CreateInvoicePlugin(CMSPluginBase):
         })
 
 
+class PublicRegisterNavPlugin(CMSPluginBase):
+    model = PublicRegisterNavPluginModel
+    name = _('Public Register: Navigation bar')
+    module = _('Public Register')
+    render_template = 'core/plugins/public_register_nav.html'
+    cache = False
+
+
+class PublicRegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
+    model = PublicRegisterEventPluginChoice
+    min_num = 1
+    extra = 1
+    fields = ['optionLabel', 'soldOutRule', 'data']
+
+
+class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
+    model = PublicRegisterEventPluginModel
+    name = _('Public Register: Event listing')
+    cache = False
+    module = _('Public Register')
+    render_template = 'core/plugins/public_event_register.html'
+    inlines = [PublicRegisterEventChoiceInline]
+
+    fieldsets = (
+        (None, {
+            'fields': ('title', 'eventType', 'registrationOpenLimit', 'occursWithinDays'),
+        }),
+        (_('Limit Start Date'), {
+            'classes': ('collapse',),
+            'fields': ('limitTypeStart', 'daysStart', 'startDate'),
+        }),
+        (_('Limit End Date'), {
+            'classes': ('collapse',),
+            'fields': ('limitTypeEnd', 'daysEnd', 'endDate'),
+        }),
+        (_('Limit Number'), {
+            'classes': ('collapse',),
+            'fields': ('limitNumber', 'sortOrder'),
+        }),
+        (_('Other Limit Restrictions'), {
+            'classes': ('collapse',),
+            'fields': ('eventCategories', 'seriesCategories', 'levels', 'location', 'weekday'),
+        }),
+        (_('Display Options'), {
+            'classes': ('collapse',),
+            'fields': ('template', 'cssClasses'),
+        }),
+    )
+
+    def render(self, context, instance, placeholder):
+        context = super().render(context, instance, placeholder)
+
+        today_start = ensure_localtime(timezone.now()).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        listing = instance.getEvents(
+            dateTime=today_start,
+            initial=context.get('allEvents', Event.objects.none()),
+        )
+
+        request = context.get('request')
+        user = getattr(request, 'user', None)
+        can_dropin = user and user.has_perm('core.register_dropins')
+        can_always_dropin = user and user.has_perm('core.override_register_dropins')
+
+        now = timezone.now()
+
+        from collections import OrderedDict
+        register_choices = OrderedDict()
+        for event in listing:
+            choices = []
+            for choice_rule in instance.publicregistereventpluginchoice_set.all():
+                choices += choice_rule.addChoices(event)
+
+            dropin_choices = []
+            if isinstance(event, Series) and (
+                (can_dropin and getattr(event, 'allowDropins', False)) or
+                can_always_dropin
+            ):
+                dropin_price = event.getBasePrice(dropIns=1)
+                for occ in event.eventoccurrence_set.filter(endTime__gte=now).order_by('startTime'):
+                    dropin_choices.append({
+                        'occurrence': occ,
+                        'price': dropin_price,
+                        'choiceId': 'pubdropin_{}_{}'.format(event.id, occ.id),
+                    })
+
+            register_choices[event.id] = {
+                'event': event,
+                'choices': choices,
+                'dropin_choices': dropin_choices,
+            }
+
+        from .constants import getConstant
+        context.update({
+            'event_list': listing,
+            'register_choices': register_choices,
+            'showDescriptionRule': getConstant('registration__showDescriptionRule') or 'all',
+        })
+        return context
+
+
 plugin_pool.register_plugin(CreateInvoicePlugin)
 plugin_pool.register_plugin(StaffMemberListPlugin)
 plugin_pool.register_plugin(LocationPlugin)
 plugin_pool.register_plugin(LocationListPlugin)
 plugin_pool.register_plugin(EventListPlugin)
 plugin_pool.register_plugin(PublicCalendarPlugin)
+plugin_pool.register_plugin(PublicRegisterNavPlugin)
+plugin_pool.register_plugin(PublicRegisterEventPlugin)
 
 
 @plugin_templates_registry.register

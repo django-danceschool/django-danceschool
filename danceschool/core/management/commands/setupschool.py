@@ -409,7 +409,7 @@ a daily/weekly/monthly ongoing basis as well.
             )
 
             generate_staff = self.boolean_input('Auto-generate staff expense items for completed events [Y/n]', True)
-            prefs['financial__autoGenerateExpensesEventStaff'] = generate_staff
+            prefs['financial__autoGenerateExpensesEventStaff'] = 'per_event' if generate_staff else 'disabled'
 
             if generate_staff:
                 # This just ensures that the standard staff categories are created before launch
@@ -650,7 +650,10 @@ Remember, all page settings and content can be changed later via the admin inter
                     'stats/schoolstats_averagebyclasstypemonth.html',
                     'stats/schoolstats_cohortretention.html',
                     'stats/schoolstats_averagesbylocation.html',
+                    'stats/schoolstats_advanceregistration.html',
+                    'stats/schoolstats_multiregistrations.html',
                     'stats/schoolstats_registrationtypes.html',
+                    'stats/schoolstats_referralcounts.html',
                     'stats/schoolstats_bestcustomers.html',
                 ]
                 for template in template_list:
@@ -678,6 +681,9 @@ Remember, all page settings and content can be changed later via the admin inter
                 in_navigation=True, limit_visibility_in_menu=VISIBILITY_USERS, published=True
             )
             self.stdout.write('Logout link added.\n')
+
+        if apps.is_installed('danceschool.register'):
+            call_command('setup_public_register')
 
         if apps.is_installed('danceschool.payments.payatdoor'):
             call_command('setup_payatdoor')

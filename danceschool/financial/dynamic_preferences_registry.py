@@ -4,7 +4,7 @@ but can be changed dynamically.
 '''
 from django.utils.translation import gettext_lazy as _
 
-from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
+from dynamic_preferences.types import BooleanPreference, ChoicePreference, IntegerPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
 
 from .models import ExpenseCategory, RevenueCategory
@@ -14,19 +14,22 @@ from .models import ExpenseCategory, RevenueCategory
 financial = Section('financial', _('Financial App'))
 
 
-##############################
-# Referral Program Preferences
-#
 @global_preferences_registry.register
-class GenerateEventStaffExpensesEnabled(BooleanPreference):
+class GenerateEventStaffExpenses(ChoicePreference):
     section = financial
     name = 'autoGenerateExpensesEventStaff'
-    verbose_name = _('Auto-generate ExpenseItems for completed events')
+    verbose_name = _('Auto-generate ExpenseItems for event staff')
     help_text = _(
-        'Uncheck to disable the automatic generation of expense items for ' +
-        'class series instructors in the financial app.'
+        'Choose whether to automatically generate expense items for event '
+        'staff, and whether to generate one item per event or one item per '
+        'individual occurrence.'
     )
-    default = True
+    choices = [
+        ('per_event', _('Generate expense items per event')),
+        ('per_occurrence', _('Generate expense items per occurrence')),
+        ('disabled', _('Do not generate expense items for event staff')),
+    ]
+    default = 'per_event'
 
 
 @global_preferences_registry.register

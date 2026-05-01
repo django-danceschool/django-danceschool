@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand
 
-from danceschool.financial.helpers import (
-    createExpenseItemsForEvents, createExpenseItemsForVenueRental, createRevenueItemsForRegistrations
-)
+from danceschool.financial.helpers.expenses import createExpenseItemsForEvents, createExpenseItemsForVenueRental
+from danceschool.financial.helpers.revenues import createRevenueItemsForRegistrations
 from danceschool.core.constants import getConstant
 
 
@@ -10,7 +9,7 @@ class Command(BaseCommand):
     help = 'Create expense items for recurring expenses and generate revenue items for registrations'
 
     def handle(self, *args, **options):
-        if getConstant('financial__autoGenerateExpensesEventStaff'):
+        if getConstant('financial__autoGenerateExpensesEventStaff') != 'disabled':
             self.stdout.write('Generating expense items for event staff...')
             createExpenseItemsForEvents()
             self.stdout.write('...done.')

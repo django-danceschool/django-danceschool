@@ -13,20 +13,14 @@ from .models import (
 from danceschool.core.models import Instructor, EventStaffMember, StaffMember
 from danceschool.core.admin import EventChildAdmin, EventOccurrenceInline, EventRegistrationInline
 from danceschool.core.constants import getConstant
-from danceschool.core.forms import LocationWithDataWidget
+from danceschool.core.forms.inputs import LocationWithDataWidget
 
 
-class InstructorPrivateLessonDetailsInline(admin.TabularInline):
+class InstructorPrivateLessonDetailsInline(admin.StackedInline):
     model = InstructorPrivateLessonDetails
-    extra = 0
-
-    # Prevents adding new voucher uses without going through
-    # the standard registration process
-    # def has_add_permission(self, request, obj=None):
-    #    return False
-
-    # def has_delete_permission(self, request, obj=None):
-    #     return False
+    extra = 1
+    max_num = 1
+    fields = ['defaultPricingTier', 'roles', 'couples', 'smallGroups']
 
 
 @admin.register(InstructorAvailabilitySlot)

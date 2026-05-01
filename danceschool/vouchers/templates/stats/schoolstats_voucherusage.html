@@ -1,9 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Statistics on Voucher Usage" %}</h3>
 
 <div class="card">
@@ -19,123 +15,97 @@
 				<a class="nav-link registrationVoucherButton" href="#" role="tab" data-toggle="tab">{% trans "All Time" %}</a>
 			</li>
 		</ul>
-	</div>	
+	</div>
 	<div class="card-body row tab-content">
 
 		<div class="col-md-6">
-		    <h4 class="card-title">{% trans "Percentage of Registration Using Vouchers" %}</h4>
-		    <div id="voucherFrequencyChart"></div>
+		    <h4 class="card-title">{% trans "Percentage of Registrations Using Vouchers" %}</h4>
+		    <canvas id="voucherFrequencyChart"></canvas>
 		</div>
 		<div class="col-md-6">
 			<h4 class="card-title">{% trans "Most Popular Vouchers" %}</h4>
 	    	<table class="table">
 	      		<thead><tr><th>{% trans "Code" %}</th><th>{% trans "Description" %}</th><th>{% trans "Uses" %}</th></tr></thead>
-	      		<tbody id="popularVouchersTable">
-	      	    </tbody>
+	      		<tbody id="popularVouchersTable"></tbody>
 	        </table>
 		</div>
+
     </div>
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function() {
+(function () {
+  'use strict';
 
-var startDate = '{{ limitMonthDates.12 }}';
-var voucherFrequencyChart = null;
+  var voucherFrequencyChart = null;
+  var startDate = '{{ limitMonthDates.12 }}';
 
-$.ajax({
-  dataType: "json",
-  url: '{% url "voucherFrequencyJSON" %}?startDate=' + startDate,
-  success: function(jsonData) {
-	var data = {};
-	var counts = [];
-	jsonData.forEach(function(e) {
-	    counts.push(e.vouchers.toString());
-	    data[e.vouchers] = e.count;
-	});
-
-	voucherFrequencyChart = c3.generate({
-		bindto: '#voucherFrequencyChart',
-	    data: {
-	        json: [ data ],
-	        type : 'pie',
-	        keys: {
-	        	value: counts,
-	        }
-	    }
-	});
+  function labelForCount(n) {
+    if (n === 0) { return '{% trans "No voucher" %}'; }
+    if (n === 1) { return '{% trans "1 voucher" %}'; }
+    return n + ' {% trans "vouchers" %}';
   }
-});
 
-$.ajax({
-  dataType: "json",
-  url: '{% url "popularVouchersJSON" %}?startDate=' + startDate,
-  success: function(jsonData) {
-  	var tableData = '';
+  function loadVoucherFrequency(sd) {
+    fetch('{% url "voucherFrequencyJSON" %}?startDate=' + (sd || ''))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var labels = data.map(function (e) { return labelForCount(e.vouchers); });
+        var values = data.map(function (e) { return e.count; });
 
-  	jsonData.forEach(function(e) {
-        tableData += '<tr><td>' + e.voucherId + '</td><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
-  	});
-
-  	$('#popularVouchersTable').append(tableData);
+        if (voucherFrequencyChart) {
+          voucherFrequencyChart.data.labels = labels;
+          voucherFrequencyChart.data.datasets[0].data = values;
+          voucherFrequencyChart.update();
+        } else {
+          voucherFrequencyChart = new Chart(
+            document.getElementById('voucherFrequencyChart'),
+            {
+              type: 'pie',
+              data: { labels: labels, datasets: [{ data: values }] },
+              options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } },
+              },
+            }
+          );
+        }
+      });
   }
-});
 
+  function loadPopularVouchers(sd) {
+    fetch('{% url "popularVouchersJSON" %}?startDate=' + (sd || ''))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var tbody = document.getElementById('popularVouchersTable');
+        var html = '';
+        data.forEach(function (e) {
+          html += '<tr><td>' + e.voucherId + '</td><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
+        });
+        tbody.innerHTML = html;
+      });
+  }
 
-$('.registrationVoucherButton').click(function(e) {
-  var startDate = $(this).attr('data-startDate');
+  loadVoucherFrequency(startDate);
+  loadPopularVouchers(startDate);
 
-  $.ajax({
-    dataType: "json",
-    url: '{% url "voucherFrequencyJSON" %}?startDate=' + startDate,
-    success: function(jsonData) {
-	  	var data = {};
-	  	var counts = [];
-	  	jsonData.forEach(function(e) {
-	  	    counts.push(e.vouchers.toString());
-	  	    data[e.vouchers] = e.count;
-	  	});
-	  	voucherFrequencyChart.load({
-		    data: {
-		        json: [ data ],
-		        type : 'pie',
-		        keys: {
-		        	value: counts,
-		        }
-		    }  		
-	  	});
-    }
+  document.querySelectorAll('.registrationVoucherButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var sd = btn.getAttribute('data-startDate') || '';
+      loadVoucherFrequency(sd);
+      loadPopularVouchers(sd);
+      document.querySelectorAll('.registrationVoucherButton').forEach(function (b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+    });
   });
 
-  $.ajax({
-    dataType: "json",
-    url: '{% url "popularVouchersJSON" %}?startDate=' + startDate,
-    success: function(jsonData) {
-    	$('#popularVouchersTable').html('');
-    	var tableData = '';
-  
-    	jsonData.forEach(function(e) {
-	        tableData += '<tr><td>' + e.voucherId + '</td><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
-    	});
-  
-    	$('#popularVouchersTable').append(tableData);
-    }
-  });
-
-  $('.registrationVoucherButton').removeClass('active');
-  $(this).addClass('active');
-  e.preventDefault();
-
-});
-
-
-});
+}());
 </script>
 {% endaddtoblock %}

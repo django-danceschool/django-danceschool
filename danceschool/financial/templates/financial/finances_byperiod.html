@@ -44,12 +44,12 @@
 <div class="card mt-4">
 <h4 class="card-header">{% trans "School Performance Over Time" %}</h4>
 <div class="card-body">
-	<div id="periodicchart"></div>
-	<div class="btn-group" role="group" aria-label="..." id='chartselector_buttons'>
-	  <button type="button" class="btn btn-outline-secondary active" data-y-accessor='profit'>{% trans "Profits" %}</button>
-	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='registrations'>{% trans "Registrations" %}</button>
-	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='revenues'>{% trans "Revenues" %}</button>
-	  <button type="button" class="btn btn-outline-secondary" data-y-accessor='expenses'>{% trans "Expenses" %}</button>
+	<canvas id="periodicchart" style="max-height:300px;"></canvas>
+	<div class="btn-group mt-2" role="group" aria-label="..." id='chartselector_buttons'>
+	  <button type="button" class="btn btn-outline-secondary active" data-y-accessor="profit">{% trans "Profits" %}</button>
+	  <button type="button" class="btn btn-outline-secondary" data-y-accessor="registrations">{% trans "Registrations" %}</button>
+	  <button type="button" class="btn btn-outline-secondary" data-y-accessor="revenues">{% trans "Revenues" %}</button>
+	  <button type="button" class="btn btn-outline-secondary" data-y-accessor="expenses">{% trans "Expenses" %}</button>
 	</div>
 </div>
 </div>
@@ -118,62 +118,65 @@
 </div>
 </div>
 
-{% addtoblock "css" %}
-	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/metrics-graphics@3.0.0-beta1/dist/mg.min.css"/>
+{% addtoblock "js" %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
-	<script src="https://cdn.jsdelivr.net/npm/moment@2.30.1/moment.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-	<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-	<script src="https://cdn.jsdelivr.net/npm/metrics-graphics@3.0.0-beta1/dist/cjs/index.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-	<script type="text/javascript">
-	var period_data = [
-	{% for this_period in statement.statementByPeriod reversed %}
-		{
-			'date': new Date('{{ this_period.period_date|date:"Y-m-d" }}'),
-			'profit': {{ this_period.net_profit }},
-			'registrations': {{ this_period.registrations }},
-			'revenues': {{ this_period.revenues }},
-			'expenses': {{ this_period.expenses.total }},
-		},
-	{% endfor %}
-	]
+<script type="text/javascript">
+(function () {
+  'use strict';
 
-	var chart_params = {
-	  title: "{% trans 'School Performance By Period' %}",
-	  description: "{% trans 'Profits, Revenues, Expenses, and Total Registrations' %}",
-	  data: period_data,
-	  full_width: true,
-	  height: 300,
-	  target: "#periodicchart",
-	  x_accessor: "date",
-	  y_accessor: "profit",
-	  interpolate: "monotone",
-	  area: false
-	}
+  var periodData = [
+  {% for this_period in statement.statementByPeriod reversed %}
+    {
+      label: '{{ this_period.period_name|escapejs }}',
+      profit: {{ this_period.net_profit }},
+      registrations: {{ this_period.registrations }},
+      revenues: {{ this_period.revenues }},
+      expenses: {{ this_period.expenses.total }},
+    },
+  {% endfor %}
+  ];
 
-	$(document).ready(function() {
+  var SERIES_LABELS = {
+    profit: '{% trans "Profits" %}',
+    registrations: '{% trans "Registrations" %}',
+    revenues: '{% trans "Revenues" %}',
+    expenses: '{% trans "Expenses" %}',
+  };
 
-		MG.data_graphic(chart_params);
+  var activeAccessor = 'profit';
 
-		$('#chartselector_buttons button').click(function() {
-		    var new_y_accessor = $(this).data('y-accessor');
-		    chart_params.y_accessor = new_y_accessor;
+  var periodicChart = new Chart(document.getElementById('periodicchart'), {
+    type: 'line',
+    data: {
+      labels: periodData.map(function (d) { return d.label; }),
+      datasets: [{
+        label: SERIES_LABELS[activeAccessor],
+        data: periodData.map(function (d) { return d[activeAccessor]; }),
+        tension: 0.3,
+        pointRadius: 3,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: false } },
+    },
+  });
 
-		    // change button state
-		    $(this).addClass('active').siblings().removeClass('active');
+  document.querySelectorAll('#chartselector_buttons button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activeAccessor = btn.dataset.yAccessor;
+      periodicChart.data.datasets[0].label = SERIES_LABELS[activeAccessor];
+      periodicChart.data.datasets[0].data = periodData.map(function (d) { return d[activeAccessor]; });
+      periodicChart.update();
+      document.querySelectorAll('#chartselector_buttons button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
 
-		    // update data
-		    delete chart_params.xax_format;
-		    MG.data_graphic(chart_params);
-		});
-
-	});
-	</script>
+}());
+</script>
 {% endaddtoblock %}
 {% endblock %}

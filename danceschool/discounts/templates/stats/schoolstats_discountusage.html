@@ -1,9 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Statistics on Discount Usage" %}</h3>
 
 <div class="card">
@@ -19,22 +15,18 @@
 				<a class="nav-link registrationDiscountButton" href="#" role="tab" data-toggle="tab">{% trans "All Time" %}</a>
 			</li>
 		</ul>
-	</div>	
+	</div>
 	<div class="card-body row tab-content">
 
     <div class="col-md-6">
-      <h4 class="card-title">{% trans "Percentage of Registration Using Discounts" %}</h4>
-
-      <div id="discountFrequencyChart"></div>
+      <h4 class="card-title">{% trans "Percentage of Registrations Using Discounts" %}</h4>
+      <canvas id="discountFrequencyChart"></canvas>
     </div>
     <div class="col-md-6">
       <h4 class="card-title">{% trans "Most Popular Discounts" %}</h4>
-
       <table class="table">
       	<thead><tr><th>{% trans "Name" %}</th><th>{% trans "Uses" %}</th></tr></thead>
-      	<tbody id="popularDiscountsTable">
-
-      	</tbody>
+      	<tbody id="popularDiscountsTable"></tbody>
       </table>
     </div>
 
@@ -42,103 +34,78 @@
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function() {
+(function () {
+  'use strict';
 
-var discountFrequencyChart = null;
-var startDate = '{{ limitMonthDates.12 }}';
+  var discountFrequencyChart = null;
+  var startDate = '{{ limitMonthDates.12 }}';
 
-$.ajax({
-  dataType: "json",
-  url: '{% url "discountFrequencyJSON" %}?startDate=' + startDate,
-  success: function(jsonData) {
-	var data = {};
-	var counts = [];
-	jsonData.forEach(function(e) {
-	    counts.push(e.discounts.toString());
-	    data[e.discounts] = e.count;
-	});
-
-	discountFrequencyChart = c3.generate({
-		bindto: '#discountFrequencyChart',
-	    data: {
-	        json: [ data ],
-	        type : 'pie',
-	        keys: {
-	        	value: counts,
-	        }
-	    }
-	});
+  function labelForCount(n) {
+    if (n === 0) { return '{% trans "No discount" %}'; }
+    if (n === 1) { return '{% trans "1 discount" %}'; }
+    return n + ' {% trans "discounts" %}';
   }
-});
 
-$.ajax({
-  dataType: "json",
-  url: '{% url "popularDiscountsJSON" %}?startDate=' + startDate,
-  success: function(jsonData) {
-  	var tableData = '';
+  function loadDiscountFrequency(sd) {
+    fetch('{% url "discountFrequencyJSON" %}?startDate=' + (sd || ''))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var labels = data.map(function (e) { return labelForCount(e.discounts); });
+        var values = data.map(function (e) { return e.count; });
 
-  	jsonData.forEach(function(e) {
-        tableData += '<tr><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
-  	});
-
-  	$('#popularDiscountsTable').append(tableData);
+        if (discountFrequencyChart) {
+          discountFrequencyChart.data.labels = labels;
+          discountFrequencyChart.data.datasets[0].data = values;
+          discountFrequencyChart.update();
+        } else {
+          discountFrequencyChart = new Chart(
+            document.getElementById('discountFrequencyChart'),
+            {
+              type: 'pie',
+              data: { labels: labels, datasets: [{ data: values }] },
+              options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } },
+              },
+            }
+          );
+        }
+      });
   }
-});
 
-$('.registrationDiscountButton').click(function(e) {
-  var startDate = $(this).attr('data-startDate');
+  function loadPopularDiscounts(sd) {
+    fetch('{% url "popularDiscountsJSON" %}?startDate=' + (sd || ''))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var tbody = document.getElementById('popularDiscountsTable');
+        var html = '';
+        data.forEach(function (e) {
+          html += '<tr><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
+        });
+        tbody.innerHTML = html;
+      });
+  }
 
-  $.ajax({
-    dataType: "json",
-    url: '{% url "discountFrequencyJSON" %}?startDate=' + startDate,
-    success: function(jsonData) {
-	  	var data = {};
-	  	var counts = [];
-	  	jsonData.forEach(function(e) {
-	  	    counts.push(e.discounts.toString());
-	  	    data[e.discounts] = e.count;
-	  	});
-	  	discountFrequencyChart.load({
-		    data: {
-		        json: [ data ],
-		        type : 'pie',
-		        keys: {
-		        	value: counts,
-		        }
-		    }  		
-	  	});
-    }
+  loadDiscountFrequency(startDate);
+  loadPopularDiscounts(startDate);
+
+  document.querySelectorAll('.registrationDiscountButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var sd = btn.getAttribute('data-startDate') || '';
+      loadDiscountFrequency(sd);
+      loadPopularDiscounts(sd);
+      document.querySelectorAll('.registrationDiscountButton').forEach(function (b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+    });
   });
 
-  $.ajax({
-    dataType: "json",
-    url: '{% url "popularDiscountsJSON" %}?startDate=' + startDate,
-    success: function(jsonData) {
-    	$('#popularDiscountsTable').html('');
-    	var tableData = '';
-  
-    	jsonData.forEach(function(e) {
-          tableData += '<tr><td>' + e.name + '</td><td>' + e.counter + '</td></tr>';
-    	});
-  
-    	$('#popularDiscountsTable').append(tableData);
-    }
-  });
-
-
-  $('.registrationDiscountButton').removeClass('active');
-  $(this).addClass('active');
-  e.preventDefault();
-
-});
-
-});
+}());
 </script>
 {% endaddtoblock %}

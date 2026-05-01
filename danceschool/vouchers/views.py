@@ -37,13 +37,13 @@ class GiftCertificateCustomizeView(FormView):
         and that said invoice is marked as paid.
         '''
         paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
-        self.invoiceID = paymentSession.get('invoiceID')
+        self.invoice_id = paymentSession.get('invoice_id')
         self.amount = paymentSession.get('amount', 0)
         self.success_url = paymentSession.get('success_url', reverse('registration'))
 
         # Check that Invoice matching passed ID exists
         try:
-            i = Invoice.objects.get(id=self.invoiceID)
+            i = Invoice.objects.get(id=self.invoice_id)
         except ObjectDoesNotExist:
             return HttpResponseBadRequest(_('Invalid invoice information passed.'))
 
@@ -80,8 +80,8 @@ class GiftCertificateCustomizeView(FormView):
                 expirationDate=None,
             )
         except IntegrityError:
-            logger.error('Error creating gift certificate voucher for Invoice #%s' % self.invoiceId)
-            emailErrorMessage(_('Gift certificate transaction not completed'), self.invoiceId)
+            logger.error('Error creating gift certificate voucher for Invoice #%s' % self.invoice_id)
+            emailErrorMessage(_('Gift certificate transaction not completed'), self.invoice_id)
 
         template = getConstant('vouchers__giftCertTemplate')
 

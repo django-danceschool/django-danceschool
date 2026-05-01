@@ -1,9 +1,5 @@
 {% load sekizai_tags static i18n %}
 
-{% addtoblock "css" %}
-  <link href="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.css" rel="stylesheet" type="text/css">
-{% endaddtoblock %}
-
 <h3 class="mt-4">{% trans "Advance Registration" %}</h3>
 
 <p>{% blocktrans %}This graph shows how far in advance students register, relative to the start date of the first class they registered for.{% endblocktrans %}</p>
@@ -13,79 +9,90 @@
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs">
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.1 }}" class="nav-link showAdvanceRegistrationButton active">{% trans "Last Month" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.1 }}" class="nav-link showAdvanceRegistrationButton active">{% trans "Last Month" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.3 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 3 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.3 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 3 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.6 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 6 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.6 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 6 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" data-startDate="{{ limitMonthDates.12 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 12 Months" %}</a>
+        <a href="#" data-start-date="{{ limitMonthDates.12 }}" class="nav-link showAdvanceRegistrationButton">{% trans "Last 12 Months" %}</a>
       </li>
       <li class="nav-item">
-        <a href="#" class="nav-link showAdvanceRegistrationButton">{% trans "All Time" %}</a>
+        <a href="#" data-start-date="" class="nav-link showAdvanceRegistrationButton">{% trans "All Time" %}</a>
       </li>
     </ul>
   </div>
   <div class="card-body">
-    <div id="advanceRegistrationChart"></div>
+    <canvas id="advanceRegistrationChart" style="max-height:400px;"></canvas>
   </div>
+
 </div>
 
 {% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-{% endaddtoblock %}
-{% addtoblock "js" %}
-  <script src="https://cdn.jsdelivr.net/npm/c3@0.7.20/c3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function(){
+(function () {
+  'use strict';
 
-  var advanceRegistrationChart = c3.generate({
-      bindto: '#advanceRegistrationChart',
-    data: {
-      url: "{% url 'AdvanceRegistrationDaysJSON' %}?startDate={{ limitMonthDates.1 }}",
-      mimeType: 'json',
-      types: {
-        pct: 'step',
-        cumulative_pct: 'area-step',
+  var advRegChart = null;
+
+  function buildAdvRegChart(data) {
+    var ctx = document.getElementById('advanceRegistrationChart');
+    if (advRegChart) { advRegChart.destroy(); }
+    advRegChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: '{% trans "% of Registrations" %}',
+            data: data.map(function (d) { return { x: d.days, y: d.pct }; }),
+            stepped: 'before',
+            pointRadius: 2,
+          },
+          {
+            label: '{% trans "Cumulative %" %}',
+            data: data.map(function (d) { return { x: d.days, y: d.cumulative_pct }; }),
+            stepped: 'before',
+            fill: true,
+            pointRadius: 2,
+          },
+        ],
       },
-      keys: {
-        x: 'days',
-        value: ['pct','cumulative_pct']
-      }
-    },
-    axis: {
-        x: {
-            type: 'indexed', // this needed to load string x value
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          x: { type: 'linear', title: { display: true, text: '{% trans "Days in Advance" %}' } },
+          y: { beginAtZero: true, title: { display: true, text: '%' } },
         },
-    }
-  });
+      },
+    });
+  }
 
-  $('.showAdvanceRegistrationButton').click(function(e) {
-      var startDate = $(this).attr('data-startDate');
+  function loadAdvRegChart(startDate) {
+    var url = '{% url "AdvanceRegistrationDaysJSON" %}';
+    if (startDate) { url += '?startDate=' + startDate; }
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) { buildAdvRegChart(data); });
+  }
 
-      advanceRegistrationChart.load({
-      url: "{% url 'AdvanceRegistrationDaysJSON' %}?startDate=" + startDate,
-        mimeType: 'json',
-        types: {
-          pct: 'step',
-          cumulative_pct: 'area-step',
-        },
-        keys: {
-          x: 'days',
-          value: ['pct','cumulative_pct'],
-        }
-      });
+  loadAdvRegChart('{{ limitMonthDates.1 }}');
 
-      $('.showAdvanceRegistrationButton').removeClass('active');
-      $(this).addClass('active');
+  document.querySelectorAll('.showAdvanceRegistrationButton').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
       e.preventDefault();
+      loadAdvRegChart(btn.dataset.startDate);
+      document.querySelectorAll('.showAdvanceRegistrationButton').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
   });
 
-});
+}());
 </script>
 {% endaddtoblock %}

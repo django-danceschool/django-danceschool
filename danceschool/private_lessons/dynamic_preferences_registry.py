@@ -6,7 +6,7 @@ but can be changed dynamically.
 from django.utils.translation import gettext_lazy as _
 from django.template.loader import get_template
 
-from dynamic_preferences.types import BooleanPreference, IntegerPreference, ModelChoicePreference, Section
+from dynamic_preferences.types import BooleanPreference, FloatPreference, IntegerPreference, ModelChoicePreference, Section
 from dynamic_preferences.registries import global_preferences_registry
 
 from danceschool.core.models import EventStaffCategory, EmailTemplate, get_defaultEmailName, get_defaultEmailFrom
@@ -19,6 +19,20 @@ privateLessons = Section('privateLessons', _('Private Lessons'))
 ############################
 # Private Lessons Preferences
 #
+@global_preferences_registry.register
+class PrivateLessonSalesTaxRate(FloatPreference):
+    section = privateLessons
+    name = 'salesTaxRate'
+    verbose_name = _('Sales tax percentage rate to be applied to private lessons')
+    help_text = _(
+        'Enter the sales tax rate as a percentage (e.g. enter 6 for 6%). '
+        'Enter 0 for no sales tax. The "Buyer pays sales tax" setting under '
+        'Registration preferences controls whether tax is added on top of the '
+        'price or included within it.'
+    )
+    default = 0
+
+
 @global_preferences_registry.register
 class AllowPublicBooking(BooleanPreference):
     section = privateLessons

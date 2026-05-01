@@ -1,17 +1,14 @@
 from django.urls import path, re_path
 from django.contrib import admin
 
-from .feeds import EventFeed, json_event_feed
-from .views import (
-    SubmissionRedirectView, InstructorStatsView, OtherInstructorStatsView,
-    IndividualClassView, IndividualPublicEventView, StaffDirectoryView,
-    EmailConfirmationView, SendEmailView, SubstituteReportingView,
-    StaffMemberBioChangeView, AccountProfileView, OtherAccountProfileView,
-    RepeatEventsView, IndividualClassReferralView, IndividualPublicEventReferralView,
-    RefundProcessingView, RefundConfirmationView, ViewInvoiceView,
-    InvoicePDFView, InvoiceNotificationView, RegistrationTransferProcessingView
-)
-from .ajax import UserAccountInfo, updateSeriesAttributes, getEmailTemplate
+from .views.feed import EventFeed, json_event_feed
+from .views.actions import SubmissionRedirectView, RepeatEventsView
+from .views.event import IndividualClassView, IndividualPublicEventView, IndividualClassReferralView, IndividualPublicEventReferralView
+from .views.invoice import ViewInvoiceView, InvoiceNotificationView, InvoicePDFView
+from .views.adjustments import RefundProcessingView, RefundConfirmationView, RegistrationTransferProcessingView
+from .views.email import EmailConfirmationView, SendEmailView, getEmailTemplate
+from .views.account import AccountProfileView, OtherAccountProfileView, UserAccountInfo
+from .views.staff import InstructorStatsView, OtherInstructorStatsView, StaffDirectoryView, StaffMemberBioChangeView, SubstituteReportingView, updateSeriesAttributes
 from .autocomplete_light_registry import (
     CustomerAutoComplete, UserAutoComplete, StaffMemberAutoComplete,
     EventAutoComplete, ClassDescriptionAutoComplete
@@ -73,9 +70,34 @@ urlpatterns = [
     # This allows creation of duplicate offset events from admin
     path('events/repeat/', RepeatEventsView.as_view(), name='repeatEvents'),
 
-    # These are for individual class views and event views
+    # These are for individual class views and event views.
+    # UUID-based private link patterns must come before session-slug patterns
+    # because <slug:session_slug> would otherwise match the literal "link"
+    # segment and shadow the UUID URLs.
     path('classes/<int:year>/<slug:month>/<slug:slug>/', IndividualClassView.as_view(), name='classView'),
     path('events/<int:year>/<slug:month>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventView'),
+
+    # UUID-based private links for link-only events.
+    # Variants also accept an optional voucher code or marketing ID in the path.
+    path('classes/link/<uuid:uuid>/', IndividualClassView.as_view(), name='classViewUUID'),
+    path('events/link/<uuid:uuid>/', IndividualPublicEventView.as_view(), name='eventViewUUID'),
+    path(
+        'classes/link/<uuid:uuid>/referral/<slug:voucher_id>/',
+        IndividualClassView.as_view(), name='classViewUUIDVoucher',
+    ),
+    path(
+        'events/link/<uuid:uuid>/referral/<slug:voucher_id>/',
+        IndividualPublicEventView.as_view(), name='eventViewUUIDVoucher',
+    ),
+    path(
+        'classes/link/<uuid:uuid>/id/<slug:marketing_id>/',
+        IndividualClassView.as_view(), name='classViewUUIDMarketing',
+    ),
+    path(
+        'events/link/<uuid:uuid>/id/<slug:marketing_id>/',
+        IndividualPublicEventView.as_view(), name='eventViewUUIDMarketing',
+    ),
+
     path('classes/<slug:session_slug>/<slug:slug>/', IndividualClassView.as_view(), name='classViewSession'),
     path('events/<slug:session_slug>/<slug:slug>/', IndividualPublicEventView.as_view(), name='eventViewSession'),
     path(

@@ -1,5 +1,22 @@
 from django.dispatch import Signal
 
+# Fires when collecting the set of purchasable items for a register page or
+# for shopping cart processing.
+collect_purchasable_items = Signal(
+    ''' ['request', 'payAtDoor', 'date'] '''
+)
+
+# Fires during RegistrationContactForm.__init__() to allow other apps to
+# inject additional fields into the mid-section of the form (below
+# agreeToPolicies).  Each connected handler should return either None or a
+# list of (field_name, field, layout_element) tuples, where field is a
+# Django form field instance and layout_element is a crispy-forms layout
+# object.  All returned fields are added to the form and their layout
+# elements are appended inside the mid-section card.
+collect_student_info_fields = Signal(
+    ''' ['instance', 'request', 'eventRegs', 'registration', 'invoice'] '''
+)
+
 # Fires during the clean process of the StudentInfoView form or the
 # MultiRegCustomerNameForm, allowing hooked in apps to validate the form data
 # and raise ValidationErrors or send warnings (messages) to the user by adding
@@ -25,11 +42,11 @@ request_discounts = Signal(
     ''' ['invoice', 'registration', 'customer_final', 'voucher_code'] '''
 )
 
-# Fires in the AjaxClassRegistrationView to check the validity of a voucher code
-# if it is passed.  Unlike the vouchers handler for check_student_info, the vouchers
-# app handler for this signal does not raise ValidationErrors, but instead returns
-# a JSON object that indicates if the voucher is invalid as well as the max.
-# amount that it can be used for.
+# Fires to check the validity of a voucher code if it is passed.  Unlike the
+# vouchers handler for check_student_info, the vouchers app handler for this
+# signal does not raise ValidationErrors, but instead returns a JSON object that
+# indicates if the voucher is invalid as well as the max. amount that it can be
+# used for.
 check_voucher = Signal(
     ''' ['invoice', 'registration', 'voucherId', 'customer', 'validateCustomer'] '''
 )
@@ -60,10 +77,12 @@ apply_price_adjustments = Signal(
 # Fires after a Registration is created.
 post_registration = Signal(''' ['invoice', registration'] ''')
 
-# Fires in AjaxClassRegistrationView so that items related to invoices can be
-# created or updated at the same time as the invoice.
+# Fires so that items related to invoices can be created or updated at the same
+# time as the invoice.
 get_invoice_related = Signal(''' ['invoice', 'post_data', 'prior_response', 'request'] ''')
+get_cart_invoice_related = Signal(''' ['invoice', 'item_data', 'payAtDoor', 'request'] ''')
 get_invoice_item_related = Signal(''' ['item', 'item_data', 'post_data', 'prior_response', 'request'] ''')
+get_cart_invoice_item_related = Signal(''' ['item', 'item_data', 'cart_data', 'prior_response', 'purchasable_registry', 'request'] ''')
 
 # Fires whenever an invoice is finalized.
 invoice_finalized = Signal(''' ['invoice'] ''')

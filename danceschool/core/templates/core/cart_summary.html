@@ -1,0 +1,168 @@
+{% extends "cms/home.html" %}
+{% load i18n danceschool_tags %}
+
+{% block title %}{% trans "Your Cart" %}{% endblock %}
+
+{% block body_id %}cart-summary{% endblock %}
+
+{% block content %}
+
+{% for message in messages %}
+<div class="alert {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}alert-danger{% elif message.level == DEFAULT_MESSAGE_LEVELS.WARNING %}alert-warning{% else %}alert-info{% endif %}">
+    {{ message }}
+</div>
+{% endfor %}
+
+<h3 class="mb-4">{% trans "Your Shopping Cart" %}</h3>
+
+{% if cart_items %}
+<div class="card card-body bg-light pb-0 mb-4">
+    <table class="table">
+        <tbody>
+        {% for item in cart_items %}
+            {% if item.event %}
+            <tr>
+                <td>
+                    {% if item.is_dropin %}{% trans "DROP IN" %}: {% endif %}
+                    {{ item.event.name }}
+                    {% if item.role %} &ndash; {{ item.role.name }}{% endif %}
+                    {% if item.quantity > 1 %}&times;{{ item.quantity }}{% endif %}
+                    <div class="mt-1 mb-1 text-muted">
+                        <small>
+                        {% if item.event.numOccurrences > 1 %}
+                            {% readable_weekday item.event.weekday %}s
+                            {{ item.event.startTime|date:"g:i A" }} &ndash; {{ item.event.endTime|date:"g:i A" }} &mdash;
+                            {% for occ in item.event.eventoccurrence_set.all %}
+                            {{ occ.startTime|date:"N j" }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            {{ item.event.startTime|date:"l, N jS, g:i A" }}
+                        {% endif %}
+                        {% if item.event_url %}
+                        <span class="ml-2"><a href="{{ item.event_url }}" target="_blank" rel="noopener">{% trans "more info" %}</a></span>
+                        {% endif %}
+                        </small>
+                    </div>
+                </td>
+                <td class="text-nowrap">
+                    {% if item.price is not None %}
+                        {{ currencySymbol }}{{ item.price|floatformat:2 }}
+                        {% if item.quantity > 1 %}
+                            &times; {{ item.quantity }}
+                        {% endif %}
+                    {% endif %}
+                </td>
+                <td class="text-end">
+                    <form method="post" action="" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                            <i class="fa fa-trash" aria-hidden="true" title="{% trans 'Remove' %}"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            {# Non-event item — show raw description if available #}
+            <tr>
+                <td>{{ item.description|default:item.sku }}</td>
+                <td></td>
+                <td class="text-end">
+                    <form method="post" action="" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="item_id" value="{{ item.item_id }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            {% trans "Remove" %}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+        </tbody>
+
+        {% if discount_preview and discount_preview.total_discount > 0 %}
+        <tbody>
+            {% for discount in discount_preview.discounts %}
+            <tr>
+                <td><strong>{% trans "Discount" %}:</strong> {{ discount.name }}</td>
+                <td class="price-adjustment">-{{ currencySymbol }}{{ discount.discount_amount|floatformat:2 }}</td>
+                <td></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% endif %}
+
+        {% if voucher_preview %}
+            {% if voucher_preview.error %}
+            <tbody>
+                <tr>
+                    <td colspan="3" class="text-danger">
+                        <strong>{% trans "Voucher error" %}:</strong> {{ voucher_preview.error }}
+                    </td>
+                </tr>
+            </tbody>
+            {% elif voucher_preview.before_tax %}
+            <tbody>
+                <tr>
+                    <td><strong>{% trans "Voucher" %}:</strong> {{ voucher_preview.voucher_name }} ({{ voucher_preview.voucher_id }})</td>
+                    <td class="price-adjustment">-{{ currencySymbol }}{{ voucher_preview.voucher_amount|floatformat:2 }}</td>
+                    <td></td>
+                </tr>
+            </tbody>
+            {% endif %}
+        {% endif %}
+
+        <tbody>
+            <tr class="item-subtotal">
+                <th><em>{% trans "Subtotal" %}:</em></th>
+                <th>{{ currencySymbol }}{{ net_total|floatformat:2 }}</th>
+                <th></th>
+            </tr>
+        </tbody>
+
+        {% if voucher_preview and not voucher_preview.error and not voucher_preview.before_tax %}
+        {# After-tax voucher: shown below the subtotal row for clarity #}
+        <tbody>
+            <tr>
+                <td><strong>{% trans "Voucher" %}:</strong> {{ voucher_preview.voucher_name }} ({{ voucher_preview.voucher_id }})</td>
+                <td class="price-adjustment">-{{ currencySymbol }}{{ voucher_preview.voucher_amount|floatformat:2 }}</td>
+                <td></td>
+            </tr>
+        </tbody>
+        {% endif %}
+    </table>
+</div>
+
+<div class="d-flex mt-3">
+    <a href="{{ add_more_url }}" class="btn btn-outline-secondary mr-2">
+        {% trans "Add more items" %}
+    </a>
+    <form method="post" action="" class="d-inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="checkout">
+        <button type="submit" class="btn btn-primary">
+            {% trans "Proceed to checkout" %}
+        </button>
+    </form>
+</div>
+
+{% else %}
+<p class="text-muted">{% trans "Your cart is empty." %}</p>
+<a href="{{ add_more_url }}" class="btn btn-outline-secondary mt-2">
+    {% trans "Add more items" %}
+</a>
+{% endif %}
+
+{% endblock %}
+
+<style>
+    .item-subtotal {
+        font-size: 1.2em;
+    }
+    .price-adjustment {
+        font-style: italic;
+    }
+</style>

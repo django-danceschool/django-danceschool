@@ -16,6 +16,7 @@ from danceschool.core.models import (
     Customer, Series, EventOccurrence, Registration, EventRegistration,
     DanceTypeLevel, Location, DanceRole, EventStaffMember, Instructor
 )
+from danceschool.core.constants import getConstant
 from danceschool.core.utils.requests import getDateTimeFromGet
 from danceschool.core.utils.timezone import ensure_timezone
 
@@ -730,12 +731,12 @@ def getRegistrationTypesAveragesByYear():
 
     for year in eligible_years:
         this_year_results = srs.filter(event__year=year).annotate(
-            student=Case(When(registration__student=True, then=100), default=0, output_field=IntegerField()),
-            door=Case(When(registration__payAtDoor=False, then=100), default=0, output_field=IntegerField()),
+            is_student=Case(When(student=True, then=100), default=0, output_field=IntegerField()),
+            is_door=Case(When(registration__payAtDoor=False, then=100), default=0, output_field=IntegerField()),
             droppedIn=Case(When(dropIn=True, then=100), default=0, output_field=IntegerField()),
             cancellation=Case(When(cancelled=True, then=100), default=0, output_field=IntegerField()),
         ).aggregate(
-            Student=Avg('student'), Door=Avg('door'), DropIn=Avg('droppedIn'),
+            Student=Avg('is_student'), Door=Avg('is_door'), DropIn=Avg('droppedIn'),
             Cancelled=Avg('cancellation'), year=Min('event__year')
         )
 
@@ -871,8 +872,13 @@ def AdvanceRegistrationDaysJSON(request):
 
     for x in advance_days_sorted:
         cumulative += x[1]
+        # The ORM subtraction of two truncated dates returns a timedelta on
+        # most backends. Convert to a plain integer so it serializes cleanly.
+        days = x[0]
+        if hasattr(days, 'days'):
+            days = days.days
         results_list.append({
-            'days': x[0], 'count': x[1], 'cumulative': cumulative,
+            'days': days, 'count': x[1], 'cumulative': cumulative,
             'pct': 100 * (x[1] / total), 'cumulative_pct': 100 * (cumulative / total)
         })
     return JsonResponse(results_list, safe=False)

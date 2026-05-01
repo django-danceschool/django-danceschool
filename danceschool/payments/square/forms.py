@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
-from danceschool.core.forms import EventAutocompleteForm
+from danceschool.core.forms.event import EventAutocompleteForm
 from .models import SquarePaymentRecord
 
 

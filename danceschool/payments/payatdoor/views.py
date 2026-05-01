@@ -5,6 +5,7 @@ from django.views.generic import FormView
 
 from danceschool.core.models import CashPaymentRecord, Invoice
 from danceschool.core.helpers import getReturnPage
+from danceschool.core.views.cart import clear_reg_cart
 
 from .forms import WillPayAtDoorForm, DoorPaymentForm
 
@@ -32,6 +33,7 @@ class WillPayAtDoorView(FormView):
 
         if getattr(invoice, 'registration', None):
             invoice.registration.finalize()
+        clear_reg_cart(self.request)
         if instance:
             return HttpResponseRedirect(instance.successPage.get_absolute_url())
 
@@ -71,6 +73,7 @@ class PayAtDoorView(FormView):
             methodTxn='CASHPAYMENT_%s' % this_cash_payment.recordId,
             forceFinalize=True,
         )
+        clear_reg_cart(self.request)
 
         # Send users back to the invoice to confirm the successful payment.
         # If none is specified, then return to the registration page.
