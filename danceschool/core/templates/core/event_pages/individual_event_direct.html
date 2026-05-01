@@ -23,6 +23,7 @@
 
 {% block content %}
 	{{ block.super }}
-
+	
+	{% csrf_token %}
 	{% addtoblock "js" %}<script type="text/javascript" data-cart-url="{% url 'cartSummary' %}" src="{% static 'js/classregistration_ajax.js' %}"></script>{% endaddtoblock %}
 {% endblock %}
