@@ -1,5 +1,7 @@
 from django.http import HttpResponseRedirect, Http404
 from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import TemplateView, RedirectView
 from django.db.models import Q, Case, When, BooleanField
 from django.utils.translation import gettext_lazy as _
@@ -133,6 +135,7 @@ class IndividualEventView(ReferralInfoMixin, FinancialContextMixin, TemplateView
         else:
             return super().get_template_names()
 
+    @method_decorator(ensure_csrf_cookie)
     def get(self, request, *args, **kwargs):
 
         # This will pass through to the context data by default
