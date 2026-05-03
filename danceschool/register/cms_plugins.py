@@ -7,7 +7,7 @@ from cms.plugin_base import CMSPluginBase
 from cms.plugin_pool import plugin_pool
 
 from collections import OrderedDict
-from adminsortable2.admin import SortableInlineAdminMixin
+from adminsortable2.admin import SortableInlineAdminMixin, CustomInlineFormSet
 
 from .models import (
     RegisterEventPluginModel, RegisterEventPluginChoice,
@@ -19,8 +19,21 @@ from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.constants import getConstant
 
 
+class RegisterEventChoiceFormSet(CustomInlineFormSet):
+    """
+    CMSPluginBase doesn't inherit SortableAdminBase, so it never calls
+    get_formset_kwargs() to pass default_order_field through to the formset.
+    Providing the value here avoids the resulting TypeError in save_new().
+    """
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('default_order_field', 'order')
+        kwargs.setdefault('default_order_direction', '')
+        super().__init__(*args, **kwargs)
+
+
 class RegisterEventChoiceInline(SortableInlineAdminMixin, TabularInline):
     model = RegisterEventPluginChoice
+    formset = RegisterEventChoiceFormSet
     min_num = 1
     extra = 1
     fields = [

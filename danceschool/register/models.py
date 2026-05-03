@@ -6,8 +6,11 @@ from math import ceil
 import logging
 import json
 
+from functools import cached_property
+
 from cms.models.pluginmodel import CMSPlugin
-from cms.models.fields import PlaceholderField
+from cms.models.fields import PlaceholderRelationField
+from cms.utils.placeholder import get_placeholder_from_slot
 
 from danceschool.core.models import (
     Event, PublicEvent, Series, RegisterEventLimitedModel,
@@ -41,7 +44,17 @@ class Register(models.Model):
         _('Enable this register page'), default=True, blank=True
     )
 
-    placeholder = PlaceholderField('register_placeholder')
+    placeholders = PlaceholderRelationField()
+
+    @cached_property
+    def placeholder(self):
+        return get_placeholder_from_slot(self.placeholders, 'register_placeholder')
+
+    def get_placeholder_slots(self):
+        return ['register_placeholder']
+
+    def get_template(self):
+        return None
 
     def __str__(self):
         return self.title
