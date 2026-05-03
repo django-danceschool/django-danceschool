@@ -16,6 +16,18 @@ class RegisterToolbar(CMSToolbar):
     def populate(self):
         menu = self.toolbar.get_or_create_menu('door-register', _('Registration'))
 
+        # When viewing a register page, set the object so CMS shows Edit/Structure
+        # buttons for that register's placeholder.
+        resolver_match = getattr(self.request, 'resolver_match', None)
+        if resolver_match and resolver_match.url_name == 'registerView':
+            slug = resolver_match.kwargs.get('slug')
+            if slug:
+                try:
+                    register = Register.objects.get(slug=slug, enabled=True)
+                    self.toolbar.set_object(register)
+                except Register.DoesNotExist:
+                    pass
+
         if self.request.user.has_perm('core.accept_door_payments'):
             today = ensure_localtime(timezone.now())
 
