@@ -173,7 +173,7 @@ class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):
                             'class="btn btn-outline-secondary">' +
                             ('%s</button></div>' % _('Event Start Date'))
                         ),
-                        css_class='form-row',
+                        css_class='row',
                     ),
                     'paymentMethod',
                     HTML(
@@ -434,7 +434,7 @@ class RevenueReportingForm(EventAutocompleteForm, forms.ModelForm):
                             'class="btn btn-outline-secondary">' +
                             ('%s</button></div>' % _('Event Start Date'))
                         ),
-                        css_class='form-row',
+                        css_class='row',
                     ),
                     'currentlyHeldBy',
                     # The hidden input of accrual date must be passed as a naive datetime.

@@ -114,7 +114,7 @@ class PartnerRequiredForm(forms.Form):
                         css_class='col-lg'
                     ),
                     *[Field(x[0], placeholder=x[1], wrapper_class='col-lg') for x in er_info.get('field_names', [])],
-                    css_class='form-row'
+                    css_class='row'
                 ),
                 css_class='list-group-item'
             ) for er_info in reg_name_fields
@@ -440,7 +440,7 @@ class RegistrationContactForm(RegistrationForm):
         buttons = [Submit('submit', _('Proceed with Registration'))]
         if self._add_more_url:
             buttons.append(HTML(
-                '<a href="%s" class="btn btn-outline-secondary mr-2">%s</a>' % (
+                '<a href="%s" class="btn btn-outline-secondary me-2">%s</a>' % (
                     self._add_more_url, gettext('Add more items')
                 )
             ))
@@ -619,7 +619,7 @@ class MultiRegCustomerNameForm(RegistrationForm):
                         css_class='col-lg'
                     ),
                     *[Field(x[0], placeholder=x[1], wrapper_class='col-lg') for x in er_info.get('field_names', [])],
-                    css_class='form-row'
+                    css_class='row'
                 ),
                 css_class='list-group-item'
             ) for er_info in reg_name_fields

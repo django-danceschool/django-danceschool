@@ -144,7 +144,7 @@ REST_FRAMEWORK = {
 }
 
 # For Crispy forms Bootstrap templates
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 CRISPY_FAIL_SILENTLY = True
 
 DJANGOCMS_FORMS_PLUGIN_MODULE = 'Forms'

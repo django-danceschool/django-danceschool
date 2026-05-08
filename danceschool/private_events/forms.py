@@ -76,7 +76,7 @@ class AddPrivateEventForm(forms.ModelForm):
             Div(
                 Field('category', wrapper_class='col'),
                 Field('visibleTo', wrapper_class='col'),
-                css_class='form-row'),
+                css_class='row'),
             Div('displayToUsers'),
             Div('displayToGroup'),
             Accordion(
@@ -158,18 +158,18 @@ class OccurrenceFormSetHelper(FormHelper):
                 Field('startTime', wrapper_class='col', ),
                 Field('endTime', wrapper_class='col', ),
                 Field('allDay', wrapper_class='col', ),
-                css_class='form-row'
+                css_class='row'
             ),
             Div(
                 Field('extraOccurrencesToAdd', wrapper_class='col', ),
                 Field('extraOccurrenceRule', wrapper_class='col', ),
-                css_class="form-row"
+                css_class="row"
             ),
             Div(
                 Field('sendReminderTo', wrapper_class='col', ),
                 Field('sendReminderWhen', wrapper_class='col', ),
                 Field('sendReminderWhich', wrapper_class='col', ),
-                css_class="form-row"
+                css_class="row"
             ),
             Div('sendReminderGroup'),
             Div('sendReminderUsers'),
