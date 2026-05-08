@@ -68,8 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
         div.className = 'alert ' + (alertClass || 'alert-danger') + ' my-1 alert-dismissible fade show';
         div.setAttribute('role', 'alert');
         div.innerHTML =
-            '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
-            '<span aria-hidden="true">&times;</span></button>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
             '<span class="register-alert-text">' + message + '</span>';
         box.appendChild(div);
     }

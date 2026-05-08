@@ -38,9 +38,9 @@
 				<button data-id="{{ event.id }}" data-event-type="publicevent" class="btn btn-primary btn-lg register-ajax">{% trans "Register for this event!" %}</button>
 				{% endif %}	
 			{% elif event.soldOut %}
-				<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{% trans "Sold Out!" %}</button>
+				<button class="btn btn-secondary me-2 my-2 btn-lg disabled">{% trans "Sold Out!" %}</button>
 			{% elif event.registrationEnabled and not event.status == event.RegStatus.linkOnly %}
-				<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{% trans "Registration Closed" %}</button>
+				<button class="btn btn-secondary me-2 my-2 btn-lg disabled">{% trans "Registration Closed" %}</button>
 			{% endif %}
 			{% endblock %}
 			</p>

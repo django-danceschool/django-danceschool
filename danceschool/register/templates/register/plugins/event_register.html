@@ -34,13 +34,13 @@
                         {% endif %}
                         {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
                     >
-                        {{ choice.label }} <span class="badge badge-pill badge-primary badge-choice-counter"></span>
+                        {{ choice.label }} <span class="badge rounded-pill text-bg-primary badge-choice-counter"></span>
                     </button>
                 {% endfor %}
                 </div>
                 {% if item.additional_options %}
-                    <div class="btn-group pull-right">
-                    <button class="btn btn-outline-secondary dropdown-toggle my-2" type="button" data-toggle="dropdown" id="additionalChoices_{{ item.event.id }}" aria-haspopup="true" aria-expanded="false">
+                    <div class="btn-group float-end">
+                    <button class="btn btn-outline-secondary dropdown-toggle my-2" type="button" data-bs-toggle="dropdown" id="additionalChoices_{{ item.event.id }}" aria-haspopup="true" aria-expanded="false">
                             {% trans "Additional Options" %}
                         </button>
                         <div class="dropdown-menu" aria-labelledby="additionalChoices_{{ item.event.id }}">
@@ -69,7 +69,7 @@
                                     {% endif %}
                                     {% if choice.data %}data-data="{{ choice.data }}"{% endif %}
                                 >
-                                    {{ choice.label }} <span class="badge badge-pill badge-primary badge-choice-counter"></span>
+                                    {{ choice.label }} <span class="badge rounded-pill text-bg-primary badge-choice-counter"></span>
                                 </a>
                             {% endfor %}
                         </div>

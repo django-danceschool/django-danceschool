@@ -13,7 +13,7 @@
 <h5 class="card-header">{% trans "Basic Info" %}</h5>
 <div class="card-body">
 
-	<img class="float-left mr-4 mb-4 mt-2" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
+	<img class="float-start me-4 mb-4 mt-2" src="{% if instructor.image %}{% thumbnail instructor.image 118x118 crop %}{% endif %}" width="118" />
 
 	<dl>
 		<dt>{% trans "Teaching Since" %}:</dt><dd>{{ teaching_since }}</dd>

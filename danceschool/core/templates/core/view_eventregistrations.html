@@ -20,20 +20,18 @@
 	<form id="checkin_form">
 
 	{% if scope == "invoice" %}
-		<div class="form-group">
+		<div class="mb-3">
 			<label for="checkInTypeSelect">{% trans "Select Check-In Type" %}</label>
 			<div class="input-group">
 				<select disabled id="checkInTypeSelect" class="form-control">
 					<option value="O" selected>{% trans "Check into today's/next occurrence" %}</option>
 					<option value="E">{% trans "Event-level check-in" %}</option>
 				</select>
-				<div class="input-group-append">
-					<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
-				</div>
+				<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
 			</div>
 		</div>
 	{% else %}
-		<div class="form-group">
+		<div class="mb-3">
 			<label for="occurrenceSelect">{% trans "Select Event Occurrence for Check-In" %}</label>
 			<div class="input-group">
 				<select disabled id="occurrenceSelect" class="form-control">
@@ -42,14 +40,12 @@
 					{% endfor %}
 					<option value="event">{% trans "Event-level check-in" %}</option>
 				</select>
-				<div class="input-group-append">
-					<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
-				</div>
+				<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
 			</div>
 		</div>
 	{% endif %}
 
-	<div class="form-group">
+	<div class="mb-3">
 		<label for="nameFilter">{% trans 'Filter by customer' %}</label>
 		<input type="search" class="form-control" id="nameFilter" placeholder="{% trans 'Enter name/email...' %}">
 	</div>
@@ -168,7 +164,7 @@
 				<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 				<strong>{% trans "Net Price" %}:</strong>
 				{% if details.grossTotal != details.total %}
-					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					<a href="javascript://" data-bs-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-bs-container="body" data-bs-placement="top" data-bs-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
 							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }},
@@ -194,7 +190,7 @@
 				{% if details.grossTotal != details.total %}
 					<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 					<strong>{% trans "Net Price" %}:</strong>
-					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					<a href="javascript://" data-bs-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-bs-container="body" data-bs-placement="top" data-bs-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
 							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }},
@@ -215,7 +211,7 @@
 
 		<td>
 		<div class="dropdown show">
-			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 				{% trans "Related Items" %}
 			</a>
 			<div class="dropdown-menu" aria-labelledby="itemsLink_{{ reg.id }}">
@@ -391,7 +387,9 @@
 	}
 
 	$(function () {
-	  $('[data-toggle="popover"]').popover();
+	  document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
+	    new bootstrap.Popover(el);
+	  });
 	  getCheckIns();
 	});
 

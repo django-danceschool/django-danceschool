@@ -2,7 +2,7 @@
 
 <div class="post">
 <h2>{% trans "Latest News" %}&nbsp;&nbsp;
-	<div class="float-right">
+	<div class="float-end">
 		{% if 'news.add_newsitem' in perms or user.is_superuser %}
 		<a class="edit-link btn btn-outline-secondary btn-sm" href="{% url 'admin:news_newsitem_add' %}">{% trans "Post News Item" %}</a>&nbsp;
 		{% endif %}

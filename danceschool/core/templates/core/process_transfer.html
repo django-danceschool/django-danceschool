@@ -34,7 +34,7 @@
 {{ form.media }}
 
 <div>
-<input type="submit" class="btn btn-primary float-right my-4" value="{% trans 'Process Registration Transfer' %}" />
+<input type="submit" class="btn btn-primary float-end my-4" value="{% trans 'Process Registration Transfer' %}" />
 </div>
 
 {% if form.non_field_errors %}
@@ -82,11 +82,11 @@
 	</tbody>
 	</table>
 
-<div class="form-group">
+<div class="mb-3">
     {{ form.comments.errors }}
     {{ form.comments.label_tag }}<br />
     {{ form.comments }}
-    <p class="help-block">{{ form.comments.help_text }}</p>
+    <p class="form-text">{{ form.comments.help_text }}</p>
 </div>
 </form>
 

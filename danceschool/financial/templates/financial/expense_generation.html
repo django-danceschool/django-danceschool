@@ -9,12 +9,12 @@
 
     {% csrf_token %}
 
-    <input type="submit" class="btn btn-primary float-right my-4" value="{% trans "Submit" %}" />
+    <input type="submit" class="btn btn-primary float-end my-4" value="{% trans "Submit" %}" />
 
     <table class="table table-hover">
         {% if staff_keys %}
             <thead>
-                <tr data-toggle="collapse" data-target="#accordionstaff" class="clickable">
+                <tr data-bs-toggle="collapse" data-bs-target="#accordionstaff" class="clickable">
                     <th class="top-level">{{ form.staff }}</th><th>{{ form.staff.label }} ({% trans "Click to expand" %})</th>
                 </tr>
             </thead>
@@ -38,7 +38,7 @@
 
         {% if venue_keys %}
             <thead>
-                <tr data-toggle="collapse" data-target="#accordionvenue" class="clickable">
+                <tr data-bs-toggle="collapse" data-bs-target="#accordionvenue" class="clickable">
                     <th class="top-level">{{ form.venues }}</th><th>{{ form.venues.label }} ({% trans "Click to expand" %})</th>
                 </tr>
             </thead>
@@ -55,7 +55,7 @@
 
         {% if generic_keys %}
             <thead>
-                <tr data-toggle="collapse" data-target="#accordiongeneric" class="clickable">
+                <tr data-bs-toggle="collapse" data-bs-target="#accordiongeneric" class="clickable">
                     <th class="top-level">{{ form.generic }}</th><th>{{ form.generic.label }} ({% trans "Click to expand" %})</th>
                 </tr>
             </thead>
@@ -77,7 +77,7 @@
         </thead>
     </table>
 
-    <input type="submit" class="btn btn-primary float-right my-4" value="{% trans "Submit" %}" />
+    <input type="submit" class="btn btn-primary float-end my-4" value="{% trans "Submit" %}" />
 
 </form>
 

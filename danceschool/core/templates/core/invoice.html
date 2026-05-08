@@ -4,11 +4,11 @@
 {% block content %}
 
 {% if user_has_permissions %}
-	<p><a class="btn btn-outline-secondary float-right" href="{% url 'viewInvoicePDF' object.id %}"><span class="fa fa-file-pdf-o"></span>&nbsp;&nbsp;{% trans "Download PDF" %}</a></p>
+	<p><a class="btn btn-outline-secondary float-end" href="{% url 'viewInvoicePDF' object.id %}"><span class="fa fa-file-pdf-o"></span>&nbsp;&nbsp;{% trans "Download PDF" %}</a></p>
 {% endif %}
 {% getReturnPage prior=True as returnPage %}
 {% if returnPage.url %}
-	<p><a class="btn btn-outline-secondary float-right" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+	<p><a class="btn btn-outline-secondary float-end" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
 {% endif %}
 
 <h1>
@@ -184,7 +184,7 @@
 {% endif %}
 
 {% if returnPage.url %}
-	<p class="my-4 clearfix"><a class="btn btn-outline-secondary float-right" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
+	<p class="my-4 clearfix"><a class="btn btn-outline-secondary float-end" href="{{ returnPage.url }}">&laquo;&nbsp;{% trans "Return to" %} {{ returnPage.title }}</a></p>
 {% endif %}
 
 {% addtoblock "css" %}

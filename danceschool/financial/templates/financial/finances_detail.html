@@ -9,14 +9,14 @@
 <div class="col-12">
 
 	{% if events %}
-		<div class="btn-group float-right" role="group" aria-label="Event Links">
+		<div class="btn-group float-end" role="group" aria-label="Event Links">
 			<a href="{% url 'financesByEvent' %}" class="btn btn-primary">{% trans "Return to Event Summary" %}</a>
 			{% if events.count == 1 %}
 				<a href="{% url 'admin:core_event_change' events.first.id %}" class="btn btn-outline-primary">{% trans "Edit Event" %}</a>
 			{% endif %}
 		</div>	
 	{% else %}
-		<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-right">{% trans "Return to Monthly Summary" %}</a>
+		<a href="{% url 'financesByMonth' %}" class="btn btn-primary float-end">{% trans "Return to Monthly Summary" %}</a>
 	{% endif %}
 
 	<h4>{% trans "Choose Financial Basis" %}</h4>
@@ -62,7 +62,7 @@
 <h3 class="mt-5 mb-3">{% trans "Revenues" %}</h3>
 
 <table class="table table-hover">
-	<thead class="thead-default">
+	<thead class="table-light">
 		<tr>
 			<th colspan="2">{% trans "Registrations:" %}</th>
 			<th>{{ currencySymbol }}{% getAllocatedSum registrationRevenueItems 'netRevenue' %}</th>
@@ -71,7 +71,7 @@
 	{% regroup registrationRevenueItems by event as event_item_list %}
 		{% for event in event_item_list %}
 			<tbody>
-				<tr data-toggle="collapse" data-target="#accordionevent_{{ event.grouper.id }}" class="clickable">
+				<tr data-bs-toggle="collapse" data-bs-target="#accordionevent_{{ event.grouper.id }}" class="clickable">
 					<th colspan="2">
 						<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>{{ event.grouper|default:grouper_default }}
 					</th>
@@ -90,7 +90,7 @@
 					<td>
 						{{ item.description }}{% spaceless %}
 						{% if not item.received %}
-							&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
+							&nbsp;<span class="badge text-bg-warning">{% trans "Not Received" %}</span>
 						{% endif %}{% endspaceless %}
 					</td>
 					<td>{{ currencySymbol }}{% getAllocation item 'netRevenue' %}</td>
@@ -102,7 +102,7 @@
 
 {% if otherRevenueItems %}
 	<table class="table table-hover">
-		<thead class="thead-default">
+		<thead class="table-light">
 			<tr>
 				<th colspan="2">{% trans "Other Revenues" %}:</th>
 				<th>{{ currencySymbol }}{% getAllocatedSum otherRevenueItems 'netRevenue' %}</th>
@@ -111,7 +111,7 @@
 		{% regroup otherRevenueItems by category as other_item_list %}
 			{% for category in other_item_list %}
 				<tbody>
-					<tr data-toggle="collapse" data-target="#accordionotherrevenue_{{ category.grouper.id }}" class="clickable">
+					<tr data-bs-toggle="collapse" data-bs-target="#accordionotherrevenue_{{ category.grouper.id }}" class="clickable">
 						<th colspan="2">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper|default:grouper_default }}
 						</th>
@@ -130,7 +130,7 @@
 						<td>
 							{{ item.description }}{% spaceless %}
 							{% if not item.received %}
-								&nbsp;<span class="badge badge-warning">{% trans "Not Received" %}</span>
+								&nbsp;<span class="badge text-bg-warning">{% trans "Not Received" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
 						<td>{{ currencySymbol }}{% getAllocation item 'netRevenue' %}</td>
@@ -147,7 +147,7 @@
 
 {% if instructionExpenseItems %}
 	<table class="table table-hover">
-		<thead class="thead-default">
+		<thead class="table-light">
 			<tr>
 				<th colspan="2">{% trans "Instruction" %}:</th>
 				<th>{{ currencySymbol }}{% getAllocatedSum instructionExpenseItems 'net' %}</th>
@@ -156,7 +156,7 @@
 		{% regroup instructionExpenseItems by payTo as teacher_item_list %}
 			{% for teacher in teacher_item_list %}
 				<tbody>
-					<tr data-toggle="collapse" data-target="#accordioninstructor_{{ teacher.grouper.id }}" class="clickable">
+					<tr data-bs-toggle="collapse" data-bs-target="#accordioninstructor_{{ teacher.grouper.id }}" class="clickable">
 						<th colspan="2">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i>
 							{{ teacher.grouper.name|default:grouper_default }}
@@ -178,9 +178,9 @@
 						<td>
 							{{ item.description }}{% spaceless %}
 							{% if not item.paid %}
-								&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+								&nbsp;<span class="badge text-bg-warning">{% trans "Unpaid" %}</span>
 							{% elif not item.approved %}
-								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+								&nbsp;<span class="badge text-bg-danger">{% trans "Not Approved" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
 						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
@@ -193,7 +193,7 @@
 
 {% if venueExpenseItems %}
 	<table class="table table-hover">
-		<thead class="thead-default">
+		<thead class="table-light">
 			<tr>
 				<th colspan="2">{% trans "Venue Rental" %}:</th>
 				<th>{{ currencySymbol }}{% getAllocatedSum venueExpenseItems 'net' %}</th>
@@ -202,7 +202,7 @@
 		{% regroup venueExpenseItems by payTo as venue_item_list %}
 			{% for venue in venue_item_list %}
 				<tbody>
-					<tr data-toggle="collapse" data-target="#accordionlocation_{{ venue.grouper.id }}" class="clickable">
+					<tr data-bs-toggle="collapse" data-bs-target="#accordionlocation_{{ venue.grouper.id }}" class="clickable">
 						<th colspan="2">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ venue.grouper.name|default:grouper_default }}
 						</th>
@@ -221,9 +221,9 @@
 						<td>
 							{{ item.description }}{% spaceless %}
 							{% if not item.paid %}
-								&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+								&nbsp;<span class="badge text-bg-warning">{% trans "Unpaid" %}</span>
 							{% elif not item.approved %}
-								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+								&nbsp;<span class="badge text-bg-danger">{% trans "Not Approved" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
 						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
@@ -237,7 +237,7 @@
 
 {% if otherExpenseItems %}
 	<table class="table table-hover">
-		<thead class="thead-default">
+		<thead class="table-light">
 			<tr>
 				<th colspan="3">{% trans "Other Expenses" %}:</th>
 				<th>{{ currencySymbol }}{% getAllocatedSum otherExpenseItems 'net' %}</th>
@@ -246,7 +246,7 @@
 		{% regroup otherExpenseItems by category as category_item_list %}
 			{% for category in category_item_list %}
 				<tbody>
-					<tr data-toggle="collapse" data-target="#accordionotherexpense_{{ category.grouper.id }}" class="clickable">
+					<tr data-bs-toggle="collapse" data-bs-target="#accordionotherexpense_{{ category.grouper.id }}" class="clickable">
 						<th colspan="3">
 							<i class="fa fa-plus-circle mx-2" aria-hidden="true"></i> {{ category.grouper.name|default:grouper_default }}
 						</th>
@@ -267,9 +267,9 @@
 						<td>
 							{{ item.description }}{% spaceless %}
 							{% if not item.paid %}
-								&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+								&nbsp;<span class="badge text-bg-warning">{% trans "Unpaid" %}</span>
 							{% elif not item.approved %}
-								&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+								&nbsp;<span class="badge text-bg-danger">{% trans "Not Approved" %}</span>
 							{% endif %}{% endspaceless %}
 						</td>
 						<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
@@ -282,7 +282,7 @@
 
 {% if allocatedStaffExpenseItems %}
 <table class="table table-hover">
-	<thead class="thead-default">
+	<thead class="table-light">
 		<tr>
 			<th colspan="3">{% trans "Allocated Staff Expenses" %}:</th>
 			<th>{{ currencySymbol }}{{ allocatedStaffTotal|floatformat:"2" }}</th>
@@ -302,9 +302,9 @@
 			<td>
 				{{ item.description }}{% spaceless %}
 				{% if not item.paid %}
-					&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+					&nbsp;<span class="badge text-bg-warning">{% trans "Unpaid" %}</span>
 				{% elif not item.approved %}
-					&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+					&nbsp;<span class="badge text-bg-danger">{% trans "Not Approved" %}</span>
 				{% endif %}{% endspaceless %}
 			</td>
 			<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>
@@ -316,7 +316,7 @@
 
 {% if allocatedVenueExpenseItems %}
 <table class="table table-hover">
-	<thead class="thead-default">
+	<thead class="table-light">
 		<tr>
 			<th colspan="3">{% trans "Allocated Venue Expenses" %}:</th>
 			<th>{{ currencySymbol }}{{ allocatedVenueTotal|floatformat:"2" }}</th>
@@ -336,9 +336,9 @@
 			<td>
 				{{ item.description }}{% spaceless %}
 				{% if not item.paid %}
-					&nbsp;<span class="badge badge-warning">{% trans "Unpaid" %}</span>
+					&nbsp;<span class="badge text-bg-warning">{% trans "Unpaid" %}</span>
 				{% elif not item.approved %}
-					&nbsp;<span class="badge badge-danger">{% trans "Not Approved" %}</span>
+					&nbsp;<span class="badge text-bg-danger">{% trans "Not Approved" %}</span>
 				{% endif %}{% endspaceless %}
 			</td>
 			<td>{{ currencySymbol }}{% getAllocation item 'net' %}</td>

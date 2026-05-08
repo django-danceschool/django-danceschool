@@ -41,7 +41,7 @@
 <form id="refund_form" method="post" action="">{% csrf_token %}
 
 <div class="my-4">
-<input type="submit" class="btn btn-primary float-right" value="{% trans 'Process Refund' %}" />
+<input type="submit" class="btn btn-primary float-end" value="{% trans 'Process Refund' %}" />
 <h3>{% trans "Total Refund Amount" %}: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h3>
 </div>
 
@@ -127,11 +127,11 @@
 	</tbody>
 	</table>
 
-<div class="form-group">
+<div class="mb-3">
     {{ form.comments.errors }}
     {{ form.comments.label_tag }}<br />
     {{ form.comments }}
-    <p class="help-block">{{ form.comments.help_text }}</p>
+    <p class="form-text">{{ form.comments.help_text }}</p>
 </div>
 </form>
 
