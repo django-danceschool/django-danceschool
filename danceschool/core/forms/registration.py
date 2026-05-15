@@ -350,7 +350,7 @@ class RegistrationContactForm(RegistrationForm):
     )
     agreeToPolicies = forms.BooleanField(
         required=True,
-        label=_('<strong>I agree to all policies (required)</strong>'),
+        label=mark_safe(_('<strong>I agree to all policies (required)</strong>')),
         help_text=_('By checking, you agree to abide by all policies.')
     )
     gift = forms.CharField(required=False, label=_('Voucher ID'))

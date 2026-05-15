@@ -136,11 +136,11 @@
 
 	{% addtoblock "js" %}
 		<script type="text/javascript">
-		$( document ).ready(function() {
-			$('#showMoreClasses').click(function(event) {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.getElementById('showMoreClasses').addEventListener('click', function(event) {
 				event.preventDefault();
-				$('#showMoreClassesRow').fadeOut();
-			});	
+				document.getElementById('showMoreClassesRow').style.display = 'none';
+			});
 		});
 		</script>
 	{% endaddtoblock %}
@@ -187,11 +187,11 @@
 
 	{% addtoblock "js" %}
 		<script type="text/javascript">
-		$( document ).ready(function() {
-			$('#showMoreVerified').click(function(event) {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.getElementById('showMoreVerified').addEventListener('click', function(event) {
 				event.preventDefault();
-				$('#showMoreVerifiedRow').fadeOut();
-			});	
+				document.getElementById('showMoreVerifiedRow').style.display = 'none';
+			});
 		});
 		</script>
 	{% endaddtoblock %}
@@ -237,11 +237,11 @@
 
 	{% addtoblock "js" %}
 		<script type="text/javascript">
-		$( document ).ready(function() {
-			$('#showMoreSubmitted').click(function(event) {
+		document.addEventListener('DOMContentLoaded', function() {
+			document.getElementById('showMoreSubmitted').addEventListener('click', function(event) {
 				event.preventDefault();
-				$('#showMoreSubmittedRow').fadeOut();
-			});	
+				document.getElementById('showMoreSubmittedRow').style.display = 'none';
+			});
 		});
 		</script>
 	{% endaddtoblock %}

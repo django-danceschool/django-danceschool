@@ -78,7 +78,7 @@ Note: This process may take a minute or two to complete.
                 ('change_user', 'auth', 'user'),
             ]
 
-            app_add_list = ['cms', 'core', 'djangocms_forms', 'djangocms_text_ckeditor', 'easy_thumbnails', 'filer']
+            app_add_list = ['cms', 'core', 'djangocms_forms', 'djangocms_text', 'easy_thumbnails', 'filer']
             for this_app in [
                 'danceschool.financial',
                 'danceschool.discounts',

@@ -1,21 +1,16 @@
-document.addEventListener("DOMContentLoaded", function(event) { 
+document.addEventListener("DOMContentLoaded", function(event) {
 
-	// The code below requires jQuery
-	var $ = django.jQuery;
+	document.getElementById('id_occurrences').disabled = true;
+	document.getElementById('id_occurrences').closest('div.mb-3').style.display = 'none';
+	document.getElementById('id_replacedStaffMember').disabled = true;
+	document.getElementById('id_replacedStaffMember').closest('div.mb-3').style.display = 'none';
 
-	$('#id_occurrences').attr('disabled',true);
-	$('#id_occurrences').parent('p').hide();
-	$('#id_replacedStaffMember').attr('disabled',true);
-	$('#id_replacedStaffMember').parent('p').hide();
-
-	// Use Jquery to get the cookie value of the CSRF token
 	function getCookie(name) {
 	    var cookieValue = null;
 	    if (document.cookie && document.cookie !== '') {
 	        var cookies = document.cookie.split(';');
 	        for (var i = 0; i < cookies.length; i++) {
-	            var cookie = $.trim(cookies[i]);
-	            // Does this cookie string begin with the name we want?
+	            var cookie = cookies[i].trim();
 	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
 	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
 	                break;
@@ -24,91 +19,77 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	    }
 	    return cookieValue;
 	}
-	var csrftoken = getCookie('csrftoken');
 
-	function csrfSafeMethod(method) {
-	    // these HTTP methods do not require CSRF protection
-	    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	function postForm(formData) {
+		return fetch("/staff/substitute/filter/", {
+			method: "POST",
+			headers: {"X-CSRFToken": getCookie('csrftoken')},
+			body: new URLSearchParams(formData),
+		}).then(function(response) { return response.json(); });
 	}
 
-	// Ensure that CSRF token is passed
-	$.ajaxSetup({
-	    beforeSend: function(xhr, settings) {
-	        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-	            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-	        }
-	    }
-	});
-
-	$('#id_event').change(function(event){
-		event.preventDefault();
-
+	// id_event uses a Select2 autocomplete widget (dal), which triggers change via
+	// jQuery.trigger() — not a native DOM event. Use django.jQuery to receive it.
+	django.jQuery('#id_event').on('change', function() {
 		var formData = {
-			event: $('#id_event').val(),
-			category: $('#id_category').val(),
+			event: document.getElementById('id_event').value,
+			category: document.getElementById('id_category').value,
 		};
 
-		$.ajax({
-			url: "/staff/substitute/filter/",
-			type: "POST",
-			data: formData,
-			success: function(data, textStatus, jqXHR) {
-				$('#id_occurrences').empty();
-				$('#id_replacedStaffMember').empty();
+		postForm(formData)
+		.then(function(data) {
+			var occurrencesSelect = document.getElementById('id_occurrences');
+			var replacedSelect = document.getElementById('id_replacedStaffMember');
 
-				$.each(data['id_occurrences'], function(index,text) {
-					$('#id_occurrences').append(
-						$('<option></option>').val(index).html(text)
-					);
-				});
-				$.each(data['id_replacedStaffMember'], function(index,text) {
-					$('#id_replacedStaffMember').append(
-						$('<option></option>').val(index).html(text)
-					);
-				});
-				$('#id_occurrences').parent('p').show();
-				$('#id_occurrences').attr('disabled',false);
+			occurrencesSelect.innerHTML = '';
+			replacedSelect.innerHTML = '';
 
-				if (data['id_replacedStaffMember'].length !== 0) {
-					$('#id_replacedStaffMember').parent('p').show();
-					$('#id_replacedStaffMember').attr('disabled',false);
-				}
+			Object.entries(data['id_occurrences']).forEach(function([index, text]) {
+				var opt = new Option(text, index);
+				occurrencesSelect.appendChild(opt);
+			});
+			Object.entries(data['id_replacedStaffMember']).forEach(function([index, text]) {
+				var opt = new Option(text, index);
+				replacedSelect.appendChild(opt);
+			});
 
-			},
-			failure: function() {
-				console.log('Failed to retrieve dropdown data using AJAX.');
-			},
+			occurrencesSelect.closest('div.mb-3').style.display = '';
+			occurrencesSelect.disabled = false;
+
+			if (Object.keys(data['id_replacedStaffMember']).length !== 0) {
+				replacedSelect.closest('div.mb-3').style.display = '';
+				replacedSelect.disabled = false;
+			}
+		})
+		.catch(function() {
+			console.log('Failed to retrieve dropdown data using AJAX.');
 		});
 	});
 
-	$('#id_category, #id_occurrences').change(function(event){
-		event.preventDefault();
+	['id_category', 'id_occurrences'].forEach(function(id) {
+		document.getElementById(id).addEventListener('change', function() {
+			var formData = {
+				event: document.getElementById('id_event').value,
+				category: document.getElementById('id_category').value,
+				occurrences: document.getElementById('id_occurrences').value,
+			};
 
-		var formData = {
-			event: $('#id_event').val(),
-			category: $('#id_category').val(),
-			occurrences: $('#id_occurrences').val(),
-		};
+			postForm(formData)
+			.then(function(data) {
+				var replacedSelect = document.getElementById('id_replacedStaffMember');
+				replacedSelect.innerHTML = '';
 
-		$.ajax({
-			url: "/staff/substitute/filter/",
-			type: "POST",
-			data: formData,
-			success: function(data, textStatus, jqXHR) {
-				$('#id_replacedStaffMember').empty();
-
-				$.each(data['id_replacedStaffMember'], function(index,text) {
-					$('#id_replacedStaffMember').append(
-						$('<option></option>').val(index).html(text)
-					);
+				Object.entries(data['id_replacedStaffMember']).forEach(function([index, text]) {
+					var opt = new Option(text, index);
+					replacedSelect.appendChild(opt);
 				});
 
-				$('#id_replacedStaffMember').parent('p').show();
-				$('#id_replacedStaffMember').attr('disabled',false);
-			},
-			failure: function() {
+				replacedSelect.closest('div.mb-3').style.display = '';
+				replacedSelect.disabled = false;
+			})
+			.catch(function() {
 				console.log('Failed to retrieve dropdown data using AJAX.');
-			},
+			});
 		});
 	});
 });

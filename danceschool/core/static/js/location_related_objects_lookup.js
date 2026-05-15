@@ -2,11 +2,8 @@
 // Handles related-objects functionality: lookup link for raw_id_fields
 // and Add Another links.
 
-document.addEventListener("DOMContentLoaded", function(event) { 
+document.addEventListener("DOMContentLoaded", function(event) {
     'use strict';
-
-	// The code below requires jQuery
-	var $ = django.jQuery;
 
     // IE doesn't accept periods or dashes in the window name, but the element IDs
     // we use to generate popup window names may contain them, therefore we map them
@@ -31,9 +28,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
             var elemName = elem.nodeName.toUpperCase();
             if (elemName === 'SELECT') {
                 var o = new Option(newRepr, newId, true, true);
-                $(o).data('roomoptions', $.parseJSON(newRoomOptions) || []);
-                $(o).data('defaultcapacity', newDefaultCapacity);
-                elem.options[elem.options.length] = o
+                // Store room options data as custom properties (read by serieslocation_capacity_change.js)
+                o._roomoptions = JSON.parse(newRoomOptions) || [];
+                o._defaultcapacity = newDefaultCapacity;
+                elem.options[elem.options.length] = o;
             } else if (elemName === 'INPUT') {
                 if (elem.className.indexOf('vManyToManyRawIdAdminField') !== -1 && elem.value) {
                     elem.value += ',' + newId;
@@ -42,12 +40,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
                 }
             }
             // Trigger a change event to update related links if required.
-            $(elem).trigger('change');
+            elem.dispatchEvent(new Event('change', {bubbles: true}));
         } else {
             var toId = name + "_to";
             var o = new Option(newRepr, newId);
-            $(o).data('roomoptions', $.parseJSON(newRoomOptions) || []);
-            $(o).data('defaultcapacity', newDefaultCapacity);
+            o._roomoptions = JSON.parse(newRoomOptions) || [];
+            o._defaultcapacity = newDefaultCapacity;
             SelectBox.add_to_cache(toId, o);
             SelectBox.redisplay(toId);
         }
@@ -56,16 +54,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     function dismissLocationChangeRelatedObjectPopup(win, objId, newRepr, newId, newRoomOptions, newDefaultCapacity) {
         var id = location_windowname_to_id(win.name).replace(/^edit_/, '');
-        var selectsSelector = interpolate('#%s, #%s_from, #%s_to', [id, id, id]);
-        var selects = $(selectsSelector);
-        selects.find('option').each(function() {
-            if (this.value === objId) {
-                this.textContent = newRepr;
-                this.value = newId;
-                $(this).data('roomoptions', $.parseJSON(newRoomOptions) || []);
-                $(this).data('defaultcapacity', newDefaultCapacity);
-                $(this).parent('select').trigger('change');
-            }
+        var selects = document.querySelectorAll('#' + id + ', #' + id + '_from, #' + id + '_to');
+        selects.forEach(function(select) {
+            Array.from(select.options).forEach(function(opt) {
+                if (opt.value === objId) {
+                    opt.textContent = newRepr;
+                    opt.value = newId;
+                    opt._roomoptions = JSON.parse(newRoomOptions) || [];
+                    opt._defaultcapacity = newDefaultCapacity;
+                    select.dispatchEvent(new Event('change', {bubbles: true}));
+                }
+            });
         });
         win.close();
     }

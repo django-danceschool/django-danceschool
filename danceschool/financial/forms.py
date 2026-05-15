@@ -7,9 +7,6 @@ from django.db.models import Q
 from django.forms import formset_factory
 from django.forms.widgets import Select
 from django.template.loader import render_to_string
-from django.utils.encoding import force_str
-from django.utils.safestring import mark_safe
-from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 
@@ -60,34 +57,22 @@ class ExpenseDuplicationFormsetLayout(LayoutObject):
 
 class ExpenseCategoryWidget(Select):
     '''
-    Override render_option to permit extra data of default wage to be used by JQuery
-    This could be optimized to reduce database calls by overriding the render function.
+    Override create_option to add the default wage rate as a data attribute on
+    each <option>, used by update_task_wages.js to pre-fill the wageRate field.
     '''
 
-    def render_option(self, selected_choices, option_value, option_label):
-        if option_value is None:
-            option_value = ''
-        option_value = force_str(option_value)
-        if option_value in selected_choices:
-            selected_html = mark_safe(' selected="selected"')
-            if not self.allow_multiple_selected:
-                # Only allow for a single selection.
-                selected_choices.remove(option_value)
-        else:
-            selected_html = ''
-
-        # Pass the default wage rate as an option
-        if option_value:
-            defaultRate = ExpenseCategory.objects.filter(id=int(option_value)).first().defaultRate
-            extra_value_data = ' data-defaultRate=' + str(defaultRate)
-        else:
-            extra_value_data = ''
-
-        return format_html('<option value="{}"{}{}>{}</option>',
-                           option_value,
-                           selected_html,
-                           extra_value_data,
-                           force_str(option_label))
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
+        # value may be a ModelChoiceIteratorValue wrapper; extract the raw pk.
+        raw = value.value if hasattr(value, 'value') else value
+        if raw:
+            try:
+                category = ExpenseCategory.objects.filter(id=int(raw)).first()
+                if category:
+                    option['attrs']['data-defaultrate'] = str(category.defaultRate)
+            except (ValueError, TypeError):
+                pass
+        return option
 
 
 class ExpenseReportingForm(EventAutocompleteForm, forms.ModelForm):

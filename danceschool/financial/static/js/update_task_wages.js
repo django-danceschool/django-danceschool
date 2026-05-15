@@ -1,11 +1,8 @@
 document.addEventListener("DOMContentLoaded", function(e) {
 
-	// Requires jQuery
-	var $ = django.jQuery;
-
-	$('#id_category').change(function(){
-		var this_default = $('#id_category option:selected').data('defaultrate');
-		$('#id_wageRate').val(this_default);
+	document.getElementById('id_category').addEventListener('change', function(){
+		var selected = this.options[this.selectedIndex];
+		document.getElementById('id_wageRate').value = selected ? (selected.dataset.defaultrate || '') : '';
 	});
 
 });

@@ -1,37 +1,24 @@
-document.addEventListener("DOMContentLoaded", function(event) { 
-
-	// The code below requires jQuery
-	var $ = django.jQuery;
+document.addEventListener("DOMContentLoaded", function(event) {
 
 	function checkRichTextChoice() {
-		var richTextChoice = $('#div_id_richTextChoice input:checked').val();
+		var richTextInput = document.querySelector('#div_id_richTextChoice input:checked');
+		var richTextChoice = richTextInput ? richTextInput.value : null;
 
-		if (CKEDITOR.instances['id_html_message']) {
-			window.initial_CKEditor_config = CKEDITOR.instances['id_html_message'].config;
-			CKEDITOR.instances['id_html_message'].destroy();		
+		if (richTextChoice === 'plain') {
+			document.getElementById('div_id_message').style.display = '';
+			document.getElementById('div_id_html_message').style.display = 'none';
+		} else if (richTextChoice === 'HTML') {
+			document.getElementById('div_id_message').style.display = 'none';
+			document.getElementById('div_id_html_message').style.display = '';
 		}
-
-		if (richTextChoice == "plain") {
-			$('#div_id_message').show();
-			$('#div_id_html_message').hide();
-		}
-		if (richTextChoice == "HTML") {
-			$('#div_id_message').hide();
-			$('#div_id_html_message').show();
-		}
-
-		CKEDITOR.replace('id_html_message', window.initial_CKEditor_config);
-
 	}
 
-	// Use Jquery to get the cookie value of the CSRF token
 	function getCookie(name) {
 	    var cookieValue = null;
 	    if (document.cookie && document.cookie !== '') {
 	        var cookies = document.cookie.split(';');
 	        for (var i = 0; i < cookies.length; i++) {
-	            var cookie = $.trim(cookies[i]);
-	            // Does this cookie string begin with the name we want?
+	            var cookie = cookies[i].trim();
 	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
 	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
 	                break;
@@ -40,57 +27,48 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	    }
 	    return cookieValue;
 	}
-	var csrftoken = getCookie('csrftoken');
 
-	function csrfSafeMethod(method) {
-	    // these HTTP methods do not require CSRF protection
-	    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+	function setEditorContent(html) {
+		var editors = window.cms_editor_plugin && window.cms_editor_plugin._editors;
+		var editor = editors && editors['id_html_message'];
+		if (editor) {
+			editor.commands.setContent(html || '');
+		} else {
+			document.getElementById('id_html_message').value = html || '';
+		}
 	}
 
-	// Ensure that CSRF token is passed
-	$.ajaxSetup({
-	    beforeSend: function(xhr, settings) {
-	        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-	            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-	        }
-	    }
-	});
+	checkRichTextChoice();
 
-	CKEDITOR.on('pagePrepared', function() {
+	document.getElementById('div_id_richTextChoice').addEventListener('change', function(event){
 		checkRichTextChoice();
 	});
 
-	CKEDITOR.on('instanceReady', function() {
-		CKEDITOR.fireOnce('pagePrepared');
-	});
-
-	$('#div_id_richTextChoice').change(function(event){
-		checkRichTextChoice();
-	});
-
-	$('#id_template').change(function(event){
+	document.getElementById('id_template').addEventListener('change', function(event){
 		event.preventDefault();
 
-		var formData = {template: $('#id_template').val()};
+		var formData = new FormData();
+		formData.append('template', document.getElementById('id_template').value);
 
-		$.ajax({
-			url: "/staff/sendemail/template/",
-			type: "POST",
-			data: formData,
-			success: function(data, textStatus, jqXHR) {
-				$('#id_subject').val(data['subject']);
-				$('#id_message').val(data['content']);
-				$('#div_id_template').slideUp();
+		fetch("/staff/sendemail/template/", {
+			method: "POST",
+			headers: {"X-CSRFToken": getCookie('csrftoken')},
+			body: formData,
+		})
+		.then(function(response) { return response.json(); })
+		.then(function(data) {
+			document.getElementById('id_subject').value = data['subject'];
+			document.getElementById('id_message').value = data['content'];
+			document.getElementById('div_id_template').style.display = 'none';
 
-				// Fill in the ID for the
-				CKEDITOR.instances['id_html_message'].destroy();		
-				$('#id_html_message').val(data['html_content']);
-				$('#div_id_richTextChoice input[value="' + data['richTextChoice'] + '"]').prop('checked',true);
-				checkRichTextChoice();
-			},
-			failure: function() {
-				console.log('Failed to retrieve template data using AJAX.');
-			},
+			setEditorContent(data['html_content']);
+
+			var richTextInput = document.querySelector('#div_id_richTextChoice input[value="' + data['richTextChoice'] + '"]');
+			if (richTextInput) { richTextInput.checked = true; }
+			checkRichTextChoice();
+		})
+		.catch(function() {
+			console.log('Failed to retrieve template data using AJAX.');
 		});
 	});
 

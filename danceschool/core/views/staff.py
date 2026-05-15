@@ -174,7 +174,7 @@ def updateSeriesAttributes(request):
     elif category_id:
         staff_filters &= Q(category__id=category_id)
 
-    occurrence_ids = request.POST.getlist('occurrences[]')
+    occurrence_ids = request.POST.getlist('occurrences')
     if not occurrence_ids:
         # Don't return staff unless occurrences are specified.
         staff_filters = Q(pk__in=[])

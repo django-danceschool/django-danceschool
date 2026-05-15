@@ -1,7 +1,5 @@
 from django import forms
-from django.utils.encoding import force_str
-from django.forms.widgets import mark_safe, Select
-from django.utils.html import format_html
+from django.forms.widgets import Select
 from django.utils.translation import gettext_lazy as _
 
 import json
@@ -18,42 +16,24 @@ logger = logging.getLogger(__name__)
 
 class LocationWithDataWidget(Select):
     '''
-    Override render_option to permit extra data of default capacity
-    and room options to be used by JQuery.
+    Override create_option to add data-defaultCapacity and data-roomOptions
+    attributes to each location option, used by serieslocation_capacity_change.js.
     '''
 
-    def render_option(self, selected_choices, option_value, option_label):
-        if option_value is None:
-            option_value = ''
-        option_value = force_str(option_value)
-        if option_value in selected_choices:
-            selected_html = mark_safe(' selected="selected"')
-            if not self.allow_multiple_selected:
-                # Only allow for a single selection.
-                selected_choices.remove(option_value)
-        else:
-            selected_html = ''
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex=subindex, attrs=attrs)
 
-        # Pass the default location capacity as an option
+        option_value = value.value if hasattr(value, 'value') else value
         if option_value:
             this_location = Location.objects.filter(id=int(option_value)).first()
-            defaultCapacity = this_location.defaultCapacity
-            room_options = [
-                {'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity}
-                for x in this_location.room_set.all()
-            ]
+            if this_location:
+                option['attrs']['data-defaultCapacity'] = this_location.defaultCapacity
+                option['attrs']['data-roomOptions'] = json.dumps([
+                    {'id': x.id, 'name': x.name, 'defaultCapacity': x.defaultCapacity}
+                    for x in this_location.room_set.all()
+                ])
 
-            extra_value_data = format_html(
-                ' data-defaultCapacity="{}" data-roomOptions="{}"',
-                defaultCapacity, json.dumps(room_options))
-        else:
-            extra_value_data = ''
-
-        return format_html('<option value="{}"{}{}>{}</option>',
-                           option_value,
-                           mark_safe(selected_html),
-                           extra_value_data,
-                           force_str(option_label))
+        return option
 
 
 class EventCheckboxInput(forms.CheckboxInput):

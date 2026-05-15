@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -192,7 +193,7 @@ class PrivateLessonStudentInfoForm(forms.Form):
     )
     agreeToPolicies = forms.BooleanField(
         required=True,
-        label=_('<strong>I agree to all policies (required)</strong>'),
+        label=mark_safe(_('<strong>I agree to all policies (required)</strong>')),
         help_text=_('By checking, you agree to abide by all policies.')
     )
 

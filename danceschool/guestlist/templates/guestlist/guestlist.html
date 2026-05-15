@@ -40,31 +40,30 @@
 
 {% addtoblock "js" %}
 <script type="text/javascript">
-	$(document).ready(function() {
-		$('#guestListSelect').change(function(){
+	document.addEventListener('DOMContentLoaded', function() {
+		document.getElementById('guestListSelect').addEventListener('change', function(){
 			// Get the ID of the selected event, grab the JSON name list,
 			// and refresh the table.
 
-			var event_id = $('#guestListSelect option:selected').val()
+			var event_id = this.value;
 
-			$.ajax({
-				type: "GET",
-				url: "{% url 'guestListJSON' guestlist_id=guestList.id %}" + event_id + "/",
-				contentType: "application/json; charset=utf-8",
-				dataType: "json",
-				success: function(data) {
-					$("#guestListBody").empty();
-
-					$.each(data.names, function(index, item) {
-						$("#guestListBody").append('<tr><td>' + item.first + ' ' + item.last + '</td><td>' + item.guestType + '</td></tr>');
-					});
-					$('#guestListTable').trigger('update');
-				},
-				error: function() {
-					console.log("ERROR: Failed to load guest list.");
-				}
+			fetch("{% url 'guestListJSON' guestlist_id=guestList.id %}" + event_id + "/", {
+				headers: {"Accept": "application/json"},
+			})
+			.then(function(r) { return r.json(); })
+			.then(function(data) {
+				var tbody = document.getElementById('guestListBody');
+				var html = '';
+				data.names.forEach(function(item) {
+					html += '<tr><td>' + item.first + ' ' + item.last + '</td><td>' + item.guestType + '</td></tr>';
+				});
+				tbody.innerHTML = html;
+				// Notify tablesorter (jQuery plugin) to re-index the table
+				if (window.jQuery) { jQuery('#guestListTable').trigger('update'); }
+			})
+			.catch(function() {
+				console.log("ERROR: Failed to load guest list.");
 			});
-
 		});
 	});
 </script>
@@ -79,7 +78,7 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-	$(document).ready(function() {
+	jQuery(document).ready(function($) {
 		$('#guestListTable').tablesorter({
 			theme: "bootstrap",
 			widgets: ["filter",],

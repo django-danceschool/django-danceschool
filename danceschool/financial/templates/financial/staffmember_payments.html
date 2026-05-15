@@ -107,47 +107,30 @@
 
 {% addtoblock "js" %}
 	<script type="text/javascript">
-	$(document).ready(function () {
+	document.addEventListener('DOMContentLoaded', function() {
+		var basisButtons = ['button_accrual_basis', 'button_payment_basis', 'button_submission_basis'];
+		var rowClasses = {'button_accrual_basis': 'accrued_thisyear', 'button_payment_basis': 'paid_thisyear', 'button_submission_basis': 'submitted_thisyear'};
 
-		$('#button_accrual_basis').on('click', function () {
-			$('#button_accrual_basis').css('font-weight','bold');
-			$('#button_payment_basis').css('font-weight','normal');
-			$('#button_submission_basis').css('font-weight','normal');
+		function showBasis(activeId) {
+			basisButtons.forEach(function(id) {
+				var btn = document.getElementById(id);
+				if (btn) { btn.style.fontWeight = (id === activeId) ? 'bold' : 'normal'; }
+			});
+			['accrued_thisyear', 'paid_thisyear', 'submitted_thisyear'].forEach(function(cls) {
+				document.querySelectorAll('tr.' + cls).forEach(function(el) { el.style.display = 'none'; });
+			});
+			document.querySelectorAll('tr.' + rowClasses[activeId]).forEach(function(el) { el.style.display = ''; });
+		}
 
-			$('tr.accrued_thisyear').hide();
-			$('tr.paid_thisyear').hide();
-			$('tr.submitted_thisyear').hide();
+		basisButtons.forEach(function(id) {
+			var btn = document.getElementById(id);
+			if (btn) {
+				btn.addEventListener('click', function() { showBasis(id); });
+			}
+		});
 
-			$('tr.accrued_thisyear').fadeIn('slow');
-	    });
-
-		$('#button_payment_basis').on('click', function () {
-			$('#button_accrual_basis').css('font-weight','normal');
-			$('#button_payment_basis').css('font-weight','bold');
-			$('#button_submission_basis').css('font-weight','normal');
-
-			$('tr.accrued_thisyear').hide();
-			$('tr.paid_thisyear').hide();
-			$('tr.submitted_thisyear').hide();
-
-			$('tr.paid_thisyear').fadeIn('slow');
-	    });
-
-		$('#button_submission_basis').on('click', function () {
-			$('#button_accrual_basis').css('font-weight','normal');
-			$('#button_payment_basis').css('font-weight','normal');
-			$('#button_submission_basis').css('font-weight','bold');
-
-			$('tr.accrued_thisyear').hide();
-			$('tr.paid_thisyear').hide();
-			$('tr.submitted_thisyear').hide();
-
-			$('tr.submitted_thisyear').fadeIn('slow');
-	    });
-
-		$('#button_payment_basis').click();
-
-	 });
+		showBasis('button_payment_basis');
+	});
 	</script>
 {% endaddtoblock %}
 {% endblock %}

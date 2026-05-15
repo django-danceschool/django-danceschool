@@ -7,7 +7,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, HTML, Submit
 from dal import autocomplete
 import logging
-from djangocms_text_ckeditor.widgets import TextEditorWidget
+from djangocms_text.widgets import TextEditorWidget
 from multi_email_field.forms import MultiEmailField
 
 from ..models import (
@@ -112,7 +112,7 @@ class EmailContactForm(forms.Form):
         cc_section = Div(
             Div(
                 HTML(
-                    '<a data-toggle="collapse" href="#collapse_cc">' +
+                    '<a data-bs-toggle="collapse" href="#collapse_cc">' +
                     ('%s</a> (%s)' % (
                         _('Add CC/BCC recipients'), _('click to expand')
                     ))

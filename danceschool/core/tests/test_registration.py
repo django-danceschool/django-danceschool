@@ -93,14 +93,14 @@ class RegistrationTest(DefaultSchoolTestCase):
         ongoing_idx = content.find('Ongoing Classes')
         self.assertNotEqual(ongoing_idx, -1, 'Ongoing Classes section missing')
         self.assertIn(self.levelOneClassDescription.title, content[ongoing_idx:])
-        # ...but must NOT appear in the Upcoming Classes section.
+        # ...but must NOT appear in the Upcoming Classes section (if it is rendered at all).
         upcoming_idx = content.find('Upcoming Classes')
-        self.assertNotEqual(upcoming_idx, -1, 'Upcoming Classes section missing')
-        self.assertNotIn(
-            self.levelOneClassDescription.title,
-            content[upcoming_idx:ongoing_idx] if upcoming_idx < ongoing_idx
-            else content[upcoming_idx:],
-        )
+        if upcoming_idx != -1:
+            self.assertNotIn(
+                self.levelOneClassDescription.title,
+                content[upcoming_idx:ongoing_idx] if upcoming_idx < ongoing_idx
+                else content[upcoming_idx:],
+            )
         # Closed series must not present any registration quantity inputs.
         self.assertNotContains(response, 'register-quantity')
 

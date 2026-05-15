@@ -111,25 +111,30 @@
 {% endaddtoblock %}
 {% addtoblock "js" %}
 <script type="text/javascript">
-	var $ = django.jQuery;
+	document.addEventListener('DOMContentLoaded', function(){
+		var $ = django.jQuery;
+		$('select[id*=new_event_]').on('select2:select', function(e) {
+			var thisId = this.id.split("_")[3];
+			var oldInfo = document.getElementById('old_event_info_' + thisId);
+			var old_tier = oldInfo ? oldInfo.dataset.pricingtierId : undefined;
+			var old_base_price = oldInfo ? oldInfo.dataset.basePrice : undefined;
 
-	$(document).ready(function(){
-        $('select[id*=new_event_').change(function() {
-            var thisId = this.id.split("_")[3];
-			var old_tier = $('#old_event_info_' + thisId).data('pricingtierId');
-            var old_base_price = $('#old_event_info_' + thisId).data('basePrice');
+			// e.params.data.text is the get_result_label HTML containing the <span>
+			// with data-pricingtier-id and data-base-price attributes.
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = e.params.data.text || '';
+			var span = tempDiv.querySelector('[data-pricingtier-id]');
+			var new_tier = span ? span.dataset.pricingtierId : undefined;
+			var new_base_price = span ? span.dataset.basePrice : undefined;
 
-            var new_tier = $($(this).find(':selected').text()).data('pricingtierId');
-            var new_base_price = $($(this).find(':selected').text()).data('basePrice');
-
-            if ((old_base_price !== new_base_price) || (old_tier !== new_tier)) {
-                $('#event_price_warning_' + thisId).html(transferParams.mismatchText);
-                $('#event_price_warning_' + thisId).removeClass('d-none');
-            }
-            else {
-                $('#event_price_warning_' + thisId).addClass('d-none');
-            }
-        });
+			var warning = document.getElementById('event_price_warning_' + thisId);
+			if ((old_base_price !== new_base_price) || (old_tier !== new_tier)) {
+				warning.innerHTML = transferParams.mismatchText;
+				warning.classList.remove('d-none');
+			} else {
+				warning.classList.add('d-none');
+			}
+		});
 	});
 </script>
 {% endaddtoblock %}

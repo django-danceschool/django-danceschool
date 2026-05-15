@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 
 from cms.models.pluginmodel import CMSPlugin
 
-from djangocms_text_ckeditor.fields import HTMLField
+from djangocms_text.fields import HTMLField
 
 
 class FAQCategory(models.Model):

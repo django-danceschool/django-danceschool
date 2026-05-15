@@ -238,8 +238,8 @@ class RegisterCartTest(StaticLiveServerTestCase):
         gp = global_preferences_registry.manager()
         gp.load_from_db()
 
-        DanceRole.objects.create(name='Lead', order=1)
-        DanceRole.objects.create(name='Follow', order=2)
+        DanceRole.objects.get_or_create(name='Lead', defaults={'order': 1})
+        DanceRole.objects.get_or_create(name='Follow', defaults={'order': 2})
         dance_roles = DanceRole.objects.filter(name__in=['Lead', 'Follow'])
 
         dance_type = DanceType.objects.create(name='Lindy Hop', order=1)
