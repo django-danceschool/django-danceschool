@@ -68,7 +68,7 @@ class SubstituteTeacherTest(DefaultSchoolTestCase):
         ajax_response = self.client.post(
             reverse('ajaxhandler_submitsubstitutefilter'),
             {
-                'event': s.id, 'occurrences[]': s.eventoccurrence_set.values_list('id', flat=True),
+                'event': s.id, 'occurrences': s.eventoccurrence_set.values_list('id', flat=True),
                 'category': getConstant('general__eventStaffCategorySubstitute').id,
             }
         )
