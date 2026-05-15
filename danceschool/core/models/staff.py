@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from django.db.models import F, ExpressionWrapper, DurationField
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
-from djangocms_text_ckeditor.fields import HTMLField
+from djangocms_text.fields import HTMLField
 from filer.fields.image import FilerImageField
 from calendar import month_name
 import uuid

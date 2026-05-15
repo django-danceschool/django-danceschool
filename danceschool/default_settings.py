@@ -56,51 +56,16 @@ THUMBNAIL_PROCESSORS = (
 # FOR DJANGO-FILER
 FILER_ENABLE_PERMISSIONS = True
 
-# FOR CKEDITOR INSTALL
-CKEDITOR_IMAGE_BACKEND = 'pillow'
-CKEDITOR_SETTINGS = {
-    'language': '',
-    'toolbar_CMS': [
-        {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', '-', 'RemoveFormat']},
-        {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', '-', 'Undo', 'Redo']},
-        {
-            'name': 'paragraph',
-            'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-',
-                      'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']
-        },
-        {'name': 'styles', 'items': ['Format']},
-        '/',
-        {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
-        {'name': 'insert', 'items': ['FilerImage', 'Table', 'HorizontalRule', 'Smiley', 'Iframe']},
-        {'name': 'tools', 'items': ['Maximize', 'ShowBlocks', 'Source']},
-    ],
-    'toolbar_HTMLField': [
-        {'name': 'basicstyles', 'items': ['Bold', 'Italic', 'Underline', '-', 'RemoveFormat']},
-        {'name': 'clipboard', 'items': ['Cut', 'Copy', 'Paste', 'PasteText', '-', 'Undo', 'Redo']},
-        {
-            'name': 'paragraph',
-            'items': ['NumberedList', 'BulletedList', '-', 'Outdent', 'Indent', '-', 'Blockquote', 'CreateDiv', '-',
-                      'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']
-        },
-        {'name': 'styles', 'items': ['Format']},
-        '/',
-        {'name': 'links', 'items': ['Link', 'Unlink', 'Anchor']},
-        {'name': 'insert', 'items': ['FilerImage', 'Table', 'HorizontalRule', 'Smiley', 'Iframe']},
-        {'name': 'tools', 'items': ['Maximize', 'ShowBlocks', 'Source']},
-    ],
-    'skin': 'moono-lisa',
-    'extraPlugins': ','.join(
-        [
-            # you extra plugins here
-            'filerimage',
-        ]),
-    'removePlugins': 'image',
-}
+# FOR DJANGOCMS-TEXT (TipTap editor)
+# The default editor is TipTap (MIT licensed). To switch to CKEditor 5 (GPL licensed),
+# install a compatible adapter package and set TEXT_EDITOR to point to its RTEConfig instance,
+# for example:
+#     TEXT_EDITOR = 'my_ckeditor5_adapter.editor.ckeditor5'
+# See the djangocms-text documentation for details on configuring alternative editors.
 
-# These settings allow <iframe> elements to be used in CKEditor.  Override or remove them to
-# disable this feature.
-TEXT_ADDITIONAL_TAGS = ('iframe',)
-TEXT_ADDITIONAL_ATTRIBUTES = ('scrolling', 'allowfullscreen', 'frameborder')
+# These settings allow <iframe> elements to be embedded in text fields.
+# Override or remove them to disable this feature.
+TEXT_ADDITIONAL_ATTRIBUTES = {"iframe": set(), "*": {"frameborder", "scrolling", "allowfullscreen"}}
 
 # For Huey task queue and scheduling.  By default, this project uses the SQLite
 # backend for easy testing.  For production purposes, it is strongly recommended
@@ -144,7 +109,8 @@ REST_FRAMEWORK = {
 }
 
 # For Crispy forms Bootstrap templates
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
+CRISPY_ALLOWED_TEMPLATE_PACKS = ('bootstrap5',)
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 CRISPY_FAIL_SILENTLY = True
 
 DJANGOCMS_FORMS_PLUGIN_MODULE = 'Forms'

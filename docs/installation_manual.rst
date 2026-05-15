@@ -96,14 +96,14 @@ order of these does not matter, but some apps *must* be listed before
       'allauth',
       'allauth.account',
       'allauth.socialaccount',
-      'ckeditor_filebrowser_filer',
       'crispy_forms',
       'dal',
       'dal_select2',
       'daterange_filter',
       'djangocms_admin_style',
       'djangocms_forms',
-      'djangocms_text_ckeditor',
+      'djangocms_text',
+      'djangocms_text.contrib.filer_image',
       'easy_pdf',
       'easy_thumbnails',
       'filer',
@@ -245,7 +245,6 @@ For more information on these settings, see the
 - ``STATIC_ROOT``
 - ``MEDIA_ROOT``
 - ``MEDIA_URL``
-- ``CKEDITOR_UPLOAD_PATH``
 
 **Django email settings (needed for confirmation emails, etc.)**
 

@@ -41,7 +41,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h4 class="modal-title" id="eventModalTitle"></h4>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="eventModalBody">
           <form action="" id="" method="post">{% csrf_token %}
@@ -49,8 +49,8 @@
           </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "Cancel" %}</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" id="eventModalSubmit">{% trans "Update Availability" %}</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="eventModalSubmit">{% trans "Update Availability" %}</button>
       </div>
     </div>
   </div>
@@ -61,8 +61,8 @@
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="availabilityModalTitle">{% trans "Add Private Lesson Availability Slots" %}</h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="eventModalBody">
           <form action="" id="" method="post">{% csrf_token %}
@@ -70,8 +70,8 @@
           </form>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "Cancel" %}</button>
-        <button type="button" class="btn btn-primary" data-dismiss="modal" id="availabilityModalSubmit">{% trans "Update Availability" %}</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="availabilityModalSubmit">{% trans "Update Availability" %}</button>
       </div>
     </div>
   </div>
@@ -203,7 +203,7 @@ $(document).ready(function() {
             $('#id_updateRoom').val(calEvent.room_id);
             $('#id_updatePricing').val(calEvent.pricingTier_id);
             $('#id_deleteSlot').prop('checked', false);
-            $('#eventModal').modal();
+            new bootstrap.Modal(document.getElementById('eventModal')).show();
         },
         select: function(start, end) {
             var startDateLabel = start.format('MMMM Do, YYYY')
@@ -236,7 +236,7 @@ $(document).ready(function() {
                 $('#availabilityModalTitle').append(' to ' + endDateLabel );
             }
 
-            $('#availabilityModal').modal();
+            new bootstrap.Modal(document.getElementById('availabilityModal')).show();
             $('#calendarBox').fullCalendar('unselect');
         },
 

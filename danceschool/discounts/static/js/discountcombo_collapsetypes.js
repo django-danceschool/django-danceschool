@@ -1,56 +1,32 @@
-document.addEventListener("DOMContentLoaded", function(event) { 
-
-	// The code below requires jQuery
-	var $ = django.jQuery;
+document.addEventListener("DOMContentLoaded", function(event) {
 
 	function checkDiscountType() {
-		var discountType = $('#id_discountType').val();
+		var discountType = document.getElementById('id_discountType').value;
+		var types = ['type_flatPrice', 'type_dollarDiscount', 'type_percentageDiscount'];
+		var activeType = {
+			'F': 'type_flatPrice',
+			'D': 'type_dollarDiscount',
+			'P': 'type_percentageDiscount',
+		}[discountType];
 
-		if (discountType == "F") {
-			$('.type_flatPrice').removeClass('collapsed');
-			$('.type_flatPrice').find('h2').show();
-
-			$('.type_dollarDiscount').addClass('collapsed');
-			$('.type_dollarDiscount').find('h2').hide();
-
-			$('.type_percentageDiscount').addClass('collapsed');
-			$('.type_percentageDiscount').find('h2').hide();
-		}
-		if (discountType == "D") {
-			$('.type_flatPrice').addClass('collapsed');
-			$('.type_flatPrice').find('h2').hide();
-
-			$('.type_dollarDiscount').removeClass('collapsed');
-			$('.type_dollarDiscount').find('h2').show();
-
-			$('.type_percentageDiscount').addClass('collapsed');
-			$('.type_percentageDiscount').find('h2').hide();
-		}
-		if (discountType == "P") {
-			$('.type_flatPrice').addClass('collapsed');
-			$('.type_flatPrice').find('h2').hide();
-
-			$('.type_dollarDiscount').addClass('collapsed');
-			$('.type_dollarDiscount').find('h2').hide();
-
-			$('.type_percentageDiscount').removeClass('collapsed');
-			$('.type_percentageDiscount').find('h2').show();
-		}
-		if (discountType == "A") {
-			$('.type_flatPrice').addClass('collapsed');
-			$('.type_flatPrice').find('h2').hide();
-
-			$('.type_dollarDiscount').addClass('collapsed');
-			$('.type_dollarDiscount').find('h2').hide();
-
-			$('.type_percentageDiscount').addClass('collapsed');
-			$('.type_percentageDiscount').find('h2').hide();
-		}
+		types.forEach(function(cls) {
+			document.querySelectorAll('.' + cls).forEach(function(el) {
+				if (cls === activeType) {
+					el.classList.remove('collapsed');
+					var h2 = el.querySelector('h2');
+					if (h2) { h2.style.display = ''; }
+				} else {
+					el.classList.add('collapsed');
+					var h2 = el.querySelector('h2');
+					if (h2) { h2.style.display = 'none'; }
+				}
+			});
+		});
 	}
 
 	checkDiscountType();
 
-	$('#id_discountType').change(function(event){
+	document.getElementById('id_discountType').addEventListener('change', function(event){
 		checkDiscountType();
 	});
 });

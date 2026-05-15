@@ -6,9 +6,9 @@
 		{% for role in series.availableRoles %}
 			{% soldOutForRole series role as roleSoldOut %}
 			{% if roleSoldOut %}
-				<button class="btn btn-secondary mr-2 my-2 btn-lg disabled">{{ role.pluralName }} {% trans "Sold Out!" %}</button>
+				<button class="btn btn-secondary me-2 my-2 btn-lg disabled">{{ role.pluralName }} {% trans "Sold Out!" %}</button>
 			{% else %}
-				<button data-id="{{ series.id }}" data-role-id="{{ role.id }}" data-event-type="series" class="btn btn-primary mr-2 my-2 btn-lg register-ajax">{% trans "Register:" %} {{ role.name }}</button>
+				<button data-id="{{ series.id }}" data-role-id="{{ role.id }}" data-event-type="series" class="btn btn-primary me-2 my-2 btn-lg register-ajax">{% trans "Register:" %} {{ role.name }}</button>
 			{% endif %}
 		{% empty %}
 			<button data-id="{{ series.id }}" data-event-type="series" class="btn btn-primary btn-lg register-ajax">{% trans "Register Now" %}</button>

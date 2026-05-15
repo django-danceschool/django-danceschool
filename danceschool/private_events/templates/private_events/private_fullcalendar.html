@@ -53,9 +53,9 @@
 <div aria-labelledby="eventDetails" class="modal fade my-5" id="eventContent" role="dialog" tabindex="-1" title="{% trans "Event Details" %}">
 <div class="modal-dialog" role="document">
 <div class="modal-content">
-<div class="modal-header"><button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
-
+<div class="modal-header">
 <h3 class="modal-title" id="eventTitle">&nbsp;</h3>
+<button aria-label="{% trans 'Close' %}" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 
 <div class="modal-body">
@@ -69,7 +69,7 @@
 <div id="eventInfo">&nbsp;</div>
 </div>
 
-<div class="modal-footer"><a class="btn btn-outline-secondary" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a><a class="btn btn-outline-secondary" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-outline-secondary" data-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
+<div class="modal-footer"><a class="btn btn-outline-secondary" href="" id="eventEditLink" type="button">{% trans "Edit Details" %}</a><a class="btn btn-outline-secondary" href="" id="eventLink" type="button">{% trans "Read More" %}</a><button class="btn btn-outline-secondary" data-bs-dismiss="modal" id="closeLink" type="button">{% trans "Close" %}</button></div>
 </div>
 </div>
 </div>
@@ -78,9 +78,9 @@
 <div aria-labelledby="eventNew" class="modal fade my-5" id="eventNew" role="dialog" tabindex="-1" title="{% trans 'Add Event' %}">
 <div class="modal-dialog modal-lg" role="document">
 <div class="modal-content">
-<div class="modal-header"><button aria-label="{% trans 'Close' %}" class="close" data-dismiss="modal" type="button"><span aria-hidden="true">&times;</span></button>
-
+<div class="modal-header">
 <h3 class="modal-title" id="eventNewTitle">&nbsp;</h3>
+<button aria-label="{% trans 'Close' %}" class="btn-close" data-bs-dismiss="modal" type="button"></button>
 </div>
 
 <div class="modal-body">
@@ -95,7 +95,7 @@
 </div>
 
 <div class="modal-footer">
-    <button class="btn btn-secondary" data-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button>
+    <button class="btn btn-secondary" data-bs-dismiss="modal" id="closeNewLink" type="button">{% trans "Close" %}</button>
 </div>
 </div>
 </div>
@@ -193,7 +193,7 @@ $(document).ready(function() {
                     $("#eventLink").show();
                     $("#eventLink").attr('href', event.url);
                 }
-                $("#eventContent").modal();
+                new bootstrap.Modal(document.getElementById('eventContent')).show();
             });
         },
         {% if 'private_events.add_privateevent' in perms or user.is_superuser %}
@@ -215,7 +215,7 @@ $(document).ready(function() {
             else {
                 $('#eventNewExistingInfo').html('{% trans "No currently scheduled events." %}');
             }
-            $("#eventNew").modal();
+            new bootstrap.Modal(document.getElementById('eventNew')).show();
         }
         {% endif %}
     });

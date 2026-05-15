@@ -8,8 +8,8 @@
   {# Offer Sign-in or Signup #}
   <div class="card-body" id="ajax_login_choice">
 
-    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signin_form" aria-expanded="false" aria-controls="#signin_form" >{% trans "Sign In" %}</a>
-    <a class="btn btn-primary" role="button" data-toggle="collapse" href="#signup_form" aria-expanded="false" aria-controls="#signup_form">{% trans "Create An Account" %}</a>
+    <a class="btn btn-primary" role="button" href="#signin_form">{% trans "Sign In" %}</a>
+    <a class="btn btn-primary" role="button" href="#signup_form">{% trans "Create An Account" %}</a>
   </div>
 
   {# Sign-in Form #}
@@ -58,33 +58,52 @@
 
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
 
-  // Once the user has made a choice, no need for the buttons at the top of the panel
-  $('#ajax_login_choice a.btn').click(function() {
-      $('#ajax_login_choice').fadeOut();
+  function showForm(el) { el.classList.add('show'); }
+  function hideForm(el) { el.classList.remove('show'); }
+
+  var signinFormEl = document.getElementById('signin_form');
+  var signupFormEl = document.getElementById('signup_form');
+  var choiceDiv = document.getElementById('ajax_login_choice');
+
+  // Once the user has made a choice, hide the buttons and show the target form
+  document.querySelectorAll('#ajax_login_choice a.btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          var targetId = btn.getAttribute('href').replace('#', '');
+          var targetEl = document.getElementById(targetId);
+          if (targetEl) { showForm(targetEl); }
+          choiceDiv.style.display = 'none';
+      });
   });
 
   // Switch from sign-in to signup
-  $('#signup_switch').click(function() {
-    $('#signin_form').slideUp();
-    $('#signup_form').slideDown();
-  });
+  var signupSwitch = document.getElementById('signup_switch');
+  if (signupSwitch) {
+      signupSwitch.addEventListener('click', function(e) {
+          e.preventDefault();
+          hideForm(signinFormEl);
+          showForm(signupFormEl);
+      });
+  }
 
   // Switch from sign-up to signin
-  $('#signin_switch').click(function() {
-    $('#signup_form').slideUp();
-    $('#signin_form').slideDown();
-  });
+  var signinSwitch = document.getElementById('signin_switch');
+  if (signinSwitch) {
+      signinSwitch.addEventListener('click', function(e) {
+          e.preventDefault();
+          hideForm(signupFormEl);
+          showForm(signinFormEl);
+      });
+  }
 
-  // Get the CSRF 
   function getCookie(name) {
       var cookieValue = null;
       if (document.cookie && document.cookie !== '') {
           var cookies = document.cookie.split(';');
           for (var i = 0; i < cookies.length; i++) {
-              var cookie = $.trim(cookies[i]);
-              // Does this cookie string begin with the name we want?
+              var cookie = cookies[i].trim();
               if (cookie.substring(0, name.length + 1) === (name + '=')) {
                   cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                   break;
@@ -97,90 +116,72 @@ $(document).ready(function() {
   function getUserData() {
      var info_url = "{% url 'getUserAccountInfo' %}";
 
-     // Pass the logged in user's information to the form and hide the forms
-     $.ajax({
-         type: "GET",
-         url: info_url,
-         success: function(data) {
-            $('#id_firstName').val(data['first_name']);
-            $('#id_lastName').val(data['last_name']);
-            $('input[name=email]').val(data['email']);
-            $('#id_phone').val(data['phone']);
+     fetch(info_url, {headers: {"X-CSRFToken": getCookie('csrftoken')}})
+     .then(function(r) { return r.json(); })
+     .then(function(data) {
+        var firstName = document.getElementById('id_firstName');
+        if (firstName) { firstName.value = data['first_name']; }
+        var lastName = document.getElementById('id_lastName');
+        if (lastName) { lastName.value = data['last_name']; }
+        document.querySelectorAll('input[name=email]').forEach(function(el) { el.value = data['email']; });
+        var phone = document.getElementById('id_phone');
+        if (phone) { phone.value = data['phone'] || ''; }
 
-            // Update the CSRF token
-            $('input[name=csrfmiddlewaretoken]').val(getCookie('csrftoken'));
+        // Update the CSRF token in all hidden inputs
+        var csrftoken = getCookie('csrftoken');
+        document.querySelectorAll('input[name=csrfmiddlewaretoken]').forEach(function(el) { el.value = csrftoken; });
 
-
-            for (var x in data['messages']) {
-                var this_msg = data['messages'][x];
-                var this_alert_html = '<div class="alert ';
-                if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.ERROR }}) {
-                  this_alert_html += 'alert-danger';
-                }
-                else if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.WARNING }}) {
-                  this_alert_html += 'alert-warning';
-                }
-                else if (this_msg['extra_tags'] == "success") {
-                  this_alert_html += 'alert-success';
-                }
-                else {
-                  this_alert_html += 'alert-info'; 
-                }
-                this_alert_html += '">' + this_msg['message'] + '</div>';
-
-                $('#message-alerts').append(this_alert_html);
-                $('.alert-login-error').hide();
-            };
-            $('#returning-customers-panel').slideUp();
-         }
-     })
+        var messageAlerts = document.getElementById('message-alerts');
+        for (var x in data['messages']) {
+            var this_msg = data['messages'][x];
+            var alertClass = 'alert-info';
+            if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.ERROR }}) {
+              alertClass = 'alert-danger';
+            } else if (this_msg['level'] == {{ DEFAULT_MESSAGE_LEVELS.WARNING }}) {
+              alertClass = 'alert-warning';
+            } else if (this_msg['extra_tags'] == "success") {
+              alertClass = 'alert-success';
+            }
+            messageAlerts.insertAdjacentHTML('beforeend', '<div class="alert ' + alertClass + '">' + this_msg['message'] + '</div>');
+            document.querySelectorAll('.alert-login-error').forEach(function(el) { el.style.display = 'none'; });
+        }
+        document.getElementById('returning-customers-panel').style.display = 'none';
+     });
   }
 
   function showAjaxErrors(errorObject) {
-    // Show the form error as an alert (and hide old errors)
-    $('.alert-login-error').hide();
-
+    document.querySelectorAll('.alert-login-error').forEach(function(el) { el.style.display = 'none'; });
+    var messageAlerts = document.getElementById('message-alerts');
     for (var key in errorObject) {
-      // skip loop if the property is from prototype
-      if (!errorObject.hasOwnProperty(key)) continue;
-
+      if (!errorObject.hasOwnProperty(key)) { continue; }
       var obj = errorObject[key];
       for (var msg in obj) {
-        var this_alert_html = '<div class="alert alert-danger alert-login-error">' +
-            obj[msg] +
-            '</div>'
-        $('#message-alerts').append(this_alert_html);
+        messageAlerts.insertAdjacentHTML('beforeend',
+            '<div class="alert alert-danger alert-login-error">' + obj[msg] + '</div>');
       }
     }
   }
 
-  $("#ajax_login_form").submit(function(event) {
-      var url = "{% url 'account_login' %}";
+  function submitFormAjax(form, url) {
+      form.addEventListener('submit', function(event) {
+          event.preventDefault();
+          fetch(url, {
+              method: "POST",
+              headers: {"X-CSRFToken": getCookie('csrftoken')},
+              body: new URLSearchParams(new FormData(form)),
+          })
+          .then(function(r) {
+              if (r.ok) { getUserData(); }
+              else { return r.json().then(function(data) { showAjaxErrors(data['form_errors']); }); }
+          });
+      });
+  }
 
-      $.ajax({
-             type: "POST",
-             url: url,
-             data: $("#ajax_login_form").serialize(), // serializes the form's elements.
-             success: function(data) {getUserData();},
-             error: function (data) { showAjaxErrors(data.responseJSON['form_errors'])},
-           });
+  var loginForm = document.getElementById('ajax_login_form');
+  if (loginForm) { submitFormAjax(loginForm, "{% url 'account_login' %}"); }
 
-      event.preventDefault(); // do not execute the actual submit of the form.
-  });
-
-  $("#ajax_signup_form").submit(function(event) {
-      var url = "{% url 'account_signup' %}";
-
-      $.ajax({
-             type: "POST",
-             url: url,
-             data: $("#ajax_signup_form").serialize(), // serializes the form's elements.
-             success: function(data) {getUserData();},
-             error: function (data) { showAjaxErrors(data.responseJSON['form_errors'])},
-           });
-
-      event.preventDefault(); // do not execute the actual submit of the form.
-  });
+  var signupForm = document.getElementById('ajax_signup_form');
+  if (signupForm) { submitFormAjax(signupForm, "{% url 'account_signup' %}"); }
 
 });
 </script>

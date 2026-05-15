@@ -11,11 +11,11 @@
       {% if allow_amount_entry %}
       <form id="options-form" onsubmit="event.preventDefault();">
             <input type="hidden" name="transaction_type" value="{{ transaction_type }}">
-            <div class="form-group">
+            <div class="mb-3">
               <label for="id_amount">{% trans "Enter Amount" %}</label>
               <input class="form-control" id="id_amount" name="amount" type="number" value="{{ instance.defaultAmount }}" />
             </div>
-            <div class="form-group">
+            <div class="mb-3">
               <label for="id_email">{% trans "Enter Email" %}</label>
               <input class="form-control" id="id_email" type="email" name="customerEmail">
             </div>

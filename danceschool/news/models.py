@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from cms.models.pluginmodel import CMSPlugin
 
-from djangocms_text_ckeditor.fields import HTMLField
+from djangocms_text.fields import HTMLField
 
 
 class NewsItem(models.Model):

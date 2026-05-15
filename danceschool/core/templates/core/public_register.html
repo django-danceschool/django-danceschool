@@ -21,18 +21,18 @@
       <div class="row my-2">
         <div class="col-12">
           {# "Register Now" submit button #}
-          <button class="btn btn-success btn-lg ml-2 float-right submit-button"
+          <button class="btn btn-success btn-lg ms-2 float-end submit-button"
                   id="publicRegisterSubmit">
             {% trans "Register now" %} &raquo;
           </button>
-          <div class="d-flex bg-white float-right justify-content-end align-items-start" id="cart-toggle-container" style="display: none !important;">
+          <div class="d-flex bg-white float-end justify-content-end align-items-start" id="cart-toggle-container" style="display: none !important;">
             <a class="btn btn-outline-secondary"
-              data-toggle="collapse"
+              data-bs-toggle="collapse"
               href="#cart-container"
               role="button"
               aria-expanded="false"
               aria-controls="cart-container">
-              <i class="fa fa-shopping-cart fa-2x"></i>&nbsp;{% trans "Your Cart" %}&nbsp;<span id="cartSummary" class="badge badge-success"></span>
+              <i class="fa fa-shopping-cart fa-2x"></i>&nbsp;{% trans "Your Cart" %}&nbsp;<span id="cartSummary" class="badge text-bg-success"></span>
             </a>
           </div>
         </div>
@@ -45,10 +45,10 @@
             <div class="card" style="z-index: 1020;">
               <div class="card-header">
                 <h4>{% trans "Your Shopping Cart" %}
-                  <div class="float-right">
+                  <div class="float-end">
                     <button class="btn btn-outline-secondary mx-3" id="emptyCart">{% trans "Empty" %}</button>
                     <button class="btn" id="hideCart"
-                            data-toggle="collapse" href="#cart-container"
+                            data-bs-toggle="collapse" href="#cart-container"
                             role="button" aria-expanded="false" aria-controls="cart-container"
                             aria-label="Hide Cart" title="Hide Cart">
                       <i class="fa fa-chevron-up" aria-hidden="true"></i>

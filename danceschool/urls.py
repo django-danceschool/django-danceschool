@@ -90,9 +90,6 @@ urlpatterns = [
     path('filer/', include('filer.urls')),
     path('', include('filer.server.urls')),
 
-    # For Django-filer in CKeditor
-    path('filebrowser_filer/', include('ckeditor_filebrowser_filer.urls')),
-
     # For automatically-generated sitemaps
     path(
         'sitemap.xml', sitemap,

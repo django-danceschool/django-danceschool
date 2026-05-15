@@ -21,7 +21,7 @@
         {% if teacher.instructor.availableForPrivates and teacher.publicEmail %}<small><a href="mailto:{{ teacher.publicEmail }}">{% trans "schedule a private lesson" %}</a></small>{% endif %}
     </h3>
 
-    {% if teacher.image %}<img class="float-left mr-3 mb-3 instructor-bio-photo" src="{% thumbnail teacher.image thumbnail_dimensions|default:'133x133' crop %}" width="{{ thumbnail.width|default:'133' }}" />{% endif %}
+    {% if teacher.image %}<img class="float-start me-3 mb-3 instructor-bio-photo" src="{% thumbnail teacher.image thumbnail_dimensions|default:'133x133' crop %}" width="{{ thumbnail.width|default:'133' }}" />{% endif %}
     <div class="post-body">
         {% render_model teacher "bio" "" "" "safe" %}
     </div>

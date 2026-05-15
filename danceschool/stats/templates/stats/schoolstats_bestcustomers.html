@@ -2,17 +2,17 @@
 
 <h3 class="mt-4">{% trans "Top Students and Teachers" %}</h3>
 
-<div class="card">
+<div class="card" id="bestCustomersCard">
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" href="#topCustomersTwelve" role="tab" data-toggle="tab">{% trans "Top Customers" %}</a>
+        <a class="nav-link active" href="#topCustomersTwelve" role="tab" data-bs-toggle="tab">{% trans "Top Customers" %}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#topCustomers" role="tab" data-toggle="tab">{% trans "All-Time Top Customers" %}</a>
+        <a class="nav-link" href="#topCustomers" role="tab" data-bs-toggle="tab">{% trans "All-Time Top Customers" %}</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#topInstructors" role="tab" data-toggle="tab">{% trans "Most Active Teachers" %}</a>
+        <a class="nav-link" href="#topInstructors" role="tab" data-bs-toggle="tab">{% trans "Most Active Teachers" %}</a>
       </li>
     </ul>
   </div>
@@ -62,33 +62,43 @@
 
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function() {
-  $.ajax({
-    dataType: "json",
-    url: '{% url "bestCustomersJSON" %}',
-    success: function(jsonData) {
-      var bestAll = jsonData.bestCustomersAllTime;
-      var bestTwelve = jsonData.bestCustomersLastTwelveMonths;
-      var topInstructors = jsonData.mostActiveTeachersThisYear;
+document.addEventListener('DOMContentLoaded', function() {
+  // Manual tab switching — Bootstrap JS auto-init is not reliable on CMS pages.
+  document.querySelectorAll('#bestCustomersCard [data-bs-toggle="tab"]').forEach(function(trigger) {
+    trigger.addEventListener('click', function(e) {
+      e.preventDefault();
+      var targetId = this.getAttribute('href').substring(1);
+      document.querySelectorAll('#bestCustomersCard .nav-link').forEach(function(l) { l.classList.remove('active'); });
+      document.querySelectorAll('#bestCustomersCard .tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
+      this.classList.add('active');
+      document.getElementById(targetId).classList.add('show', 'active');
+    });
+  });
 
-      var tableData = '';
-      bestAll.forEach(function(e) {
-          tableData += '<tr><td>' + e.first_name + ' ' + e.last_name + '</td><td>' + e.eventregistration__count + '</td></tr>';
-      });
-      $('#bestCustomersAllTimeTable').append(tableData);
+  fetch('{% url "bestCustomersJSON" %}')
+  .then(function(r) { return r.json(); })
+  .then(function(jsonData) {
+    var bestAll = jsonData.bestCustomersAllTime;
+    var bestTwelve = jsonData.bestCustomersLastTwelveMonths;
+    var topInstructors = jsonData.mostActiveTeachersThisYear;
 
-      var tableData = '';
-      bestTwelve.forEach(function(e) {
-          tableData += '<tr><td>' + e.first_name + ' ' + e.last_name + '</td><td>' + e.eventregistration__count + '</td></tr>';
-      });
-      $('#bestCustomersLastTwelveMonthsTable').append(tableData);
+    var html = '';
+    bestAll.forEach(function(e) {
+        html += '<tr><td>' + e.first_name + ' ' + e.last_name + '</td><td>' + e.eventregistration__count + '</td></tr>';
+    });
+    document.getElementById('bestCustomersAllTimeTable').insertAdjacentHTML('beforeend', html);
 
-      var tableData = '';
-      topInstructors.forEach(function(e) {
-          tableData += '<tr><td>' + e[0] + ' ' + e[1] + '</td><td>' + e[2] + '</td></tr>';
-      });
-      $('#mostActiveTeachersThisYearTable').append(tableData);
-    }
+    html = '';
+    bestTwelve.forEach(function(e) {
+        html += '<tr><td>' + e.first_name + ' ' + e.last_name + '</td><td>' + e.eventregistration__count + '</td></tr>';
+    });
+    document.getElementById('bestCustomersLastTwelveMonthsTable').insertAdjacentHTML('beforeend', html);
+
+    html = '';
+    topInstructors.forEach(function(e) {
+        html += '<tr><td>' + e[0] + ' ' + e[1] + '</td><td>' + e[2] + '</td></tr>';
+    });
+    document.getElementById('mostActiveTeachersThisYearTable').insertAdjacentHTML('beforeend', html);
   });
 });
 </script>

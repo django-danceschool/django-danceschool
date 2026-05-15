@@ -50,7 +50,9 @@ class AccountProfileView(LoginRequiredMixin, DetailView):
             id__in=[x.id for x in context.get('customer_eventregs', [])]
         )
         context['submitted_eventregs'] = EventRegistration.objects.filter(
-            registration__invoice__submissionUser=self.request.user, registration__payAtDoor=False
+            registration__invoice__submissionUser=self.request.user,
+            registration__payAtDoor=False,
+            registration__final=True,
         ).exclude(
             id__in=[x.id for x in context.get('customer_eventregs', [])]
         ).exclude(

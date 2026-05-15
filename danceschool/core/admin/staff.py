@@ -141,6 +141,3 @@ class StaffMemberAdmin(FrontendEditableAdminMixin, admin.ModelAdmin):
         return ', '.join([x.name for x in obj.categories.all()])
     categories_list.short_description = _('Staff categories')
 
-    class Media:
-        js = ('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js', )
-        css = {'all': ('https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css', )}

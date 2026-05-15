@@ -41,7 +41,7 @@
 <form id="refund_form" method="post" action="">{% csrf_token %}
 
 <div class="my-4">
-<input type="submit" class="btn btn-primary float-right" value="{% trans 'Process Refund' %}" />
+<input type="submit" class="btn btn-primary float-end" value="{% trans 'Process Refund' %}" />
 <h3>{% trans "Total Refund Amount" %}: {{ currencySymbol }}<span id="total_refund_amount">{{ invoice.refunds|floatformat:2 }}</span></h3>
 </div>
 
@@ -127,11 +127,11 @@
 	</tbody>
 	</table>
 
-<div class="form-group">
+<div class="mb-3">
     {{ form.comments.errors }}
     {{ form.comments.label_tag }}<br />
     {{ form.comments }}
-    <p class="help-block">{{ form.comments.help_text }}</p>
+    <p class="form-text">{{ form.comments.help_text }}</p>
 </div>
 </form>
 
@@ -149,79 +149,71 @@
 
 {% addtoblock "js" %}
 <script type="text/javascript">
-	var $ = django.jQuery;
+	document.addEventListener('DOMContentLoaded', function(){
 
-	$(document).ready(function(){
-		$('input[id*=_refundamount_]').change(function(){
+		function updateTotalRefund() {
 			var totalRefund = 0;
-
-			$('input[id*=_refundamount_]').each(function(i,n){
-				totalRefund += parseFloat($(n).val());
+			document.querySelectorAll('input[id*=_refundamount_]').forEach(function(n){
+				totalRefund += parseFloat(n.value) || 0;
 			});
+			document.getElementById('total_refund_amount').innerHTML = totalRefund.toFixed(2);
+			document.getElementById('id_total_refund_amount').value = totalRefund;
+		}
 
-			$('#total_refund_amount').html(totalRefund.toFixed(2));
-			$('#id_total_refund_amount').val(totalRefund);
+		document.querySelectorAll('input[id*=_refundamount_]').forEach(function(el){
+			el.addEventListener('change', updateTotalRefund);
 		});
 
-		$('input[id*=_cancelled_]').change(function(){
-			if (this.checked) {
-				var thisType = this.id.split("_")[1];
-				var thisId = this.id.split("_")[3];
-				var total = parseFloat($("#" + thisType + "_total_" + thisId).html().replace("{{ currencySymbol }}",""));
-				{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
-					var taxes = parseFloat($("#" + thisType + "_taxes_" + thisId).html().replace("{{ currencySymbol }}",""));
-					var refundable = total + taxes;
-				{% else %}
-					var refundable = total;
-				{% endif %}
-
-				$("#id_" + thisType + "_refundamount_" + thisId).val(refundable.toFixed(2));
-			}
-
-
-			var totalRefund = 0;
-
-			$('input[id*=_refundamount_]').each(function(i,n){
-				totalRefund += parseFloat($(n).val());
+		document.querySelectorAll('input[id*=_cancelled_]').forEach(function(el){
+			el.addEventListener('change', function(){
+				if (this.checked) {
+					var thisType = this.id.split("_")[1];
+					var thisId = this.id.split("_")[3];
+					var total = parseFloat(document.getElementById(thisType + "_total_" + thisId).innerHTML.replace("{{ currencySymbol }}",""));
+					{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
+						var taxes = parseFloat(document.getElementById(thisType + "_taxes_" + thisId).innerHTML.replace("{{ currencySymbol }}",""));
+						var refundable = total + taxes;
+					{% else %}
+						var refundable = total;
+					{% endif %}
+					document.getElementById("id_" + thisType + "_refundamount_" + thisId).value = refundable.toFixed(2);
+				}
+				updateTotalRefund();
 			});
-
-			$('#total_refund_amount').html(totalRefund.toFixed(2));
-			$('#id_total_refund_amount').val(totalRefund);
 		});
 
-		$('input[type=submit]').click(function( event ){
-			var alertFlag = false;
+		document.querySelectorAll('input[type=submit]').forEach(function(btn){
+			btn.addEventListener('click', function(event){
+				var alertFlag = false;
 
-			$('input[id*=_cancelled_]:checked').each(function(i,n){
-				var thisType = n.id.split("_")[1];
-				var thisId = n.id.split("_")[3];
-				var thisRefund = parseFloat($("#id_" + thisType + "_refundamount_" + thisId).val());
-				var total = parseFloat($("#" + thisType + "_total_" + thisId).html().replace("$",""));
+				document.querySelectorAll('input[id*=_cancelled_]:checked').forEach(function(n){
+					var thisType = n.id.split("_")[1];
+					var thisId = n.id.split("_")[3];
+					var thisRefund = parseFloat(document.getElementById("id_" + thisType + "_refundamount_" + thisId).value);
+					var total = parseFloat(document.getElementById(thisType + "_total_" + thisId).innerHTML.replace("$",""));
 
-				{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
-					var taxes = parseFloat($("#" + thisType + "_taxes_" + thisId).html().replace("{{ currencySymbol }}",""));
-					var refundable = total + taxes;
-				{% else %}
-					var refundable = total;
-				{% endif %}
+					{% if invoice.taxes > 0 and invoice.buyerPaysSalesTax %}
+						var taxes = parseFloat(document.getElementById(thisType + "_taxes_" + thisId).innerHTML.replace("{{ currencySymbol }}",""));
+						var refundable = total + taxes;
+					{% else %}
+						var refundable = total;
+					{% endif %}
 
-				if (thisRefund != refundable) {
-					alertFlag = true;
+					if (thisRefund != refundable) {
+						alertFlag = true;
+					}
+				});
+
+				if (alertFlag == true) {
+					if (confirm("{% trans 'Cancelled classes are not fully refunded. Confirm that this is desired?' %}")) {
+						document.getElementById('refund_form').submit();
+					} else {
+						event.preventDefault();
+					}
+				} else {
+					document.getElementById('refund_form').submit();
 				}
-
 			});
-
-			if (alertFlag == true) {
-				if (confirm("{% trans 'Cancelled classes are not fully refunded. Confirm that this is desired?' %}")) {
-					$('#refund_form').submit();
-				}
-				else {
-					event.preventDefault();
-				}
-			}
-			else {
-				$('#refund_form').submit();
-			}
 		});
 
 	});

@@ -18,8 +18,8 @@
 
     <button class="navbar-toggler"
             type="button"
-            data-toggle="collapse"
-            data-target="#publicNavLinks-{{ instance.pk }}"
+            data-bs-toggle="collapse"
+            data-bs-target="#publicNavLinks-{{ instance.pk }}"
             aria-controls="publicNavLinks-{{ instance.pk }}"
             aria-expanded="false"
             aria-label="{% trans 'Toggle navigation' %}">
@@ -27,7 +27,7 @@
     </button>
 
     <div class="collapse navbar-collapse" id="publicNavLinks-{{ instance.pk }}">
-      <ul class="navbar-nav mr-auto" id="publicNavItems-{{ instance.pk }}">
+      <ul class="navbar-nav me-auto" id="publicNavItems-{{ instance.pk }}">
         {# Populated by the inline script below #}
       </ul>
     </div>

@@ -3,7 +3,7 @@
 {{ formset.management_form|crispy }}
 
     {% for form in formset.forms %}
-            <tr class="form-row align-items-end {% cycle 'row1' 'row2' %} formset_row-{{ formset.prefix }}">
+            <tr class="align-items-end {% cycle 'row1' 'row2' %} formset_row-{{ formset.prefix }}">
                 {% for field in form.visible_fields %}
                 <td class="col">
                     {# Include the hidden fields in the form #}

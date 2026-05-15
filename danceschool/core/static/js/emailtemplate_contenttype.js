@@ -1,37 +1,33 @@
-document.addEventListener("DOMContentLoaded", function(event) { 
-
-	// The code below requires jQuery
-	var $ = django.jQuery;
+document.addEventListener("DOMContentLoaded", function(event) {
 
 	function checkRichTextChoice() {
-		var richTextChoice = $('#id_richTextChoice input:checked').val();
+		var richTextInput = document.querySelector('#id_richTextChoice input:checked');
+		var richTextChoice = richTextInput ? richTextInput.value : null;
 
 		if (richTextChoice == "plain") {
-			$('#id_content').parents('fieldset').first().removeClass('collapsed');
-			$('#id_content').parents('fieldset').first().find('h2').show();
+			var contentFieldset = document.getElementById('id_content').closest('fieldset');
+			contentFieldset.classList.remove('collapsed');
+			contentFieldset.querySelector('h2').style.display = '';
 
-			$('#id_html_content').parents('fieldset').first().addClass('collapsed');
-			$('#id_html_content').parents('fieldset').first().find('h2').hide();
+			var htmlFieldset = document.getElementById('id_html_content').closest('fieldset');
+			htmlFieldset.classList.add('collapsed');
+			htmlFieldset.querySelector('h2').style.display = 'none';
 		}
 		if (richTextChoice == "HTML") {
-			$('#id_content').parents('fieldset').first().addClass('collapsed');
-			$('#id_content').parents('fieldset').first().find('h2').hide();
+			var contentFieldset = document.getElementById('id_content').closest('fieldset');
+			contentFieldset.classList.add('collapsed');
+			contentFieldset.querySelector('h2').style.display = 'none';
 
-			$('#id_html_content').parents('fieldset').first().removeClass('collapsed');
-			$('#id_html_content').parents('fieldset').first().find('h2').show();
+			var htmlFieldset = document.getElementById('id_html_content').closest('fieldset');
+			htmlFieldset.classList.remove('collapsed');
+			htmlFieldset.querySelector('h2').style.display = '';
 		}
 	}
 
-	$('#id_richTextChoice').change(function(event){
+	document.getElementById('id_richTextChoice').addEventListener('change', function(event){
 		checkRichTextChoice();
 	});
 
-	CKEDITOR.on('pagePrepared', function() {
-		checkRichTextChoice();
-	});
-
-	CKEDITOR.on('instanceReady', function() {
-		CKEDITOR.fireOnce('pagePrepared');
-	});
+	checkRichTextChoice();
 
 });

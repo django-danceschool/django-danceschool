@@ -20,20 +20,18 @@
 	<form id="checkin_form">
 
 	{% if scope == "invoice" %}
-		<div class="form-group">
+		<div class="mb-3">
 			<label for="checkInTypeSelect">{% trans "Select Check-In Type" %}</label>
 			<div class="input-group">
 				<select disabled id="checkInTypeSelect" class="form-control">
 					<option value="O" selected>{% trans "Check into today's/next occurrence" %}</option>
 					<option value="E">{% trans "Event-level check-in" %}</option>
 				</select>
-				<div class="input-group-append">
-					<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
-				</div>
+				<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
 			</div>
 		</div>
 	{% else %}
-		<div class="form-group">
+		<div class="mb-3">
 			<label for="occurrenceSelect">{% trans "Select Event Occurrence for Check-In" %}</label>
 			<div class="input-group">
 				<select disabled id="occurrenceSelect" class="form-control">
@@ -42,14 +40,12 @@
 					{% endfor %}
 					<option value="event">{% trans "Event-level check-in" %}</option>
 				</select>
-				<div class="input-group-append">
-					<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
-				</div>
+				<button id="editTypeButton" class="btn btn-secondary" type="button">{% trans "Edit" %}</button>
 			</div>
 		</div>
 	{% endif %}
 
-	<div class="form-group">
+	<div class="mb-3">
 		<label for="nameFilter">{% trans 'Filter by customer' %}</label>
 		<input type="search" class="form-control" id="nameFilter" placeholder="{% trans 'Enter name/email...' %}">
 	</div>
@@ -168,7 +164,7 @@
 				<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 				<strong>{% trans "Net Price" %}:</strong>
 				{% if details.grossTotal != details.total %}
-					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					<a href="javascript://" data-bs-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-bs-container="body" data-bs-placement="top" data-bs-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
 							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }},
@@ -194,7 +190,7 @@
 				{% if details.grossTotal != details.total %}
 					<strong>{% trans "Gross Price" %}:</strong> {{ details.grossTotal|floatformat:2 }} <br />
 					<strong>{% trans "Net Price" %}:</strong>
-					<a href="javascript://" data-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-container="body" data-placement="top" data-content="
+					<a href="javascript://" data-bs-toggle="popover" title="{% trans 'Gross vs. Net Price' %}" data-bs-container="body" data-bs-placement="top" data-bs-content="
 					{% for d in reg.registration.registrationdiscount_set.all %}
 						{% if d.discountAmount > 0 %}
 							{% trans 'Discount' %}: {{ d.discount.name }} = -{{ d.discountAmount }},
@@ -215,7 +211,7 @@
 
 		<td>
 		<div class="dropdown show">
-			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+			<a class="btn btn-light btn-sm dropdown-toggle" href="#" role="button" id="itemsLink_{{ reg.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 				{% trans "Related Items" %}
 			</a>
 			<div class="dropdown-menu" aria-labelledby="itemsLink_{{ reg.id }}">
@@ -304,13 +300,44 @@
 {% addtoblock "js" %}
 	<script type="text/javascript">
 
-	var $ = django.jQuery;
-
-	regParams = {
+	var regParams = {
 		scope: "{{ scope }}",
 		event: "{{ event.id }}",
 		invoice: "{{ invoice.id }}",
 		ajaxUrl: "{% url 'ajax_checkin' %}",
+	};
+
+	function getCookie(name) {
+	    var cookieValue = null;
+	    if (document.cookie && document.cookie !== '') {
+	        var cookies = document.cookie.split(';');
+	        for (var i = 0; i < cookies.length; i++) {
+	            var cookie = cookies[i].trim();
+	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+	                break;
+	            }
+	        }
+	    }
+	    return cookieValue;
+	}
+
+	function postJSON(url, data) {
+		return fetch(url, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"X-CSRFToken": getCookie('csrftoken'),
+			},
+			body: JSON.stringify(data),
+		}).then(function(r) { return r.json(); });
+	}
+
+	function showError() {
+		document.getElementById('update_error').style.display = '';
+	}
+	function hideError() {
+		document.getElementById('update_error').style.display = 'none';
 	}
 
 	function slugify(str) {
@@ -320,12 +347,13 @@
 			.replace(/[^\w\s-]/g, '')
 			.trim()
 			.replace(/[-\s]+/g, '-');
-	};
+	}
 
 	function getCheckIns() {
-
-		$('.personCheckIn').removeAttr('disabled');
-		$('.personCheckIn').show();
+		document.querySelectorAll('.personCheckIn').forEach(function(el) {
+			el.disabled = false;
+			el.style.display = '';
+		});
 
 		var this_request = {
 			request: "get_all",
@@ -335,232 +363,188 @@
 		if (regParams.scope == "invoice") {
 			this_request["scope"] = "invoice";
 			this_request["invoice_id"] = regParams.invoice;
-			this_request["checkin_type"] = $('#checkInTypeSelect').children("option:selected").val();
-		}
-		else {
+			var typeSelect = document.getElementById('checkInTypeSelect');
+			this_request["checkin_type"] = typeSelect ? typeSelect.value : "E";
+		} else {
 			this_request["scope"] = "event";
 			this_request["event_id"] = regParams.event;
-			var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
+			var occSelect = document.getElementById('occurrenceSelect');
+			var thisOccurrence = occSelect ? occSelect.value : "event";
 			if (thisOccurrence !== "event") {
 				this_request["checkin_type"] = "O";
 				this_request["occurrence_id"] = thisOccurrence;
 
-				var mismatched = $('.personCheckIn[data-drop-in="true"][data-occurrence-ids!=""]').not('[data-occurrence-ids*="' + thisOccurrence + '"]');
-				$(mismatched).attr('disabled', true);
-				$(mismatched).hide();
-
-			}
-		}
-
-	    $.ajax(
-	    {
-	        url : regParams.ajaxUrl,
-	        type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify(this_request),
-			success: function(data, textStatus, jqXHR)
-	        {
-				if (data["status"] !== "success") {
-					$('#update_error').slideDown();
-				}
-				else {
-					$('.personCheckIn').prop('checked', false);
-					$.each(data['checkins'], function() {
-						var this_element;
-
-						if (this.eventRegistration) {
-							this_element = $('#reg_id_' + this.eventRegistration);
-						}
-						else if (this.firstName && this.lastName) {
-							this_element = $('#additional_name_' + slugify(this.firstName) + '_' + slugify(this.lastName));
-						}
-
-						if (this_element) {
-							this_element.prop('checked', (this.cancelled == false));
-							this_element.data('existing',"true");
-						}
-					});
-				}
-			},
-	        error: function(jqXHR, textStatus, errorThrown)
-	        {
-	        	$('#update_error').slideDown();
-	        }
-	    });
-
-	}
-
-	$(function () {
-	  $('[data-toggle="popover"]').popover();
-	  getCheckIns();
-	});
-
-	$('.personCheckIn').click(function(){
-		$('#update_error').slideUp();
-	});
-
-	$('#occurrenceSelect').change(function() {
-		$('.personCheckIn').removeData('existing');
-		getCheckIns();
-	});
-
-	$('#checkInTypeSelect').change(function() {
-		$('.personCheckIn').removeData('existing');
-		getCheckIns();
-	});
-
-	// Use Jquery to get the cookie value of the CSRF token
-	function getCookie(name) {
-	    var cookieValue = null;
-	    if (document.cookie && document.cookie !== '') {
-	        var cookies = document.cookie.split(';');
-	        for (var i = 0; i < cookies.length; i++) {
-	            var cookie = django.jQuery.trim(cookies[i]);
-	            // Does this cookie string begin with the name we want?
-	            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-	                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-	                break;
-	            }
-	        }
-	    }
-	    return cookieValue;
-	}
-	var csrftoken = getCookie('csrftoken');
-
-	function csrfSafeMethod(method) {
-	    // these HTTP methods do not require CSRF protection
-	    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-	}
-
-	// Ensure that CSRF token is passed
-	$.ajaxSetup({
-	    beforeSend: function(xhr, settings) {
-	        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-	            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-	        }
-	    }
-	});
-
-	// Enable modification of occurrence.
-	$(document).on("click", "#editTypeButton", function() {
-		$('#occurrenceSelect').attr("disabled", false);
-		$('#checkInTypeSelect').attr("disabled", false);		
-	});
-
-    // Check-in customer, guest.
-    $(document).on("click", ".personCheckIn", function() {
-
-		$('.personCheckIn').attr("disabled", true);
-
-		var this_request = {
-			request: "update",
-			checkin_type: "E",
-			registrations: [],
-			names: [],
-		};
-
-		if (regParams.scope == "invoice") {
-			this_request["scope"] = "invoice";
-			this_request["invoice_id"] = regParams.invoice;
-			this_request["checkin_type"] = $('#checkInTypeSelect').children("option:selected").val();
-		}
-		else {
-			this_request["scope"] = "event";
-			this_request["event_id"] = regParams.event;
-			var thisOccurrence = $("#occurrenceSelect").children("option:selected").val();
-			if (thisOccurrence !== "event") {
-				this_request["checkin_type"] = "O";
-				this_request["occurrence_id"] = thisOccurrence;
-			}
-		}
-
-		$.each($('.regCheckIn'), function() {
-			if ($(this).is(':checked') || $(this).data('existing') == "true") {
-				this_request.registrations.push({
-					id: $(this).val(),
-					cancelled: ($(this).prop('checked') == false),
+				document.querySelectorAll('.personCheckIn[data-drop-in="true"]').forEach(function(el) {
+					var ids = el.dataset.occurrenceIds || '';
+					if (ids !== '' && ids.indexOf(thisOccurrence) === -1) {
+						el.disabled = true;
+						el.style.display = 'none';
+					}
 				});
-				$(this).data('existing',"true");
 			}
+		}
+
+		postJSON(regParams.ajaxUrl, this_request)
+		.then(function(data) {
+			if (data["status"] !== "success") {
+				showError();
+			} else {
+				document.querySelectorAll('.personCheckIn').forEach(function(el) {
+					el.checked = false;
+				});
+				data['checkins'].forEach(function(item) {
+					var this_element;
+					if (item.eventRegistration) {
+						this_element = document.getElementById('reg_id_' + item.eventRegistration);
+					} else if (item.firstName && item.lastName) {
+						this_element = document.getElementById('additional_name_' + slugify(item.firstName) + '_' + slugify(item.lastName));
+					}
+					if (this_element) {
+						this_element.checked = (item.cancelled == false);
+						this_element._existing = "true";
+					}
+				});
+			}
+		})
+		.catch(showError);
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
+			new bootstrap.Popover(el);
 		});
-		$.each($('.nameCheckIn'), function() {
-			if ($(this).is(':checked') || $(this).data('existing') == "true") {
-				this_request.names.push({
-					first_name: $(this).data('firstName'),
-					last_name: $(this).data('lastName'),
-					cancelled: ($(this).prop('checked') == false),
-				});
-				$(this).data('existing',"true");
-			}
+		getCheckIns();
+
+		// Show error div initially hidden
+		hideError();
+
+		document.querySelectorAll('.personCheckIn').forEach(function(el) {
+			el.addEventListener('click', hideError);
 		});
 
+		var occSelect = document.getElementById('occurrenceSelect');
+		if (occSelect) {
+			occSelect.addEventListener('change', function() {
+				document.querySelectorAll('.personCheckIn').forEach(function(el) { el._existing = null; });
+				getCheckIns();
+			});
+		}
 
-	    $.ajax(
-	    {
-	        url : regParams.ajaxUrl,
-	        type: "POST",
-            contentType: "application/json",
-            data: JSON.stringify(this_request),
-			success: function(data, textStatus, jqXHR)
-	        {
+		var typeSelect = document.getElementById('checkInTypeSelect');
+		if (typeSelect) {
+			typeSelect.addEventListener('change', function() {
+				document.querySelectorAll('.personCheckIn').forEach(function(el) { el._existing = null; });
+				getCheckIns();
+			});
+		}
+
+		// Enable modification of occurrence.
+		var editBtn = document.getElementById('editTypeButton');
+		if (editBtn) {
+			editBtn.addEventListener('click', function() {
+				var occ = document.getElementById('occurrenceSelect');
+				if (occ) { occ.disabled = false; }
+				var type = document.getElementById('checkInTypeSelect');
+				if (type) { type.disabled = false; }
+			});
+		}
+
+		// Check-in customer, guest.
+		document.addEventListener('click', function(e) {
+			if (!e.target.matches('.personCheckIn')) { return; }
+
+			document.querySelectorAll('.personCheckIn').forEach(function(el) { el.disabled = true; });
+
+			var this_request = {
+				request: "update",
+				checkin_type: "E",
+				registrations: [],
+				names: [],
+			};
+
+			if (regParams.scope == "invoice") {
+				this_request["scope"] = "invoice";
+				this_request["invoice_id"] = regParams.invoice;
+				var typeSelect = document.getElementById('checkInTypeSelect');
+				this_request["checkin_type"] = typeSelect ? typeSelect.value : "E";
+			} else {
+				this_request["scope"] = "event";
+				this_request["event_id"] = regParams.event;
+				var occSelect = document.getElementById('occurrenceSelect');
+				var thisOccurrence = occSelect ? occSelect.value : "event";
+				if (thisOccurrence !== "event") {
+					this_request["checkin_type"] = "O";
+					this_request["occurrence_id"] = thisOccurrence;
+				}
+			}
+
+			document.querySelectorAll('.regCheckIn').forEach(function(el) {
+				if (el.checked || el._existing === "true") {
+					this_request.registrations.push({
+						id: el.value,
+						cancelled: !el.checked,
+					});
+					el._existing = "true";
+				}
+			});
+			document.querySelectorAll('.nameCheckIn').forEach(function(el) {
+				if (el.checked || el._existing === "true") {
+					this_request.names.push({
+						first_name: el.dataset.firstName,
+						last_name: el.dataset.lastName,
+						cancelled: !el.checked,
+					});
+					el._existing = "true";
+				}
+			});
+
+			postJSON(regParams.ajaxUrl, this_request)
+			.then(function(data) {
 				if (data["status"] !== "success") {
-					$('#update_error').slideDown();
-				}
-				else {
-					$.each($('.regCheckIn'), function() {
-						if ($(this).is(':checked') || $(this).data('existing') == "true") {
-							$(this).data('existing',"true");
-						}
+					showError();
+				} else {
+					document.querySelectorAll('.regCheckIn').forEach(function(el) {
+						if (el.checked || el._existing === "true") { el._existing = "true"; }
 					});
-					$.each($('.nameCheckIn'), function() {
-						if ($(this).is(':checked') || $(this).data('existing') == "true") {
-							$(this).data('existing',"true");
-						}
+					document.querySelectorAll('.nameCheckIn').forEach(function(el) {
+						if (el.checked || el._existing === "true") { el._existing = "true"; }
 					});
 				}
-			},
-	        error: function(jqXHR, textStatus, errorThrown)
-	        {
-				console.log(textStatus);
-				$('#update_error').slideDown();
-	        }
-	    });
+			})
+			.catch(function(err) {
+				console.log(err);
+				showError();
+			});
 
-		setTimeout(function() {
-			$(".personCheckIn").removeAttr("disabled");
-		}, 500);
+			setTimeout(function() {
+				document.querySelectorAll('.personCheckIn').forEach(function(el) { el.disabled = false; });
+			}, 500);
+		});
 
+		// Filter the list of names
+		var nameFilter = document.getElementById('nameFilter');
+		if (nameFilter) {
+			nameFilter.addEventListener('keyup', function() {
+				var filter = this.value.toUpperCase();
+				filterCustomers("regListing", filter);
+				filterCustomers("additionalNamesListing", filter);
+			});
+		}
 	});
 
 	function filterCustomers(table_id, filter) {
-
 		var table = document.getElementById(table_id);
-		if (table === null) {
-			return;
-		}
+		if (table === null) { return; }
 		var tr = table.getElementsByTagName("tr");
-
-		// Loop through all table rows, and hide those who don't match the search query
-		for (i = 0; i < tr.length; i++) {
-			td = tr[i].getElementsByClassName("customerInfo")[0];
+		for (var i = 0; i < tr.length; i++) {
+			var td = tr[i].getElementsByClassName("customerInfo")[0];
 			if (td) {
-			txtValue = td.textContent || td.innerText;
-			if (txtValue.toUpperCase().indexOf(filter) > -1) {
-				tr[i].style.display = "";
-			} else {
-				tr[i].style.display = "none";
-			}
+				var txtValue = td.textContent || td.innerText;
+				tr[i].style.display = (txtValue.toUpperCase().indexOf(filter) > -1) ? "" : "none";
 			}
 		}
 	}
 
-    // Filter the list of names
-    $("#nameFilter").keyup(function() {
-		var filter = $(this).val().toUpperCase();
-		filterCustomers("regListing", filter);
-		filterCustomers("additionalNamesListing", filter);
-	});
-	
 	</script>
 {% endaddtoblock %}
 

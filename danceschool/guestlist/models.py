@@ -270,6 +270,8 @@ class GuestList(models.Model):
         Get a union-ed queryset with a list of names associated with a particular event.
         Use annotations for everything to avoid potential issues with query ordering.
         '''
+        if isinstance(events, list):
+            events = [e for e in events if e is not None]
         names = self.guestlistname_set.annotate(
             first=F('firstName'), last=F('lastName'), contact=F('email'),
             modelType=Value('GuestListName', output_field=models.CharField()),

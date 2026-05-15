@@ -40,7 +40,7 @@
 </div>
 
 <div class="mt-4" style="display: none;" id="instructorDetails">
-  <img id="instructorDetailsImage" style="display: none;" class="float-left" src="" />
+  <img id="instructorDetailsImage" style="display: none;" class="float-start" src="" />
   <h4 id="instructorDetailsName"></h4>
 
   <ul class="list-group">
@@ -59,8 +59,8 @@
     <div class="modal-content">
       <form method="post" id="bookingForm">
       <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
         <h4 class="modal-title" id="eventModalTitle"></h4>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body" id="eventModalBody">
           {# A div to hold any alerts regarding this lesson that we want to display #}
@@ -69,7 +69,7 @@
           {{ form|crispy }}
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
         <button type="submit" form="bookingForm" value="Submit" class="btn btn-primary">{% trans "Schedule This Lesson" %}</button>
       </div>
       </form>
@@ -141,7 +141,7 @@ $(document).ready(function() {
               $('#eventModalAlerts').html('');
             }
 
-            $('#eventModal').modal();
+            new bootstrap.Modal(document.getElementById('eventModal')).show();
         },
     });
 

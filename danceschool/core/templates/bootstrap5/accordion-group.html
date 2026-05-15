@@ -1,0 +1,18 @@
+{% load crispy_forms_tags %}
+<div class="accordion-item">
+    <h2 class="accordion-header" id="heading{{ accordion_group.css_id }}">
+        <button class="accordion-button {% if not accordion_group.active %}collapsed{% endif %}" type="button"
+                data-bs-toggle="collapse" data-bs-target="#{{ accordion_group.css_id }}"
+                aria-expanded="{{ accordion_group.active|lower }}" aria-controls="{{ accordion_group.css_id }}">
+            {{ accordion_group.name }}
+        </button>
+    </h2>
+    <div id="{{ accordion_group.css_id }}"
+         class="accordion-collapse collapse {% if accordion_group.active %}show{% endif %}"
+         aria-labelledby="heading{{ accordion_group.css_id }}"
+         data-bs-parent="#{{ accordion_group.parent_accordion.accordion_id }}">
+        <div class="accordion-body">
+            {{ fields_output }}
+        </div>
+    </div>
+</div>

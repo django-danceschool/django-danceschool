@@ -12,10 +12,13 @@ def populate_placeholder_source(apps, schema_editor):
     Register = apps.get_model('register', 'Register')
     ContentType = apps.get_model('contenttypes', 'ContentType')
 
-    ct = ContentType.objects.using(db_alias).get(
-        app_label=Register._meta.app_label,
-        model=Register._meta.model_name,
-    )
+    try:
+        ct = ContentType.objects.using(db_alias).get(
+            app_label=Register._meta.app_label,
+            model=Register._meta.model_name,
+        )
+    except ContentType.DoesNotExist:
+        return
 
     for register in Register.objects.using(db_alias).select_related('placeholder'):
         if register.placeholder_id is None:

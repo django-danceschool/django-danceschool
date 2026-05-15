@@ -40,7 +40,7 @@
 			<div class="row mb-4">
 			{% for teacher in series.teachers %}
 				{% if teacher.image %}
-					<img src="{% thumbnail teacher.image 118x118 crop %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="float-right" style="margin: 5px;" /> 
+					<img src="{% thumbnail teacher.image 118x118 crop %}" title="{{teacher.firstName}} {{teacher.lastName}}" alt="{{teacher.firstName}} {{teacher.lastName}}" width="118px" class="float-end" style="margin: 5px;" /> 
 				{% endif %}
 			{% endfor %}
 			</div>
@@ -52,7 +52,7 @@
 					{# linkOnly event reached without the private UUID link — suppress the button #}
 					{% elif series.availableRoles|length > 1 %}
 					<div class="dropdown">
-						<button class="btn btn-primary btn-lg dropdown-toggle" type="button" id="registerNowButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+						<button class="btn btn-primary btn-lg dropdown-toggle" type="button" id="registerNowButton" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 							{% trans "Register for this class!" %}
 						</button>
 						<div class="dropdown-menu" aria-labelledby="registerNowButton">
@@ -122,7 +122,7 @@
 		    {% if series.pricingTier.id != default_pricingtier_id %}
 		    <p class="pricinginfo">
 		    	<strong>{% trans "Pricing" %}:</strong>&nbsp;
-				<a class="pricingPopover" data-container="body" data-toggle="popover" data-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong>" data-html="true" data-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.doorPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }}</a>
+				<a class="pricingPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom" title="<strong>{{ series.pricingTier.name }}</strong>" data-bs-html="true" data-bs-content="<em>{% trans 'Pre-Registered' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.onlinePrice|floatformat:2 }}<br /><br /><em>{% trans 'At the Door' %}</em><br />{{ currencySymbol }}{{ series.pricingTier.doorPrice|floatformat:2 }}<br />">{{ series.pricingTier.name }}</a>
 			</p>
 			{% endif %}
 		</div>
@@ -143,8 +143,10 @@
 
 	{% addtoblock "js" %}
 		<script type="text/javascript">
-		$( document ).ready(function() {
-			$('.pricingPopover').popover();
+		document.addEventListener('DOMContentLoaded', function() {
+			document.querySelectorAll('.pricingPopover').forEach(function(el) {
+				new bootstrap.Popover(el);
+			});
 		});
 		</script>
 	{% endaddtoblock %}
