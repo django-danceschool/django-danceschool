@@ -1,7 +1,7 @@
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse, JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.urls import reverse
-from django.views.generic import FormView
+from django.views.generic import FormView, TemplateView
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Email view function and form
 
 
-class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, FormView):
+class EmailConfirmationView(AdminSuccessURLMixin, PermissionRequiredMixin, TemplateView):
     permission_required = 'core.send_email'
     template_name = 'core/email_confirmation_page.html'
     success_message = _('Email sent successfully.')
