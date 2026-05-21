@@ -93,7 +93,7 @@
 
 {% addtoblock "js" %}
 <script type="text/javascript">
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     regParams['guestLookupEvents'] = "{{ event_list|join:',' }}".split(",");
 });
 </script>

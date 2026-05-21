@@ -158,8 +158,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // ===== Customer lookup =====
 
     const nameSelect = document.getElementById('id_name');
-    if (nameSelect && window.jQuery) {
-        const $ = window.jQuery;
+    // Use django.jQuery (= the jQuery instance that has Select2 registered on it
+    // via DAL's media).  window.jQuery is restored by noConflict() to the
+    // pre-form-media instance which does NOT have Select2, so event listeners
+    // bound there never fire.
+    if (nameSelect && window.django && window.django.jQuery) {
+        const $ = window.django.jQuery;
 
         // Use select2:select (Select2 v4) which provides result data directly in
         // e.params.data.  The text field contains the HTML from get_result_label,
