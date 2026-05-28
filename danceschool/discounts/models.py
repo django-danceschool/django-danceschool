@@ -107,9 +107,13 @@ class DiscountCombo(models.Model):
 
     # Net allocated prices are optional, everything else is required.
     DiscountInfo = namedtuple(
-        'DiscountInfo', ['code', 'net_price', 'discount_amount', 'net_allocated_prices']
+        'DiscountInfo',
+        [
+            'code', 'net_price', 'discount_amount',
+            'net_allocated_prices', 'net_allocated_event_ids',
+        ]
     )
-    DiscountInfo.__new__.__defaults__ = ([], )
+    DiscountInfo.__new__.__defaults__ = ([], [])
 
     # A DiscountApplication contains a list of DiscountInfo tuples to be applied, along with an optional
     # total for ineligible items to be added to the discounted net price at the end.
@@ -308,7 +312,14 @@ class DiscountCombo(models.Model):
         if this_price < initial_net_price:
             # Ensure no negative prices
             this_price = max(this_price, 0)
-            return self.DiscountInfo(self, this_price, initial_net_price - this_price, this_allocated_prices)
+            # Capture per-position event identity so downstream code can map
+            # net_allocated_prices back to specific InvoiceItems without
+            # depending on the (unordered) queryset position in helpers.
+            event_ids = [t[0].get('event_id') for t in tieredTuples]
+            return self.DiscountInfo(
+                self, this_price, initial_net_price - this_price,
+                this_allocated_prices, event_ids,
+            )
 
     @property
     def hasExpired(self):
