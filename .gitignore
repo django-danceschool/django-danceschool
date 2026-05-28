@@ -53,6 +53,11 @@ coverage.xml
 *.log
 local_settings.py
 
+# Huey task queue (SQLite backend); must not ship with the package
+huey.sqlite3
+huey.sqlite3-shm
+huey.sqlite3-wal
+
 # Flask stuff:
 instance/
 .webassets-cache

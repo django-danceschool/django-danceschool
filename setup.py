@@ -1,5 +1,5 @@
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
 
@@ -9,7 +9,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 setup(
     name='django-danceschool',
     version='0.9.3',
-    packages=['danceschool'],
+    packages=find_packages(),
     include_package_data=True,
     license='BSD License',
     description='The Django Dance School project:'
@@ -33,7 +33,7 @@ setup(
         'django-cms>=5.0.1',
         'django-colorful>=1.3',
         'django-crispy-forms>=2.3',
-        'crispy-bootstrap4>=2024.10',
+        'crispy-bootstrap5>=2024.1',
         'django-dynamic-preferences>=1.16.0',
         'django-easy-pdf>=0.1.1',
         'django-filer>=3.2.3',
@@ -65,7 +65,7 @@ setup(
         'paypalrestsdk>=1.13.3,<2.0',
         'persisting-theory>=1.0',
         'Pillow>=10.4.0',
-        'python-dateutil==2.8.2',
+        'python-dateutil>=2.8.2',
         'pytz>=2024.2',
         'qrcode>=8.0',
         'redis>=5.1.1',
@@ -75,14 +75,21 @@ setup(
         'stripe>=11.1.0',
         'unicodecsv>=0.14.1',
     ],
+    python_requires='>=3.10',
     classifiers=[
         'Environment :: Web Environment',
         'Framework :: Django',
+        'Framework :: Django :: 5.2',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'Topic :: Internet :: WWW/HTTP',
-        'Topic :: Internet :: WWW/HTTP :: Dynamic Content'
+        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
     ],
 )
