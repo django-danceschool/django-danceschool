@@ -37,9 +37,9 @@ class GiftCertificateCustomizeView(FormView):
         and that said invoice is marked as paid.
         '''
         paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
-        self.invoice_id = paymentSession.get('invoice_id')
+        self.invoice_id = paymentSession.get('invoiceID')
         self.amount = paymentSession.get('amount', 0)
-        self.success_url = paymentSession.get('success_url', reverse('registration'))
+        self.success_url = paymentSession.get('successUrl', reverse('registration'))
 
         # Check that Invoice matching passed ID exists
         try:
