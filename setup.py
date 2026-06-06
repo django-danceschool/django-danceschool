@@ -33,7 +33,7 @@ setup(
         'django-cms>=5.0.1',
         'django-colorful>=1.3',
         'django-crispy-forms>=2.3',
-        'crispy-bootstrap5>=2024.1',
+        'crispy-bootstrap5>=2025.4',
         'django-dynamic-preferences>=1.16.0',
         'django-easy-pdf>=0.1.1',
         'django-filer>=3.2.3',
