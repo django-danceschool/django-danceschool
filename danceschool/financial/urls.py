@@ -30,7 +30,7 @@ urlpatterns = [
         StaffMemberPaymentsView.as_view(), name='staffMemberPayments'
     ),
     re_path(
-        r'^staff-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$',
+        r'^staff-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.\(\)]+)-(?P<last_name>[\w\+\.\(\)]+)/$',
         OtherStaffMemberPaymentsView.as_view(), name='staffMemberPayments'
     ),
     path(
@@ -44,7 +44,7 @@ urlpatterns = [
         name='staffMemberPaymentsCSV'
     ),
     re_path(
-        r'^staff-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/csv/$',
+        r'^staff-payments/(?P<year>[\w\+]+)/(?P<first_name>[\w\+\.\(\)]+)-(?P<last_name>[\w\+\.\(\)]+)/csv/$',
         OtherStaffMemberPaymentsView.as_view(as_csv=True),
         name='staffMemberPaymentsCSV'
     ),

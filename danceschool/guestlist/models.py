@@ -117,15 +117,16 @@ class GuestList(models.Model):
 
         # Handle 'Always' and 'EventOnly' rules first, because they do not
         # require an analysis of intervals.
-        if component.admissionRule == 'EventOnly' and events:
-            # Skip the analysis of intervals and include only those who are
-            # staffed for the event.
-            return Q(filters & Q(eventstaffmember__event__in=events))
-        elif component.admissionRule == 'Always' and events:
-            # If 'Always' with events, include associated staff for those events
+        if component.admissionRule == 'Always' and component.staffMember:
+            # A specific named person is always on the list regardless of scheduling.
+            return Q(filters)
+        elif component.admissionRule in ['Always', 'EventOnly'] and events:
+            # For category-based 'Always' and all 'EventOnly' rules, restrict to
+            # staff scheduled for these events. This avoids surfacing historical
+            # category members who are no longer active.
             return Q(filters & Q(eventstaffmember__event__in=events))
         elif component.admissionRule in ['Always', 'EventOnly']:
-            # If 'Always' or 'EventOnly' without events, include all associated staff
+            # No events provided; include all associated staff.
             return Q(filters)
 
         # Start with the event occurrence intervals, or with the specified time.
