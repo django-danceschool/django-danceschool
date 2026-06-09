@@ -48,7 +48,7 @@ urlpatterns = [
 
     # These provide the ability to view one's own stats or another instructor's stats
     re_path(
-        r'^staff/instructor-stats/(?P<first_name>[\w\+\.]+)-(?P<last_name>[\w\+\.]+)/$',
+        r'^staff/instructor-stats/(?P<first_name>[\w\+\.\(\)]+)-(?P<last_name>[\w\+\.\(\)]+)/$',
         OtherInstructorStatsView.as_view(), name='staffMemberStats'
     ),
     path('staff/instructor-stats/', InstructorStatsView.as_view(), name='staffMemberStats'),
