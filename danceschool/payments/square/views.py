@@ -77,6 +77,7 @@ class ProcessSquarePaymentView(View):
         sourceUrl = data.get('sourceUrl', reverse('showRegSummary'))
         addSessionInfo = data.get('addSessionInfo', False)
         customerEmail = data.get('customerEmail')
+        finalSuccessUrl = data.get('finalSuccessUrl')
 
         # Send users back to the invoice to confirm the successful payment.
         # If none is specified, then return to the registration page.
@@ -234,7 +235,10 @@ class ProcessSquarePaymentView(View):
             paymentSession.update({
                 'invoiceID': str(this_invoice.id),
                 'amount': this_total,
-                'successUrl': successUrl,
+                # When finalSuccessUrl is present in the request (gift certificate flow),
+                # successUrl in this flow is the customization page — not a safe post-form
+                # destination. Use finalSuccessUrl instead, falling back to registration.
+                'successUrl': (finalSuccessUrl or reverse('registration')) if 'finalSuccessUrl' in data else successUrl,
             })
             request.session[PAYMENT_VALIDATION_STR] = paymentSession
 
