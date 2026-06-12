@@ -777,7 +777,6 @@ class DoubleSubtractionWhenCodeInBothTablesTest(BaseDiscountsTest):
     with no guard for the case where the same code matched both systems.
     '''
 
-    @unittest.expectedFailure
     def test_shared_code_not_double_subtracted(self):
         updateConstant('general__discountsEnabled', True)
         updateConstant('vouchers__enableVouchers', True)
