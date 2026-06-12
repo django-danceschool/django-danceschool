@@ -555,7 +555,6 @@ class BackButtonAdjustmentsResetTest(DefaultSchoolTestCase):
     pre-existing non-discount adjustment is silently wiped to 0 on retry.
     '''
 
-    @unittest.expectedFailure
     def test_back_button_preserves_prior_non_discount_adjustments(self):
         series = self.create_series(pricingTier=self.defaultPricing)
         invoice = Invoice.objects.create(
