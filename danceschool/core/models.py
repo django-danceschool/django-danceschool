@@ -1123,11 +1123,18 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def numOccurrences(self):
+        cache = self.__dict__.get('_prefetched_objects_cache', {})
+        if 'eventoccurrence_set' in cache:
+            return len(cache['eventoccurrence_set'])
         return self.eventoccurrence_set.count()
     numOccurrences.fget.short_description = _('# Occurrences')
 
     @property
     def firstOccurrence(self):
+        cache = self.__dict__.get('_prefetched_objects_cache', {})
+        if 'eventoccurrence_set' in cache:
+            occurrences = cache['eventoccurrence_set']
+            return occurrences[0] if occurrences else None
         return self.eventoccurrence_set.order_by('startTime').first()
     firstOccurrence.fget.short_description = _('First occurrence')
 
@@ -1767,6 +1774,9 @@ class Series(Event):
     )
 
     def getTeachers(self, includeSubstitutes=False):
+        if not includeSubstitutes and hasattr(self, '_prefetched_teachers'):
+            return list(set(t.staffMember for t in self._prefetched_teachers))
+
         seriesTeachers = SeriesTeacher.objects.filter(event=self)
         seriesTeachers = set([t.staffMember for t in seriesTeachers])
 
