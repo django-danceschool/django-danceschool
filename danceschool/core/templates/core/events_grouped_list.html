@@ -8,7 +8,7 @@
     {% for groupFirst in group_list %}
         <li><h4>{{ groupFirst.grouper }} {% if instance.eventType == 'S' %}{% trans "Classes" %}{% else %}{% trans "Events" %}{% endif %}</h4></li>
 
-        {% regroup groupFirst.list|dictsort:"organizer.nameSecond.grouper" by organizer.nameSecond.name as groupSecond_list %}
+        {% regroup groupFirst.list|dictsort:"organizer.nameSecond.sorter" by organizer.nameSecond.name as groupSecond_list %}
         {% for groupSecond in groupSecond_list %}
             {% if groupSecond.grouper %}<h5>{{ groupSecond.grouper }}</h5>{% endif %}
             <ul>            
