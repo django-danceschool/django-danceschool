@@ -244,8 +244,11 @@ class RegistrationForm(forms.Form):
 
         payAtDoor = self._session.get('payAtDoor', False)
 
-        if not eventRegs:
+        if not eventRegs and (self._registration is not None):
             eventRegs = self._registration.eventregistration_set.all()
+        elif not eventRegs:
+            # No registration, so nothing to check
+            return
 
         eventRegs = eventRegs.values('event__id', 'dropIn').annotate(
             count=Count('event__id')
