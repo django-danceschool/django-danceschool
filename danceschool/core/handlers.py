@@ -46,7 +46,7 @@ def linkCartRegistration(sender, **kwargs):
         }
 
     # Only create a Registration if at least one item corresponds to an Event.
-    event_ids = [x.get('item_id') for x in item_data if x.get('item_id')]
+    event_ids = [x.get('item_id') for x in item_data if x.get('item_id') and x.get('item_type') == 'Event']
     if not Event.objects.filter(id__in=event_ids).exists():
         return {}
 
@@ -84,6 +84,9 @@ def linkCartEventRegistration(sender, **kwargs):
     item_id = item_data.get('item_id')
     sku = item_data.get('sku', '')
     cart_student = kwargs.get('cart_student', False)
+
+    if item_data.get('item_type') != 'Event' and not item_data.get('child_item'):
+        return {}
 
     # Find the event in the purchasable registry (uses already-fetched querysets).
     this_event = None

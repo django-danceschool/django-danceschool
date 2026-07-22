@@ -180,3 +180,187 @@ class MerchCartCheckoutTest(DefaultSchoolTestCase):
             content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
+
+
+class MerchStudentInfoViewTest(DefaultSchoolTestCase):
+    '''
+    Tests that StudentInfoView correctly reflects the contents of a
+    merch-only cart after checkout.  Specifically checks that
+    InvoiceItem.description and InvoiceItem.grossTotal match the
+    selected merchandise variant, not any unrelated Event that might
+    share the same primary key.
+    '''
+
+    def setUp(self):
+        self.client.force_login(self.superuser)
+        self.item = MerchItem.objects.create(
+            name='Test Jacket',
+            category=None,
+            defaultPrice=45,
+            disabled=False,
+        )
+        self.variant = MerchItemVariant.objects.create(
+            item=self.item,
+            sku='JACKET-XL',
+            name='X-Large',
+            originalQuantity=10,
+        )
+
+    def _checkout(self, item, variant):
+        '''
+        Submit a merch-only door cart with checkout=True and return the
+        resulting GET response from StudentInfoView.
+        '''
+        checkout_response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{
+                    'item_type': 'MerchItem',
+                    'item_id': item.id,
+                    'sku': variant.sku,
+                    'quantity': 1,
+                }],
+                'checkout': True,
+                'payAtDoor': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(
+            checkout_response.status_code, 302,
+            'Cart checkout must redirect to StudentInfoView.',
+        )
+        return self.client.get(reverse('getStudentInfo'))
+
+    def _get_invoice(self):
+        invoice_id = self.client.session[REG_VALIDATION_STR]['invoice_id']
+        return Invoice.objects.get(id=invoice_id)
+
+    # --- Basic correctness ---
+
+    def test_student_info_view_renders_after_merch_checkout(self):
+        '''StudentInfoView must respond with 200 after a merch-only cart checkout.'''
+        response = self._checkout(self.item, self.variant)
+        self.assertEqual(response.status_code, 200)
+
+    def test_invoice_item_description_is_merch_variant_full_name(self):
+        '''
+        The InvoiceItem created during checkout must carry the variant full
+        name (e.g. "Test Jacket: X-Large"), not an event name.
+        '''
+        self._checkout(self.item, self.variant)
+        invoice = self._get_invoice()
+        items = list(invoice.invoiceitem_set.all())
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].description, self.variant.fullName)
+
+    def test_invoice_item_price_matches_merch_default_price(self):
+        '''
+        The InvoiceItem grossTotal must equal the merchandise item's
+        defaultPrice, not the price of any unrelated Event.
+        '''
+        self._checkout(self.item, self.variant)
+        invoice = self._get_invoice()
+        items = list(invoice.invoiceitem_set.all())
+        self.assertEqual(len(items), 1)
+        self.assertAlmostEqual(items[0].grossTotal, self.item.defaultPrice, places=2)
+
+    def test_no_registration_created_for_merch_only_cart(self):
+        '''A merch-only cart must not create a Registration object.'''
+        self._checkout(self.item, self.variant)
+        invoice = self._get_invoice()
+        self.assertFalse(Registration.objects.filter(invoice=invoice).exists())
+
+    # --- pk-collision regression ---
+
+    def test_pk_collision_invoice_item_description_is_merch_not_event(self):
+        '''
+        Regression: when a MerchItem and an Event share the same integer pk,
+        the checkout must produce an InvoiceItem whose description comes from
+        the merch variant, not the event.
+        '''
+        series = self.create_series()
+
+        # Force the MerchItem to share the Event's pk (possible because they
+        # live in separate database tables).
+        collision_item = MerchItem(
+            pk=series.pk,
+            name='Collision Hoodie',
+            defaultPrice=30,
+            disabled=False,
+        )
+        collision_item.save()
+        collision_variant = MerchItemVariant.objects.create(
+            item=collision_item,
+            sku='HOODIE-COLL',
+            name='One Size',
+            originalQuantity=5,
+        )
+
+        self._checkout(collision_item, collision_variant)
+        invoice = self._get_invoice()
+        items = list(invoice.invoiceitem_set.all())
+
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].description, collision_variant.fullName)
+        self.assertNotEqual(items[0].description, series.name)
+
+    def test_pk_collision_invoice_item_price_is_merch_not_event(self):
+        '''
+        Regression: with a pk collision between a MerchItem and an Event,
+        the InvoiceItem grossTotal must equal the merch price, not the event
+        base price.
+        '''
+        series = self.create_series()
+
+        collision_item = MerchItem(
+            pk=series.pk,
+            name='Collision Cap',
+            defaultPrice=15,
+            disabled=False,
+        )
+        collision_item.save()
+        collision_variant = MerchItemVariant.objects.create(
+            item=collision_item,
+            sku='CAP-COLL',
+            name='One Size',
+            originalQuantity=5,
+        )
+
+        self._checkout(collision_item, collision_variant)
+        invoice = self._get_invoice()
+        items = list(invoice.invoiceitem_set.all())
+
+        self.assertEqual(len(items), 1)
+        self.assertAlmostEqual(items[0].grossTotal, collision_item.defaultPrice, places=2)
+        self.assertNotAlmostEqual(
+            items[0].grossTotal, series.getBasePrice(), places=2,
+            msg='Invoice price must not match the colliding event base price.',
+        )
+
+    def test_pk_collision_no_spurious_registration(self):
+        '''
+        Regression: a merch-only cart must not create a Registration even
+        when the MerchItem pk collides with an existing Event pk.
+        '''
+        series = self.create_series()
+
+        collision_item = MerchItem(
+            pk=series.pk,
+            name='Collision Bag',
+            defaultPrice=20,
+            disabled=False,
+        )
+        collision_item.save()
+        collision_variant = MerchItemVariant.objects.create(
+            item=collision_item,
+            sku='BAG-COLL',
+            name='Standard',
+            originalQuantity=5,
+        )
+
+        self._checkout(collision_item, collision_variant)
+        invoice = self._get_invoice()
+        self.assertFalse(
+            Registration.objects.filter(invoice=invoice).exists(),
+            'A merch-only cart must not create a Registration.',
+        )

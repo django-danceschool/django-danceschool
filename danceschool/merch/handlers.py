@@ -300,6 +300,9 @@ def linkCartMerchOrderItems(sender, **kwargs):
     sku = item_data.get('sku', '')
     item_id = item_data.get('item_id')
 
+    if item_data.get('item_type') != 'MerchItem':
+        return {}
+
     # Identify whether this is a merch item via the purchasable registry.
     # This avoids any reliance on SKU format conventions.
     this_merch_item = None
