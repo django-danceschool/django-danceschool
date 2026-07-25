@@ -226,9 +226,16 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             invoice.invoiceitem_set.all().delete()
 
         # Expand items with quantity > 1 into multiple single-quantity items so
-        # that each person in a group registration gets their own EventRegistration.
+        # that each person in a group registration gets their own
+        # EventRegistration. Merch items are pass-through: the merch handler
+        # records quantity directly on the MerchOrderItem, and expanding
+        # produces duplicate rows that trip the "same variant added multiple
+        # times" guard in linkCartMerchOrderItems.
         expanded = []
         for item in item_data:
+            if item.get('item_type') == 'MerchItem':
+                expanded.append(item)
+                continue
             qty = max(1, int(item.get('quantity') or 1))
             for _qty_i in range(qty):
                 expanded.append({**item, 'quantity': 1})

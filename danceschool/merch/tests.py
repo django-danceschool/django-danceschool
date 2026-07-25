@@ -223,6 +223,39 @@ class MerchCartCheckoutTest(DefaultSchoolTestCase):
             response, reverse('getStudentInfo'), fetch_redirect_response=False
         )
 
+    def test_merch_checkout_with_quantity_greater_than_one(self):
+        '''
+        A merch item purchased with quantity>1 must produce a single
+        MerchOrderItem with the correct quantity, not multiple qty=1 rows.
+        Regression for the per-item cart-expansion pass in
+        create_invoice_from_cart, which is required for events (one
+        EventRegistration per attendee) but produces spurious duplicate
+        detections for merchandise.
+        '''
+        from danceschool.merch.models import MerchOrder, MerchOrderItem
+        response = self._door_cart_post(
+            items=[{
+                'item_type': 'MerchItem',
+                'item_id': self.item.id,
+                'sku': self.variant.sku,
+                'quantity': 2,
+            }],
+            checkout=True,
+        )
+        self.assertEqual(
+            response.status_code, 302,
+            'Multi-quantity merch checkout must succeed (not 400 on duplicate).',
+        )
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        order = MerchOrder.objects.get(invoice=invoice)
+        order_items = list(MerchOrderItem.objects.filter(order=order, item=self.variant))
+        self.assertEqual(len(order_items), 1, 'Expect one MerchOrderItem, not multiple.')
+        self.assertEqual(order_items[0].quantity, 2)
+        self.assertAlmostEqual(invoice.grossTotal, self.item.defaultPrice * 2, places=2)
+
+
 class MerchStudentInfoViewTest(DefaultSchoolTestCase):
     '''
     Tests that StudentInfoView correctly reflects the contents of a
