@@ -49,6 +49,20 @@ def clear_reg_cart(request):
         request.session.modified = True
 
 
+def _cart_requires_student_info(cart_items):
+    '''
+    Return True if any cart item requires the Step 2 student-information form.
+    Items without an explicit requireFull flag default to True so event
+    registrations (which historically never carried the flag) preserve their
+    current behavior; a merch-only cart whose plugin has
+    requireFullRegistration=False can then bypass Step 2 by populating
+    requireFull=False on each item.
+    '''
+    if not cart_items:
+        return True
+    return any(item.get('requireFull', True) for item in cart_items)
+
+
 class PurchasableItemPagination(PageNumberPagination):
     page_size = 20
 
@@ -212,9 +226,16 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             invoice.invoiceitem_set.all().delete()
 
         # Expand items with quantity > 1 into multiple single-quantity items so
-        # that each person in a group registration gets their own EventRegistration.
+        # that each person in a group registration gets their own
+        # EventRegistration. Merch items are pass-through: the merch handler
+        # records quantity directly on the MerchOrderItem, and expanding
+        # produces duplicate rows that trip the "same variant added multiple
+        # times" guard in linkCartMerchOrderItems.
         expanded = []
         for item in item_data:
+            if item.get('item_type') == 'MerchItem':
+                expanded.append(item)
+                continue
             qty = max(1, int(item.get('quantity') or 1))
             for _qty_i in range(qty):
                 expanded.append({**item, 'quantity': 1})
@@ -447,7 +468,10 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         return None
 
     def get_success_url(self):
-        return reverse('getStudentInfo')
+        cart = self.request.session.get(REG_VALIDATION_STR, {}).get('cart', {})
+        if _cart_requires_student_info(cart.get('items', [])):
+            return reverse('getStudentInfo')
+        return reverse('showRegSummary')
 
     def dispatch(self, request, *args, **kwargs):
         '''
@@ -860,6 +884,8 @@ class CartSummaryView(RegistrationAdjustmentsMixin, TemplateView):
             reg_session['invoice_expiry'] = invoice.expirationDate.isoformat()
             reg_session['payAtDoor'] = self.payAtDoor
             request.session.modified = True
-            return HttpResponseRedirect(reverse('getStudentInfo'))
+            if _cart_requires_student_info(cart.get('items', [])):
+                return HttpResponseRedirect(reverse('getStudentInfo'))
+            return HttpResponseRedirect(reverse('showRegSummary'))
 
         return HttpResponseRedirect(reverse('cartSummary'))
