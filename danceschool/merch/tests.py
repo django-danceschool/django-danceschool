@@ -181,6 +181,47 @@ class MerchCartCheckoutTest(DefaultSchoolTestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_merch_only_cart_with_require_full_false_skips_student_info(self):
+        '''
+        A merch-only cart whose items all carry requireFull=False (reflecting
+        the merch plugin's requireFullRegistration checkbox being unchecked)
+        should skip StudentInfoView (Step 2) at checkout and redirect straight
+        to showRegSummary.
+        '''
+        response = self._door_cart_post(
+            items=[{
+                'item_type': 'MerchItem',
+                'item_id': self.item.id,
+                'sku': self.variant.sku,
+                'quantity': 1,
+                'requireFull': False,
+            }],
+            checkout=True,
+        )
+        self.assertRedirects(
+            response, reverse('showRegSummary'), fetch_redirect_response=False
+        )
+
+    def test_merch_cart_with_require_full_true_still_routes_to_student_info(self):
+        '''
+        When an item carries requireFull=True (or the flag is absent, per the
+        safe default), the checkout redirect must still go to StudentInfoView.
+        This guards the existing behavior for event registrations and for
+        merch plugins that have requireFullRegistration checked.
+        '''
+        response = self._door_cart_post(
+            items=[{
+                'item_type': 'MerchItem',
+                'item_id': self.item.id,
+                'sku': self.variant.sku,
+                'quantity': 1,
+                'requireFull': True,
+            }],
+            checkout=True,
+        )
+        self.assertRedirects(
+            response, reverse('getStudentInfo'), fetch_redirect_response=False
+        )
 
 class MerchStudentInfoViewTest(DefaultSchoolTestCase):
     '''

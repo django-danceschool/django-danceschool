@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (raw.type === 'MerchItem' || raw.type === 'merch' || raw.type === 'merchItem') {
-            return {
+            const item = {
                 item_type: 'MerchItem',
                 item_id: parseInt(raw.itemId),
                 sku: raw.sku,
@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 description: raw.description || null,
                 price: raw.price ? parseFloat(raw.price) : null,
             };
+            if (raw.requireFull !== undefined) { item.requireFull = isTruthy(raw.requireFull); }
+            if (raw.autoSubmit !== undefined) { item.autoSubmit = isTruthy(raw.autoSubmit); }
+            if (raw.autoFulfill !== undefined) { item.autoFulfill = isTruthy(raw.autoFulfill); }
+            return item;
         }
 
         // Unknown type — pass through as-is and let the server validate.
