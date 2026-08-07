@@ -4,6 +4,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -22,6 +23,27 @@ from datetime import timedelta
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+def _safe_redirect_url(url, request, fallback):
+    '''
+    Return ``url`` if it points back to the current host, otherwise
+    ``fallback``. Used to guard HttpResponseRedirect targets that
+    originate from client-supplied POST data or webhook metadata
+    (which itself echoes client-supplied values back from Stripe).
+    Without this guard the views become open redirects.
+    '''
+    allowed_hosts = {request.get_host()}
+    if url and url_has_allowed_host_and_scheme(
+        url, allowed_hosts=allowed_hosts, require_https=request.is_secure()
+    ):
+        return url
+    if url:
+        logger.warning(
+            'Rejected unsafe redirect target "%s"; falling back to %s.',
+            url, fallback,
+        )
+    return fallback
 
 
 def handle_stripe_checkout(request):
@@ -187,9 +209,13 @@ def handle_stripe_checkout(request):
                 'successUrl': successUrl,
             })
             request.session[PAYMENT_VALIDATION_STR] = paymentSession
-            return HttpResponseRedirect(customizeUrl)
+            return HttpResponseRedirect(_safe_redirect_url(
+                customizeUrl, request, fallback=reverse('registration'),
+            ))
 
-        return HttpResponseRedirect(successUrl)
+        return HttpResponseRedirect(_safe_redirect_url(
+            successUrl, request, fallback=reverse('registration'),
+        ))
 
     else:
         this_invoice.status = Invoice.PaymentStatus.error
@@ -331,7 +357,9 @@ def create_checkout_session(request):
 def webhook(request):
     payload = request.body
     endpoint_secret = settings.STRIPE_WEBHOOK_KEY
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    if not sig_header:
+        return HttpResponse(status=400)
     event = None
 
     try:
@@ -423,10 +451,16 @@ def finish_order(charge, metadata, request):
         })
         request.session[PAYMENT_VALIDATION_STR] = paymentSession
         if 'customizeUrl' in metadata:
-            return HttpResponseRedirect(metadata['customizeUrl'])
+            return HttpResponseRedirect(_safe_redirect_url(
+                metadata['customizeUrl'], request,
+                fallback=reverse('registration'),
+            ))
 
     if 'successUrl' in metadata:
-        return HttpResponseRedirect(metadata['successUrl'])
+        return HttpResponseRedirect(_safe_redirect_url(
+            metadata['successUrl'], request,
+            fallback=reverse('registration'),
+        ))
 
 
 class SuccessView(TemplateView):
