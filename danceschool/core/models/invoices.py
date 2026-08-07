@@ -406,6 +406,26 @@ class Invoice(EmailRecipientMixin, models.Model):
             k in item_keys
         }
 
+        # Capture each item's pre-application `total` and `adjustments` into
+        # its own data dict so the back-button reset block below can restore
+        # them faithfully. Without this, an item created with a non-zero
+        # adjustment (e.g. a manual courtesy credit applied before a discount
+        # is computed) would be wiped to 0 on the retry pass because the
+        # reset's Coalesce(...) defaults to 0 when the key is absent. Items
+        # that already have `_initial_*` captured are not re-captured.
+        for item in self.invoiceitem_set.all():
+            item_data = item.data or {}
+            captured = False
+            if '_initial_adjustments' not in item_data:
+                item_data['_initial_adjustments'] = item.adjustments
+                captured = True
+            if '_initial_total' not in item_data:
+                item_data['_initial_total'] = item.total
+                captured = True
+            if captured:
+                item.data = item_data
+                item.save(updateInvoiceTotals=False)
+
         # If the invoice has previously been saved with adjustments
         # but it is still a preliminary invoice,
         # then we need to un-apply those previous adjustments by starting with
