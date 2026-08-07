@@ -1,8 +1,10 @@
 import json
+import unittest
 
 from django.urls import reverse
 
-from ..models import Registration, Invoice, EventRole
+from ..models import Registration, Invoice, EventRole, PricingTier
+from ..models.event_addons import EventAddOn
 from ..constants import updateConstant, REG_VALIDATION_STR
 from .defaults import DefaultSchoolTestCase
 
@@ -543,3 +545,79 @@ class CartSummaryViewTest(DefaultSchoolTestCase):
         items = self.client.session[REG_VALIDATION_STR]['cart']['items']
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['sku'], f'EVENT_{series.id}_GENERAL')
+
+
+class EventAddOnChildGrossTotalTest(DefaultSchoolTestCase):
+    '''
+    Reproduces an inconsistency in core/handlers.py:linkCartEventRegistration
+    where InvoiceItems created for EventAddOn children get grossTotal set
+    to the child event's standalone base price (line 303) instead of the
+    parent's allocated share for that child (which getAllocatedTotals
+    correctly computes and is used for the parent's own grossTotal at
+    line 306-309).
+
+    Item.total is currently corrected via _initial_total fallback at
+    line 313, so the invoice grand total still lands right. But
+    sum(item.grossTotal) > parent.getBasePrice() whenever any add-on's
+    allocated share differs from its own base price, leaving per-item
+    breakdowns misleading and the grossTotal column out of sync with
+    total in financial reports.
+    '''
+
+    @unittest.expectedFailure
+    def test_addon_child_grosstotal_matches_allocated_share(self):
+        # Three tiers with prices that force a non-trivial residual
+        # allocation: parent ($50) is cheaper than the children together
+        # ($30 + $60 = $90), so the allocation produces shares ≠ base prices.
+        parent_tier = PricingTier.objects.create(
+            name='Parent Tier', onlinePrice=50, doorPrice=50, dropinPrice=50,
+        )
+        child1_tier = PricingTier.objects.create(
+            name='Child 1 Tier', onlinePrice=30, doorPrice=30, dropinPrice=30,
+        )
+        child2_tier = PricingTier.objects.create(
+            name='Child 2 Tier', onlinePrice=60, doorPrice=60, dropinPrice=60,
+        )
+
+        parent = self.create_series(pricingTier=parent_tier)
+        child1 = self.create_series(pricingTier=child1_tier)
+        child2 = self.create_series(pricingTier=child2_tier)
+
+        EventAddOn.objects.create(
+            event=parent, addOnEvent=child1, order=1,
+            allocationType=EventAddOn.AllocationType.residual,
+        )
+        EventAddOn.objects.create(
+            event=parent, addOnEvent=child2, order=2,
+            allocationType=EventAddOn.AllocationType.residual,
+        )
+
+        sku = f'EVENT_{parent.id}_GENERAL'
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps({
+                'items': [{'item_type': 'Event', 'item_id': parent.id,
+                           'sku': sku, 'quantity': 1}],
+                'checkout': True,
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
+        )
+        total_gross = sum(it.grossTotal for it in invoice.invoiceitem_set.all())
+
+        # Sum of per-item grossTotal must equal what the customer is
+        # actually being asked to pay for the parent registration.
+        # With the bug: parent=0, child1=$30, child2=$60 → sum=$90 (not $50).
+        self.assertAlmostEqual(
+            total_gross, parent.getBasePrice(), places=2,
+            msg=(
+                'Sum of InvoiceItem.grossTotal ({0}) does not match '
+                'parent.getBasePrice() ({1}). Children use their own '
+                'base price instead of their allocated share '
+                '(handlers.py:303 vs getAllocatedTotals at line 268).'
+            ).format(total_gross, parent.getBasePrice()),
+        )
