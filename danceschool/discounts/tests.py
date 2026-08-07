@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
-from danceschool.core.models import Invoice, Registration
+from danceschool.core.models import Invoice, PricingTier, Registration
 
 from .models import (
     PointGroup, PricingTierGroup, DiscountCategory, DiscountCombo, DiscountComboComponent
@@ -761,3 +761,146 @@ class CartSummaryDiscountPreviewTest(BaseDiscountsTest):
         preview = response.context_data.get('discount_preview')
         self.assertIsNotNone(preview)
         self.assertGreater(preview['total_discount'], 0)
+
+
+class MixedCartDiscountAllocationTest(BaseDiscountsTest):
+    '''
+    Reproduces a bug where a discount that applies to only some items in a
+    mixed cart is allocated proportionally across ALL items by grossTotal,
+    rather than being attributed to the items the discount actually covered.
+
+    Scenario: cart contains a $10 regular series + a $20 series eligible for
+    a 100% discount. Expected per-item totals after discount: $10 and $0.
+    Buggy current behavior allocates the $20 discount as $6.67 off the $10
+    item and $13.33 off the $20 item, leaving misleading per-item totals
+    (and a wrong grand total once items have different tax rates).
+    '''
+
+    def _make_tier(self, name, price):
+        return PricingTier.objects.create(
+            name=name, onlinePrice=price, doorPrice=price, dropinPrice=price,
+        )
+
+    def _make_full_off_combo(self, point_group, name):
+        # Uses percentDiscount (non-universal) so the discount attributes
+        # to specifically-covered items rather than spreading across the
+        # whole cart. flatPrice and dollarDiscount currently spread
+        # proportionally (see DiscountCombo.applyAndAllocate); that's a
+        # separate concern from this test.
+        combo = DiscountCombo.objects.create(
+            name=name,
+            category=DiscountCategory.objects.get(id=1),
+            discountType=DiscountCombo.DiscountType.percentDiscount,
+            percentDiscount=100,
+            percentUniversallyApplied=False,
+            active=True,
+            availableOnline=True,
+            availableAtDoor=True,
+        )
+        DiscountComboComponent.objects.create(
+            discountCombo=combo, pointGroup=point_group, quantity=5,
+            allWithinPointGroup=False,
+        )
+        return combo
+
+    def test_full_discount_on_one_item_does_not_affect_other_items(self):
+        updateConstant('general__discountsEnabled', True)
+
+        tier_a = self._make_tier('Cheap Tier', 10)
+        tier_b = self._make_tier('Pricey Tier', 20)
+
+        # Series A is ineligible for the discount; series B is the only
+        # member of the point group the discount requires.
+        s_a = self.create_series(pricingTier=tier_a)
+        s_b = self.create_series(pricingTier=tier_b)
+
+        b_only_group = PointGroup.objects.create(name='Tier B only')
+        PricingTierGroup.objects.create(
+            group=b_only_group, pricingTier=tier_b, points=5,
+        )
+        self._make_full_off_combo(b_only_group, 'Free Tier B')
+
+        cart_data = {
+            'items': [
+                {
+                    'item_type': 'Event', 'item_id': s_a.id,
+                    'sku': f'EVENT_{s_a.id}_GENERAL', 'quantity': 1,
+                },
+                {
+                    'item_type': 'Event', 'item_id': s_b.id,
+                    'sku': f'EVENT_{s_b.id}_GENERAL', 'quantity': 1,
+                },
+            ],
+            'checkout': True,
+        }
+        response = self.client.post(
+            reverse('cart'),
+            data=json.dumps(cart_data),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+
+        response = self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Mixed',
+            'lastName': 'Cart',
+            'email': 'mixed@cart.com',
+            'agreeToPolicies': True,
+        }, follow=True)
+        # Two items in the cart → flow detours through the multi-customer
+        # name form before reaching the summary page.
+        self.assertEqual(
+            response.redirect_chain, [(reverse('multiRegNameInfo'), 302)],
+        )
+
+        invoice_pre = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR].get('invoice_id')
+        )
+        reg_pre = Registration.objects.get(invoice=invoice_pre)
+        name_post = {}
+        for er in reg_pre.eventregistration_set.all():
+            name_post['er_%s_firstName' % er.id] = 'Mixed'
+            name_post['er_%s_lastName' % er.id] = 'Cart'
+            name_post['er_%s_email' % er.id] = 'mixed@cart.com'
+
+        response = self.client.post(
+            reverse('multiRegNameInfo'), name_post, follow=True,
+        )
+        self.assertEqual(
+            response.redirect_chain, [(reverse('showRegSummary'), 302)],
+        )
+
+        invoice = response.context_data.get('invoice')
+        items = {it.grossTotal: it for it in invoice.invoiceitem_set.all()}
+
+        # Sanity: the right items exist with the right gross totals.
+        self.assertIn(10, items, 'Series A item with grossTotal $10 missing')
+        self.assertIn(20, items, 'Series B item with grossTotal $20 missing')
+        item_a = items[10]
+        item_b = items[20]
+
+        # Invoice grand total must be $10 (the regular item) regardless.
+        # Use assertAlmostEqual for floating-point money math.
+        self.assertAlmostEqual(
+            invoice.total, 10, places=2,
+            msg='Invoice total wrong after applying $20 discount to a $20 item',
+        )
+        self.assertEqual(
+            response.context_data.get('total_discount_amount'), 20,
+        )
+
+        # The discount applied only to item B, so item A must keep its
+        # full $10 total and item B must be reduced to $0.
+        self.assertAlmostEqual(
+            item_a.total, 10, places=2,
+            msg=(
+                'Item A (regular $10) should not be discounted; '
+                'got {0} (suggests proportional allocation bug)'
+            ).format(item_a.total),
+        )
+        self.assertAlmostEqual(
+            item_b.total, 0, places=2,
+            msg=(
+                'Item B (eligible for 100% off) should be $0; '
+                'got {0} (suggests proportional allocation bug)'
+            ).format(item_b.total),
+        )
