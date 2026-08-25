@@ -291,6 +291,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             modelType: entry.modelType,
                             eventId: entry.eventId,
                             occurrenceId: entry.occurrenceId,
+                            guestListId: entry.guestListId,
                         });
 
                         setText(row, '.guestInfoEvent', entry.eventName);
@@ -342,6 +343,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 first_name: checkIn.dataset.firstName,
                 last_name: checkIn.dataset.lastName,
                 cancelled: !checkIn.checked,
+                // Provenance: the guest list rule that admitted this person.
+                guest_list_id: checkIn.dataset.guestListId,
+                guest_model_type: checkIn.dataset.modelType,
+                guest_model_id: checkIn.value,
             }];
         } else if (checkIn.classList.contains('registrationCheckIn')) {
             requestData.registrations = [{

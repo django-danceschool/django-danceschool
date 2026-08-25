@@ -149,6 +149,10 @@ class SchoolSingleCheckInView(PermissionRequiredMixin, DetailView):
 class ProcessCheckInView(PermissionRequiredMixin, View):
     permission_required = 'core.checkin_customers'
 
+    # The types of record that a guest list may use to put a name on a list.
+    # Recorded as provenance for name-based check-ins.
+    GUEST_MODEL_TYPES = ['GuestListName', 'StaffMember', 'EventRegistration']
+
     def errorResponse(self, errors):
         ''' Return a formatted error response. Takes a dict of errors. '''
 
@@ -156,6 +160,33 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
             'status': 'failure',
             'errors': errors,
         })
+
+    def getCheckInData(self, item):
+        '''
+        Build the provenance recorded with a name-based check-in, indicating
+        the guest list and the record that put this person on it.  A check-in
+        for a customer who is admitted by way of a registration for some other
+        event records that EventRegistration here, since no EventRegistration
+        exists for the event being checked into.
+
+        This information is passed by the browser, so only known keys with
+        integer or whitelisted values are stored.
+        '''
+
+        data = {}
+
+        for key, target in [
+            ('guest_list_id', 'guestListId'), ('guest_model_id', 'guestModelId'),
+        ]:
+            try:
+                data[target] = int(item.get(key))
+            except (TypeError, ValueError):
+                continue
+
+        if item.get('guest_model_type') in self.GUEST_MODEL_TYPES:
+            data['guestModelType'] = item.get('guest_model_type')
+
+        return data
 
     def post(self, request, *args, **kwargs):
         '''
@@ -410,11 +441,17 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                     return self.errorResponse(errors)
                 names.remove(this_update[0])
 
+                # Keep provenance current for name-based check-ins, without
+                # discarding anything already recorded against them.
+                this_data = self.getCheckInData(this_update[0])
+                if this_data:
+                    checkin.data = {**(checkin.data or {}), **this_data}
+
             checkin.submissionUser = submissionUser
             checkin.cancelled = this_update[0].get('cancelled', False)
 
         EventCheckIn.objects.bulk_update(
-            existing_checkins, ['cancelled', 'submissionUser']
+            existing_checkins, ['cancelled', 'submissionUser', 'data']
         )
 
         # Create EventCheckIns associated with remaining new registrations and
@@ -456,6 +493,7 @@ class ProcessCheckInView(PermissionRequiredMixin, View):
                 cancelled=x.get('cancelled', False),
                 firstName=x.get('first_name'),
                 lastName=x.get('last_name'),
+                data=self.getCheckInData(x),
                 **new_checkin_kwargs
             ) for x in names
         ]

@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q, Value, Case, When, F
-from django.db.models.functions import Concat
+from django.db.models import Q, Value, Case, When, F, Exists, OuterRef, Subquery
+from django.db.models.functions import Concat, Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 
@@ -11,10 +11,13 @@ from dateutil.relativedelta import relativedelta
 
 from danceschool.core.models import (
     PublicEventCategory, SeriesCategory, EventStaffCategory, EventSession,
-    Event, StaffMember, Registration, EventRegistration, EventOccurrence
+    Event, StaffMember, EventRegistration, EventOccurrence
 )
 from danceschool.core.utils.timezone import ensure_localtime
-from .constants import GUESTLIST_ADMISSION_CHOICES, GUESTLIST_SORT_CHOICES
+from .constants import (
+    GUESTLIST_ADMISSION_CHOICES, GUESTLIST_REGISTRATION_ADMISSION_CHOICES,
+    GUESTLIST_SORT_CHOICES
+)
 
 
 class GuestList(models.Model):
@@ -100,34 +103,20 @@ class GuestList(models.Model):
         ''' Ensure local time and get the beginning of the day '''
         return ensure_localtime(dateTime).replace(hour=0, minute=0, second=0, microsecond=0)
 
-    def getComponentFilters(
+    def getIntervals(
             self, component, events=None, dateTime=None, event_intervals=None
     ):
         '''
-        Get a parsimonious set of intervals and the associated Q() objects
-        based on the occurrences of a specified event, and the rule that
-        implicitly defines the start and end of each interval.
+        Get a parsimonious set of time intervals based on the occurrences of a
+        specified event, and the rule that implicitly defines the start and end
+        of each interval.  Returns None for rules that do not depend on
+        intervals at all ('Always' and 'EventOnly'), and an empty list for
+        unrecognized rules or when there are no occurrences to work from.  This
+        logic is shared by all types of guest list component.
         '''
 
-        # Limit to the staff member or staff category specified by the rule.
-        if component.staffMember:
-            filters = Q(pk=component.staffMember.pk)
-        else:
-            filters = Q(eventstaffmember__category=component.staffCategory)
-
-        # Handle 'Always' and 'EventOnly' rules first, because they do not
-        # require an analysis of intervals.
-        if component.admissionRule == 'Always' and component.staffMember:
-            # A specific named person is always on the list regardless of scheduling.
-            return Q(filters)
-        elif component.admissionRule in ['Always', 'EventOnly'] and events:
-            # For category-based 'Always' and all 'EventOnly' rules, restrict to
-            # staff scheduled for these events. This avoids surfacing historical
-            # category members who are no longer active.
-            return Q(filters & Q(eventstaffmember__event__in=events))
-        elif component.admissionRule in ['Always', 'EventOnly']:
-            # No events provided; include all associated staff.
-            return Q(filters)
+        if component.admissionRule in ['Always', 'EventOnly']:
+            return None
 
         # Start with the event occurrence intervals, or with the specified time.
         if events:
@@ -172,9 +161,22 @@ class GuestList(models.Model):
                     self.getDayStart(x[1]).replace(year=x[1].year + 1, month=1, day=1)
                 ) for x in intervals
             ]
+        elif component.admissionRule == 'Rolling':
+            # A rolling window of whole days before and after each event
+            # occurrence.  Unlike the calendar-based rules above, this does not
+            # depend on where the event falls within the week or month.
+            intervals = [
+                (
+                    self.getDayStart(x[0]) - timedelta(days=component.daysBefore or 0),
+                    self.getDayStart(x[1]) + timedelta(days=(component.daysAfter or 0) + 1)
+                ) for x in intervals
+            ]
         else:
             # This is a failsafe that will always evaluate as False.
-            return Q(pk__isnull=True)
+            return []
+
+        if not intervals:
+            return []
 
         # Use intervaltree to create the most parsimonious set of intervals for this interval
         # and then filter on those intervals
@@ -182,10 +184,45 @@ class GuestList(models.Model):
         tree = IntervalTree.from_tuples(intervals)
         tree.merge_overlaps()
 
+        return [(x[0], x[1]) for x in tree.items()]
+
+    def getStaffComponentFilters(
+            self, component, events=None, dateTime=None, event_intervals=None
+    ):
+        '''
+        Get the Q() object that identifies the staff members added to this list
+        by a specified GuestListStaffComponent.
+        '''
+
+        # Limit to the staff member or staff category specified by the rule.
+        if component.staffMember:
+            filters = Q(pk=component.staffMember.pk)
+        else:
+            filters = Q(eventstaffmember__category=component.staffCategory)
+
+        # Handle 'Always' and 'EventOnly' rules first, because they do not
+        # require an analysis of intervals.
+        if component.admissionRule == 'Always' and component.staffMember:
+            # A specific named person is always on the list regardless of scheduling.
+            return Q(filters)
+        elif component.admissionRule in ['Always', 'EventOnly'] and events:
+            # For category-based 'Always' and all 'EventOnly' rules, restrict to
+            # staff scheduled for these events. This avoids surfacing historical
+            # category members who are no longer active.
+            return Q(filters & Q(eventstaffmember__event__in=events))
+        elif component.admissionRule in ['Always', 'EventOnly']:
+            # No events provided; include all associated staff.
+            return Q(filters)
+
+        intervals = self.getIntervals(
+            component, events=events, dateTime=dateTime,
+            event_intervals=event_intervals
+        )
+
         # Since we are OR appending, start with something that is always False.
         intervalFilters = Q(pk__isnull=True)
 
-        for item in tree.items():
+        for item in intervals or []:
             intervalFilters = intervalFilters | Q(
                 Q(eventstaffmember__event__eventoccurrence__endTime__gte=item[0]) &
                 Q(eventstaffmember__event__eventoccurrence__startTime__lte=item[1])
@@ -193,11 +230,55 @@ class GuestList(models.Model):
 
         return Q(filters & intervalFilters)
 
+    def getRegistrationComponentFilters(
+            self, component, events=None, dateTime=None, event_intervals=None
+    ):
+        '''
+        Get the Q() object that identifies the EventRegistrations which qualify
+        an individual for this list under a specified
+        GuestListRegistrationComponent.  The categories specified by the
+        component determine which registrations qualify, and the admission rule
+        determines how close in time the qualifying event must be.
+        '''
+
+        seriesCategories = [x.pk for x in component.seriesCategories.all()]
+        eventCategories = [x.pk for x in component.eventCategories.all()]
+
+        if not (seriesCategories or eventCategories):
+            # A component with no scope specified never adds anyone.
+            return Q(pk__isnull=True)
+
+        categoryFilters = Q(pk__isnull=True)
+
+        if seriesCategories:
+            categoryFilters = categoryFilters | Q(
+                event__series__category__in=seriesCategories
+            )
+        if eventCategories:
+            categoryFilters = categoryFilters | Q(
+                event__publicevent__category__in=eventCategories
+            )
+
+        intervals = self.getIntervals(
+            component, events=events, dateTime=dateTime,
+            event_intervals=event_intervals
+        )
+
+        intervalFilters = Q(pk__isnull=True)
+
+        for item in intervals or []:
+            intervalFilters = intervalFilters | Q(
+                Q(event__eventoccurrence__endTime__gte=item[0]) &
+                Q(event__eventoccurrence__startTime__lte=item[1])
+            )
+
+        return Q(categoryFilters & intervalFilters)
+
     def getStaffForEvents(
             self, events=Event.objects.none(), filters=Q(),
             startTime=None, endTime=None
         ):
-        components = self.guestlistcomponent_set.all()  # uses prefetch cache
+        components = self.guestliststaffcomponent_set.all()  # uses prefetch cache
         component_filters = Q(pk__isnull=True)
 
         # Compute once, reuse everywhere
@@ -217,18 +298,18 @@ class GuestList(models.Model):
                 per_event_applies = self.appliesToEvents(events, verbose=True)
         for component in components:
             if applies_to_all:
-                component_filters |= self.getComponentFilters(
+                component_filters |= self.getStaffComponentFilters(
                     component, events=events, event_intervals=event_intervals
                 )
             elif bool(events):
                 for event in events:
                     if per_event_applies.get(event.id):
-                        component_filters |= self.getComponentFilters(
+                        component_filters |= self.getStaffComponentFilters(
                             component, events=[event],
                             event_intervals=event_intervals
                         )
             else:
-                component_filters |= self.getComponentFilters(
+                component_filters |= self.getStaffComponentFilters(
                     component, dateTime=timezone.now()
                 )
 
@@ -245,6 +326,87 @@ class GuestList(models.Model):
             contact=F('privateEmail'), email=F('privateEmail'),
         ).filter(filters)
 
+    def getRegistrantsForEvents(
+            self, events=Event.objects.none(), filters=Q(),
+            startTime=None, endTime=None
+        ):
+        '''
+        Get the set of EventRegistrations that qualify an individual for
+        admission to the specified events under one of this list's
+        registration-based components.  This is how, for example, registration
+        in a class series can also admit an individual to a social dance later
+        in the same week without generating a second EventRegistration.
+
+        Individuals who hold a registration for one of the specified events are
+        excluded, because they are already handled as registrants and should
+        not be checked in twice.  At most one qualifying registration per
+        customer is returned for the same reason.
+        '''
+
+        components = self.guestlistregistrationcomponent_set.all()  # uses prefetch cache
+
+        if not components or not events:
+            return EventRegistration.objects.none()
+
+        applies_to_all = self.appliesToEvents(events)
+        per_event_applies = (
+            {} if applies_to_all else self.appliesToEvents(events, verbose=True)
+        )
+
+        # Intervals are anchored to the occurrences of the events being checked
+        # into, narrowed to the passed window if one is given.  Without the
+        # window, a recurring event would anchor intervals to every one of its
+        # occurrences.
+        occ_query = EventOccurrence.objects.filter(event__in=events)
+        if startTime is not None and endTime is not None:
+            occ_query = occ_query.filter(endTime__gte=startTime, startTime__lte=endTime)
+
+        intervals_by_event = {}
+        for occ in occ_query:
+            intervals_by_event.setdefault(occ.event_id, []).append(
+                (occ.startTime, occ.endTime)
+            )
+        all_intervals = [x for y in intervals_by_event.values() for x in y]
+
+        component_filters = Q(pk__isnull=True)
+
+        for component in components:
+            if applies_to_all:
+                component_filters |= self.getRegistrationComponentFilters(
+                    component, events=events, event_intervals=all_intervals
+                )
+            else:
+                for event in events:
+                    if per_event_applies.get(event.id):
+                        component_filters |= self.getRegistrationComponentFilters(
+                            component, events=[event],
+                            event_intervals=intervals_by_event.get(event.id, [])
+                        )
+
+        qualifying = EventRegistration.objects.filter(
+            Q(registration__final=True) & Q(cancelled=False) &
+            Q(customer__isnull=False) & component_filters
+        ).exclude(event__in=events)
+
+        # Exclude anyone who is registered for one of these events themselves,
+        # so that they cannot be checked in both as a registrant and as a guest.
+        registeredForEvent = EventRegistration.objects.filter(
+            event__in=events, cancelled=False, registration__final=True,
+            customer_id=OuterRef('customer_id'),
+        )
+
+        # Where an individual has more than one qualifying registration, list
+        # only the earliest one so that they appear on the list exactly once.
+        firstQualifying = qualifying.filter(
+            customer_id=OuterRef('customer_id')
+        ).order_by('event__startTime', 'id').values('id')[:1]
+
+        return qualifying.annotate(
+            registeredForEvent=Exists(registeredForEvent)
+        ).filter(
+            Q(registeredForEvent=False) & Q(id=Subquery(firstQualifying))
+        ).filter(filters).distinct()
+
     def getDescriptionForGuest(self, guest, event=None):
         '''
         Return a string that indicates the type of guest, depending on the rule
@@ -252,7 +414,14 @@ class GuestList(models.Model):
         '''
         if isinstance(guest, GuestListName):
             return guest.notes or gettext('Manually Added Guest')
-        elif isinstance(guest, Registration):
+        elif isinstance(guest, EventRegistration):
+            if event and guest.event_id != event.id:
+                # The guest qualifies by way of a registration for some other
+                # event, under a registration-based component.
+                category = getattr(getattr(guest.event, 'category', None), 'name', None)
+                return gettext('Included with {category}').format(
+                    category=category or gettext('registration')
+                )
             return gettext('Registered')
         elif isinstance(guest, StaffMember):
             if event:
@@ -315,9 +484,34 @@ class GuestList(models.Model):
                 ).annotate(
                     first=F('customer__first_name'), last=F('customer__last_name'),
                     contact=F('customer__email'),
-                    modelType=Value('Registration', output_field=models.CharField()),
+                    modelType=Value('EventRegistration', output_field=models.CharField()),
                     guestListId=Value(self.id, output_field=models.IntegerField()),
                     guestType=Value(_('Registered'), output_field=models.CharField()),
+                ).values(
+                    'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
+                    'guestType'
+                ).order_by()
+            )
+
+        # Individuals admitted by way of a registration for some other event.
+        if events and self.guestlistregistrationcomponent_set.all():
+            names = names.union(
+                self.getRegistrantsForEvents(
+                    events, filters, startTime=startTime, endTime=endTime
+                ).annotate(
+                    first=F('customer__first_name'), last=F('customer__last_name'),
+                    contact=F('customer__email'),
+                    modelType=Value('EventRegistration', output_field=models.CharField()),
+                    guestListId=Value(self.id, output_field=models.IntegerField()),
+                    guestType=Concat(
+                        Value(gettext('Included with ')),
+                        Coalesce(
+                            'event__series__category__name',
+                            'event__publicevent__category__name',
+                            Value(gettext('registration')),
+                        ),
+                        output_field=models.CharField()
+                    ),
                 ).values(
                     'id', 'first', 'last', 'contact', 'modelType', 'guestListId',
                     'guestType'
@@ -370,8 +564,57 @@ class GuestListName(models.Model):
         )
 
 
-class GuestListComponent(models.Model):
-    guestList = models.ForeignKey(GuestList, on_delete=models.CASCADE)
+class GuestListComponentBase(models.Model):
+    '''
+    Abstract base class for the rules that add individuals to a guest list.
+    Each subclass identifies a different set of people (staff members,
+    registrants for other events, etc.), but all of them share the same notion
+    of an admission rule that defines how close in time a person's
+    participation must be to the event being checked into.
+    '''
+
+    guestList = models.ForeignKey(
+        GuestList, verbose_name=_('Guest list'), on_delete=models.CASCADE,
+        related_name='%(class)s_set'
+    )
+
+    admissionRule = models.CharField(
+        _('Event admission rule'), choices=GUESTLIST_ADMISSION_CHOICES,
+        max_length=10
+    )
+
+    daysBefore = models.PositiveSmallIntegerField(
+        _('Days before'), null=True, blank=True,
+        help_text=_(
+            'For rolling admission rules only: how many days before the event '
+            'being checked into the qualifying participation may occur.'
+        )
+    )
+    daysAfter = models.PositiveSmallIntegerField(
+        _('Days after'), null=True, blank=True,
+        help_text=_(
+            'For rolling admission rules only: how many days after the event '
+            'being checked into the qualifying participation may occur.'
+        )
+    )
+
+    def clean(self):
+        if (
+            self.admissionRule == 'Rolling' and
+            self.daysBefore is None and self.daysAfter is None
+        ):
+            raise ValidationError(_(
+                'Rolling admission rules require a number of days before ' +
+                'and/or after the event.'
+            ))
+        super().clean()
+
+    class Meta:
+        abstract = True
+
+
+class GuestListStaffComponent(GuestListComponentBase):
+    ''' Add staff members to a guest list based on their staffing history. '''
 
     staffCategory = models.ForeignKey(
         EventStaffCategory, verbose_name=_('Category of staff members'),
@@ -382,17 +625,57 @@ class GuestListComponent(models.Model):
         null=True, blank=True, on_delete=models.CASCADE
     )
 
-    admissionRule = models.CharField(_('Event admission rule'), choices=GUESTLIST_ADMISSION_CHOICES, max_length=10)
-
     def clean(self):
         ''' Either staffCategory or staffMember must be filled in, but not both. '''
         if not self.staffCategory and not self.staffMember:
             raise ValidationError(_('Either staff category or staff member must be specified.'))
         if self.staffCategory and self.staffMember:
             raise ValidationError(_('Specify either a staff category or a staff member, not both.'))
+        super().clean()
 
     class Meta:
         ordering = ('guestList', 'admissionRule')
-        verbose_name = _('Guest list component')
-        verbose_name_plural = _('Guest list components')
+        verbose_name = _('Guest list staff component')
+        verbose_name_plural = _('Guest list staff components')
         unique_together = ('guestList', 'staffCategory', 'staffMember')
+
+
+class GuestListRegistrationComponent(GuestListComponentBase):
+    '''
+    Add customers to a guest list because they are registered for some other
+    event.  This is used where registration for one event also includes
+    admission to another, such as a class series that includes admission to a
+    social dance, without selling the two together or generating a second
+    EventRegistration.
+    '''
+
+    admissionRule = models.CharField(
+        _('Event admission rule'), choices=GUESTLIST_REGISTRATION_ADMISSION_CHOICES,
+        max_length=10
+    )
+
+    seriesCategories = models.ManyToManyField(
+        SeriesCategory, verbose_name=_('Qualifying series categories'), blank=True,
+        help_text=_(
+            'Registration for a class series in one of these categories admits '
+            'the customer to events on this guest list.'
+        )
+    )
+    eventCategories = models.ManyToManyField(
+        PublicEventCategory, verbose_name=_('Qualifying public event categories'),
+        blank=True,
+        help_text=_(
+            'Registration for a public event in one of these categories admits '
+            'the customer to events on this guest list.'
+        )
+    )
+
+    # Note that the requirement of at least one qualifying category is enforced
+    # by the admin form rather than by clean(), because the categories are
+    # many-to-many fields whose submitted values are not yet available when
+    # model validation runs.  A component with no categories admits no one.
+
+    class Meta:
+        ordering = ('guestList', 'admissionRule')
+        verbose_name = _('Guest list registration component')
+        verbose_name_plural = _('Guest list registration components')

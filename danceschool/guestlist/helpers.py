@@ -51,9 +51,12 @@ def getList(
         'eventSessions', 
         'seriesCategories',
         'eventCategories',
-        'guestlistcomponent_set',
-        'guestlistcomponent_set__staffMember',
-        'guestlistcomponent_set__staffCategory',
+        'guestliststaffcomponent_set',
+        'guestliststaffcomponent_set__staffMember',
+        'guestliststaffcomponent_set__staffCategory',
+        'guestlistregistrationcomponent_set',
+        'guestlistregistrationcomponent_set__seriesCategories',
+        'guestlistregistrationcomponent_set__eventCategories',
     )
 
     queryset = []
