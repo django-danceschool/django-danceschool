@@ -104,3 +104,12 @@ get_eventregistration_data = Signal(''' ['eventregistrations'] ''')
 # views.EventRegistrationSummaryView to get other names that may be checked in,
 # such as guest list names.  
 get_additional_event_names = Signal(''' ['event'] ''')
+
+# Fires from EventRegistrationSummaryView.get_context_data() so that other
+# apps can contribute extra header statistics (label/value pairs) to be
+# rendered in the summary <dl> above the registration table. Each handler
+# should return either an empty list or a list of dicts shaped
+# {'label': str, 'value': str_or_int}.
+get_registration_summary_header_stats = Signal(
+    ''' ['event', 'registrations'] '''
+)
