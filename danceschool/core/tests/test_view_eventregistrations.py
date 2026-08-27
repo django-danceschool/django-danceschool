@@ -150,3 +150,62 @@ class HeaderStatsViewIntegrationTest(TestCase):
             get_registration_summary_header_stats.disconnect(
                 dispatch_uid='test_kwargs_receiver',
             )
+
+
+class HeaderStatsTemplateRenderTest(TestCase):
+    """
+    Tests that view_eventregistrations.html renders each entry in
+    extra_header_stats as a <dt>/<dd> pair inside the header <dl>.
+    """
+
+    def setUp(self):
+        now = timezone.now()
+        self.superuser = User.objects.create_superuser(
+            'templateuser', 'template@example.com', 'pass'
+        )
+        self.event = PublicEvent.objects.create(
+            title='Template Test Social',
+            slug='template-test-social',
+            status=Event.RegStatus.enabled,
+        )
+        EventOccurrence.objects.create(
+            event=self.event,
+            startTime=now + timedelta(days=1),
+            endTime=now + timedelta(days=1, hours=2),
+        )
+        self.client.login(username='templateuser', password='pass')
+
+    def test_stats_render_as_dt_dd_pairs(self):
+        @receiver(
+            get_registration_summary_header_stats,
+            dispatch_uid='test_template_render',
+        )
+        def contributor(sender, event, registrations, **kwargs):
+            return [
+                {'label': 'Widget count', 'value': 7},
+                {'label': 'Gadget count', 'value': 12},
+            ]
+
+        try:
+            response = self.client.get(
+                reverse('viewregistrations', args=(self.event.id,))
+            )
+            body = response.content.decode('utf-8')
+            self.assertIn('<dt>Widget count:</dt>', body)
+            self.assertIn('<dd>7</dd>', body)
+            self.assertIn('<dt>Gadget count:</dt>', body)
+            self.assertIn('<dd>12</dd>', body)
+        finally:
+            get_registration_summary_header_stats.disconnect(
+                dispatch_uid='test_template_render',
+            )
+
+    def test_no_stats_means_no_extra_dt_dd_after_partner_required(self):
+        response = self.client.get(
+            reverse('viewregistrations', args=(self.event.id,))
+        )
+        body = response.content.decode('utf-8')
+        # 'Partner Required' is the last of the built-ins. No extra dt/dd
+        # should appear when extra_header_stats is empty.
+        self.assertIn('Partner Required', body)
+        self.assertNotIn('Widget count', body)
