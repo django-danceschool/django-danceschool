@@ -19,7 +19,7 @@ from ..models import (
 from ..forms.event import EventAutocompleteForm
 from ..constants import getConstant
 from ..mixins import EventOrderMixin, SiteHistoryMixin
-from ..signals import get_eventregistration_data, get_additional_event_names, get_person_data
+from ..signals import get_eventregistration_data, get_additional_event_names, get_person_data, get_registration_summary_header_stats
 from ..registries import extras_templates_registry
 from ..utils.timezone import ensure_localtime
 
@@ -183,6 +183,18 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             for k, v in chain.from_iterable([x.items() for x in [y[1] for y in extra_names_data if y[1]]]):
                 additional_names_extras_dict[k].extend(v)
 
+        # Signal-based extension: let apps contribute per-event header stats
+        # (label/value dicts) rendered above the registration table.
+        header_stats_responses = get_registration_summary_header_stats.send(
+            sender=EventRegistrationSummaryView,
+            event=self.object,
+            registrations=registrations,
+        )
+        extra_header_stats = []
+        for _receiver, response in header_stats_responses:
+            if response:
+                extra_header_stats.extend(response)
+
         # Compute next_occurrence from prefetched eventoccurrence_set (avoids DB query)
         now_floor = ensure_localtime(timezone.now()).replace(
             hour=0, minute=0, second=0, microsecond=0
@@ -244,6 +256,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
             'extras': extras_dict,
             'additional_names_extras': additional_names_extras_dict,
             'extras_templates_registry': extras_templates_registry,
+            'extra_header_stats': extra_header_stats,
         }
         context.update(kwargs)
         return super().get_context_data(**context)
