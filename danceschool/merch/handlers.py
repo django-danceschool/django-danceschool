@@ -306,7 +306,7 @@ def linkCartMerchOrderItems(sender, **kwargs):
     # Identify whether this is a merch item via the purchasable registry.
     # This avoids any reliance on SKU format conventions.
     this_merch_item = None
-    for qs, _ in purchasable_registry:
+    for qs, _serializer in purchasable_registry:
         if qs.model == MerchItem:
             try:
                 this_merch_item = qs.get(id=item_id)

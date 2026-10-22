@@ -164,6 +164,41 @@ class MerchCartCheckoutTest(DefaultSchoolTestCase):
             MerchOrderItem.objects.filter(order=order, item=self.variant).exists()
         )
 
+    def test_merch_checkout_with_quantity_greater_than_one(self):
+        '''Quantity > 1 yields a single MerchOrderItem carrying that quantity.'''
+        from danceschool.merch.models import MerchOrder, MerchOrderItem
+        response = self._door_cart_post(
+            items=[{
+                'item_type': 'MerchItem',
+                'item_id': self.item.id,
+                'sku': self.variant.sku,
+                'quantity': 3,
+            }],
+            checkout=True,
+        )
+        self.assertRedirects(
+            response, reverse('getStudentInfo'), fetch_redirect_response=False
+        )
+        invoice = Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+        self.assertEqual(invoice.grossTotal, self.item.defaultPrice * 3)
+        order = MerchOrder.objects.get(invoice=invoice)
+        order_items = MerchOrderItem.objects.filter(order=order, item=self.variant)
+        self.assertEqual(order_items.count(), 1)
+        self.assertEqual(order_items.first().quantity, 3)
+
+    def test_merch_duplicate_sku_in_cart_is_validation_error(self):
+        '''Duplicate SKU lines are rejected cleanly rather than raising a server error.'''
+        line = {
+            'item_type': 'MerchItem',
+            'item_id': self.item.id,
+            'sku': self.variant.sku,
+            'quantity': 1,
+        }
+        response = self._door_cart_post(items=[line, dict(line)], checkout=True)
+        self.assertEqual(response.status_code, 400)
+
     def test_merch_rejected_for_online_cart(self):
         '''Merch items must be rejected when payAtDoor is not set.'''
         response = self.client.post(

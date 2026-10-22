@@ -254,7 +254,7 @@ class CartItemSerializer(serializers.Serializer):
         purchasable_items = self.context.get('purchasable_items', [])
 
         valid = False
-        for qs, _ in purchasable_items:
+        for qs, _serializer in purchasable_items:
             if qs.filter(id=data["item_id"]).exists():
                 instance = qs.get(id=data["item_id"])
 

@@ -238,8 +238,13 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
 
         # Expand items with quantity > 1 into multiple single-quantity items so
         # that each person in a group registration gets their own EventRegistration.
+        # Merchandise is not expanded: its quantity is carried on a single
+        # MerchOrderItem, and duplicate SKUs in the cart are rejected.
         expanded = []
         for item in item_data:
+            if item.get('item_type') == 'MerchItem':
+                expanded.append(item)
+                continue
             qty = max(1, int(item.get('quantity') or 1))
             for _qty_i in range(qty):
                 expanded.append({**item, 'quantity': 1})
@@ -357,7 +362,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
         # Find the Event queryset in the purchasable registry so we can compute
         # prices without an extra DB round-trip.
         event_qs = None
-        for qs, _ in self.purchasable_registry:
+        for qs, _serializer in self.purchasable_registry:
             if qs.model.__name__ == 'Event':
                 event_qs = qs
                 break
