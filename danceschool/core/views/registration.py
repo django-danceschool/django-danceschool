@@ -244,15 +244,74 @@ class RegistrationSummaryView(
             combined_response['total_posttax'] += response[1].get('total_posttax', 0)
             combined_response['items'] += response[1].get('items', [])
 
-        # The updateTotals method allocates the total adjustment across the
-        # invoice items, and also recalculates the taxes for each item.
-        invoice.updateTotals(
-            allocateAmounts={
-                'total': -1*(combined_response['total_pretax'] + total_discount_amount),
-                'adjustments': -1*(combined_response['total_posttax']),
-            },
-            save=True,
-        )
+        # The updateTotals method allocates adjustments across invoice items
+        # and recalculates per-item taxes. Without per-item weights the
+        # default behavior is to allocate every change proportionally to
+        # grossTotal, which is wrong when a discount only covers a subset
+        # of items (e.g. a 100%-off code on one event in a mixed cart):
+        # the discount would bleed onto unrelated items and leave both
+        # per-item totals and per-event-tax-rate grand totals incorrect.
+        #
+        # Build weights from the last DiscountInfo's per-event allocation
+        # so the discount portion lands only on the items it actually
+        # covered. Vouchers and post-tax adjustments stay proportional in
+        # a chained second call (allocateWeights cannot be mixed across
+        # pre-tax and post-tax buckets in a single updateTotals call).
+        discount_weights = {}
+        if reg and discount_codes:
+            final = discount_codes[-1]
+            event_ids = list(getattr(final, 'net_allocated_event_ids', []) or [])
+            allocated = list(final.net_allocated_prices or [])
+            if event_ids and len(event_ids) == len(allocated):
+                # net_allocated_event_ids only contains events that were
+                # in the discount-eligibility list (non-drop-in, with a
+                # pricing tier), so we only need to map those here.
+                # Note: if a cart contains multiple non-drop-in
+                # registrations for the SAME event (multi-customer
+                # case), only one InvoiceItem ends up in this map; the
+                # remaining items fall back to proportional allocation
+                # for the unaccounted share. This is a corner case.
+                er_qs = reg.eventregistration_set.select_related(
+                    'invoiceItem', 'event'
+                ).filter(dropIn=False)
+                items_by_event = {
+                    er.event.id: er.invoiceItem for er in er_qs
+                    if er.invoiceItem is not None
+                }
+                for ev_id, net in zip(event_ids, allocated):
+                    item = items_by_event.get(ev_id)
+                    if item is None:
+                        continue
+                    weight = float(item.grossTotal) - float(net)
+                    if weight > 0:
+                        discount_weights[str(item.id)] = weight
+
+        pretax_total = -1*(combined_response['total_pretax'] + total_discount_amount)
+        posttax_total = -1*(combined_response['total_posttax'])
+
+        if discount_weights:
+            # Apply the discount (and any pre-tax vouchers) with per-item
+            # weights, then if there are post-tax adjustments apply those
+            # separately so updateTotals' "weights forbid mixing pre-tax
+            # and post-tax buckets" constraint is respected.
+            invoice.updateTotals(
+                save=True,
+                allocateAmounts={'total': pretax_total},
+                allocateWeights=discount_weights,
+            )
+            if posttax_total != 0:
+                invoice.updateTotals(
+                    save=True,
+                    allocateAmounts={'adjustments': posttax_total},
+                )
+        else:
+            invoice.updateTotals(
+                allocateAmounts={
+                    'total': pretax_total,
+                    'adjustments': posttax_total,
+                },
+                save=True,
+            )
 
         # Update the session key to keep track of this registration
         regSession = request.session[REG_VALIDATION_STR]
