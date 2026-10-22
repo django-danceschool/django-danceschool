@@ -13,6 +13,9 @@
 		<dt>{% trans "Location" %}:</dt><dd>{{ event.location.name }}{% if event.room.name %} - {{ event.room.name }}{% endif %}</dd>
 		<dt>{% trans "Time" %}:</dt><dd>{{ event.startTime|date:'l, h:i A' }}</dd>
 		<dt>{% trans "Partner Required" %}:</dt><dd>{{ event.partnerRequired|yesno }}</dd>
+		{% for stat in extra_header_stats %}
+			<dt>{{ stat.label }}:</dt><dd>{{ stat.value }}</dd>
+		{% endfor %}
 	</dl>
 {% endif %}
 
