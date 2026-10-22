@@ -60,14 +60,29 @@ def checkBanlist(sender, **kwargs):
             Registration.objects.filter(invoice=invoice).first(), 'id', None
         )
 
+    # Only match on values that were actually provided.  A missing value must
+    # never be passed to an iexact lookup, because Django treats iexact=None as
+    # "IS NULL", which would match every banned person with no email addresses.
+    # (A missing value is common here: fields that fail validation are absent
+    # from the form's cleaned_data, but clean() still sends this signal.)
+    first = (first or '').strip()
+    last = (last or '').strip()
+    email = (email or '').strip()
+
+    match_query = Q()
+    if first and last:
+        match_query |= Q(firstName__iexact=first) & Q(lastName__iexact=last)
+    if email:
+        match_query |= Q(bannedemail__email__iexact=email)
+
+    if not match_query:
+        return
+
     records = BannedPerson.objects.exclude(
         disabled=True
     ).exclude(
         expirationDate__lte=timezone.now()
-    ).filter(
-        (Q(firstName__iexact=first) & Q(lastName__iexact=last)) |
-        Q(bannedemail__email__iexact=email)
-    )
+    ).filter(match_query).distinct()
 
     if not records.exists():
         return
@@ -78,8 +93,9 @@ def checkBanlist(sender, **kwargs):
     ip = get_client_ip(request)
     respondTo = getConstant('registration__banListContactEmail') or getConstant('contact__businessEmail')
 
+    flagRecords = []
     for record in records:
-        flagRecord = BanFlaggedRecord.objects.create(
+        flagRecords.append(BanFlaggedRecord.objects.create(
             flagCode=flagCode,
             person=record,
             ipAddress=ip,
@@ -87,18 +103,33 @@ def checkBanlist(sender, **kwargs):
                 'session': session, 'formData': formData,
                 'registrationId': registrationId, 'invoiceId': invoiceId,
             }
-        )
+        ))
 
     notify = getConstant('registration__banListNotificationEmail')
     if notify:
         send_from = getConstant('contact__businessEmail')
         subject = _('Notice of attempted registration by banned individual')
+
+        # Report every matched individual and what they were matched on.
+        matches = []
+        for record in records:
+            reasons = []
+            if first and last and (
+                record.firstName.lower() == first.lower() and
+                record.lastName.lower() == last.lower()
+            ):
+                reasons.append(gettext('name'))
+            if email and email.lower() in [x.lower() for x in record.relatedEmails]:
+                reasons.append(gettext('email'))
+            matches.append('%s (matched on %s)' % (record.fullName, ', '.join(reasons)))
+
         message = _(
-            'This is an automated notification that the following individual has attempted ' +
-            'to register for a class series or event:\n\n' +
-            'Name: %s\n' % record.fullName +
-            'Email: %s\n' % email +
-            'Date/Time: %s\n' % flagRecord.dateTime +
+            'This is an automated notification that an individual matching the following ' +
+            'banned individual(s) has attempted to register for a class series or event:\n\n' +
+            'Banned individual(s): %s\n' % '; '.join(matches) +
+            'Submitted name: %s %s\n' % (first, last) +
+            'Submitted email: %s\n' % email +
+            'Date/Time: %s\n' % flagRecords[-1].dateTime +
             'IP Address: %s\n\n' % ip +
             'This individual has been prevented from finalizing their registration, and they ' +
             'have been asked to notify the school at %s with code %s to proceed.' % (respondTo, flagCode)
