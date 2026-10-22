@@ -67,6 +67,17 @@ class PublicRegisterRenderTest(DefaultSchoolTestCase):
         finally:
             gp['registration__registrationEnabled'] = True
 
+    def test_registration_offline_page_renders(self):
+        """The offline page itself must render (not just be redirected to)."""
+        gp = global_preferences_registry.manager()
+        gp['registration__registrationEnabled'] = False
+        try:
+            response = self.client.get(reverse('registrationOffline'))
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'Registration is currently offline')
+        finally:
+            gp['registration__registrationEnabled'] = True
+
     def test_registration_offline_staff_can_access(self):
         """Staff with accept_door_payments must still see the page when registration is disabled."""
         gp = global_preferences_registry.manager()

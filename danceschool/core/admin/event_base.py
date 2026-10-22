@@ -65,6 +65,7 @@ class EventParentAdmin(PolymorphicParentModelAdmin):
     list_filter = (PolymorphicChildModelFilter, 'status', 'registrationOpen', 'location')
     list_editable = ('status', )
     polymorphic_list = True
-    search_fields = ('name', )
+    # Event.name is a property, so search the child models' fields instead.
+    search_fields = ('series__classDescription__title', 'publicevent__title')
 
     actions = [repeat_events, ]
