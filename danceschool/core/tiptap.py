@@ -14,6 +14,7 @@ TOOLBAR_ITEM = 'Youtube'
 
 IFRAME_ATTRIBUTES = {
     'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'title',
+    'referrerpolicy',
 }
 
 
