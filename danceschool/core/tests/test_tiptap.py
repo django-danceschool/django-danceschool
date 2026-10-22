@@ -32,11 +32,19 @@ class YoutubeTiptapExtensionTest(SimpleTestCase):
     def test_sanitizer_keeps_youtube_iframe(self):
         html = (
             '<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" '
-            'width="640" height="360" frameborder="0" allowfullscreen="true"></iframe>'
+            'width="640" height="360" frameborder="0" allowfullscreen="true" '
+            'referrerpolicy="strict-origin-when-cross-origin"></iframe>'
         )
         cleaned = clean_html(html)
         self.assertIn('<iframe', cleaned)
+        # YouTube needs a referrer or it shows a player configuration error.
+        self.assertIn('referrerpolicy="strict-origin-when-cross-origin"', cleaned)
         self.assertIn('youtube-nocookie.com/embed/dQw4w9WgXcQ', cleaned)
+
+    def test_script_sets_referrer_policy_on_iframe(self):
+        with open(finders.find(SCRIPT)) as f:
+            source = f.read()
+        self.assertIn("referrerpolicy: 'strict-origin-when-cross-origin'", source)
 
     def test_sanitizer_strips_script_and_javascript_src(self):
         cleaned = clean_html(

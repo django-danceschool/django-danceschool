@@ -103,6 +103,10 @@
                 allowfullscreen: 'true',
                 allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
                 title: 'YouTube video',
+                // YouTube refuses to play embeds that arrive with no referrer
+                // ("video player configuration error" / error 153), which
+                // happens under Django's default Referrer-Policy: same-origin.
+                referrerpolicy: 'strict-origin-when-cross-origin',
             })];
         },
 

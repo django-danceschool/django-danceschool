@@ -56,6 +56,14 @@ THUMBNAIL_PROCESSORS = (
 # FOR DJANGO-FILER
 FILER_ENABLE_PERMISSIONS = True
 
+# Django's default Referrer-Policy ('same-origin') sends no referrer to other
+# sites, which makes YouTube refuse to play embedded videos ("video player
+# configuration error", error 153).  This is the browser default: it sends only
+# the site's origin (never the full URL) to other sites over HTTPS.  Requires
+# django.middleware.security.SecurityMiddleware.  Override in your settings.py
+# if you need a stricter policy.
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
 # FOR DJANGOCMS-TEXT (TipTap editor)
 # The default editor is TipTap (MIT licensed). To switch to CKEditor 5 (GPL licensed),
 # install a compatible adapter package and set TEXT_EDITOR to point to its RTEConfig instance,
