@@ -46,3 +46,34 @@ class AdminTest(TestCase):
             if model.get('add_url'):
                 response = self.client.get(model['add_url'])
                 self.assertEqual(response.status_code, 200)
+
+
+class EventAdminSearchTest(TestCase):
+    '''
+    Event.name is a property, not a database field, so event admins must not
+    search on it.  Searching with a non-empty term must not raise an error.
+    '''
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.superuser = User.objects.create_superuser(
+            'admin', 'admin@test.com', 'pass',
+        )
+
+    def setUp(self):
+        self.client.login(username=self.superuser.username, password='pass')
+
+    def test_event_changelist_search(self):
+        for model in ['event', 'publicevent', 'series']:
+            with self.subTest(model=model):
+                response = self.client.get(
+                    '/admin/core/%s/' % model, {'q': 'test'}
+                )
+                self.assertEqual(response.status_code, 200)
+
+    def test_event_addon_autocomplete_search(self):
+        response = self.client.get('/admin/autocomplete/', {
+            'term': 'test', 'app_label': 'core',
+            'model_name': 'eventaddon', 'field_name': 'addOnEvent',
+        })
+        self.assertEqual(response.status_code, 200)

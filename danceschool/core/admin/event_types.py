@@ -246,7 +246,7 @@ class PublicEventAdmin(
         ('session', RelatedDropdownFilter),
     )
     list_editable = ('status', 'category', 'session')
-    search_fields = ('name', )
+    search_fields = ('title', )
     ordering = ('-endTime', )
     prepopulated_fields = {'slug': ('title', )}
     inlines = [
