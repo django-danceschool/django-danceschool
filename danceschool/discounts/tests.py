@@ -1,4 +1,5 @@
 import json
+import unittest
 
 from django.forms.models import model_to_dict
 from django.urls import reverse
@@ -9,6 +10,7 @@ from datetime import timedelta
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
 from danceschool.core.models import Invoice, Registration
+from danceschool.vouchers.models import Voucher
 
 from .models import (
     PointGroup, PricingTierGroup, DiscountCategory, DiscountCombo, DiscountComboComponent
@@ -761,3 +763,65 @@ class CartSummaryDiscountPreviewTest(BaseDiscountsTest):
         preview = response.context_data.get('discount_preview')
         self.assertIsNotNone(preview)
         self.assertGreater(preview['total_discount'], 0)
+
+
+class DoubleSubtractionWhenCodeInBothTablesTest(BaseDiscountsTest):
+    '''
+    Reproduces a bug where a code registered in BOTH DiscountCombo
+    (with voucherId set) AND the Voucher table causes the CartSummaryView
+    to subtract the discount AND the voucher amount from the user-facing
+    net total, double-counting the price reduction.
+
+    CartSummaryView.get_context_data (cart.py:758-761) subtracts the
+    discount_preview total and the voucher_preview amount independently,
+    with no guard for the case where the same code matched both systems.
+    '''
+
+    def test_shared_code_not_double_subtracted(self):
+        updateConstant('general__discountsEnabled', True)
+        updateConstant('vouchers__enableVouchers', True)
+
+        s = self.create_series(pricingTier=self.defaultPricing)
+        gross = s.getBasePrice()
+
+        # Same code in both tables.
+        self.create_discount(
+            voucherId='DBLCODE',
+            discountType=DiscountCombo.DiscountType.dollarDiscount,
+            dollarDiscount=10,
+        )
+        Voucher.objects.create(
+            voucherId='DBLCODE',
+            name='Shared Code Voucher',
+            originalAmount=5,
+            disabled=False,
+        )
+
+        # Set up cart with the shared code and view the summary.
+        sku = f'EVENT_{s.id}_GENERAL'
+        cart = {
+            'items': [{'item_type': 'Event', 'item_id': s.id,
+                       'sku': sku, 'quantity': 1}],
+            'payAtDoor': False,
+            'discount_code': 'DBLCODE',
+        }
+        session = self.client.session
+        session[REG_VALIDATION_STR] = {'cart': cart, 'payAtDoor': False}
+        session.save()
+
+        response = self.client.get(reverse('cartSummary'))
+        self.assertEqual(response.status_code, 200)
+        net_total = response.context_data.get('net_total')
+
+        # Whatever the correct resolution (apply only the discount, only
+        # the voucher, or treat as ambiguous), it must NOT be both.
+        # Current buggy behavior: gross - 10 - 5 = gross - 15.
+        # Acceptable: net_total >= gross - max(10, 5) = gross - 10.
+        self.assertGreaterEqual(
+            net_total, gross - 10,
+            msg=(
+                'Code present in both DiscountCombo (voucherId) and '
+                'Voucher tables produced over-discounted net_total {0} '
+                '(gross {1}); expected at least {2}.'
+            ).format(net_total, gross, gross - 10),
+        )

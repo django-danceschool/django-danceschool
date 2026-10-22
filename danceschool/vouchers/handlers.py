@@ -129,6 +129,14 @@ def checkVoucherCode(sender, **kwargs):
     validate_customer = kwargs.get('validateCustomer', False)
     pay_at_door = kwargs.get('payAtDoor', None)
 
+    # If the same code is registered as a DiscountCombo voucherId, defer to
+    # the discounts app so the cart preview doesn't subtract the discount and
+    # the voucher amount both. Mirrors validateVoucher above.
+    if voucherId and apps.is_installed('danceschool.discounts'):
+        discount_models = import_module('danceschool.discounts.models')
+        if discount_models.DiscountCombo.objects.filter(voucherId=voucherId).exists():
+            return
+
     errors = []
 
     if not voucherId:
