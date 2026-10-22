@@ -118,7 +118,7 @@ CHECKING SQUARE INTEGRATION
             else:
                 alias, alias_content = self.get_alias('registration_payment_placeholder', initial_language)
 
-                if alias.get_placeholder().get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
+                if alias_content.placeholder.get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
                     self.stdout.write('Square checkout form already present.')
                 else:
                     add_plugin(
@@ -163,7 +163,7 @@ Notes for Checkout integration
             else:
                 alias, alias_content = self.get_alias('registration_payatdoor_placeholder', initial_language)
 
-                if alias.get_placeholder().get_plugins().filter(plugin_type='SquarePointOfSalePlugin').exists():
+                if alias_content.placeholder.get_plugins().filter(plugin_type='SquarePointOfSalePlugin').exists():
                     self.stdout.write('Square point of sale button already present.')
                 else:
                     add_plugin(
@@ -227,7 +227,7 @@ Notes for point-of-sale integration
             else:
                 alias, alias_content = self.get_alias('registration_payatdoor_placeholder', initial_language)
 
-                if alias.get_placeholder().get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
+                if alias_content.placeholder.get_plugins().filter(plugin_type='SquareCheckoutFormPlugin').exists():
                     self.stdout.write(
                         'Square checkout form already present for at-the-door transactions.'
                     )
