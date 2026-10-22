@@ -5,13 +5,13 @@ from django.http import Http404, JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 
 from braces.views import PermissionRequiredMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
 
 from .models import GuestList, Event, GuestListName
 from danceschool.core.utils.timezone import ensure_localtime
-from danceschool.core.models import EventCheckIn, Registration, StaffMember
+from danceschool.core.models import EventCheckIn, EventRegistration, StaffMember
 from danceschool.core.signals import get_person_data
 
 # Define logger for this file
@@ -129,9 +129,14 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
         else:
             date = ensure_localtime(timezone.now()).date()
 
+        # Used to anchor registration-based guest list rules to the occurrences
+        # that take place on this date.
+        dayStart = ensure_localtime(datetime.combine(date, datetime.min.time()))
+        dayEnd = dayStart + timedelta(days=1)
+
         if (
             post_data.get('modelType', None) not in
-            ['GuestListName', 'StaffMember', 'Registration'] or not
+            ['GuestListName', 'StaffMember', 'EventRegistration'] or not
             post_data.get('id', None)
         ):
             return JsonResponse({
@@ -154,13 +159,25 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
                     getattr(this_item.userAccount, 'email', None) or
                     this_item.publicEmail
                 )
-            elif post_data['modelType'] == 'Registration':
-                this_item = Registration.objects.prefetch_related(
-                    'invoice', 'eventregistration_set'
+            elif post_data['modelType'] == 'EventRegistration':
+                # Note that 'event' is deliberately not select_related here, so
+                # that the polymorphic child (Series/PublicEvent) is fetched and
+                # its category is available for describing the guest.
+                this_item = EventRegistration.objects.select_related(
+                    'customer', 'registration', 'registration__invoice'
                 ).get(id=post_data['id'])
-                this_first_name = this_item.invoice.firstName
-                this_last_name = this_item.invoice.lastName
-                this_email = this_item.invoice.email
+                this_invoice = this_item.registration.invoice
+                this_first_name = (
+                    getattr(this_item.customer, 'first_name', None) or
+                    this_invoice.firstName
+                )
+                this_last_name = (
+                    getattr(this_item.customer, 'last_name', None) or
+                    this_invoice.lastName
+                )
+                this_email = (
+                    getattr(this_item.customer, 'email', None) or this_invoice.email
+                )
         except ObjectDoesNotExist:
             return JsonResponse({
                 'code': 'guest_not_found', 'message': _('Guest not found.')
@@ -200,11 +217,19 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
                 this_list.getStaffForEvents([event,]).filter(id=post_data['id']).exists()
             ):
                 continue
-            elif (
-                post_data['modelType'] == 'Registration' and not
-                this_item.eventregistration_set.filter(event=event).exists()
-            ):
-                continue
+            elif post_data['modelType'] == 'EventRegistration':
+                # An event registration puts a person on the list either because
+                # it is a registration for this event, or because it qualifies
+                # them for admission under a registration-based component.
+                is_registrant = (
+                    this_list.includeRegistrants and
+                    this_item.event_id == event.id and
+                    this_item.registration.final and not this_item.cancelled
+                )
+                if not is_registrant and not this_list.getRegistrantsForEvents(
+                    [event, ], startTime=dayStart, endTime=dayEnd
+                ).filter(id=this_item.id).exists():
+                    continue
 
             # Look for an existing event check-in
             filters = {
@@ -226,6 +251,7 @@ class GuestCheckInfoJsonView(PermissionRequiredMixin, View):
             response['events'].append({
                 'id': this_item.id,
                 'modelType': post_data['modelType'],
+                'guestListId': this_list.id,
                 'firstName': this_first_name,
                 'lastName': this_last_name,
                 'email': this_email,

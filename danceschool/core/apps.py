@@ -43,6 +43,10 @@ class CoreAppConfig(AppConfig):
         # extends window.jQuery *before* noConflict stores it as django.jQuery.
         self._patch_dal_select2_media()
 
+        # Add YouTube embed support to the Tiptap rich text editor.
+        from .tiptap import register_youtube_extension
+        register_youtube_extension()
+
     @staticmethod
     def _patch_dal_select2_media():
         try:

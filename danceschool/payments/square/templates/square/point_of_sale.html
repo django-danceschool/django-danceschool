@@ -1,5 +1,5 @@
 {% load i18n sekizai_tags cms_tags %}
-{% if 'square.handle_pos_payments' in perms and registration.payAtDoor %}
+{% if 'square.handle_pos_payments' in perms and payAtDoor %}
 
 <div class="door-payment-section">
 <a role="button" id="square-pos-button" class="btn btn-primary" href="">{% trans "Send to Square App" %}</a>
