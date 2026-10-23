@@ -33,3 +33,12 @@
 <hr />
 {% endif %}
 {% endfor %}
+
+{% addtoblock "css" %}
+<style type="text/css">
+/* Ensure bios do not overlap */
+div.bio {
+    display: flow-root;
+}
+</style>
+{% endaddtoblock %}
