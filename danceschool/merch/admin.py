@@ -106,8 +106,9 @@ class MerchItemAdmin(admin.ModelAdmin):
     @admin.display(description=_('Inventory by variant'))
     def variantInventory(self, obj):
         '''
-        Read-only summary of each variant and its current quantity available.
-        Quantities are right-aligned in their own column so that they line up.
+        Read-only summary of each variant and its current quantity available,
+        one per line, with a dotted leader between the name and the quantity
+        (styled by merch/admin/inventory.css).
         '''
         variants = list(obj.item_variant.all())
         if not variants:
@@ -115,12 +116,15 @@ class MerchItemAdmin(admin.ModelAdmin):
 
         rows = format_html_join(
             '',
-            '<tr><td style="border:0;padding:0 1.5em 0 0;">{}</td>'
-            '<td style="border:0;padding:0;text-align:right;'
-            'font-variant-numeric:tabular-nums;">{}</td></tr>',
+            '<li><span class="merch-inventory-name">{}</span>'
+            '<span class="merch-inventory-leader"></span>'
+            '<span class="merch-inventory-qty">{}</span></li>',
             ((v.name, v.currentInventory) for v in variants)
         )
-        return format_html('<table style="border:0;margin:0;">{}</table>', rows)
+        return format_html('<ul class="merch-inventory">{}</ul>', rows)
+
+    class Media:
+        css = {'all': ('merch/admin/inventory.css',)}
 
 
 class MerchOrderItemInline(admin.TabularInline):
