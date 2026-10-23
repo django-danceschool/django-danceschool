@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib import admin
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
@@ -9,7 +9,7 @@ from django_admin_listfilter_dropdown.filters import ChoiceDropdownFilter
 from rangefilter.filters import DateRangeFilter
 
 from .models import (
-    MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem,
+    MerchItem, MerchItemCategory, MerchItemVariant, MerchOrder, MerchOrderItem,
     MerchQuantityAdjustment
 )
 
@@ -82,16 +82,33 @@ class MerchItemVariantInline(admin.StackedInline):
     )
 
 
+@admin.register(MerchItemCategory)
+class MerchItemCategoryAdmin(admin.ModelAdmin):
+    '''
+    Categories can be added here, or directly from the category dropdown on the
+    merchandise item form.
+    '''
+    list_display = ('name', 'numItems')
+    search_fields = ('name',)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_num_items=Count('merchitem'))
+
+    @admin.display(description=_('# Items'), ordering='_num_items')
+    def numItems(self, obj):
+        return obj._num_items
+
+
 @admin.register(MerchItem)
 class MerchItemAdmin(admin.ModelAdmin):
-    readonly_fields = ('creationDate', 'numVariants',)
-    list_display = ('name', 'defaultPrice', 'numVariants', 'variantInventory', 'disabled')
-    list_filtered = ('disabled',)
+    readonly_fields = ('creationDate',)
+    list_display = ('name', 'category', 'defaultPrice', 'variantInventory', 'disabled')
+    list_filter = ('disabled', 'category')
     list_editable = ('disabled',)
     search_fields = ('name', 'description')
 
     fields = [
-        'name', 'description', 'defaultPrice', 'salesTaxRate',
+        'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
         'photo', 'disabled', 'creationDate'
         ]
 

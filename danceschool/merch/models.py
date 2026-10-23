@@ -38,7 +38,7 @@ class MerchItemCategory(models.Model):
 
     class Meta:
         verbose_name = _('Merchandise category')
-        verbose_name_plural = _('Merchandise category')
+        verbose_name_plural = _('Merchandise categories')
         ordering = ['name', ]
         
 
@@ -57,7 +57,7 @@ class MerchItem(models.Model):
     category = models.ForeignKey(
         MerchItemCategory,
         help_text=_('Used on product pages to determine what items to list.'),
-        on_delete=models.SET_NULL, null=True
+        on_delete=models.SET_NULL, null=True, blank=True
     )
 
     description = models.TextField(

@@ -462,3 +462,80 @@ class MerchItemAdminInventoryColumnTest(DefaultSchoolTestCase):
         MerchQuantityAdjustment.objects.create(variant=self.small, amount=-3)
         html = self._changelist().content.decode()
         self.assertRegex(html, r'>Small</span><span[^>]*></span><span[^>]*>4</span>')
+
+
+class MerchItemCategoryAdminTest(DefaultSchoolTestCase):
+    '''
+    Merchandise categories can be managed in the admin, including from the
+    category dropdown on the merchandise item form.
+    '''
+
+    def setUp(self):
+        from .models import MerchItemCategory
+        self.shirts = MerchItemCategory.objects.create(name='Shirts')
+        self.stickers = MerchItemCategory.objects.create(name='Stickers')
+        self.hoodie = MerchItem.objects.create(
+            name='Test Hoodie', category=self.shirts, defaultPrice=35,
+        )
+        self.tee = MerchItem.objects.create(
+            name='Test Tee', category=self.shirts, defaultPrice=20,
+        )
+        self.sticker = MerchItem.objects.create(
+            name='Test Sticker', category=self.stickers, defaultPrice=2,
+        )
+        self.client.force_login(self.superuser)
+
+    def test_category_changelist_shows_names_and_item_counts(self):
+        response = self.client.get('/admin/merch/merchitemcategory/')
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertRegex(html, r'Shirts</a></th><td[^>]*>2</td>')
+        self.assertRegex(html, r'Stickers</a></th><td[^>]*>1</td>')
+
+    def test_category_can_be_added_in_admin(self):
+        from .models import MerchItemCategory
+        response = self.client.post(
+            '/admin/merch/merchitemcategory/add/', {'name': 'Posters'}
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(MerchItemCategory.objects.filter(name='Posters').exists())
+
+    def test_item_form_offers_add_category_link(self):
+        '''Registering the category admin adds the "+" button to the dropdown.'''
+        response = self.client.get('/admin/merch/merchitem/add/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'add_id_category')
+
+    def test_item_change_form_preselects_category(self):
+        response = self.client.get('/admin/merch/merchitem/%s/change/' % self.hoodie.id)
+        self.assertContains(
+            response, '<option value="%s" selected>Shirts</option>' % self.shirts.id
+        )
+
+    def test_item_changelist_shows_and_filters_by_category(self):
+        response = self.client.get('/admin/merch/merchitem/')
+        self.assertContains(response, 'Shirts')
+        response = self.client.get(
+            '/admin/merch/merchitem/', {'category__id__exact': self.stickers.id}
+        )
+        self.assertContains(response, 'Test Sticker')
+        self.assertNotContains(response, 'Test Hoodie')
+        self.assertNotContains(response, 'Test Tee')
+
+    def test_item_can_be_saved_without_category(self):
+        '''Category is optional: an item with none must pass admin form validation.'''
+        from django.forms import modelform_factory
+        Form = modelform_factory(MerchItem, fields=['name', 'category', 'defaultPrice', 'salesTaxRate'])
+        form = Form({'name': 'Uncategorized', 'defaultPrice': 5, 'salesTaxRate': 0})
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertIsNone(form.save().category)
+
+    def test_deleting_category_leaves_items_uncategorized(self):
+        self.shirts.delete()
+        self.hoodie.refresh_from_db()
+        self.assertIsNone(self.hoodie.category)
+        self.assertEqual(self.client.get('/admin/merch/merchitem/').status_code, 200)
+
+    def test_category_plural_name(self):
+        from .models import MerchItemCategory
+        self.assertEqual(str(MerchItemCategory._meta.verbose_name_plural), 'Merchandise categories')
