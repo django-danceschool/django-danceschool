@@ -399,3 +399,52 @@ class MerchStudentInfoViewTest(DefaultSchoolTestCase):
             Registration.objects.filter(invoice=invoice).exists(),
             'A merch-only cart must not create a Registration.',
         )
+
+
+class MerchItemAdminInventoryColumnTest(DefaultSchoolTestCase):
+    '''
+    The merchandise item changelist shows each variant's current inventory.
+    '''
+
+    def setUp(self):
+        self.item = MerchItem.objects.create(
+            name='Test Hoodie', category=None, defaultPrice=35, disabled=False,
+        )
+        self.small = MerchItemVariant.objects.create(
+            item=self.item, sku='HOODIE-SM', name='Small', originalQuantity=7,
+        )
+        self.large = MerchItemVariant.objects.create(
+            item=self.item, sku='HOODIE-LG', name='Large <b>', originalQuantity=12,
+        )
+        self.empty_item = MerchItem.objects.create(
+            name='Test Sticker', category=None, defaultPrice=2, disabled=False,
+        )
+
+    def _changelist(self):
+        self.client.force_login(self.superuser)
+        response = self.client.get('/admin/merch/merchitem/')
+        self.assertEqual(response.status_code, 200)
+        return response
+
+    def test_variants_and_quantities_listed_in_order(self):
+        html = self._changelist().content.decode()
+        self.assertIn('Inventory by variant', html)
+        small = html.index('Small</td>')
+        large = html.index('Large &lt;b&gt;</td>')
+        self.assertLess(small, large)
+        # Quantities sit in their own right-aligned cells.
+        self.assertRegex(html, r'Small</td><td[^>]*text-align:right[^>]*>7</td>')
+        self.assertRegex(html, r'Large &lt;b&gt;</td><td[^>]*text-align:right[^>]*>12</td>')
+
+    def test_variant_names_are_escaped(self):
+        html = self._changelist().content.decode()
+        self.assertNotIn('Large <b>', html)
+
+    def test_item_without_variants_is_handled(self):
+        self.assertContains(self._changelist(), 'No variants')
+
+    def test_quantity_reflects_adjustments(self):
+        from .models import MerchQuantityAdjustment
+        MerchQuantityAdjustment.objects.create(variant=self.small, amount=-3)
+        html = self._changelist().content.decode()
+        self.assertRegex(html, r'Small</td><td[^>]*>4</td>')

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib import admin
-from django.utils.html import format_html
+from django.db.models import Prefetch
+from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 from django.urls import reverse
 
@@ -84,7 +85,7 @@ class MerchItemVariantInline(admin.StackedInline):
 @admin.register(MerchItem)
 class MerchItemAdmin(admin.ModelAdmin):
     readonly_fields = ('creationDate', 'numVariants',)
-    list_display = ('name', 'defaultPrice', 'numVariants', 'disabled')
+    list_display = ('name', 'defaultPrice', 'numVariants', 'variantInventory', 'disabled')
     list_filtered = ('disabled',)
     list_editable = ('disabled',)
     search_fields = ('name', 'description')
@@ -95,6 +96,31 @@ class MerchItemAdmin(admin.ModelAdmin):
         ]
 
     inlines = [MerchItemVariantInline,]
+
+    def get_queryset(self, request):
+        ''' Fetch all variants at once so the inventory column does not query per item. '''
+        return super().get_queryset(request).prefetch_related(
+            Prefetch('item_variant', queryset=MerchItemVariant.objects.order_by('pk'))
+        )
+
+    @admin.display(description=_('Inventory by variant'))
+    def variantInventory(self, obj):
+        '''
+        Read-only summary of each variant and its current quantity available.
+        Quantities are right-aligned in their own column so that they line up.
+        '''
+        variants = list(obj.item_variant.all())
+        if not variants:
+            return format_html('<em>{}</em>', _('No variants'))
+
+        rows = format_html_join(
+            '',
+            '<tr><td style="border:0;padding:0 1.5em 0 0;">{}</td>'
+            '<td style="border:0;padding:0;text-align:right;'
+            'font-variant-numeric:tabular-nums;">{}</td></tr>',
+            ((v.name, v.currentInventory) for v in variants)
+        )
+        return format_html('<table style="border:0;margin:0;">{}</table>', rows)
 
 
 class MerchOrderItemInline(admin.TabularInline):
