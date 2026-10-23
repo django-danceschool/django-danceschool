@@ -429,12 +429,26 @@ class MerchItemAdminInventoryColumnTest(DefaultSchoolTestCase):
     def test_variants_and_quantities_listed_in_order(self):
         html = self._changelist().content.decode()
         self.assertIn('Inventory by variant', html)
-        small = html.index('Small</td>')
-        large = html.index('Large &lt;b&gt;</td>')
+        self.assertIn('merch/admin/inventory.css', html)
+        small = html.index('>Small</span>')
+        large = html.index('>Large &lt;b&gt;</span>')
         self.assertLess(small, large)
-        # Quantities sit in their own right-aligned cells.
-        self.assertRegex(html, r'Small</td><td[^>]*text-align:right[^>]*>7</td>')
-        self.assertRegex(html, r'Large &lt;b&gt;</td><td[^>]*text-align:right[^>]*>12</td>')
+        # Each line is name, dotted leader, then the quantity.
+        self.assertRegex(
+            html,
+            r'>Small</span><span class="merch-inventory-leader"></span>'
+            r'<span class="merch-inventory-qty">7</span>'
+        )
+        self.assertRegex(
+            html,
+            r'>Large &lt;b&gt;</span><span class="merch-inventory-leader"></span>'
+            r'<span class="merch-inventory-qty">12</span>'
+        )
+
+    def test_inventory_uses_list_not_nested_table(self):
+        '''A nested table would pick up the changelist's alternating row colors.'''
+        html = self._changelist().content.decode()
+        self.assertIn('<ul class="merch-inventory">', html)
 
     def test_variant_names_are_escaped(self):
         html = self._changelist().content.decode()
@@ -447,4 +461,4 @@ class MerchItemAdminInventoryColumnTest(DefaultSchoolTestCase):
         from .models import MerchQuantityAdjustment
         MerchQuantityAdjustment.objects.create(variant=self.small, amount=-3)
         html = self._changelist().content.decode()
-        self.assertRegex(html, r'Small</td><td[^>]*>4</td>')
+        self.assertRegex(html, r'>Small</span><span[^>]*></span><span[^>]*>4</span>')

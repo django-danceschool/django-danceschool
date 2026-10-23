@@ -1,0 +1,35 @@
+/*
+ * "Inventory by variant" column on the merchandise item changelist: one line
+ * per variant, with a dotted leader between the variant name and its quantity
+ * (see https://www.w3.org/Style/Examples/007/leaders.en.html).  A flat list is
+ * used rather than a nested table so that the changelist's alternating row
+ * colors do not show up inside the cell.
+ */
+ul.merch-inventory {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    min-width: 14em;
+    max-width: 24em;
+}
+
+ul.merch-inventory li {
+    display: flex;
+    align-items: baseline;
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: 0;
+}
+
+ul.merch-inventory .merch-inventory-leader {
+    flex: 1 1 auto;
+    min-width: 1em;
+    margin: 0 0.35em;
+    border-bottom: 2px dotted var(--hairline-color, #aaa);
+}
+
+ul.merch-inventory .merch-inventory-qty {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
