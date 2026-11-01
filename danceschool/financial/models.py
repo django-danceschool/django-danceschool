@@ -1109,11 +1109,10 @@ class RevenueItem(models.Model):
         # occurrence in that month.
         if not self.accrualDate:
             if self.invoiceItem and getattr(self.invoiceItem, 'eventRegistration', None):
-                min_event_time = (
+                min_event_time = getattr(
                     self.invoiceItem.eventRegistration.event.eventoccurrence_set.filter(
                         startTime__month=self.invoiceItem.eventRegistration.event.month
-                    ).first().startTime
-                )
+                    ).first(), 'startTime', None)
                 self.accrualDate = min_event_time
             elif self.event:
                 self.accrualDate = getattr(
