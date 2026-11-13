@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext, gettext_lazy as _
-from django.utils.html import format_html, escape
+from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 
 from crispy_forms.layout import Field
@@ -29,9 +29,9 @@ def addPrerequisiteAcknowledgement(sender, **kwargs):
     into RegistrationContactForm asking the customer to confirm they meet
     those prerequisites.
 
-    The checkbox label contains a tooltip link that lists the specific
-    prerequisite names and the events they apply to, so the customer can
-    see exactly what they are agreeing to.
+    The specific prerequisite names and the events they apply to are listed
+    beneath the checkbox, so the customer can see exactly what they are
+    agreeing to.
 
     Returns a list with one (field_name, field, layout_element) tuple when
     acknowledgement requirements are found, otherwise returns None.
@@ -41,38 +41,48 @@ def addPrerequisiteAcknowledgement(sender, **kwargs):
 
     eventRegs = kwargs.get('eventRegs', [])
 
-    # Collect (event_name, requirement_name) pairs for acknowledgement reqs only.
-    items = []
+    # Collect the acknowledgement requirements for each event, in order,
+    # as {event pk: (event name, [requirement names])}.
+    events = {}
     for ter in eventRegs:
         if hasattr(ter.event, 'getRequirements'):
             for req in ter.event.getRequirements():
                 if req.enforcementMethod == Requirement.EnforcementChoice.acknowledgement:
-                    items.append((ter.event.name, req.name))
+                    names = events.setdefault(ter.event.pk, (ter.event.name, []))[1]
+                    if req.name not in names:
+                        names.append(req.name)
 
-    if not items:
+    if not events:
         return None
 
-    # Build the tooltip HTML content.  Each item's text is escaped for safe
-    # HTML display; the whole string is left as a plain (non-safe) Python str
-    # so that format_html will attribute-escape it when placing it in title="".
-    tooltip_lines = ['<ul>']
-    for event_name, req_name in items:
-        tooltip_lines.append(
-            '<li><em>%s</em>: %s</li>' % (escape(event_name), escape(req_name))
-        )
-    tooltip_lines.append('</ul>')
-    tooltip_html = ''.join(tooltip_lines)
-
-    label = format_html(
-        '{} <a tabindex="0" role="button" data-toggle="tooltip" data-html="true" '
-        'data-placement="top" title="{}" style="cursor:pointer;">[{}]</a>',
-        _('I confirm that I meet the prerequisites for the classes I have registered for'),
-        tooltip_html,
-        _('details'),
+    # List the specific prerequisites beneath the checkbox (as the field's
+    # help text), with a heading for each class and a bullet for each of its
+    # prerequisites, so that the customer can see exactly what they are
+    # agreeing to without having to hover over anything.  format_html escapes
+    # the event and requirement names.
+    prerequisite_list = format_html_join(
+        '',
+        '<p class="mb-0 {}"><strong>{}</strong></p><ul class="mb-0">{}</ul>',
+        (
+            (
+                'mt-2' if index else '',
+                event_name,
+                format_html_join('', '<li>{}</li>', ((n,) for n in req_names)),
+            )
+            for index, (event_name, req_names) in enumerate(events.values())
+        ),
+    )
+    help_text = format_html(
+        '<div class="alert alert-primary mt-2 mb-0" role="note">{}</div>',
+        prerequisite_list,
     )
 
     field_name = 'acknowledge_prerequisites'
-    field = django_forms.BooleanField(required=True, label=mark_safe(label))
+    field = django_forms.BooleanField(
+        required=True,
+        label=_('I confirm that I meet the prerequisites for the classes I have registered for'),
+        help_text=help_text,
+    )
     layout_element = Field(field_name)
 
     return [(field_name, field, layout_element)]
