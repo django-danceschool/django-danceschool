@@ -75,6 +75,18 @@ SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 # Override or remove them to disable this feature.
 TEXT_ADDITIONAL_ATTRIBUTES = {"iframe": set(), "*": {"frameborder", "scrolling", "allowfullscreen"}}
 
+# Allow tables to have Bootstrap classes by default
+TEXT_EDITOR_SETTINGS = {
+    'tableClasses': [
+        ['table', 'Plain'],
+        ['table table-striped', 'Striped'],
+        ['table table-bordered', 'Bordered'],
+        ['table table-bordered table-striped table-sm', 'Compact, bordered, striped'],
+        ['table table-bordered w-50', 'Bordered, half width'],
+        ['table table-bordered w-auto', 'Bordered, fit to content'],
+    ],
+}
+
 # For Huey task queue and scheduling.  By default, this project uses the SQLite
 # backend for easy testing.  For production purposes, it is strongly recommended
 # that you use Huey's Redis backend by copying the lines below and pasting them
