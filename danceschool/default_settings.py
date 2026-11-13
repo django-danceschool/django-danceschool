@@ -185,8 +185,14 @@ CMS_PLACEHOLDER_CONF = {
     },
 }
 
-# DJANGOCMS_PICTURE_TEMPLATES = []
+# This setting replaces the default list of template choices, and it is read by
+# both djangocms_picture and djangocms_frontend's Image plugin.  The first
+# choice is the default for newly created image plugins (including images
+# inserted through the text editor), so 'default' must come first.  Only
+# 'splash_image' has a djangocms_picture template, and it is only meant for
+# the splash image placeholder (which doesn't use this setting anyway).
 DJANGOCMS_PICTURE_TEMPLATES = [
+    ('default', 'Default'),
     ('splash_image', 'Front Page Splash Image'),
 ]
 
