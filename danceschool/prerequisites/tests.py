@@ -84,12 +84,34 @@ class PrerequisiteAcknowledgementTest(DefaultSchoolTestCase):
 
     def test_acknowledgement_checkbox_shows_requirement_name(self):
         """
-        The tooltip on the checkbox must include the requirement name so the
-        customer knows what they are agreeing to.
+        The prerequisites must be listed visibly beneath the checkbox (not in
+        a tooltip), with a heading for the class and a bullet for each of its
+        requirements, so the customer knows what they are agreeing to.
         """
         self._make_registration()
         response = self.client.get(reverse('getStudentInfo'))
         self.assertContains(response, 'Must have danced before')
+        self.assertContains(response, '<li>Must have danced before</li>')
+        self.assertContains(response, 'alert alert-primary')
+        self.assertNotContains(response, 'Prerequisites for the classes you have registered for:')
+        self.assertNotContains(response, 'data-toggle="tooltip"')
+        self.assertNotContains(response, '&lt;ul&gt;')
+
+    def test_acknowledgement_list_escapes_names(self):
+        """
+        Requirement names are escaped, and are not treated as template syntax.
+        """
+        self.requirement.name = '<b>Bold</b> {{ 7*7 }}'
+        self.requirement.save()
+        try:
+            self._make_registration()
+            response = self.client.get(reverse('getStudentInfo'))
+            self.assertContains(response, '&lt;b&gt;Bold&lt;/b&gt;')
+            self.assertNotContains(response, '<b>Bold</b>')
+            self.assertContains(response, '{{ 7*7 }}')
+        finally:
+            self.requirement.name = 'Must have danced before'
+            self.requirement.save()
 
     def test_no_checkbox_without_acknowledgement_requirement(self):
         """
