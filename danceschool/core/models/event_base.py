@@ -225,11 +225,23 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         '''
         rule = getConstant('registration__orgRule')
 
+        # The sorters are used by templates (with the dictsort filter) to
+        # order groups of events.  One listing can mix sessions, months and
+        # the "Other" group, and dictsort silently returns nothing if the
+        # values cannot be compared with each other.  So, every sorter is a
+        # tuple of the same form: sessions (by name) come first, then months
+        # or weekdays (by number), then "Other".
+        def textSorter(text):
+            return (0, 0, str(text))
+
+        def numberSorter(number):
+            return (1, number, '')
+
         # Default grouping is "Other", in case session, month, or weekday are not specified.
         org = {
             'name': _('Other'),
-            'nameFirst': {'name': _('Other'), 'sorter': _('Other')},
-            'nameSecond': {'name': '', 'sorter': ''},
+            'nameFirst': {'name': _('Other'), 'sorter': (2, 0, '')},
+            'nameSecond': {'name': '', 'sorter': textSorter('')},
             'id': None,
         }
 
@@ -238,7 +250,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.month:
                 org.update({
                     'name': _(month_name[self.month]),
-                    'nameFirst': {'name': _(month_name[self.month]), 'sorter': self.month},
+                    'nameFirst': {
+                        'name': _(month_name[self.month]),
+                        'sorter': numberSorter(self.month)
+                    },
                     'id': 'month_%s' % self.month,
                 })
             return org
@@ -248,7 +263,10 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.session:
                 org.update({
                     'name': self.session.name,
-                    'nameFirst': {'name': _(self.session.name), 'sorter': _(self.session.name)},
+                    'nameFirst': {
+                        'name': _(self.session.name),
+                        'sorter': textSorter(_(self.session.name))
+                    },
                     'id': self.session.pk,
                 })
             return org
@@ -265,8 +283,14 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if self.session and self.month:
                 org.update({
                     'name': _('%s: %s' % (month_name[self.month], self.session.name)),
-                    'nameFirst': {'name': _(month_name[self.month]), 'sorter': self.month},
-                    'nameSecond': {'name': _(self.session.name), 'sorter': _(self.session.name)},
+                    'nameFirst': {
+                        'name': _(month_name[self.month]),
+                        'sorter': numberSorter(self.month)
+                    },
+                    'nameSecond': {
+                        'name': _(self.session.name),
+                        'sorter': textSorter(_(self.session.name))
+                    },
                     'id': 'month_%s_session_%s' % (self.month, self.session.pk),
                 })
             elif not self.month:
@@ -279,7 +303,7 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if w is not None:
                 org.update({
                     'name': _(d),
-                    'nameFirst': {'name': _(d), 'sorter': w},
+                    'nameFirst': {'name': _(d), 'sorter': numberSorter(w)},
                     'id': w,
                 })
         elif rule == 'MonthWeekday':
@@ -290,8 +314,8 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if w is not None and m:
                 org.update({
                     'name': _('%ss in %s' % (d, mn)),
-                    'nameFirst': {'name': _(mn), 'sorter': m},
-                    'nameSecond': {'name': _('%ss' % d), 'sorter': w},
+                    'nameFirst': {'name': _(mn), 'sorter': numberSorter(m)},
+                    'nameSecond': {'name': _('%ss' % d), 'sorter': numberSorter(w)},
                     'id': 'month_%s_weekday_%s' % (m, w)
                 })
         return org
