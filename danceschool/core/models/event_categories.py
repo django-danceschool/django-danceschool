@@ -58,7 +58,9 @@ class EventSession(models.Model):
         logger.debug('Save method for EventSession called. Updating start and end times')
 
         # Update the start and end time variables based on associated events.
-        events = self.event_set.all()
+        # A new session has no events yet, and Django raises an error if the
+        # reverse relation is used before the session has a primary key.
+        events = self.event_set.all() if self.pk else None
         if events:
             self.startTime = events.order_by('startTime').first().startTime
             self.endTime = events.order_by('endTime').last().endTime
