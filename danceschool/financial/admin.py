@@ -318,6 +318,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         'received',
         ('paymentMethod', DropdownFilter),
         ('event', RelatedDropdownFilter),
+        ('taxJurisdiction', RelatedDropdownFilter),
         ('receivedDate', DateRangeFilter),
         ('accrualDate', DateRangeFilter),
         ('submissionDate', DateRangeFilter),
@@ -333,8 +334,8 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         (_('Basic Info'), {
             'fields': (
                 'category', 'description', 'grossTotal', 'total', 'adjustments',
-                'taxes', 'fees', 'netRevenue', 'paymentMethod', 'receivedFrom',
-                'invoiceNumber', 'comments'
+                'taxes', 'taxJurisdiction', 'fees', 'netRevenue', 'paymentMethod',
+                'receivedFrom', 'invoiceNumber', 'comments'
             )
         }),
         (_('Related Items'), {

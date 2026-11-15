@@ -90,6 +90,11 @@ class RevenueItem(models.Model):
     )
     taxes = models.FloatField(_('Taxes'), default=0)
     buyerPaysSalesTax = models.BooleanField(_('Buyer pays sales tax'), default=False)
+    taxJurisdiction = models.ForeignKey(
+        'core.TaxJurisdiction', verbose_name=_('Tax jurisdiction'),
+        null=True, blank=True, on_delete=models.PROTECT,
+        help_text=_('The jurisdiction to which the tax on this item is owed.')
+    )
 
     paymentMethod = models.CharField(_('Payment method'), max_length=50, null=True, blank=True)
     invoiceNumber = models.CharField(

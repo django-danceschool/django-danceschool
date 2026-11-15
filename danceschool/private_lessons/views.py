@@ -303,14 +303,11 @@ class BookPrivateLessonView(FormView):
             )
             reg.save()
             tr.registration = reg
+            # Saving the event registration creates its invoice item, with the
+            # tax rate and jurisdiction determined by the location of the
+            # lesson (see danceschool.core.utils.tax). A rate that is specific
+            # to private lessons is set with a tax rule on the jurisdiction.
             tr.save(grossTotal=price, total=price)
-
-            # Override the default public-event tax rate with the private-lesson
-            # specific rate. buyerPaysSalesTax is already set on the invoice by
-            # link_invoice() and calculateTaxes() reads it from there.
-            pl_tax_rate = getConstant('privateLessons__salesTaxRate') or 0
-            tr.invoiceItem.taxRate = pl_tax_rate
-            tr.invoiceItem.calculateTaxes()
             tr.invoiceItem.save(updateInvoiceTotals=True)
 
             affectedSlots.update(

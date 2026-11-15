@@ -62,7 +62,9 @@ class StripeCharge(PaymentRecord):
             'reason': 'requested_by_customer',
         }
         if amount:
-            refund_kwargs['amount'] = int(amount * 100)
+            # round() rather than int(), because int() truncates
+            # (e.g. int(19.99 * 100) is 1998).
+            refund_kwargs['amount'] = round(amount * 100)
 
         refund = self.stripe.Refund.create(**refund_kwargs)
 

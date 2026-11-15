@@ -66,6 +66,7 @@
     // Global variables used by the register script and plugin extras scripts.
     var regParams = {
         payAtDoor: true,
+        registerId: {{ register.id|default:"null" }},
         currencySymbol: "{{ currencySymbol }}",
         multipleVoucherString: "{% trans 'You cannot apply two vouchers to this registration. Please remove the existing voucher from your cart and try again.' %}",
         emptyRegisterVoucherString: "{% trans 'You have applied a voucher to an empty cart. It will be validated once you have added an item.' %}",

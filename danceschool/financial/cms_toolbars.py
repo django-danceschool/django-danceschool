@@ -87,6 +87,10 @@ class FinancialToolbar(CMSToolbar):
                 periodic_submenu.add_link_item(
                     _('Financial Summary By Event'), url=reverse('financesByEvent')
                 )
+            if self.request.user.has_perm('financial.view_finances_bymonth'):
+                periodic_submenu.add_link_item(
+                    _('Sales Tax By Jurisdiction'), url=reverse('taxesByJurisdiction')
+                )
 
         if self.request.user.has_perm('financial.view_finances_detail'):
             menu, newPosition = self.addTheMenu()

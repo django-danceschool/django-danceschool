@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q, OuterRef, Subquery
+from django.db.models import Q, OuterRef, Prefetch, Subquery
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from calendar import day_name
@@ -9,6 +9,7 @@ from math import ceil
 from cms.models.pluginmodel import CMSPlugin
 import logging
 
+from ..constants import getConstant
 from ..utils.timezone import ensure_localtime
 
 logger = logging.getLogger(__name__)
@@ -150,6 +151,7 @@ class RegisterEventLimitedModel(CMSPlugin):
         from .event_base import Event
         from .event_occurrences import EventOccurrence
         from .event_types import Series, PublicEvent
+        from .staff import EventStaffMember
 
         if initial and isinstance(initial, QuerySet):
             listing = initial
@@ -244,9 +246,22 @@ class RegisterEventLimitedModel(CMSPlugin):
                 **occ_filters, **time_filters,
             ).order_by(occ_order_by).values('id')[:1])
         ).filter(
-            **filters, **time_filters).order_by(order_by).prefetch_related(
-                'eventoccurrence_set'
-            ).distinct()[:self.limitNumber]
+            **filters, **time_filters
+        ).order_by(order_by).select_related(
+            # Fetch what is needed to display each event (location, room,
+            # session, occurrences and instructors) in a fixed number of
+            # queries, rather than in several queries for each event.
+            'location', 'room', 'session'
+        ).prefetch_related(
+            'eventoccurrence_set',
+            Prefetch(
+                'eventstaffmember_set',
+                queryset=EventStaffMember.objects.filter(
+                    category=getConstant('general__eventStaffCategoryInstructor')
+                ).select_related('staffMember'),
+                to_attr='_prefetched_teachers',
+            ),
+        ).distinct()[:self.limitNumber]
         return listing
 
     def copy_relations(self, oldinstance):
@@ -375,11 +390,16 @@ class PublicRegisterEventPluginChoice(models.Model):
 
     order = models.PositiveSmallIntegerField(default=0, blank=False, null=False)
 
-    def addChoices(self, event):
+    def addChoices(self, event, registrationCounts=None):
         '''
         Return a list of choice dicts for the given event — one entry per
         available role, or a single "General admission" entry when the event
         has no roles defined.
+
+        registrationCounts may be passed as a dictionary of the number of
+        final registrations for this event by role id (None for no role),
+        as produced by PublicRegisterEventPlugin.render() for the whole
+        listing.  If it is not passed, the registrations are counted here.
         '''
         from math import ceil
         from .event_types import Series
@@ -387,9 +407,11 @@ class PublicRegisterEventPluginChoice(models.Model):
 
         choices = []
 
-        event_roles = list(
-            event.eventrole_set.filter(capacity__gt=0).select_related('role')
-        )
+        # Filtering here rather than in the query allows prefetched event
+        # roles to be used.
+        event_roles = [
+            er for er in event.eventrole_set.all() if (er.capacity or 0) > 0
+        ]
 
         if event_roles:
             roles_data = [
@@ -414,16 +436,20 @@ class PublicRegisterEventPluginChoice(models.Model):
         else:
             roles_data = []
 
-        if roles_data:
+        if registrationCounts is None:
             count_rows = event.eventregistration_set.filter(
                 cancelled=False, dropIn=False, registration__final=True
             ).values('role_id').annotate(count=Count('id'))
-            count_map = {row['role_id']: row['count'] for row in count_rows}
+            registrationCounts = {
+                row['role_id']: row['count'] for row in count_rows
+            }
+
+        if roles_data:
+            count_map = registrationCounts
         else:
+            # With no roles, every registration counts toward the one choice.
             roles_data = [{'name': None, 'id': None, 'capacity': event.capacity}]
-            count_map = {None: event.eventregistration_set.filter(
-                cancelled=False, dropIn=False, registration__final=True
-            ).count()}
+            count_map = {None: sum(registrationCounts.values())}
 
         for i, role in enumerate(roles_data):
             num_registered = count_map.get(role['id'], 0)

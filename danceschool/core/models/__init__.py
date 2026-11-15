@@ -1,5 +1,6 @@
 from .event_roles import DanceRole, EventRole
 from .event_features import DanceType, DanceTypeLevel, ClassDescription, get_defaultClassColor, get_defaultSeriesPageTemplate
+from .taxes import TaxJurisdiction, TaxRule
 from .locations import Location, Room, get_defaultEventCapacity
 from .event_prices import PricingTier
 from .event_categories import EventSession, EventCategory, SeriesCategory, PublicEventCategory
@@ -34,6 +35,8 @@ __all__ = [
     'DanceType',
     'DanceTypeLevel',
     'ClassDescription',
+    'TaxJurisdiction',
+    'TaxRule',
     'Location',
     'Room',
     'PricingTier',

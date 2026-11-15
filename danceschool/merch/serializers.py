@@ -32,7 +32,7 @@ class MerchItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = MerchItem
         fields = [
-            'id', 'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
+            'id', 'name', 'description', 'category', 'defaultPrice', 'taxRateOverride',
             'disabled', 'creationDate', 'soldOut', 'numVariants',
             'variants'
         ]

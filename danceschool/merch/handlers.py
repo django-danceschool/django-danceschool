@@ -14,7 +14,9 @@ from danceschool.core.signals import (
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.signals import collect_purchasable_items
 
-from .models import MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem
+from .models import (
+    MerchItem, MerchItemVariant, MerchOrder, MerchOrderItem, getMerchTax
+)
 from .serializers import MerchItemSerializer
 
 
@@ -244,7 +246,9 @@ def linkMerchOrderItems(sender, **kwargs):
 
     item.grossTotal = this_order_item.grossTotal
     item.total = item.grossTotal
-    item.taxRate = this_order_item.item.item.salesTaxRate
+    item.taxRate, item.taxJurisdiction = getMerchTax(
+        this_order_item.item.item, item.invoice
+    )
     item.calculateTaxes()
     item.description = this_item_variant.fullName
 
@@ -370,7 +374,9 @@ def linkCartMerchOrderItems(sender, **kwargs):
 
     item.grossTotal = this_order_item.grossTotal
     item.total = item.grossTotal
-    item.taxRate = this_order_item.item.item.salesTaxRate
+    item.taxRate, item.taxJurisdiction = getMerchTax(
+        this_order_item.item.item, item.invoice
+    )
     item.calculateTaxes()
     item.description = this_item_variant.fullName
 

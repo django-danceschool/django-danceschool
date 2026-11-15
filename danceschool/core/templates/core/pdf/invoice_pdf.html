@@ -89,7 +89,7 @@
 		<td>{{ item.name }}</td>
 		<td>{{ currencySymbol }}{{ item.grossTotalWithAllocation|floatformat:"2" }}</td>
 		<td>{{ currencySymbol }}{{ item.totalWithAllocation|floatformat:"2" }}</td>
-		<td>{{ currencySymbol }}{{ item.taxesWithAllocation|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.taxesWithAllocation|floatformat:"2" }}{% if item.taxJurisdiction %} <small>({{ item.taxJurisdiction.label }})</small>{% endif %}</td>
 		<td>{{ currencySymbol }}{{ item.feesWithAllocation|floatformat:"2" }}</td>
 		<td>{{ currencySymbol }}{{ item.adjustmentsWithAllocation|floatformat:"2" }}</td>
 	</tr>

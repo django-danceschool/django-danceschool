@@ -50,6 +50,13 @@ class Series(Event):
     )
 
     def getTeachers(self, includeSubstitutes=False):
+        # If instructors have been prefetched (see
+        # RegisterEventLimitedModel.getEvents()), then use them instead of
+        # running another query.  In this case, a list is returned.
+        prefetched = getattr(self, '_prefetched_teachers', None)
+        if prefetched is not None and not includeSubstitutes:
+            return list(dict.fromkeys(x.staffMember for x in prefetched))
+
         staff_categories = [
             getConstant('general__eventStaffCategoryInstructor')
         ]

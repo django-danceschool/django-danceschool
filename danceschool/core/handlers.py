@@ -19,6 +19,7 @@ from .signals import (
     get_cart_invoice_item_related, post_registration
 )
 from .utils.timezone import ensure_localtime
+from .utils.tax import getEventTax
 
 
 # Define logger for this file
@@ -314,10 +315,7 @@ def linkCartEventRegistration(sender, **kwargs):
         item.data['_initial_total'] = allocated_totals.get(this_event.id, item.grossTotal)
 
     item.total = item.data.get('_initial_total', item.grossTotal)
-    if isinstance(this_event, Series):
-        item.taxRate = getConstant('registration__seriesSalesTaxRate') or 0
-    else:
-        item.taxRate = getConstant('registration__publicEventSalesTaxRate') or 0
+    item.taxRate, item.taxJurisdiction = getEventTax(this_event)
     item.calculateTaxes()
     item.description = this_event.name
 

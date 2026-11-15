@@ -14,7 +14,6 @@ class CoreAppConfig(AppConfig):
     def ready(self):
         # Ensure that signal handlers and database checks are loaded
         from . import checks, handlers
-        from .managers import EventManager
 
         # This will load all cms_plugins.py files under
         # installed apps to identify custom plugin templates
@@ -22,14 +21,6 @@ class CoreAppConfig(AppConfig):
         plugin_templates_registry.autodiscover(app_names)
         model_templates_registry.autodiscover(app_names)
         extras_templates_registry.autodiscover(app_names)
-
-        # get the Event model from the registry (safe at this point)
-        Event = apps.get_model(self.label, "Event")
-
-        # attach a custom manager the Event model. It occurs here to avoid
-        # issues with early import that would arise if the manager were
-        # specified directly in models.py.
-        Event.add_to_class("objects", EventManager())
 
         # DAL's Select2WidgetMixin.media lists select2.full.js without including
         # the surrounding jQuery files, so Django's media merger places it after

@@ -1,26 +1,10 @@
 '''
-This file defines a variety of preferences that must be set in the DB,
-but can be changed dynamically.
+This file defines preferences that must be set in the DB, but can be changed
+dynamically.
+
+The merch app currently defines no preferences of its own. The sales tax rate
+for merchandise was formerly set here; it is now determined by the tax
+jurisdiction of the at-the-door register through which an item is sold (or
+the default tax jurisdiction for the site), and it can be overridden for an
+individual merchandise item.
 '''
-
-from django.utils.translation import gettext_lazy as _
-
-from dynamic_preferences.types import (
-    BooleanPreference, FloatPreference, Section
-)
-from dynamic_preferences.registries import global_preferences_registry
-
-
-registration = Section('registration', _('Registration'))
-
-
-@global_preferences_registry.register
-class SalesTaxRate(FloatPreference):
-    section = registration
-    name = 'merchSalesTaxRate'
-    verbose_name = _('Sales tax percentage rate to be applied to merchandise.')
-    help_text = _(
-        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all merchandise. ' +
-        'This can be overridden for each individual merchandise item.'
-    )
-    default = 0.0

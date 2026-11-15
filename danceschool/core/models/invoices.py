@@ -528,9 +528,20 @@ class Invoice(EmailRecipientMixin, models.Model):
         else:
             pretax_annotations['totalRatio'] = (F('newGrossTotal')/new_totals['grossTotal'])
 
+        # This must match InvoiceItem.calculateTaxes(). If the buyer pays sales
+        # tax, then it is added as a fraction of the price. If the seller pays,
+        # then the price already includes the tax, so the tax is the portion
+        # of the price that is not the seller's pre-tax revenue.
+        if self.buyerPaysSalesTax:
+            newTaxes = F('newTotal') * (F('taxRate') / 100)
+        else:
+            newTaxes = (
+                F('newTotal') * (F('taxRate') / 100) / (1 + (F('taxRate') / 100))
+            )
+
         pretax_annotations.update({
             'newTotal': F('oldTotal') + (F('totalRatio') * allocateAmounts.get('total',0)),
-            'newTaxes': F('newTotal') * (F('taxRate') / 100),
+            'newTaxes': newTaxes,
         })
 
         items = items.annotate(**pretax_annotations)
@@ -794,6 +805,15 @@ class InvoiceItem(models.Model):
         ),
     )
     taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
+    taxJurisdiction = models.ForeignKey(
+        'core.TaxJurisdiction', verbose_name=_('Tax jurisdiction'),
+        null=True, blank=True, on_delete=models.PROTECT,
+        help_text=_(
+            'The jurisdiction to which the tax on this item is owed. This is ' +
+            'recorded when the item is priced, and it does not change if the ' +
+            'associated event or location is later modified.'
+        ),
+    )
 
     fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
 
@@ -892,17 +912,21 @@ class InvoiceItem(models.Model):
     def calculateTaxes(self):
         '''
         Updates the tax field to reflect the amount of taxes depending on
-        the local rate as well as whether the buyer or seller pays sales tax on
-        this invoice.
-        '''
-        from .event_types import Series
+        the tax rate for this item as well as whether the buyer or seller pays
+        sales tax on this invoice.
 
-        if not self.taxRate:
+        The tax rate and jurisdiction are normally set by whatever creates the
+        item (see danceschool.core.utils.tax). As a fallback, an item for an
+        event registration that has neither is resolved here. An item that
+        already has a jurisdiction is never re-resolved, so that a rate of 0
+        (i.e. an exempt item) is respected.
+        '''
+        from ..utils.tax import getEventTax
+
+        if not self.taxRate and not self.taxJurisdiction_id:
             er = getattr(self, 'eventRegistration', None)
-            if er and isinstance(er.event, Series):
-                self.taxRate = getConstant('registration__seriesSalesTaxRate') or 0
-            elif er:
-                self.taxRate = getConstant('registration__publicEventSalesTaxRate') or 0
+            if er:
+                self.taxRate, self.taxJurisdiction = getEventTax(er.event)
 
         if self.taxRate > 0:
             if self.invoice.buyerPaysSalesTax:

@@ -250,33 +250,49 @@ class ContentToolbar(CMSToolbar):
 
 @toolbar_pool.register
 class CoreFinancesToolbar(CMSToolbar):
-    ''' Adds links to view and add invoices '''
+    '''
+    Adds links to view and add invoices, and to manage tax jurisdictions.
+    These are part of the core app because invoices are taxed whether or not
+    the financial app is installed.
+    '''
 
     def populate(self):
-        if (
-            self.request.user.has_perm('core.add_invoice')
-        ):
-            menu = self.toolbar.get_or_create_menu('financial', _('Finances'))
+        can_invoice = self.request.user.has_perm('core.add_invoice')
+        can_tax = self.request.user.has_perm('core.change_taxjurisdiction')
 
+        if not (can_invoice or can_tax):
+            return
+
+        menu = self.toolbar.get_or_create_menu('financial', _('Finances'))
+
+        if can_invoice:
             # The "Create an Invoice" link goes at the top of the menu
             menu.add_link_item(
                 _('Create an Invoice'), url=reverse('admin:core_invoice_add'),
                 position=0
             )
 
-            # Other apps may have added related items already
+        # Other apps may have added related items already
+        startPosition = menu.find_first(
+            Break,
+            identifier='financial_related_items_break'
+        )
+        if not startPosition:
+            menu.add_break('financial_related_items_break')
             startPosition = menu.find_first(
                 Break,
                 identifier='financial_related_items_break'
             )
-            if not startPosition:
-                menu.add_break('financial_related_items_break')
-                startPosition = menu.find_first(
-                    Break,
-                    identifier='financial_related_items_break'
-                )
-            related_menu = menu.get_or_create_menu(
-                'financial-related', _('Related Items'),
-                position=startPosition + 2
+        related_menu = menu.get_or_create_menu(
+            'financial-related', _('Related Items'),
+            position=startPosition + 2
+        )
+        if can_invoice:
+            related_menu.add_link_item(
+                _('Invoices'), url=reverse('admin:core_invoice_changelist')
             )
-            related_menu.add_link_item(_('Invoices'), url=reverse('admin:core_invoice_changelist'))
+        if can_tax:
+            related_menu.add_link_item(
+                _('Tax Jurisdictions'),
+                url=reverse('admin:core_taxjurisdiction_changelist')
+            )

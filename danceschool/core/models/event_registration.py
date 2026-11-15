@@ -14,6 +14,7 @@ from ..constants import getConstant
 from ..helpers import getSiteUrl
 from ..signals import post_registration
 from ..mixins import EmailRecipientMixin
+from ..utils.tax import getEventTax
 from .invoices import Invoice, InvoiceItem
 from .event_base import Event
 from .event_occurrences import EventOccurrence
@@ -617,8 +618,6 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         If an invoice item does not already exist for this event registration,
         then create one.  Return the linked invoice item.
         '''
-        from .event_types import Series
-
         invoice = getattr(self.registration, 'invoice', None)
 
         if not isinstance(invoice, Invoice):
@@ -644,14 +643,11 @@ class EventRegistration(EmailRecipientMixin, models.Model):
             if total is None:
                 total = grossTotal
 
-            if isinstance(self.event, Series):
-                _tax_rate = getConstant('registration__seriesSalesTaxRate') or 0
-            else:
-                _tax_rate = getConstant('registration__publicEventSalesTaxRate') or 0
+            _tax_rate, _tax_jurisdiction = getEventTax(self.event)
 
             new_item = InvoiceItem(
                 invoice=invoice, fees=0, grossTotal=grossTotal, total=total,
-                taxRate=_tax_rate
+                taxRate=_tax_rate, taxJurisdiction=_tax_jurisdiction
             )
 
             # Attach the new invoice item to its parent if the event registration

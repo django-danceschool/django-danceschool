@@ -180,7 +180,9 @@ class ProcessSquarePaymentView(View):
             'location_id': getattr(settings, 'SQUARE_LOCATION_ID', ''),
             'idempotency_key': data.get('idempotency_key', str(uuid.uuid1())),
             'amount_money': {
-                'amount': int(100 * this_total),
+                # round() rather than int(), because int() truncates
+                # (e.g. int(100 * 19.99) is 1998).
+                'amount': round(100 * this_total),
                 'currency': this_currency,
             },
         }

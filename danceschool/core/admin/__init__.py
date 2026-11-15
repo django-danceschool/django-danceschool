@@ -15,6 +15,7 @@ from .event_types import (
 )
 from .invoices import InvoiceAdminForm, InvoiceItemInline, InvoiceAdmin
 from .locations import RoomInline, RoomAdmin, LocationAdmin
+from .taxes import TaxRuleInline, TaxJurisdictionAdmin
 from .staff import (
     EventStaffMemberInlineForm, EventStaffMemberInline, EventStaffCategoryAdmin,
     InstructorInline, StaffMemberAdmin

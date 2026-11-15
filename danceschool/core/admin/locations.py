@@ -30,10 +30,10 @@ class RoomAdmin(admin.ModelAdmin):
 class LocationAdmin(admin.ModelAdmin):
     inlines = [RoomInline, ]
 
-    list_display = ('name', 'address', 'city', 'orderNum', 'status')
+    list_display = ('name', 'address', 'city', 'taxJurisdiction', 'orderNum', 'status')
     list_display_links = ('name', )
     list_editable = ('orderNum', 'status')
-    list_filter = ('status', 'city')
+    list_filter = ('status', 'city', 'taxJurisdiction')
 
     ordering = ('status', 'orderNum')
 

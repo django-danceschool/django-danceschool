@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 
 from itertools import chain
 
+from dynamic_preferences.registries import global_preferences_registry
+
 
 class AdminTest(TestCase):
     '''
@@ -14,6 +16,12 @@ class AdminTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
+        # The preferences cache is not rolled back between tests, so it may
+        # still hold the primary keys of objects that were created by an
+        # earlier test and that no longer exist. Reloading the preferences
+        # from the database recreates the defaults and refreshes the cache.
+        global_preferences_registry.manager().load_from_db()
+
         cls.superuser = User.objects.create_superuser(
             'admin',
             'admin@test.com',
