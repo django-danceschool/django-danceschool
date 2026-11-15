@@ -14,6 +14,7 @@ from .reports import (
     FinancesByMonthView,
     FinancesByDateView,
     FinancialDetailView,
+    TaxesByJurisdictionView,
 )
 from .rest import (
     ExportPermission,
@@ -41,6 +42,7 @@ __all__ = [
     'FinancesByMonthView',
     'FinancesByDateView',
     'FinancialDetailView',
+    'TaxesByJurisdictionView',
     'ExportPermission',
     'FinancialPagination',
     'ExpenseItemViewSet',

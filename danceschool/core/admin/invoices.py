@@ -45,10 +45,17 @@ class InvoiceAdminForm(ModelForm):
 class InvoiceItemInline(admin.StackedInline):
     model = InvoiceItem
     extra = 0
-    add_fields = [('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'), ]
-    fields = ['id', ('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'), ]
+    add_fields = [
+        ('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'),
+        'taxJurisdiction',
+    ]
+    fields = [
+        'id',
+        ('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'),
+        'taxJurisdiction',
+    ]
     add_readonly_fields = ['fees', ]
-    readonly_fields = ['id', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees']
+    readonly_fields = ['id', 'grossTotal', 'total', 'taxRate', 'taxes', 'taxJurisdiction', 'fees']
 
     def has_add_permission(self, request, obj=None):
         '''

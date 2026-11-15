@@ -365,7 +365,9 @@ class SquarePaymentRecord(SquareAPIMixin, PaymentRecord):
             'idempotency_key': idempotency_key,
             'payment_id': payment.get('id'),
             'amount_money': {
-                'amount': int(amount_to_refund * 100),
+                # round() rather than int(), because int() truncates
+                # (e.g. int(19.99 * 100) is 1998).
+                'amount': round(amount_to_refund * 100),
                 'currency': payment.get('amount_money', {}).get('currency')
             }
         }

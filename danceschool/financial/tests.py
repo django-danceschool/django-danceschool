@@ -9,7 +9,10 @@ from django.utils import timezone
 from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
-from danceschool.core.models import EventOccurrence, EventStaffMember, Series
+from danceschool.core.models import (
+    EventOccurrence, EventStaffMember, Series, Invoice, InvoiceItem,
+    TaxJurisdiction,
+)
 from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
@@ -337,6 +340,55 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         self.client.login(username=self.superuser.username, password='pass')
         response = self.client.get(reverse('financesByMonth'))
         self.assertEqual(response.status_code, 200)
+
+    def test_taxes_by_jurisdiction(self):
+        '''
+        Revenue items carry the tax jurisdiction of their invoice items, and
+        the tax report totals sales and tax for each jurisdiction.
+        '''
+        jurisdiction = TaxJurisdiction.objects.create(name='Test Jurisdiction', defaultRate=10)
+        invoice = Invoice.objects.create(
+            status=Invoice.PaymentStatus.unpaid, buyerPaysSalesTax=True
+        )
+        taxed = InvoiceItem.objects.create(
+            invoice=invoice, description='Taxed', grossTotal=100, total=100,
+            taxRate=10, taxes=10, taxJurisdiction=jurisdiction,
+        )
+        untaxed = InvoiceItem.objects.create(
+            invoice=invoice, description='Untaxed', grossTotal=40, total=40,
+        )
+
+        self.assertEqual(taxed.revenueitem.taxJurisdiction, jurisdiction)
+        self.assertEqual(taxed.revenueitem.taxes, 10)
+        self.assertIsNone(untaxed.revenueitem.taxJurisdiction)
+
+        # A later change to the invoice item is carried to the revenue item.
+        untaxed.taxJurisdiction = jurisdiction
+        untaxed.save()
+        untaxed.revenueitem.refresh_from_db()
+        self.assertEqual(untaxed.revenueitem.taxJurisdiction, jurisdiction)
+
+        response = self.client.get(reverse('taxesByJurisdiction'))
+        self.assertEqual(response.status_code, 302)
+        self.client.login(username=self.superuser.username, password='pass')
+
+        response = self.client.get(reverse('taxesByJurisdiction') + '?basis=accrualDate')
+        self.assertEqual(response.status_code, 200)
+        totals = response.context_data['totals']
+        self.assertEqual(len(totals), 1)
+        self.assertEqual(totals[0]['jurisdiction'], 'Test Jurisdiction')
+        self.assertEqual(totals[0]['num_items'], 2)
+        self.assertAlmostEqual(totals[0]['sales'], 140)
+        self.assertAlmostEqual(totals[0]['taxable_sales'], 100)
+        self.assertAlmostEqual(totals[0]['tax'], 10)
+
+        # Nothing has been received yet, so the default basis shows nothing.
+        response = self.client.get(reverse('taxesByJurisdiction'))
+        self.assertEqual(response.context_data['totals'], [])
+
+        response = self.client.get(reverse('taxesByJurisdictionCSV') + '?basis=accrualDate')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Test Jurisdiction', response.content.decode('utf8'))
 
     def test_summary_byevent(self):
         s = self.create_series()

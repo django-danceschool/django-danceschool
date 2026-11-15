@@ -8,7 +8,7 @@ from .views import (
     FinancialDetailView, ExpenseReportingView, RevenueReportingView,
     CompensationRuleUpdateView, CompensationRuleResetView, ExpenseRuleGenerationView,
     ExpenseDuplicationView, ExpenseItemViewSet, RevenueItemViewSet,
-    TransactionPartyViewSet, EventFinancialViewSet
+    TransactionPartyViewSet, EventFinancialViewSet, TaxesByJurisdictionView
 )
 from .ajax import updateEventRegistrations
 from .autocomplete_light_registry import (
@@ -111,6 +111,12 @@ urlpatterns = [
         FinancesByDateView.as_view(as_csv=True), name='financesByDateCSV'
     ),
     path('finances/daily/', FinancesByDateView.as_view(), name='financesByDate'),
+
+    path('finances/taxes/', TaxesByJurisdictionView.as_view(), name='taxesByJurisdiction'),
+    path(
+        'finances/taxes/csv/', TaxesByJurisdictionView.as_view(as_csv=True),
+        name='taxesByJurisdictionCSV'
+    ),
 
     path('finances/csv/', FinancesByMonthView.as_view(as_csv=True), name='financesByMonthCSV'),
     path('finances/<slug:year>/', FinancesByMonthView.as_view(), name='financesByMonth'),

@@ -108,7 +108,7 @@ class MerchItemAdmin(admin.ModelAdmin):
     search_fields = ('name', 'description')
 
     fields = [
-        'name', 'description', 'category', 'defaultPrice', 'salesTaxRate',
+        'name', 'description', 'category', 'defaultPrice', 'taxRateOverride',
         'photo', 'disabled', 'creationDate'
         ]
 

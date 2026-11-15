@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from django.utils import timezone
 from unittest.mock import patch
@@ -6,7 +7,8 @@ from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
 from danceschool.core.models import (
-    Invoice, Instructor, EmailTemplate, Event, EventStaffMember,
+    Invoice, Instructor, EmailTemplate, Event, EventStaffMember, Location,
+    TaxJurisdiction, TaxRule,
 )
 from danceschool.core.constants import REG_VALIDATION_STR, getConstant
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
@@ -55,7 +57,22 @@ class PrivateLessonTestCase(DefaultSchoolTestCase):
         self.gp['privateLessons__allowRegistration'] = True
         self.gp['privateLessons__allowPublicBooking'] = True
         self.gp['privateLessons__notifyInstructor'] = True
-        self.gp['privateLessons__salesTaxRate'] = self.LESSON_TAX_RATE
+
+        # Private lessons are taxed under the rules of the jurisdiction of the
+        # lesson's location. The jurisdiction has a default rate, and a rule
+        # that sets a different rate for private lessons.
+        self.jurisdiction = TaxJurisdiction.objects.create(
+            name='Lesson Jurisdiction', defaultRate=self.LESSON_TAX_RATE + 5
+        )
+        TaxRule.objects.create(
+            jurisdiction=self.jurisdiction,
+            itemType=ContentType.objects.get_for_model(PrivateLessonEvent),
+            rate=self.LESSON_TAX_RATE,
+        )
+        Location.objects.filter(id=self.defaultLocation.id).update(
+            taxJurisdiction=self.jurisdiction
+        )
+        self.defaultLocation.refresh_from_db()
 
         # Create a single 30-minute available slot starting tomorrow.
         self.slot = InstructorAvailabilitySlot.objects.create(
@@ -147,7 +164,10 @@ class BookingWithRegistrationTest(PrivateLessonTestCase):
         )
 
     def test_booking_creates_invoice_with_private_lesson_tax_rate(self):
-        '''The invoice item created during booking carries privateLessons__salesTaxRate.'''
+        '''
+        The invoice item created during booking carries the rate of the tax
+        rule for private lessons in the jurisdiction of the lesson's location.
+        '''
         self.client.force_login(self.nonStaffUser)
         self._book_slot()
 
@@ -156,6 +176,7 @@ class BookingWithRegistrationTest(PrivateLessonTestCase):
         items = list(invoice.invoiceitem_set.all())
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].taxRate, self.LESSON_TAX_RATE)
+        self.assertEqual(items[0].taxJurisdiction, self.jurisdiction)
 
     def test_booking_applies_buyer_pays_tax_correctly(self):
         '''

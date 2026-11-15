@@ -68,6 +68,43 @@ Note also that for accounting purposes, monthly and detailed summaries can be co
 - **Accrual basis:** Summaries are constructed based on a notion of when the money is "owed" (e.g. at the end of a class series for instructors).  This can help to get a more accurate picture of your financial performance   Please be advised that the accrual basis constructed in this project almost certainly does not correspond to generally accepted accounting practices, and therefore it is not recommended to use these statements as a basis for so-called "accrual accounting" for tax purposes.
 - **Submission basis:** Summaries are constructed based on when revenue and expense items are submitted to the database.
 
+Sales Tax and Tax Jurisdictions
+-------------------------------
+
+Sales tax (or a similar tax, such as an admissions tax) is charged according to *tax jurisdictions*.  A tax jurisdiction is an authority to which you owe tax; depending on local rules this may be a state, a county, or a city.  If no tax jurisdiction applies to a sale, then no tax is charged.
+
+To set up sales tax:
+
+1. Go to "Finances > Related Items > Tax Jurisdictions" in the CMS toolbar and create a jurisdiction with its **default tax rate**.  If some things are taxed differently in that jurisdiction, add rules beneath it.  A rule can apply to a type of item (class series, public events, private lessons, or merchandise) or to a specific category of class series or public events.  Enter a rate of 0 for anything that is exempt.
+2. Assign each **Location** to its tax jurisdiction.  Registrations are taxed based on where the event takes place, regardless of where or when the customer pays.
+3. Assign each **at-the-door register** to its tax jurisdiction.  Merchandise is taxed based on the register through which it is sold, so each register should be used in only one jurisdiction.
+4. Optionally, choose a **default tax jurisdiction** under "Registration" in the site preferences.  This is used for anything that has no jurisdiction of its own, such as an event with no location.
+
+The rate for an individual event or merchandise item can be overridden using its "Sales tax rate override" field.  Leave that field blank to follow the rules of the jurisdiction, or enter 0 to make the item exempt.
+
+**Only one tax jurisdiction and one tax rate apply to each item that is sold.**  If more than one authority taxes sales at the same place (for example, a state sales tax and a county sales tax), do not create a jurisdiction for each of them.  Instead, create a single jurisdiction for that place whose rates are the combined total of all the taxes that apply there (for example, "Springfield (state and county)" at 7.5% for a 6% state tax and a 1.5% county tax).  The same is true of the "Sales tax rate override" field: it replaces the rate only, so enter the combined rate, and the tax is still reported under the jurisdiction of the location or register.  The system reports one tax amount for each jurisdiction, so if the taxes are filed separately, you will need to divide that amount between the authorities yourself in proportion to their rates.
+
+Each invoice item records the tax rate and jurisdiction that applied when it was sold, and a single invoice may include items from more than one jurisdiction.  To see how much tax is owed to each authority, go to "Finances > Financial Summaries > Sales Tax By Jurisdiction".  The report can be based on when payment was received or on the accrual date, and it can be exported as a CSV file.
+
+The site preference "Buyer pays sales tax" continues to determine whether tax is added on top of your prices or is treated as included in them.
+
+Applying Tax Rules to Existing Invoices
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Invoices that were created before your tax jurisdictions were set up do not record a jurisdiction, and they may not have had the correct tax applied.  The ``backfill_tax_jurisdictions`` management command applies your current rules to existing invoices.  By default it only reports what it would do, broken down by jurisdiction and month, and it changes nothing until you add ``--commit``:
+
+::
+
+    python manage.py backfill_tax_jurisdictions --mode=carve-out --start=2025-01-01 --end=2025-12-31
+
+There are three modes:
+
+- ``--mode=label`` (the default) records the tax jurisdiction on each invoice item and changes no amounts.
+- ``--mode=carve-out`` also corrects items whose tax is too low, by treating the amount that was collected as having included the tax.  The price of the item is revised downward by the amount of the tax, so the amount collected does not change and paid invoices remain paid.  The original amounts are kept in the item's additional data.
+- ``--mode=add`` also corrects items whose tax is too low, by adding the tax on top of the price.  Because this leaves a balance due, it is only permitted for invoices that are still unpaid.  If paid invoices are affected, the command lists them and stops; re-open those invoices yourself, or pass ``--skip-paid`` to proceed with the others.
+
+Use ``--start``, ``--end`` and ``--jurisdiction`` to limit which invoices are considered.  The command applies the rules as they are now, so if your rates have changed over time, run it separately for each period with the rules set as they were.  Items that have been refunded, and items with more tax recorded than is now due, are never changed automatically; they are counted in the report so that you can review them.
+
 Exporting Financial Data
 ------------------------
 

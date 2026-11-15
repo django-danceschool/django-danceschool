@@ -5,7 +5,7 @@ from .models import Register, RegisterPaymentMethod
 
 @admin.register(Register)
 class RegisterAdmin(admin.ModelAdmin):
-    list_display = ['title', 'enabled', ]
+    list_display = ['title', 'taxJurisdiction', 'enabled', ]
     list_editable = ['enabled', ]
     prepopulated_fields = {"slug": ("title",)}
 

@@ -110,7 +110,8 @@ def handle_stripe_checkout(request):
 
     this_invoice.status = Invoice.PaymentStatus.unpaid
 
-    this_total = int(min(this_invoice.outstandingBalance, amount) * 100)
+    # round() rather than int(), because int() truncates (e.g. int(19.99 * 100) is 1998).
+    this_total = round(min(this_invoice.outstandingBalance, amount) * 100)
     charge = None
 
     try:
@@ -284,7 +285,7 @@ def create_checkout_session(request):
 
         this_invoice.status = Invoice.PaymentStatus.unpaid
         stripeEmail = this_invoice.email
-        this_total = int(min(this_invoice.outstandingBalance, amount) * 100)
+        this_total = round(min(this_invoice.outstandingBalance, amount) * 100)
         try:
             # Create new Checkout Session for the order
             # Other optional params include:

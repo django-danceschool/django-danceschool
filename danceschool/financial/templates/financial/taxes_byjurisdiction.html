@@ -1,0 +1,102 @@
+{% extends "cms/admin_home.html" %}
+{% load i18n %}
+
+{% block content %}
+<h3>{% trans "Sales Tax by Jurisdiction" %}</h3>
+
+<div class="row">
+<div class="col-md-8 mb-4">
+	<h5>{% trans "Report Sales By" %}</h5>
+	<div class="btn-group" role="group" aria-label="{% trans 'Reporting basis' %}">
+		{% for key, name in bases.items %}
+			<a href="{% url 'taxesByJurisdiction' %}?basis={{ key }}{% if year %}&amp;year={{ year }}{% endif %}" class="btn btn-outline-secondary {% if basis == key %}active{% endif %}">{{ name }}</a>
+		{% endfor %}
+	</div>
+
+	<h5 class="mt-3">{% trans "Year" %}</h5>
+	<div class="btn-group flex-wrap" role="group" aria-label="{% trans 'Year' %}">
+		<a href="{% url 'taxesByJurisdiction' %}?basis={{ basis }}" class="btn btn-outline-secondary {% if not year %}active{% endif %}">{% trans "All" %}</a>
+		{% for this_year in eligible_years %}
+			<a href="{% url 'taxesByJurisdiction' %}?basis={{ basis }}&amp;year={{ this_year }}" class="btn btn-outline-secondary {% if year == this_year %}active{% endif %}">{{ this_year }}</a>
+		{% endfor %}
+	</div>
+</div>
+
+{% if perms.financial.export_financial_data %}
+<div class="col-md-4 mb-4">
+	<h5>{% trans "Export (CSV)" %}</h5>
+	<a href="{% url 'taxesByJurisdictionCSV' %}?basis={{ basis }}{% if year %}&amp;year={{ year }}{% endif %}" class="btn btn-outline-secondary">{% trans "This View" %}</a>
+</div>
+{% endif %}
+</div>
+
+<p class="text-muted">
+	{% blocktrans %}Sales are shown before tax. Refunds and other adjustments are shown separately and are not subtracted from sales or tax. Items with no jurisdiction were sold when no tax jurisdiction applied.{% endblocktrans %}
+</p>
+
+<div class="card mt-4">
+<h4 class="card-header">{% trans "Totals by Jurisdiction" %}{% if year %} ({{ year }}){% endif %}</h4>
+<div class="card-body">
+	<table class="table">
+	<thead>
+		<tr>
+			<th>{% trans "Tax Jurisdiction" %}</th>
+			<th>{% trans "Items" %}</th>
+			<th>{% trans "Sales Before Tax" %}</th>
+			<th>{% trans "Taxable Sales" %}</th>
+			<th>{% trans "Tax" %}</th>
+			<th>{% trans "Refunds/Adjustments" %}</th>
+		</tr>
+	</thead>
+	<tbody>
+	{% for row in totals %}
+		<tr>
+			<td>{{ row.jurisdiction }}</td>
+			<td>{{ row.num_items }}</td>
+			<td>{{ row.sales|floatformat:2 }}</td>
+			<td>{{ row.taxable_sales|floatformat:2 }}</td>
+			<td>{{ row.tax|floatformat:2 }}</td>
+			<td>{{ row.adjustments|floatformat:2 }}</td>
+		</tr>
+	{% empty %}
+		<tr><td colspan="6">{% trans "No revenues were found for this period." %}</td></tr>
+	{% endfor %}
+	</tbody>
+	</table>
+</div>
+</div>
+
+<div class="card mt-4">
+<h4 class="card-header">{% trans "Details by Month" %}</h4>
+<div class="card-body">
+	<table class="table">
+	<thead>
+		<tr>
+			<th>{% trans "Month" %}</th>
+			<th>{% trans "Tax Jurisdiction" %}</th>
+			<th>{% trans "Items" %}</th>
+			<th>{% trans "Sales Before Tax" %}</th>
+			<th>{% trans "Taxable Sales" %}</th>
+			<th>{% trans "Tax" %}</th>
+			<th>{% trans "Refunds/Adjustments" %}</th>
+		</tr>
+	</thead>
+	<tbody>
+	{% for row in rows %}
+		<tr>
+			<td>{{ row.month|date:"F Y" }}</td>
+			<td>{{ row.jurisdiction }}</td>
+			<td>{{ row.num_items }}</td>
+			<td>{{ row.sales|floatformat:2 }}</td>
+			<td>{{ row.taxable_sales|floatformat:2 }}</td>
+			<td>{{ row.tax|floatformat:2 }}</td>
+			<td>{{ row.adjustments|floatformat:2 }}</td>
+		</tr>
+	{% empty %}
+		<tr><td colspan="7">{% trans "No revenues were found for this period." %}</td></tr>
+	{% endfor %}
+	</tbody>
+	</table>
+</div>
+</div>
+{% endblock %}

@@ -303,6 +303,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (cart.discount_code) {
             payload.discount_code = cart.discount_code;
         }
+        // At-the-door registers identify themselves so that the tax
+        // jurisdiction of the register can be applied to merchandise.
+        if (regParams.registerId) {
+            payload.register_id = regParams.registerId;
+        }
         return payload;
     }
 

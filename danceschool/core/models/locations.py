@@ -59,6 +59,16 @@ class Location(models.Model):
         help_text=_('This determines the order that the locations show up on the Locations page.')
     )
 
+    taxJurisdiction = models.ForeignKey(
+        'core.TaxJurisdiction', verbose_name=_('Tax jurisdiction'),
+        null=True, blank=True, on_delete=models.SET_NULL,
+        help_text=_(
+            'Registrations for events at this location are taxed under the ' +
+            'rules of this jurisdiction. If blank, the default tax ' +
+            'jurisdiction for the site (if any) is used.'
+        )
+    )
+
     defaultCapacity = models.PositiveIntegerField(
         _('Default Venue Capacity'), null=True, blank=True,
         default=get_defaultEventCapacity,

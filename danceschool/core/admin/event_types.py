@@ -132,7 +132,7 @@ class SeriesAdmin(FrontendEditableAdminMixin, EventChildAdmin):
             'classes': ('collapse', ),
             'fields': (
                 ('status', 'calendarEvent'), 'registrationOpenDate',
-                'closeAfterDays', 'capacity',
+                'closeAfterDays', 'capacity', 'taxRateOverride',
             ),
         }),
         (_('Additional data'), {
@@ -266,6 +266,7 @@ class PublicEventAdmin(
                 ('status', 'calendarEvent'),
                 ('registrationOpenDate', 'closeAfterDays'),
                 ('pricingTier', 'capacity'),
+                'taxRateOverride',
             ),
         }),
         (_('Description/Link'), {

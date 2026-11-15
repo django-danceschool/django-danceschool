@@ -12,14 +12,36 @@ from datetime import timedelta
 
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant
-from danceschool.register.models import RegisterPaymentMethod
+from danceschool.core.utils.tax import getItemTax
+from danceschool.register.models import Register, RegisterPaymentMethod
 
 from .managers import MerchOrderManager
 
 
 def get_defaultSalesTaxRate():
-    ''' Callable for default used by MerchItem class '''
-    return getConstant('registration__merchSalesTaxRate')
+    '''
+    No longer used. Tax rates for merchandise now come from tax jurisdictions,
+    but this callable is referenced by earlier migrations and must remain.
+    '''
+    return 0
+
+
+def getMerchTax(merchItem, invoice=None):
+    '''
+    Return a tuple of (rate, jurisdiction) for the sale of the passed MerchItem.
+    Merchandise is taxed where it is handed over, so the jurisdiction is that
+    of the at-the-door register through which the sale was made (recorded on
+    the invoice by the shopping cart). If there is no such register, or the
+    register has no jurisdiction, the default jurisdiction for the site is used.
+    '''
+    jurisdiction = None
+    register_id = (getattr(invoice, 'data', None) or {}).get('register_id')
+    if register_id:
+        register = Register.objects.filter(
+            id=register_id
+        ).select_related('taxJurisdiction').first()
+        jurisdiction = getattr(register, 'taxJurisdiction', None)
+    return getItemTax(merchItem, jurisdiction)
 
 
 class MerchItemCategory(models.Model):
@@ -72,12 +94,14 @@ class MerchItem(models.Model):
         )
     )
 
-    salesTaxRate = models.FloatField(
-        _('Sales tax rate'),
-        default=get_defaultSalesTaxRate, validators=[MinValueValidator(0)],
+    taxRateOverride = models.FloatField(
+        _('Sales tax rate override'), null=True, blank=True,
+        validators=[MinValueValidator(0)],
         help_text=_(
-            'The sales tax percentage rate to be applied to this item (e.g. ' +
-            'enter \'10\' to apply 10 percent sales tax).'
+            'Leave blank to apply the tax rules of the jurisdiction in which ' +
+            'this item is sold. To override those rules for this item only, ' +
+            'enter a whole number percentage (e.g. enter \'6\' for 6%), or ' +
+            'enter 0 if this item is exempt from tax.'
         )
     )
 
@@ -530,16 +554,20 @@ class MerchOrderItem(models.Model):
         ):
             invoiceItem.grossTotal = newTotal
             invoiceItem.total = newTotal
-            invoiceItem.taxRate = self.item.item.salesTaxRate
+            invoiceItem.taxRate, invoiceItem.taxJurisdiction = getMerchTax(
+                self.item.item, invoice
+            )
             invoiceItem.calculateTaxes()
             invoiceItem.save()
         elif not invoiceItem and invoice:
+            taxRate, taxJurisdiction = getMerchTax(self.item.item, invoice)
             new_item = InvoiceItem(
                 invoice=invoice,
                 description=self.item.fullName,
                 grossTotal=newTotal,
                 total=newTotal,
-                taxRate=self.item.item.salesTaxRate
+                taxRate=taxRate,
+                taxJurisdiction=taxJurisdiction,
             )
             new_item.calculateTaxes()
             new_item.save()

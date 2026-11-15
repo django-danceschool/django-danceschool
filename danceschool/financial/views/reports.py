@@ -1,7 +1,8 @@
 from django.views.generic import DetailView, TemplateView
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, Http404
-from django.db.models import Q
+from django.db.models import Q, F, Sum, Count, Case, When, Value, FloatField
+from django.db.models.functions import Coalesce, TruncMonth
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
@@ -409,6 +410,124 @@ class FinancesByPeriodView(PermissionRequiredMixin, TemplateView):
             ]
             writer.writerow(this_row_data)
 
+        return response
+
+
+class TaxesByJurisdictionView(PermissionRequiredMixin, TemplateView):
+    '''
+    Reports sales and sales tax by tax jurisdiction and month, so that the
+    amount owed to each tax authority can be determined.
+    '''
+    permission_required = 'financial.view_finances_bymonth'
+    template_name = 'financial/taxes_byjurisdiction.html'
+    as_csv = False
+
+    # Revenues are either reported when they are received, or as of the date
+    # of accrual (e.g. the date that an event begins).
+    bases = {
+        'receivedDate': _('Date Received'),
+        'accrualDate': _('Date of Accrual'),
+    }
+
+    def get_rows(self, year, basis):
+        ''' One row per month and tax jurisdiction. '''
+        items = RevenueItem.objects.all()
+        if basis == 'receivedDate':
+            items = items.filter(received=True, receivedDate__isnull=False)
+        if year:
+            items = items.filter(**{'%s__year' % basis: year})
+
+        # When the seller pays sales tax, the tax is included in the total, so
+        # it is subtracted in order to report sales before tax.
+        pretax = F('total') - Case(
+            When(buyerPaysSalesTax=False, then=F('taxes')),
+            default=Value(0.0), output_field=FloatField()
+        )
+
+        rows = items.annotate(month=TruncMonth(basis)).values(
+            'month', 'taxJurisdiction', 'taxJurisdiction__name',
+        ).annotate(
+            num_items=Count('id'),
+            sales=Coalesce(Sum(pretax), 0.0, output_field=FloatField()),
+            taxable_sales=Coalesce(
+                Sum(pretax, filter=Q(taxes__gt=0)), 0.0, output_field=FloatField()
+            ),
+            tax=Coalesce(Sum('taxes'), 0.0, output_field=FloatField()),
+            adjustments=Coalesce(Sum('adjustments'), 0.0, output_field=FloatField()),
+        ).order_by('-month', 'taxJurisdiction__name')
+
+        return [
+            {
+                'month': x['month'],
+                'jurisdiction_id': x['taxJurisdiction'],
+                'jurisdiction': x['taxJurisdiction__name'] or _('None'),
+                'num_items': x['num_items'],
+                'sales': x['sales'],
+                'taxable_sales': x['taxable_sales'],
+                'tax': x['tax'],
+                'adjustments': x['adjustments'],
+            }
+            for x in rows
+        ]
+
+    def get_context_data(self, **kwargs):
+        year = getIntFromGet(self.request, 'year')
+        basis = self.request.GET.get('basis')
+        if basis not in self.bases:
+            basis = 'receivedDate'
+
+        eligible_years = sorted(set(
+            x.year for x in RevenueItem.objects.filter(
+                **{'%s__isnull' % basis: False}
+            ).datetimes(basis, 'year')
+        ), reverse=True)
+
+        rows = self.get_rows(year, basis)
+
+        # Totals by jurisdiction for the entire period.
+        totals = {}
+        for row in rows:
+            this_total = totals.setdefault(row['jurisdiction_id'], {
+                'jurisdiction': row['jurisdiction'], 'num_items': 0,
+                'sales': 0, 'taxable_sales': 0, 'tax': 0, 'adjustments': 0,
+            })
+            for key in ['num_items', 'sales', 'taxable_sales', 'tax', 'adjustments']:
+                this_total[key] += row[key]
+
+        kwargs.update({
+            'year': year,
+            'basis': basis,
+            'bases': self.bases,
+            'basis_name': self.bases[basis],
+            'eligible_years': eligible_years,
+            'rows': rows,
+            'totals': sorted(totals.values(), key=lambda x: str(x['jurisdiction'])),
+        })
+        return super().get_context_data(**kwargs)
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.as_csv:
+            return self.render_to_csv(context)
+        return super().render_to_response(context, **response_kwargs)
+
+    def render_to_csv(self, context):
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="taxesByJurisdiction.csv"'
+
+        writer = csv.writer(response, csv.excel)
+        response.write(u'﻿'.encode('utf8'))  # BOM (optional...Excel needs it to open UTF-8 file properly)
+
+        writer.writerow([
+            _('Month'), _('Tax Jurisdiction'), _('Items'), _('Sales Before Tax'),
+            _('Taxable Sales'), _('Tax'), _('Refunds/Adjustments'),
+        ])
+        for row in context['rows']:
+            writer.writerow([
+                row['month'].strftime('%Y-%m') if row['month'] else '',
+                row['jurisdiction'], row['num_items'],
+                round(row['sales'], 2), round(row['taxable_sales'], 2),
+                round(row['tax'], 2), round(row['adjustments'], 2),
+            ])
         return response
 
 

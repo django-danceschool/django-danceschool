@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 from .constants import REG_VALIDATION_STR
 from .models import Event, EventRole
@@ -301,6 +302,32 @@ class CartSerializer(serializers.Serializer):
     email = serializers.CharField(required=False, max_length=200, allow_blank=True)
 
     student = serializers.BooleanField(required=False, default=False)
+
+    # The at-the-door register (if any) from which this cart originates. This
+    # is only honored for at-the-door sales (see validate()).
+    register_id = serializers.IntegerField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        # The register determines the tax jurisdiction for merchandise, so a
+        # customer who is checking out online must not be able to specify it.
+        register_id = attrs.pop('register_id', None)
+        if (
+            register_id is None or not self.context.get('payAtDoor') or
+            not apps.is_installed('danceschool.register')
+        ):
+            return attrs
+
+        # An at-the-door sale must come from a register that exists and is in
+        # use. Otherwise, the sale would silently be taxed under the default
+        # jurisdiction instead of the jurisdiction of the register.
+        Register = apps.get_model('register', 'Register')
+        if not Register.objects.filter(id=register_id, enabled=True).exists():
+            raise serializers.ValidationError({
+                'register_id': _('Invalid or disabled at-the-door register.')
+            })
+
+        attrs['register_id'] = register_id
+        return attrs
 
     def validate_discount_code(self, value):
         import re

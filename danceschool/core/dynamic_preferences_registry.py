@@ -18,7 +18,7 @@ from cms.forms.fields import PageSelectFormField
 
 from .utils.serializers import PageModelSerializer
 from .models import (
-    EventStaffCategory, EmailTemplate, PublicEvent, Series,
+    EventStaffCategory, EmailTemplate, PublicEvent, Series, TaxJurisdiction,
     get_defaultEmailName, get_defaultEmailFrom
 )
 from .mixins import ModelTemplateMixin
@@ -564,25 +564,21 @@ class DoorCheckInRule(ChoicePreference):
 
 
 @global_preferences_registry.register
-class SeriesSalesTaxRate(FloatPreference):
+class DefaultTaxJurisdiction(ModelChoicePreference):
     section = registration
-    name = 'seriesSalesTaxRate'
-    verbose_name = _('Sales tax percentage rate to be applied to class series registrations')
+    name = 'defaultTaxJurisdiction'
+    verbose_name = _('Default tax jurisdiction')
     help_text = _(
-        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all class series registrations.'
+        'Sales tax rates are defined by tax jurisdictions, which are ' +
+        'assigned to locations and to at-the-door registers. The ' +
+        'jurisdiction selected here is used for anything that has no ' +
+        'jurisdiction of its own (e.g. an event with no location). If no ' +
+        'jurisdiction applies, then no sales tax is charged.'
     )
-    default = 0.0
-
-
-@global_preferences_registry.register
-class PublicEventSalesTaxRate(FloatPreference):
-    section = registration
-    name = 'publicEventSalesTaxRate'
-    verbose_name = _('Sales tax percentage rate to be applied to public event registrations')
-    help_text = _(
-        'Enter, e.g. \'10\' for a 10% tax rate to be applied to all public event registrations.'
-    )
-    default = 0.0
+    model = TaxJurisdiction
+    queryset = TaxJurisdiction.objects.all()
+    required = False
+    default = None
 
 
 @global_preferences_registry.register

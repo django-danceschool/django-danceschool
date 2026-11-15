@@ -1,10 +1,14 @@
 import json
 
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
+from dynamic_preferences.registries import global_preferences_registry
+
 from danceschool.core.constants import REG_VALIDATION_STR
-from danceschool.core.models import Invoice, Registration
+from danceschool.core.models import Invoice, Registration, TaxJurisdiction, TaxRule
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
+from danceschool.register.models import Register
 
 from .models import MerchItem, MerchItemVariant
 
@@ -401,6 +405,114 @@ class MerchStudentInfoViewTest(DefaultSchoolTestCase):
         )
 
 
+class MerchTaxTest(DefaultSchoolTestCase):
+    '''
+    Merchandise is taxed under the rules of the tax jurisdiction of the
+    at-the-door register through which it is sold. If the register has no
+    jurisdiction (or the sale is not associated with a register), the default
+    jurisdiction for the site is used.
+    '''
+
+    REGISTER_RATE = 6.0
+    DEFAULT_RATE = 2.0
+    MERCH_RULE_RATE = 9.0
+
+    def setUp(self):
+        self.gp = global_preferences_registry.manager()
+        self.client.force_login(self.superuser)
+
+        self.item = MerchItem.objects.create(
+            name='Test Jacket', category=None, defaultPrice=45, disabled=False,
+        )
+        self.variant = MerchItemVariant.objects.create(
+            item=self.item, sku='JACKET-XL', name='X-Large', originalQuantity=10,
+        )
+
+        self.registerJurisdiction = TaxJurisdiction.objects.create(
+            name='Register Jurisdiction', defaultRate=self.REGISTER_RATE
+        )
+        self.defaultJurisdiction = TaxJurisdiction.objects.create(
+            name='Default Jurisdiction', defaultRate=self.DEFAULT_RATE
+        )
+        self.register = Register.objects.create(
+            title='Taxed Register', slug='taxed-register',
+            taxJurisdiction=self.registerJurisdiction,
+        )
+        self.plainRegister = Register.objects.create(
+            title='Plain Register', slug='plain-register',
+        )
+
+    def tearDown(self):
+        self.gp['registration__defaultTaxJurisdiction'] = None
+
+    def _checkout_item(self, register=None):
+        payload = {
+            'items': [{
+                'item_type': 'MerchItem', 'item_id': self.item.id,
+                'sku': self.variant.sku, 'quantity': 1,
+            }],
+            'checkout': True,
+            'payAtDoor': True,
+        }
+        if register:
+            payload['register_id'] = register.id
+        response = self.client.post(
+            reverse('cart'), data=json.dumps(payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+        invoice_id = self.client.session[REG_VALIDATION_STR]['invoice_id']
+        return Invoice.objects.get(id=invoice_id).invoiceitem_set.get()
+
+    def test_no_jurisdiction_means_no_tax(self):
+        item = self._checkout_item()
+        self.assertEqual(item.taxRate, 0)
+        self.assertEqual(item.taxes, 0)
+        self.assertIsNone(item.taxJurisdiction)
+
+    def test_register_jurisdiction_applies(self):
+        item = self._checkout_item(self.register)
+        self.assertEqual(item.taxRate, self.REGISTER_RATE)
+        self.assertEqual(item.taxJurisdiction, self.registerJurisdiction)
+        self.assertGreater(item.taxes, 0)
+
+    def test_default_jurisdiction_applies_without_register(self):
+        self.gp['registration__defaultTaxJurisdiction'] = self.defaultJurisdiction
+        item = self._checkout_item()
+        self.assertEqual(item.taxRate, self.DEFAULT_RATE)
+        self.assertEqual(item.taxJurisdiction, self.defaultJurisdiction)
+
+    def test_default_jurisdiction_applies_for_register_without_jurisdiction(self):
+        self.gp['registration__defaultTaxJurisdiction'] = self.defaultJurisdiction
+        item = self._checkout_item(self.plainRegister)
+        self.assertEqual(item.taxRate, self.DEFAULT_RATE)
+        self.assertEqual(item.taxJurisdiction, self.defaultJurisdiction)
+
+    def test_merchandise_rule_overrides_jurisdiction_default(self):
+        TaxRule.objects.create(
+            jurisdiction=self.registerJurisdiction,
+            itemType=ContentType.objects.get_for_model(MerchItem),
+            rate=self.MERCH_RULE_RATE,
+        )
+        item = self._checkout_item(self.register)
+        self.assertEqual(item.taxRate, self.MERCH_RULE_RATE)
+
+    def test_item_override_prevails(self):
+        self.item.taxRateOverride = 1.5
+        self.item.save()
+        item = self._checkout_item(self.register)
+        self.assertEqual(item.taxRate, 1.5)
+        self.assertEqual(item.taxJurisdiction, self.registerJurisdiction)
+
+    def test_item_override_of_zero_means_exempt(self):
+        self.item.taxRateOverride = 0
+        self.item.save()
+        item = self._checkout_item(self.register)
+        self.assertEqual(item.taxRate, 0)
+        self.assertEqual(item.taxes, 0)
+        self.assertEqual(item.taxJurisdiction, self.registerJurisdiction)
+
+
 class MerchItemAdminInventoryColumnTest(DefaultSchoolTestCase):
     '''
     The merchandise item changelist shows each variant's current inventory.
@@ -525,8 +637,8 @@ class MerchItemCategoryAdminTest(DefaultSchoolTestCase):
     def test_item_can_be_saved_without_category(self):
         '''Category is optional: an item with none must pass admin form validation.'''
         from django.forms import modelform_factory
-        Form = modelform_factory(MerchItem, fields=['name', 'category', 'defaultPrice', 'salesTaxRate'])
-        form = Form({'name': 'Uncategorized', 'defaultPrice': 5, 'salesTaxRate': 0})
+        Form = modelform_factory(MerchItem, fields=['name', 'category', 'defaultPrice', 'taxRateOverride'])
+        form = Form({'name': 'Uncategorized', 'defaultPrice': 5, 'taxRateOverride': 0})
         self.assertTrue(form.is_valid(), form.errors)
         self.assertIsNone(form.save().category)
 

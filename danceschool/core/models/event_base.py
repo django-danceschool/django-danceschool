@@ -106,6 +106,17 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     capacity = models.PositiveIntegerField(_('Event capacity'), null=True, blank=True)
 
+    taxRateOverride = models.FloatField(
+        _('Sales tax rate override'), null=True, blank=True,
+        validators=[MinValueValidator(0)],
+        help_text=_(
+            'Leave blank to apply the tax rules of the jurisdiction in which ' +
+            'this event takes place. To override those rules for this event ' +
+            'only, enter a whole number percentage (e.g. enter \'6\' for 6%), ' +
+            'or enter 0 if this event is exempt from tax.'
+        )
+    )
+
     partnerRequired = models.BooleanField(
         _('Partner required'), default=False,
         help_text=_(

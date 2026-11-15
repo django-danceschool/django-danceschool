@@ -44,6 +44,18 @@ class Register(models.Model):
         _('Enable this register page'), default=True, blank=True
     )
 
+    taxJurisdiction = models.ForeignKey(
+        'core.TaxJurisdiction', verbose_name=_('Tax jurisdiction'),
+        null=True, blank=True, on_delete=models.SET_NULL,
+        help_text=_(
+            'Merchandise sold through this register is taxed under the rules ' +
+            'of this jurisdiction, so each register should be used in only ' +
+            'one jurisdiction. If blank, the default tax jurisdiction for ' +
+            'the site (if any) is used. Event registrations are always taxed ' +
+            'based on the location of the event, not the register.'
+        )
+    )
+
     placeholders = PlaceholderRelationField()
 
     @cached_property
