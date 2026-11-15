@@ -1,7 +1,7 @@
 from django.urls import reverse
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import HttpResponseRedirect, Http404, JsonResponse
 from django.views.generic import FormView, RedirectView, TemplateView, View
 from django.utils.translation import gettext, gettext_lazy as _
@@ -16,7 +16,8 @@ from braces.views import PermissionRequiredMixin
 
 from .models import (
     Event, Series, PublicEvent, Invoice, InvoiceItem, Customer,
-    CashPaymentRecord, DanceRole, Registration, EventRegistration
+    CashPaymentRecord, DanceRole, Registration, EventRegistration,
+    EventOccurrence, SeriesTeacher,
 )
 from .forms import (
     ClassChoiceForm, RegistrationContactForm, MultiRegCustomerNameForm,
@@ -337,7 +338,19 @@ class ClassRegistrationView(FinancialContextMixin, EventOrderMixin, SiteHistoryM
                 Q(status=Event.RegStatus.hidden) |
                 Q(status=Event.RegStatus.regHidden) |
                 Q(status=Event.RegStatus.linkOnly)
-            ).order_by(*self.get_ordering())
+            ).order_by(*self.get_ordering()).select_related(
+                'location', 'room', 'polymorphic_ctype',
+            ).prefetch_related(
+                Prefetch(
+                    'eventoccurrence_set',
+                    queryset=EventOccurrence.objects.order_by('startTime'),
+                ),
+                Prefetch(
+                    'eventstaffmember_set',
+                    queryset=SeriesTeacher.objects.select_related('staffMember'),
+                    to_attr='_prefetched_teachers',
+                ),
+            )
 
         return self.allEvents
 
