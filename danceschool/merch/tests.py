@@ -274,6 +274,22 @@ class MerchStudentInfoViewTest(DefaultSchoolTestCase):
         invoice_id = self.client.session[REG_VALIDATION_STR]['invoice_id']
         return Invoice.objects.get(id=invoice_id)
 
+    def _create_collision_item(self, event, name, defaultPrice):
+        '''
+        Return a MerchItem that shares the primary key of the passed event
+        (possible because they live in separate database tables). Depending
+        on the database backend, the item created in setUp() may already
+        have that primary key, in which case that item is updated instead.
+        '''
+        return MerchItem.objects.update_or_create(
+            pk=event.pk,
+            defaults={
+                'name': name,
+                'defaultPrice': defaultPrice,
+                'disabled': False,
+            },
+        )[0]
+
     # --- Basic correctness ---
 
     def test_student_info_view_renders_after_merch_checkout(self):
@@ -319,15 +335,8 @@ class MerchStudentInfoViewTest(DefaultSchoolTestCase):
         '''
         series = self.create_series()
 
-        # Force the MerchItem to share the Event's pk (possible because they
-        # live in separate database tables).
-        collision_item = MerchItem(
-            pk=series.pk,
-            name='Collision Hoodie',
-            defaultPrice=30,
-            disabled=False,
-        )
-        collision_item.save()
+        # Force the MerchItem to share the Event's pk.
+        collision_item = self._create_collision_item(series, 'Collision Hoodie', 30)
         collision_variant = MerchItemVariant.objects.create(
             item=collision_item,
             sku='HOODIE-COLL',
@@ -351,13 +360,7 @@ class MerchStudentInfoViewTest(DefaultSchoolTestCase):
         '''
         series = self.create_series()
 
-        collision_item = MerchItem(
-            pk=series.pk,
-            name='Collision Cap',
-            defaultPrice=15,
-            disabled=False,
-        )
-        collision_item.save()
+        collision_item = self._create_collision_item(series, 'Collision Cap', 15)
         collision_variant = MerchItemVariant.objects.create(
             item=collision_item,
             sku='CAP-COLL',
@@ -383,13 +386,7 @@ class MerchStudentInfoViewTest(DefaultSchoolTestCase):
         '''
         series = self.create_series()
 
-        collision_item = MerchItem(
-            pk=series.pk,
-            name='Collision Bag',
-            defaultPrice=20,
-            disabled=False,
-        )
-        collision_item.save()
+        collision_item = self._create_collision_item(series, 'Collision Bag', 20)
         collision_variant = MerchItemVariant.objects.create(
             item=collision_item,
             sku='BAG-COLL',
