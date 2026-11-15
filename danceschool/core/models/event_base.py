@@ -145,9 +145,6 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     data = models.JSONField(_('Additional data'), default=dict, blank=True)
 
-    # In apps.py, this will be replaced with a custom manager to add annotations
-    # for registration being enabled and for past events. It also allows access
-    # to QuerySet methods for prefetching occurrences and registrations.
     objects = PolymorphicManager()
 
     @property
@@ -423,13 +420,29 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
         return (None, None)
 
+    def _prefetchedOccurrences(self):
+        '''
+        If this event's occurrences have been prefetched, return them as a
+        list so that they can be used without another query (see
+        RegisterEventLimitedModel.getEvents()).  Otherwise, return None.
+        '''
+        return getattr(
+            self, '_prefetched_objects_cache', {}
+        ).get('eventoccurrence_set')
+
     @property
     def numOccurrences(self):
+        prefetched = self._prefetchedOccurrences()
+        if prefetched is not None:
+            return len(prefetched)
         return self.eventoccurrence_set.count()
     numOccurrences.fget.short_description = _('# Occurrences')
 
     @property
     def firstOccurrence(self):
+        prefetched = self._prefetchedOccurrences()
+        if prefetched is not None:
+            return min(prefetched, key=lambda x: x.startTime, default=None)
         return self.eventoccurrence_set.order_by('startTime').first()
     firstOccurrence.fget.short_description = _('First occurrence')
 
@@ -484,6 +497,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def lastOccurrence(self):
+        prefetched = self._prefetchedOccurrences()
+        if prefetched is not None:
+            return max(prefetched, key=lambda x: x.startTime, default=None)
         return self.eventoccurrence_set.order_by('startTime').last()
     lastOccurrence.fget.short_description = _('Last occurrence')
 
@@ -555,6 +571,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
             if isinstance(dateTime, datetime):
                 excludes = Q(excludes) | (Q(registration__final=False) & Q(registration__dateTime__gte=dateTime))
         else:
+            prefetched = getattr(self, '_prefetched_registrationCounts', None)
+            if prefetched is not None:
+                return sum(prefetched.values())
             filters = filters & Q(registration__final=True)
         return self.eventregistration_set.filter(filters).exclude(excludes).count()
 
@@ -573,8 +592,12 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         is not role-specific.
         '''
         from .event_types import Series
-        eventRoles = self.eventrole_set.filter(capacity__gt=0)
-        if eventRoles.count() > 0:
+        # Filtering here rather than in the query allows prefetched event
+        # roles to be used.
+        eventRoles = [
+            x for x in self.eventrole_set.all() if (x.capacity or 0) > 0
+        ]
+        if eventRoles:
             return [x.role for x in eventRoles]
         elif isinstance(self, Series):
             return self.classDescription.danceTypeLevel.danceType.roles.all()
@@ -591,6 +614,9 @@ class Event(EmailRecipientMixin, PolymorphicModel):
         if includeTemporaryRegs:
             excludes = Q(registration__final=False) & Q(registration__invoice__expirationDate__lte=timezone.now())
         else:
+            prefetched = getattr(self, '_prefetched_registrationCounts', None)
+            if prefetched is not None:
+                return prefetched.get(getattr(role, 'pk', role), 0)
             filters = filters & Q(registration__final=True)
         return self.eventregistration_set.filter(filters).exclude(excludes).count()
 
@@ -664,11 +690,6 @@ class Event(EmailRecipientMixin, PolymorphicModel):
 
     @property
     def soldOut(self):
-        # Prefer annotation if present (base annotation does not look at
-        # addOnEvents).
-        if getattr(self, '_sold_out', False) is True:
-            return True
-
         base_sold_out = (self.numRegistered >= (self.capacity or 0))
         if base_sold_out:
             return True

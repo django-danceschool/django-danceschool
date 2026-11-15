@@ -1,5 +1,7 @@
 import json
 
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -7,7 +9,10 @@ from datetime import timedelta
 
 from dynamic_preferences.registries import global_preferences_registry
 
-from ..models import EventOccurrence, Event, Series, PublicEvent, Invoice
+from ..models import (
+    EventOccurrence, Event, Series, PublicEvent, Invoice, Registration,
+    EventRegistration, DanceRole,
+)
 from ..constants import updateConstant, REG_VALIDATION_STR
 from .defaults import DefaultSchoolTestCase
 
@@ -370,3 +375,103 @@ class PublicRegisterReferralTest(PublicRegisterRenderTest):
             id=self.client.session[REG_VALIDATION_STR]['invoice_id']
         )
         self.assertEqual(invoice.data.get('marketing_id'), marketing_id)
+
+
+class PublicRegisterQueryCountTest(PublicRegisterRenderTest):
+    """
+    The number of database queries needed to render the public registration
+    page must not grow with the number of events that are listed
+    (see pull request #184).
+    """
+
+    def _add_events(self, number):
+        ''' Add open multi-week series, open public events and ongoing series. '''
+        for k in range(number):
+            self._open_series(occurrences=4)
+
+            start = timezone.now() + timedelta(hours=2)
+            pe = PublicEvent(
+                title='Query Count Event %s' % PublicEvent.objects.count(),
+                slug='query-count-event-%s' % PublicEvent.objects.count(),
+                pricingTier=self.defaultPricing,
+                location=self.defaultLocation,
+                status=Event.RegStatus.enabled,
+            )
+            pe.save()
+            EventOccurrence.objects.create(
+                event=pe, startTime=start, endTime=start + timedelta(hours=1),
+            )
+            pe.save()
+
+            closed = self.create_series(status=Event.RegStatus.disabled)
+            occ = closed.eventoccurrence_set.first()
+            occ.startTime = timezone.now() - timedelta(hours=1)
+            occ.endTime = timezone.now() + timedelta(hours=1)
+            occ.save()
+            closed.save()
+
+    def _count_queries(self):
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 200)
+        return len(queries)
+
+    def _register(self, event, roleName, number=1, final=True):
+        invoice = Invoice.objects.create(
+            firstName='Jane', lastName='Doe', email='jane@x.com'
+        )
+        registration = Registration.objects.create(invoice=invoice, final=final)
+        for k in range(number):
+            EventRegistration.objects.create(
+                registration=registration, event=event,
+                role=DanceRole.objects.get(name=roleName),
+            )
+
+    def test_registration_counts_are_displayed(self):
+        '''
+        The numbers of registrations are loaded for all events at once, so
+        check that they are still reported for the right event and role, and
+        that registrations that are not final are not counted.
+        '''
+        open_series = self._open_series()
+        self._register(open_series, 'Lead', number=2)
+        self._register(open_series, 'Follow', number=1)
+        self._register(open_series, 'Follow', number=3, final=False)
+
+        # A second open series with no registrations
+        self._open_series(classDescription=self.levelTwoClassDescription)
+
+        closed = self.create_series(status=Event.RegStatus.disabled)
+        occ = closed.eventoccurrence_set.first()
+        occ.startTime = timezone.now() - timedelta(hours=1)
+        occ.endTime = timezone.now() + timedelta(hours=1)
+        occ.save()
+        closed.save()
+        self._register(closed, 'Lead', number=4)
+
+        response = self.client.get(self._url())
+        content = ' '.join(response.content.decode().split())
+
+        self.assertEqual(content.count('Lead (2)'), 1)
+        self.assertEqual(content.count('Follow (1)'), 1)
+        self.assertEqual(content.count('Lead (0)'), 1)
+        self.assertEqual(content.count('Follow (0)'), 1)
+        self.assertEqual(content.count('(4 registered)'), 1)
+        self.assertEqual(content.count('(0 registered)'), 1)
+
+    def test_query_count_does_not_grow_with_events(self):
+        self._add_events(2)
+        # The first request also fills caches (content types, site
+        # preferences), so it is not used for the comparison.
+        self._count_queries()
+        few = self._count_queries()
+
+        self._add_events(4)
+        many = self._count_queries()
+
+        self.assertEqual(
+            few, many,
+            'Rendering 18 events took %s queries, but 6 events took %s.' % (
+                many, few
+            )
+        )

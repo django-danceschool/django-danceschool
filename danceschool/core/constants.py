@@ -12,6 +12,27 @@ from .utils.sys import isPreliminaryRun
 logger = logging.getLogger(__name__)
 
 
+# The names of the databases in which the preferences table is known to exist.
+_preferencesTableFound = set()
+
+
+def preferencesTableExists():
+    '''
+    Check that the django_dynamic_preferences app has been set up.  Looking
+    for the table requires a database query, so once the table has been found
+    in a database, the result is remembered.  The result is kept separately
+    for each database name, so that a newly-created database (such as a test
+    database) is always checked.
+    '''
+    db_name = str(connection.settings_dict.get('NAME'))
+    if db_name in _preferencesTableFound:
+        return True
+    if 'dynamic_preferences_globalpreferencemodel' in connection.introspection.table_names():
+        _preferencesTableFound.add(db_name)
+        return True
+    return False
+
+
 def getConstant(name, force_preliminary=False):
     '''
     This is a convenience function that makes it easy to access the value of a preference/constant
@@ -21,8 +42,8 @@ def getConstant(name, force_preliminary=False):
 
     # We instantiate a manager for our global preferences
     if (
-        'dynamic_preferences_globalpreferencemodel' in connection.introspection.table_names() and
-        (force_preliminary or not isPreliminaryRun())
+        (force_preliminary or not isPreliminaryRun()) and
+        preferencesTableExists()
     ):
         params = global_preferences_registry.manager()
         try:
@@ -41,7 +62,7 @@ def updateConstant(name, value, fail_silently=False):
     '''
 
     # We instantiate a manager for our global preferences
-    if 'dynamic_preferences_globalpreferencemodel' in connection.introspection.table_names() and not isPreliminaryRun():
+    if not isPreliminaryRun() and preferencesTableExists():
         params = global_preferences_registry.manager()
         try:
             params[name] = value

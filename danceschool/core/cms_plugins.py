@@ -1,3 +1,4 @@
+from django.db.models import Count, prefetch_related_objects
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.middleware.csrf import get_token
@@ -13,7 +14,7 @@ from datetime import datetime, timedelta
 from .models import (
     StaffMemberListPluginModel, LocationPluginModel, LocationListPluginModel,
     EventListPluginModel, StaffMember, Instructor, Event, Series, PublicEvent,
-    Location,
+    Location, EventRegistration,
     PublicRegisterNavPluginModel, PublicRegisterEventPluginModel,
     PublicRegisterEventPluginChoice,
 )
@@ -291,12 +292,43 @@ class PublicRegisterEventPlugin(PluginTemplateMixin, CMSPluginBase):
 
         now = timezone.now()
 
+        # Everything below that is needed for each event is loaded here for
+        # the whole listing at once, so that the number of database queries
+        # does not grow with the number of events.
+        listing = list(listing)
+        choice_rules = list(instance.publicregistereventpluginchoice_set.all())
+
+        # Relations that exist only for some types of event must be
+        # prefetched separately for the events of that type.
+        prefetch_related_objects(listing, 'eventrole_set__role', 'eventaddon_set')
+        prefetch_related_objects(
+            [x for x in listing if isinstance(x, Series)],
+            'pricingTier', 'classDescription__danceTypeLevel__danceType__roles',
+        )
+        prefetch_related_objects(
+            [x for x in listing if isinstance(x, PublicEvent)], 'pricingTier',
+        )
+
+        # The number of final registrations for each event, by role.  These
+        # are also attached to each event so that the event's own methods
+        # (numRegistered, soldOut, etc.) do not need to count them again.
+        registration_counts = {x.id: {} for x in listing}
+        for row in EventRegistration.objects.filter(
+            event__in=listing, cancelled=False, dropIn=False,
+            registration__final=True,
+        ).values('event_id', 'role_id').annotate(count=Count('id')):
+            registration_counts[row['event_id']][row['role_id']] = row['count']
+
         from collections import OrderedDict
         register_choices = OrderedDict()
         for event in listing:
+            event._prefetched_registrationCounts = registration_counts[event.id]
+
             choices = []
-            for choice_rule in instance.publicregistereventpluginchoice_set.all():
-                choices += choice_rule.addChoices(event)
+            for choice_rule in choice_rules:
+                choices += choice_rule.addChoices(
+                    event, registrationCounts=registration_counts[event.id]
+                )
 
             dropin_choices = []
             if isinstance(event, Series) and (
