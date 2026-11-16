@@ -98,12 +98,13 @@ class GiftCertificateCustomizeView(FormView):
             'recipientName': recipientName,
             'fromName': fromName,
         }
-        if recipientName:
-            pdf_kwargs.update({})
-
-        response = GiftCertificatePDFView(request=pdf_request).get(request=pdf_request, **pdf_kwargs)
-        response.render()
-        attachment = response.content or None
+        attachment = None
+        if getConstant('vouchers__enableGiftCertificatePDF'):
+            response = GiftCertificatePDFView(request=pdf_request).get(
+                request=pdf_request, **pdf_kwargs
+            )
+            response.render()
+            attachment = response.content or None
 
         if attachment:
             attachment_name = 'gift_certificate.pdf'

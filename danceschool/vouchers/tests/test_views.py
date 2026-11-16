@@ -1,5 +1,7 @@
 from unittest import mock
 
+from django.template import Context, Template
+from django.template.loader import get_template
 from django.urls import reverse
 
 from danceschool.core.constants import PAYMENT_VALIDATION_STR, updateConstant
@@ -68,6 +70,53 @@ class GiftCertificatePurchaseTest(BaseVouchersTest):
         })
         self.assertEqual(response.status_code, 400)
         self.assertEqual(Voucher.objects.count(), 1)
+
+    def submit(self):
+        with mock.patch(EMAIL_METHOD) as email:
+            self.client.post(reverse('customizeGiftCertificate'), {
+                'emailTo': 'recipient@example.com', 'emailType': 'R',
+                'message': 'Enjoy your classes!',
+            })
+        self.assertEqual(email.call_count, 1)
+        return email.call_args.kwargs
+
+    def test_pdf_is_attached_when_enabled(self):
+        updateConstant('vouchers__enableGiftCertificatePDF', True)
+        email_kwargs = self.submit()
+
+        self.assertEqual(email_kwargs['attachment_name'], 'gift_certificate.pdf')
+        self.assertTrue(email_kwargs['attachment'].startswith(b'%PDF'))
+
+    def test_pdf_is_not_attached_when_disabled(self):
+        updateConstant('vouchers__enableGiftCertificatePDF', False)
+        try:
+            email_kwargs = self.submit()
+        finally:
+            updateConstant('vouchers__enableGiftCertificatePDF', True)
+
+        self.assertIsNone(email_kwargs['attachment'])
+        self.assertIsNone(email_kwargs['attachment_name'])
+        self.assertEqual(Voucher.objects.count(), 1)
+
+    def test_default_templates_use_variables_that_are_passed(self):
+        '''
+        The default text of the confirmation email and of the PDF uses the
+        names of the variables that the view passes to them.
+        '''
+        context = Context({
+            'emailType': 'R', 'recipientName': 'Lucky Recipient',
+            'certificateMessage': 'Enjoy your classes!',
+            'certificateCode': 'GC_CODE', 'certificateAmount': 25,
+        })
+        for name in [
+            'email/gift_certificate_confirmation.html',
+            'email/gift_certificate_attachment.html',
+        ]:
+            with open(get_template(name).origin.name) as infile:
+                rendered = Template(infile.read()).render(context)
+            self.assertIn('Dear Lucky Recipient', rendered, msg=name)
+            self.assertIn('Enjoy your classes!', rendered, msg=name)
+            self.assertIn('GC_CODE', rendered, msg=name)
 
     def test_email_address_is_required(self):
         with mock.patch(EMAIL_METHOD) as email:

@@ -15,9 +15,9 @@ Certificate Amount: {{ currencySymbol }}{{ certificateAmount|floatformat:2 }}<br
 Certificate Code: {{ certificateCode }}
 </p>
 
-{% if message %}
+{% if certificateMessage %}
 	<p><strong>Message:</strong><br />
-	{{ message }}
+	{{ certificateMessage }}
 	</p>
 {% endif %}
 

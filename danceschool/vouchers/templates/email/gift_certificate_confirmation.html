@@ -1,13 +1,13 @@
-{% if emailTo == 'R' %}{% if recipientName %}Dear {{ recipientName }},{% else %}Hello!{% endif %}
+{% if emailType == 'R' %}{% if recipientName %}Dear {{ recipientName }},{% else %}Hello!{% endif %}
 
 {% if fromName %}{{ fromName }} has given you a gift certificate from {{ businessName }}!{% else %}You've been given a gift certificate from {{ businessName }}!{% endif %} We are happy to be sharing the gift of dance with you.
 
 The gift certificate is in the amount of {{ currencySymbol }}{{ certificateAmount|floatformat:2 }}.  In order to redeem your gift certificate when registering for classes, please enter the following voucher code:
 
 {{ certificateCode }}
-{% if message %}
+{% if certificateMessage %}
 {% if fromName %}Message from {{ fromName }}:{% else %}Included message:{% endif %}
-{{ message }}
+{{ certificateMessage }}
 {% endif %}
 
 If the amount of the voucher is greater than the amount of your registration, then you can continue to use this code until the full value of the voucher has been applied.
