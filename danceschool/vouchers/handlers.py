@@ -202,6 +202,17 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
     invoice = kwargs.pop('invoice')
     voucherId = invoice.data.get('discount_code') or invoice.data.get('gift', '')
 
+    # This signal is sent again if the customer goes back and submits their
+    # information again (possibly with a different voucher code, or with none),
+    # so any use of a voucher code that was recorded previously and has not
+    # been finalized is removed first.  Referrer vouchers are handled
+    # separately in applyReferrerVouchersTemporarily().
+    prior_uses = invoice.voucheruse_set.filter(applied=False)
+    referral_cat = getConstant('referrals__referrerCategory')
+    if referral_cat:
+        prior_uses = prior_uses.exclude(voucher__category=referral_cat)
+    prior_uses.delete()
+
     try:
         voucher = Voucher.objects.get(voucherId=voucherId)
     except ObjectDoesNotExist:
@@ -260,6 +271,15 @@ def applyReferrerVouchersTemporarily(sender, **kwargs):
     logger.debug('Signal fired to temporarily apply referrer vouchers.')
 
     invoice = kwargs.pop('invoice')
+
+    # Remove any use of referrer vouchers that was recorded previously and has
+    # not been finalized, so that they are not applied more than once if this
+    # signal is sent again.
+    referral_cat = getConstant('referrals__referrerCategory')
+    if referral_cat:
+        invoice.voucheruse_set.filter(
+            applied=False, voucher__category=referral_cat
+        ).delete()
 
     # Email address is unique for users, so use that
     try:
