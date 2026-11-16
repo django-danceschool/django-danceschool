@@ -7,7 +7,7 @@ from danceschool.core.models import Invoice
 from danceschool.core.tests.test_tax import TaxTestMixin
 
 from ..handlers import reportVouchers
-from ..models import VoucherCredit
+from ..models import ClassVoucher, VoucherCredit
 from .base import BaseVouchersTest
 
 
@@ -226,6 +226,18 @@ class VoucherLinkTest(BaseVouchersTest):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(self.cart_code())
         self.assertTrue(list(response.context['messages']))
+
+    def test_restricted_voucher_in_link_is_kept(self):
+        '''
+        A voucher that can only be used for a specific class can be passed in
+        a link, before anything is in the cart.
+        '''
+        series = self.create_series()
+        ClassVoucher.objects.create(
+            classDescription=series.classDescription, voucher=self.voucher
+        )
+        self.client.get(reverse('registration') + '?referral=' + self.voucher.voucherId)
+        self.assertEqual(self.cart_code(), self.voucher.voucherId)
 
     def test_disabled_voucher_in_link_is_not_kept(self):
         self.voucher.disabled = True

@@ -258,8 +258,27 @@ class Voucher(models.Model):
         if errors and raise_errors:
             raise ValidationError(errors)
 
+        event_restricted = (
+            self.classvoucher_set.exists() or
+            self.dancetypevoucher_set.exists() or
+            self.seriescategoryvoucher_set.exists() or
+            self.publiceventcategoryvoucher_set.exists() or
+            self.sessionvoucher_set.exists()
+        )
+
         # Only validate events contents if specified (default is True)
         if validate_events:
+            # A voucher that is restricted to specific classes or events can
+            # only be used when at least one registration for them is being
+            # made (so not, for example, for merchandise alone).
+            if event_restricted and not events.exists():
+                errors.append(
+                    ValidationError(
+                        _('This voucher can be only used for specific classes or events.'),
+                        code='no_eligible_events'
+                    )
+                )
+
             # every series is either in the list or there is no list
             if self.classvoucher_set.exists():
                 for s in events:
@@ -324,13 +343,7 @@ class Voucher(models.Model):
                                 code='sessionvoucher_invalid'
                             )
                         )
-        elif (
-            self.classvoucher_set.exists() or
-            self.dancetypevoucher_set.exists() or
-            self.seriescategoryvoucher_set.exists() or
-            self.publiceventcategoryvoucher_set.exists() or
-            self.sessionvoucher_set.exists()
-        ):
+        elif event_restricted:
             warnings.append({
                 'code': 'event_restrictions',
                 'message': _('This voucher can be only used for specific classes or events.')

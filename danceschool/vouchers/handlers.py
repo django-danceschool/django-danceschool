@@ -182,11 +182,15 @@ def checkVoucherCode(sender, **kwargs):
     if pay_at_door is None:
         pay_at_door = getattr(registration, 'payAtDoor', False)
 
+    # If there is no cart yet (e.g. a voucher code passed in a link to the
+    # registration page), then the events cannot be checked yet.  They are
+    # checked once there is a cart or a registration.
     return obj.validate(
         customer=customer, events=events,
         payAtDoor=pay_at_door,
         raise_errors=False, return_amount=True,
-        validate_customer=validate_customer
+        validate_customer=validate_customer,
+        validate_events=bool(registration or cart_items),
     )
 
 
