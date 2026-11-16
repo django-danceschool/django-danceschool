@@ -119,6 +119,24 @@ class DiscountAddOnTest(DiscountAllocationBase):
         self.assertAlmostEqual(response.context_data['total_discount_amount'], 0, places=2)
         self.assertAlmostEqual(response.context_data['invoice'].total, 100, places=2)
 
+    def test_student_status_applies_to_included_events(self):
+        '''
+        A student who registers for a pass is also recorded as a student for
+        the events that are included with it. A second series is in the cart
+        so that the form that asks for the name and student status for each
+        registration is used; it has no fields for the included events, which
+        take their values from the pass.
+        '''
+        s_extra = self.create_series(pricingTier=self.tier_b)
+        response = self.checkout(self.s_pass, s_extra, student=True)
+        reg = response.context_data['invoice'].registration
+
+        self.assertEqual(reg.eventregistration_set.count(), 4)
+        self.assertEqual(
+            [er.student for er in reg.eventregistration_set.order_by('id')],
+            [True, True, True, True]
+        )
+
     def test_pass_with_full_discount_is_not_negative(self):
         self.make_combo(
             group=self.group_pass, percentDiscount=100, percentUniversallyApplied=True

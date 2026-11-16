@@ -208,6 +208,8 @@ class DiscountAllocationBase(BaseDiscountsTest):
                 name_post['er_%s_firstName' % er.id] = name[0]
                 name_post['er_%s_lastName' % er.id] = name[1]
                 name_post['er_%s_email' % er.id] = 'mixed@cart.com'
+                if kwargs.get('student'):
+                    name_post['er_%s_student' % er.id] = True
             response = self.client.post(
                 reverse('multiRegNameInfo'), name_post, follow=True,
             )
