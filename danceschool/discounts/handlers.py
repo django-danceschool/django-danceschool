@@ -301,20 +301,31 @@ def applyTemporaryDiscount(sender, **kwargs):
         invoice = kwargs.get('invoice', None)
         reg = Registration.objects.filter(invoice=invoice).first()
 
-    discount = kwargs.pop('discount', None)
-    discountAmount = kwargs.pop('discount_amount', None)
+    discounts = kwargs.pop('discounts', None)
 
-    if not reg or not discount:
+    if not reg or discounts is None:
         logger.warning('Incomplete information passed, discounts not applied.')
         return
 
-    obj = RegistrationDiscount.objects.update_or_create(
-        registration=reg,
-        discount=discount,
-        defaults={'discountAmount': discountAmount, 'applied': False},
-    )[0]
-    logger.debug('Temporary discount record created.')
-    return obj
+    records = [
+        RegistrationDiscount.objects.update_or_create(
+            registration=reg,
+            discount=discount,
+            defaults={'discountAmount': discountAmount, 'applied': False},
+        )[0]
+        for discount, discountAmount in discounts
+    ]
+
+    # A discount that was recorded when the discounts were last determined
+    # may no longer apply (e.g. the customer changed their cart, or the
+    # discount was disabled), so its record is removed.  Records that have
+    # been finalized (applied) are never removed.
+    RegistrationDiscount.objects.filter(registration=reg, applied=False).exclude(
+        id__in=[x.id for x in records]
+    ).delete()
+
+    logger.debug('Temporary discount records updated.')
+    return records
 
 
 @receiver(apply_addons)

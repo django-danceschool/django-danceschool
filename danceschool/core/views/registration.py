@@ -214,13 +214,14 @@ class RegistrationSummaryView(
             )
             addons = self.getAddons(invoice, reg)
 
-            for discount in discounts.codes:
-                apply_discount.send(
-                    sender=RegistrationSummaryView,
-                    discount=discount.code,
-                    discount_amount=discount.discount_amount,
-                    registration=reg,
-                )
+            # This is sent even if there are no discounts, so that any discount
+            # recorded on a prior load of this page that no longer applies is
+            # forgotten.
+            apply_discount.send(
+                sender=RegistrationSummaryView,
+                discounts=[(x.code, x.discount_amount) for x in discounts.codes],
+                registration=reg,
+            )
 
         discount_codes = discounts.codes
         total_discount_amount = discounts.total_amount

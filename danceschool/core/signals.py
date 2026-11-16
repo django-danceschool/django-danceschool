@@ -56,8 +56,13 @@ check_voucher = Signal(
 # app by default records the discounted price of a registration, net of all discounts
 # and also of all voucher uses, but it does not itself record information on the
 # discounts or vouchers actually applied.
+#
+# The discounts argument is the complete list of the discounts that apply to the
+# registration, as (discount, discount_amount) tuples, so that receivers can
+# also forget any discount that applied previously but no longer applies.  It
+# is sent each time that the discounts are determined, even if the list is empty.
 apply_discount = Signal(
-    ''' ['invoice', 'registration', 'discount', 'discount_amount'] '''
+    ''' ['invoice', 'registration', 'discounts'] '''
 )
 
 # Fires at the point when free add-on items may be applied to

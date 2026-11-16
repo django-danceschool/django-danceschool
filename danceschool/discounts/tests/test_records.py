@@ -1,5 +1,3 @@
-from unittest import expectedFailure
-
 from django.test import SimpleTestCase
 from django.urls import reverse
 
@@ -89,12 +87,12 @@ class DiscountRecordsTest(DiscountAllocationBase):
 
         self.assertEqual(RegistrationDiscount.objects.filter(registration=reg).count(), 1)
 
-    # A record is created each time that the summary page finds a discount,
-    # but nothing removes the record if the discount no longer applies when
-    # the page is loaded again. The stale record is then marked as applied
-    # when the invoice is paid, and it is counted in discount statistics.
-    @expectedFailure
     def test_record_is_removed_when_discount_no_longer_applies(self):
+        '''
+        If a discount no longer applies when the summary page is loaded
+        again, then its record is removed, so that it is not marked as
+        applied when the invoice is paid.
+        '''
         combo = self.make_combo(percentDiscount=50)
 
         response = self.checkout(self.s_a, self.s_b)
@@ -108,6 +106,36 @@ class DiscountRecordsTest(DiscountAllocationBase):
         self.assertAlmostEqual(response.context_data['total_discount_amount'], 0, places=2)
         self.assertItemTotals(response, self.s_b, [20])
         self.assertEqual(RegistrationDiscount.objects.filter(registration=reg).count(), 0)
+
+        invoice = self.pay(response)
+        self.assertTrue(invoice.registration.final)
+        self.assertFalse(
+            RegistrationDiscount.objects.filter(registration=reg, applied=True).exists()
+        )
+
+    def test_only_record_of_discount_that_now_applies_is_kept(self):
+        '''
+        If a different discount applies when the summary page is loaded
+        again, then only the record of that discount is kept.
+        '''
+        half = self.make_combo(name='Half Off', percentDiscount=50)
+        quarter = self.make_combo(name='Quarter Off', percentDiscount=25)
+
+        response = self.checkout(self.s_a, self.s_b)
+        reg = response.context_data['invoice'].registration
+        self.assertEqual(
+            list(reg.registrationdiscount_set.values_list('discount', flat=True)),
+            [half.id]
+        )
+
+        half.active = False
+        half.save()
+        response = self.client.get(reverse('showRegSummary'))
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 5, places=2)
+        records = RegistrationDiscount.objects.filter(registration=reg)
+        self.assertEqual([x.discount for x in records], [quarter])
+        self.assertAlmostEqual(records[0].discountAmount, 5, places=2)
 
     def test_discounts_reported_for_event_registrations(self):
         ''' Other apps can ask which discounts apply to a registration. '''
