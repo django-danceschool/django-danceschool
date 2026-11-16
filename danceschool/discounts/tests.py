@@ -1242,6 +1242,43 @@ class DiscountWithVoucherTest(TaxTestMixin, DiscountAllocationTest):
         self.assertItemTotals(response, self.s_a, [10])
         self.assertItemTotals(response, self.s_b, [0])
 
+    def test_pretax_and_posttax_vouchers_together(self):
+        '''
+        A pre-tax voucher reduces the tax, so a post-tax voucher on the same
+        invoice is limited to what is owed after that: $10 less the $4 pre-tax
+        voucher is $6, plus 10% tax, is $6.60.
+        '''
+        from danceschool.vouchers.models import Voucher, VoucherUse
+
+        voucher = self.make_voucher(4, beforeTax=True)
+        response = self.checkout(self.s_a, self.s_b, discount_code=voucher.voucherId)
+        invoice = self.get_invoice(response)
+
+        # Registration only accepts one voucher code, so the second voucher is
+        # attached to the invoice directly, and the summary page is reloaded.
+        gift = Voucher.objects.create(
+            voucherId='ALLOCATION_GIFT', name='Allocation Test Gift Certificate',
+            originalAmount=100, beforeTax=False,
+        )
+        VoucherUse.objects.create(
+            voucher=gift, invoice=invoice, amount=0, beforeTax=False,
+        )
+        response = self.client.get(reverse('showRegSummary'))
+        invoice = self.get_invoice(response)
+
+        self.assertAlmostEqual(invoice.total, 6, places=4)
+        self.assertAlmostEqual(invoice.taxes, 0.6, places=4)
+        self.assertAlmostEqual(
+            invoice.voucheruse_set.get(voucher=voucher).amount, 4, places=4
+        )
+        self.assertAlmostEqual(
+            invoice.voucheruse_set.get(voucher=gift).amount, 6.6, places=4
+        )
+        self.assertAlmostEqual(invoice.adjustments, -6.6, places=4)
+        self.assertAlmostEqual(invoice.outstandingBalance, 0, places=4)
+        self.assertItemTotals(response, self.s_a, [6])
+        self.assertItemTotals(response, self.s_b, [0])
+
     def test_reload_with_voucher_gives_same_totals(self):
         voucher = self.make_voucher(8, beforeTax=True)
 

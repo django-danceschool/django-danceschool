@@ -264,16 +264,21 @@ def applyTemporaryVouchers(sender, **kwargs):
 
     logger.debug('Signal fired to apply preliminary vouchers.')
 
-    # Put referral vouchers first, so that they are applied last in the loop.
     referral_cat = getConstant('referrals__referrerCategory')
+    unapplied = invoice.voucheruse_set.filter(applied=False)
 
-    tvus = list(invoice.voucheruse_set.filter(
-        voucher__category=referral_cat,
-        applied=False
-    ).order_by('-beforeTax')) + list(invoice.voucheruse_set.exclude(
-        voucher__category=referral_cat,
-        applied=False
-    ).order_by('-beforeTax'))
+    def inOrderOfUse(queryset):
+        ''' Referral vouchers are used last. '''
+        return (
+            list(queryset.exclude(voucher__category=referral_cat)) +
+            list(queryset.filter(voucher__category=referral_cat))
+        )
+
+    # Pre-tax vouchers are always used before post-tax vouchers, because they
+    # reduce the tax, and so they reduce the amount that remains to be paid
+    # with a post-tax voucher.
+    pretax_uses = inOrderOfUse(unapplied.filter(beforeTax=True))
+    posttax_uses = inOrderOfUse(unapplied.filter(beforeTax=False))
 
     response = {
         'total_pretax': 0,
@@ -281,44 +286,50 @@ def applyTemporaryVouchers(sender, **kwargs):
         'items': [],
     }
 
-    if not tvus:
+    if not pretax_uses and not posttax_uses:
         logger.debug('No applicable vouchers found.')
         return response
 
-    # If the buyer does not pay sales tax, then the price already includes
-    # the tax, so it is not added to the amount that remains to be paid.
-    remaining_pretax = invoice.total + prior_adjustment
-    remaining_posttax = (
-        invoice.total + prior_adjustment +
-        (invoice.taxes if invoice.buyerPaysSalesTax else 0) +
-        invoice.adjustments
-    )
-
-    while (remaining_pretax > 0 or remaining_posttax > 0) and tvus:
-        tvu = tvus.pop()
-
+    def useVoucher(tvu, remaining):
+        ''' Use as much of the voucher as is available and needed. '''
+        amount = tvu.voucher.amountLeft
         if tvu.voucher.maxAmountPerUse:
-            amount = min(tvu.voucher.amountLeft, tvu.voucher.maxAmountPerUse)
-        else:
-            amount = tvu.voucher.amountLeft
+            amount = min(amount, tvu.voucher.maxAmountPerUse)
+        amount = max(min(remaining, amount), 0)
 
-        # The amount of the voucher that can be used depends on wh
-        if tvu.beforeTax:
-            amount = min(remaining_pretax, amount)
-            remaining_pretax -= amount
-            response['total_pretax'] += amount
-        else:
-            amount = min(remaining_posttax, amount)
-            response['total_posttax'] += amount
-
-        remaining_posttax -= amount
         tvu.amount = amount
         tvu.save()
-        response['items'].append({
-            'name': tvu.voucher.name,
-            'amount': amount,
-            'beforeTax': tvu.beforeTax,
-        })
+        if amount > 0:
+            response['items'].append({
+                'name': tvu.voucher.name,
+                'amount': amount,
+                'beforeTax': tvu.beforeTax,
+            })
+        return amount
+
+    initial_pretax = invoice.total + prior_adjustment
+    remaining_pretax = initial_pretax
+
+    for tvu in pretax_uses:
+        amount = useVoucher(tvu, remaining_pretax)
+        remaining_pretax -= amount
+        response['total_pretax'] += amount
+
+    # If the buyer does not pay sales tax, then the price already includes
+    # the tax, so it is not added to the amount that remains to be paid.
+    # Otherwise, the tax is reduced in proportion to the reduction in price
+    # from pre-tax vouchers.  This is exact, because a pre-tax voucher is
+    # allocated among the invoice items in proportion to their prices.
+    taxes = invoice.taxes if invoice.buyerPaysSalesTax else 0
+    if invoice.total > 0:
+        taxes = taxes * (remaining_pretax / invoice.total)
+
+    remaining_posttax = remaining_pretax + taxes + invoice.adjustments
+
+    for tvu in posttax_uses:
+        amount = useVoucher(tvu, remaining_posttax)
+        remaining_posttax -= amount
+        response['total_posttax'] += amount
 
     return response
 
