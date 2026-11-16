@@ -31,12 +31,16 @@ def registrationEvents(registration):
     '''
     Return the events that the passed Registration is for, which are the
     events that a voucher restricted to specific classes or events may
-    qualify for.
+    qualify for.  Events that are included with another event (e.g. as part
+    of a pass) are left out, because they qualify for a voucher only if the
+    event that they are included with does (see Voucher.eligibleItemIds()).
     '''
     if not registration:
         return Event.objects.none()
     return Event.objects.filter(
-        id__in=registration.eventregistration_set.values_list('event_id', flat=True)
+        id__in=registration.eventregistration_set.filter(
+            invoiceItem__parent_item__isnull=True
+        ).values_list('event_id', flat=True)
     )
 
 

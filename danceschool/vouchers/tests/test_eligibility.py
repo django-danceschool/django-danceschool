@@ -161,6 +161,65 @@ class VoucherEligibilityTest(BaseVouchersTest):
         self.assertAlmostEqual(self.get_invoice().total, 0, places=2)
         self.assertInvoiceMatchesItems()
 
+    def test_voucher_for_included_event_not_usable_for_pass(self):
+        '''
+        A voucher for a class that is included with a pass cannot be used
+        when only the pass is being registered for, because the included
+        class qualifies only if the pass does.
+        '''
+        tier_pass = PricingTier.objects.create(
+            name='Pass Tier', onlinePrice=40, doorPrice=40, dropinPrice=40,
+        )
+        s_pass = self.create_series(
+            pricingTier=tier_pass, classDescription=self.levelTwoClassDescription
+        )
+        EventAddOn.objects.create(
+            event=s_pass, addOnEvent=self.s_a, order=0,
+            allocationType=EventAddOn.AllocationType.fixed, allocationAmount=10,
+        )
+
+        # Entered on the customer information form, the code is an error.
+        response = self.checkout(s_pass, gift=self.voucher.voucherId)
+        self.assertFalse(response.redirect_chain)
+        self.assertTrue(response.context_data['form'].errors.get('gift'))
+
+        # Passed with the cart, the voucher is not applied to the invoice.
+        # (The price of a pass is not its gross total, which includes the
+        # prices of the included events on their own, so this does not use
+        # assertVoucherRefused().)
+        self.new_session()
+        response = self.checkout(s_pass, code=self.voucher.voucherId)
+        self.assertEqual(response.redirect_chain[-1][0], reverse('showRegSummary'))
+        self.assertFalse(
+            self.get_invoice().voucheruse_set.filter(voucher=self.voucher).exists()
+        )
+        self.assertAlmostEqual(self.get_invoice().total, 40, places=2)
+
+    def test_voucher_for_drop_in_to_qualifying_class(self):
+        ''' A drop-in to a qualifying class is a registration for that class. '''
+        self.s_a.allowDropins = True
+        self.s_a.save()
+        self.client.force_login(self.superuser)
+        response = self.client.post(
+            reverse('cart'), content_type='application/json',
+            data=json.dumps({
+                'items': [{
+                    'item_type': 'Event', 'item_id': self.s_a.id,
+                    'sku': 'EVENT_%s_GENERAL' % self.s_a.id, 'quantity': 1,
+                    'dropIn': True,
+                }],
+                'checkout': True, 'payAtDoor': True,
+                'discount_code': self.voucher.voucherId,
+            }),
+        )
+        self.assertEqual(response.status_code, 302)
+        response = self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Drop', 'lastName': 'In', 'email': 'dropin@customer.com',
+            'agreeToPolicies': True,
+        }, follow=True)
+
+        self.assertVoucherApplied(response, self.voucher, 20)
+
     # -- More than one voucher, and tax -----------------------------------------
 
     def test_restricted_voucher_and_gift_certificate_with_two_tax_rates(self):
@@ -237,17 +296,73 @@ class VoucherEligibilityTest(BaseVouchersTest):
         preview = response.context_data['voucher_preview']
         self.assertAlmostEqual(preview['voucher_amount'], 20, places=2)
 
-    def test_customer_information_preview_matches_summary(self):
+    def _preview_and_summary(self, voucher):
+        '''
+        Return the amount of the voucher that is shown on the customer
+        information page, and the amount that is used on the summary page.
+        '''
         response = self.client.post(
             reverse('cart'), content_type='application/json',
             data=json.dumps({
                 'items': self.cart_items(self.s_a, self.s_b), 'checkout': True,
-                'discount_code': self.voucher.voucherId,
+                'discount_code': voucher.voucherId,
             }),
         )
         self.assertEqual(response.status_code, 302)
 
         response = self.client.get(reverse('getStudentInfo'))
-        self.assertAlmostEqual(
-            response.context_data['voucher']['voucherAmount'], 20, places=2
+        preview = response.context_data['voucher']['voucherAmount']
+
+        response = self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Voucher', 'lastName': 'Customer',
+            'email': 'test@customer.com', 'agreeToPolicies': True,
+        }, follow=True)
+
+        # With two registrations, the name for each one is asked for.
+        if response.redirect_chain[-1][0] == reverse('multiRegNameInfo'):
+            name_post = {}
+            for er in self.get_invoice().registration.eventregistration_set.all():
+                name_post['er_%s_firstName' % er.id] = 'Voucher'
+                name_post['er_%s_lastName' % er.id] = 'Customer'
+                name_post['er_%s_email' % er.id] = 'test@customer.com'
+            response = self.client.post(
+                reverse('multiRegNameInfo'), name_post, follow=True
+            )
+        self.assertEqual(response.redirect_chain[-1][0], reverse('showRegSummary'))
+        return preview, self.voucher_amount(voucher)
+
+    def test_customer_information_preview_matches_summary(self):
+        preview, used = self._preview_and_summary(self.voucher)
+        self.assertAlmostEqual(preview, 20, places=2)
+        self.assertAlmostEqual(used, 20, places=2)
+
+    def test_after_tax_voucher_preview_matches_summary(self):
+        '''
+        A voucher applied after tax is limited to the price of the qualifying
+        class plus its 10% tax.
+        '''
+        jurisdiction = TaxJurisdiction.objects.create(name='Ten Percent', defaultRate=10)
+        self.defaultLocation.taxJurisdiction = jurisdiction
+        self.defaultLocation.save()
+        self.gp['registration__buyerPaysSalesTax'] = True
+        voucher = self.restricted_voucher(
+            50, voucherId='CLASS_A_AFTER_TAX', beforeTax=False
         )
+
+        preview, used = self._preview_and_summary(voucher)
+
+        self.assertAlmostEqual(preview, 22, places=2)
+        self.assertAlmostEqual(used, 22, places=2)
+        self.assertAlmostEqual(self.get_invoice().outstandingBalance, 33, places=2)
+        self.assertInvoiceMatchesItems()
+
+    def test_admin_form_shows_option(self):
+        self.client.force_login(self.superuser)
+        response = self.client.get(reverse('admin:vouchers_voucher_add'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'appliesToEntireInvoice')
+        response = self.client.get(
+            reverse('admin:vouchers_voucher_change', args=[self.voucher.pk])
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'appliesToEntireInvoice')
