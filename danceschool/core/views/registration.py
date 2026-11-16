@@ -28,7 +28,7 @@ from ..signals import (
 )
 from ..mixins import (
     FinancialContextMixin, EventOrderMixin, SiteHistoryMixin,
-    RegistrationAdjustmentsMixin
+    RegistrationAdjustmentsMixin, DiscountDetails
 )
 
 # Define logger for this file
@@ -203,19 +203,18 @@ class RegistrationSummaryView(
         reg = kwargs.get('reg')
         invoice = kwargs.get('invoice')
 
-        discount_codes = None
-        total_discount_amount = 0
+        discounts = DiscountDetails([], 0, None, {})
         addons = []
 
         voucherId = invoice.data.get('discount_code') or invoice.data.get('gift')
 
         if reg:
-            discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+            discounts = self.getDiscountDetails(
                 invoice, registration=reg, voucher_code=voucherId
             )
             addons = self.getAddons(invoice, reg)
 
-            for discount in discount_codes:
+            for discount in discounts.codes:
                 apply_discount.send(
                     sender=RegistrationSummaryView,
                     discount=discount.code,
@@ -223,14 +222,26 @@ class RegistrationSummaryView(
                     registration=reg,
                 )
 
+        discount_codes = discounts.codes
+        total_discount_amount = discounts.total_amount
+
+        # Discounts are applied first (without saving anything yet), so that
+        # each discount is taken off of the items that it applies to, and taxes
+        # are recalculated.  This also undoes any adjustments that were saved
+        # if this page was loaded previously.  The invoice then reflects the
+        # discounted price and tax, which is what is needed to determine how
+        # much of a voucher can be used.
+        items_queryset = self.allocateDiscount(invoice, discounts)
+
         # The return value to this signal should contain any adjustments that
         # need to be made to the price (e.g., from vouchers if the voucher app
-        # is installed)
+        # is installed).  Since the discount is already reflected in the
+        # invoice totals, there is no prior adjustment to report.
         adjustment_responses = apply_price_adjustments.send(
             sender=RegistrationSummaryView,
             invoice=invoice,
             registration=reg,
-            prior_adjustment=-1*total_discount_amount,
+            prior_adjustment=0,
         )
 
         combined_response = {
@@ -244,13 +255,13 @@ class RegistrationSummaryView(
             combined_response['total_posttax'] += response[1].get('total_posttax', 0)
             combined_response['items'] += response[1].get('items', [])
 
-        # The updateTotals method allocates the total adjustment across the
-        # invoice items, and also recalculates the taxes for each item.
-        invoice.updateTotals(
-            allocateAmounts={
-                'total': -1*(combined_response['total_pretax'] + total_discount_amount),
-                'adjustments': -1*(combined_response['total_posttax']),
-            },
+        # Allocate the remaining adjustments across the invoice items (which
+        # also recalculates the taxes for each item), and save the result.
+        # Both this and allocateDiscount() above use Invoice.updateTotals().
+        self.allocateAdjustments(
+            invoice, items_queryset,
+            pretax=combined_response['total_pretax'],
+            posttax=combined_response['total_posttax'],
             save=True,
         )
 
@@ -420,29 +431,27 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
         # Get a voucher ID to check from the current contents of the form
         voucherId = self.invoice.data.get('discount_code') or self.invoice.data.get('gift')
 
-        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+        discounts = self.getDiscountDetails(
             self.invoice, registration=reg, voucher_code=voucherId
         )
+        voucherId = discounts.voucher_code
         addons = self.getAddons(self.invoice, reg)
 
         # Update totals (without saving anything), so that taxes are
         # recalculated and the invoice handler knows how much to apply.
-        items_queryset = self.invoice.updateTotals(
-            save=False, allocateAmounts={'total': -1*total_discount_amount}
-        )
+        items_queryset = self.allocateDiscount(self.invoice, discounts)
 
         if voucherId:
             context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
-            if context_data['voucher'].get('beforeTax'):
-                allocateAmounts = {'total': -1*context_data['voucher'].get('voucherAmount', 0)}
-            else:
-                allocateAmounts = {'adjustments': -1*context_data['voucher'].get('voucherAmount', 0)}
-            items_queryset = self.invoice.updateTotals(
-                save=False, allocateAmounts=allocateAmounts,
-                prior_queryset=items_queryset
+            voucherAmount = context_data['voucher'].get('voucherAmount', 0)
+            beforeTax = context_data['voucher'].get('beforeTax')
+            items_queryset = self.allocateAdjustments(
+                self.invoice, items_queryset,
+                pretax=voucherAmount if beforeTax else 0,
+                posttax=0 if beforeTax else voucherAmount,
             )
 
         context_data.update({
@@ -451,8 +460,8 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
             'reg': reg,
             'payAtDoor': payAtDoor,
             'addonItems': addons,
-            'discount_codes': discount_codes,
-            'discount_code_amount': total_discount_amount,
+            'discount_codes': discounts.codes,
+            'discount_code_amount': discounts.total_amount,
         })
 
         return context_data
@@ -567,29 +576,27 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
         # Get a voucher ID to check from the current contents of the form
         voucherId = self.invoice.data.get('discount_code') or self.invoice.data.get('gift')
 
-        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+        discounts = self.getDiscountDetails(
             self.invoice, registration=reg, voucher_code=voucherId
         )
+        voucherId = discounts.voucher_code
         addons = self.getAddons(self.invoice, reg)
 
         # Update totals (without saving anything), so that taxes are
         # recalculated and the invoice handler knows how much to apply.
-        items_queryset = self.invoice.updateTotals(
-            save=False, allocateAmounts={'total': -1*total_discount_amount}
-        )
+        items_queryset = self.allocateDiscount(self.invoice, discounts)
 
         if voucherId:
             context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
-            if context_data['voucher'].get('beforeTax'):
-                allocateAmounts = {'total': -1*context_data['voucher'].get('voucherAmount', 0)}
-            else:
-                allocateAmounts = {'adjustments': -1*context_data['voucher'].get('voucherAmount', 0)}
-            items_queryset = self.invoice.updateTotals(
-                save=False, allocateAmounts=allocateAmounts,
-                prior_queryset=items_queryset
+            voucherAmount = context_data['voucher'].get('voucherAmount', 0)
+            beforeTax = context_data['voucher'].get('beforeTax')
+            items_queryset = self.allocateAdjustments(
+                self.invoice, items_queryset,
+                pretax=voucherAmount if beforeTax else 0,
+                posttax=0 if beforeTax else voucherAmount,
             )
 
         context_data.update({
@@ -598,8 +605,8 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
             'reg': reg,
             'payAtDoor': payAtDoor,
             'addonItems': addons,
-            'discount_codes': discount_codes,
-            'discount_code_amount': total_discount_amount,
+            'discount_codes': discounts.codes,
+            'discount_code_amount': discounts.total_amount,
         })
 
         return context_data
@@ -737,29 +744,27 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         # Get a voucher ID to check from the current contents of the form
         voucherId = getattr(context_data['form'].fields.get('gift'), 'initial', None)
 
-        discount_codes, total_discount_amount, voucherId = self.getDiscounts(
+        discounts = self.getDiscountDetails(
             self.invoice, registration=reg, voucher_code=voucherId
         )
+        voucherId = discounts.voucher_code
         addons = self.getAddons(self.invoice, reg)
 
         # Update totals (without saving anything), so that taxes are
         # recalculated and the invoice handler knows how much to apply.
-        items_queryset = self.invoice.updateTotals(
-            save=False, allocateAmounts={'total': -1*total_discount_amount}
-        )
+        items_queryset = self.allocateDiscount(self.invoice, discounts)
 
         if voucherId:
             context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
-            if context_data['voucher'].get('beforeTax'):
-                allocateAmounts = {'total': -1*context_data['voucher'].get('voucherAmount', 0)}
-            else:
-                allocateAmounts = {'adjustments': -1*context_data['voucher'].get('voucherAmount', 0)}
-            items_queryset = self.invoice.updateTotals(
-                save=False, allocateAmounts=allocateAmounts,
-                prior_queryset=items_queryset
+            voucherAmount = context_data['voucher'].get('voucherAmount', 0)
+            beforeTax = context_data['voucher'].get('beforeTax')
+            items_queryset = self.allocateAdjustments(
+                self.invoice, items_queryset,
+                pretax=voucherAmount if beforeTax else 0,
+                posttax=0 if beforeTax else voucherAmount,
             )
 
         if (
@@ -782,8 +787,8 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
             'reg': reg,
             'payAtDoor': payAtDoor,
             'addonItems': addons,
-            'discount_codes': discount_codes,
-            'discount_code_amount': total_discount_amount,
+            'discount_codes': discounts.codes,
+            'discount_code_amount': discounts.total_amount,
             'is_multiple_registration': self.multiReg,
         })
 

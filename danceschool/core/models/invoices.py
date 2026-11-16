@@ -399,6 +399,9 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         item_keys = ['grossTotal', 'total', 'adjustments', 'fees']
 
+        # Is this call a continuation of a prior call to this method?
+        chained = prior_queryset is not None
+
         # Ignore keys other than the ones that apply to invoice items and
         # also 0 adjustment amounts
         allocateAmounts = {
@@ -604,6 +607,13 @@ class Invoice(EmailRecipientMixin, models.Model):
             if getattr(self,k) != new_totals[k]:
                 setattr(self, k, new_totals[k])
                 changed_invoice = True
+
+        # When this call continues from a prior call that was not saved (the
+        # chained variable is set at the top of this method), the totals on
+        # this invoice already reflect that prior call, so they may not appear
+        # to have changed even though they have not been saved.
+        if chained:
+            changed_invoice = True
 
         if (changed_invoice and save) or forceSave:
             if changed_invoice and setAdjustmentsFlag:

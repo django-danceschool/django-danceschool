@@ -285,10 +285,13 @@ def applyTemporaryVouchers(sender, **kwargs):
         logger.debug('No applicable vouchers found.')
         return response
 
+    # If the buyer does not pay sales tax, then the price already includes
+    # the tax, so it is not added to the amount that remains to be paid.
     remaining_pretax = invoice.total + prior_adjustment
     remaining_posttax = (
         invoice.total + prior_adjustment +
-        invoice.taxes + invoice.adjustments
+        (invoice.taxes if invoice.buyerPaysSalesTax else 0) +
+        invoice.adjustments
     )
 
     while (remaining_pretax > 0 or remaining_posttax > 0) and tvus:

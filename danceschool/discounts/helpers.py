@@ -76,7 +76,7 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
             quantity=quantity_expression,
             base_price=Coalesce(
                 Cast(
-                    F('invoiceItem__data___initialTotal'),
+                    F('invoiceItem__data___initial_total'),
                     output_field=FloatField()
                 ),
                 F('invoiceItem__grossTotal'),
@@ -94,6 +94,11 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
             }
             for x in qs
         ]
+        # The invoice item for each entry in the list above (in the same
+        # order), so that discounts can be allocated to specific items. These
+        # are kept separate from the dictionaries above because the matching
+        # of discounts treats identical dictionaries as the same item.
+        item_id_list = [x.invoiceItem_id for x in qs]
     elif cart_items:
         events = Event.objects.filter(
             id__in=[x.get('item_id') for x in cart_items]
@@ -120,6 +125,8 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
                 'customer_id': None
             } for x in cart_items
         ]
+        # There are no invoice items when a cart is only being previewed.
+        item_id_list = [None for x in cart_items]
 
         map_events = {x.id: x for x in events}
 
@@ -141,10 +148,19 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
         return
 
     # Split items into eligible (for discounts) and ineligible
-    eligible_items = [
-        x for x in event_count_list
-        if x.get('tier') and (not x.get('dropIn', False))
-    ]
+    # The eligible items and their invoice item ids are two parallel lists (the
+    # same length, in the same order), not one list of dictionaries that
+    # include the id. The matching of discounts compares these dictionaries
+    # for equality, so that two registrations for the same event by the same
+    # customer are treated as the same item. An id in the dictionary would
+    # make every item unique and change which discounts apply. The ids are
+    # only used afterward, to allocate a discount to specific invoice items.
+    eligible_items = []
+    eligible_item_ids = []
+    for x, item_id in zip(event_count_list, item_id_list):
+        if x.get('tier') and (not x.get('dropIn', False)):
+            eligible_items.append(x)
+            eligible_item_ids.append(item_id)
     ineligible_total = sum([
         x.get('base_price', 0) for x in event_count_list
         if (x.get('tier') is None) or (x.get('dropIn', False))
@@ -178,6 +194,7 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
     student = reg is not None and reg.eventregistration_set.filter(student=True).exists()
     return {
         'cart_object_list': eligible_items,
+        'cart_item_ids': eligible_item_ids,
         'ineligible_total': ineligible_total,
         'student': student,
     }

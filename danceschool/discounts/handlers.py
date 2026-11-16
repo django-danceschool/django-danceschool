@@ -184,10 +184,27 @@ def getBestDiscount(sender, **kwargs):
     if not best_discounts:
         logger.debug('No applicable discounts found.')
 
+    # Determine the amount by which the price of each invoice item is reduced.
+    # The allocation of the last discount applied already reflects the
+    # discounts in all prior categories. The allocated prices are in the same
+    # order as the list of eligible items, and so are the invoice item ids
+    # (which are not available when a cart is only being previewed).
+    item_discounts = {}
+    if best_discounts:
+        final_prices = best_discounts[next(reversed(best_discounts))].net_allocated_prices
+        item_ids = cart_kwargs.get('cart_item_ids', [])
+
+        if len(final_prices) == len(initial_prices) == len(item_ids):
+            for item_id, initial, final in zip(item_ids, initial_prices, final_prices):
+                if item_id is not None and initial - final > 0:
+                    item_discounts[item_id] = initial - final
+
     # Return the list of discounts to be applied (in DiscountInfo tuples), along
-    # with the additional price of ineligible items to be added.
+    # with the additional price of ineligible items to be added, and the amount
+    # of the discount that applies to each invoice item.
     return DiscountCombo.DiscountApplication(
-        [x for x in best_discounts.values()], cart_kwargs.get('ineligible_total')
+        [x for x in best_discounts.values()], cart_kwargs.get('ineligible_total'),
+        item_discounts
     )
 
 
