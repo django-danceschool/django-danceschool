@@ -923,6 +923,46 @@ class MerchVoucherTest(MerchAdjustmentsBase):
         self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 42, places=2)
         self.assertEqual(invoice.outstandingBalance, 0)
 
+    def class_voucher(self, amount, **kwargs):
+        from danceschool.vouchers.models import ClassVoucher
+        voucher = self.make_voucher(amount)
+        for k, v in kwargs.items():
+            setattr(voucher, k, v)
+        voucher.save()
+        ClassVoucher.objects.create(
+            classDescription=self.series.classDescription, voucher=voucher
+        )
+        return voucher
+
+    def test_voucher_for_specific_class_does_not_cover_merchandise(self):
+        ''' A $50 voucher for the $20 class covers the class and not the jacket. '''
+        voucher = self.class_voucher(50)
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 20, places=2)
+        self.assertAlmostEqual(self.series_item(invoice).total, 0, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+        self.assertAlmostEqual(invoice.total, 40, places=2)
+
+    def test_voucher_for_class_and_entire_invoice_covers_merchandise(self):
+        voucher = self.class_voucher(50, appliesToEntireInvoice=True)
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 50, places=2)
+        self.assertAlmostEqual(invoice.total, 10, places=2)
+        self.assertAlmostEqual(
+            invoice.total, sum([x.total for x in invoice.invoiceitem_set.all()]),
+            places=4
+        )
+
     def test_voucher_for_specific_class_not_usable_for_merchandise_only(self):
         '''
         A voucher that can only be used for a specific class cannot be used

@@ -579,11 +579,14 @@ class RegistrationAdjustmentsMixin(object):
     customers_final = False
 
     def getVoucher(
-        self, voucherId, invoice, prior_adjustment=0, first_name=None, last_name=None, email=None
+        self, voucherId, invoice, prior_adjustment=0, first_name=None,
+        last_name=None, email=None, items=None
     ):
         '''
         This method looks for a voucher with the associated voucher ID, it checks
-        for eligibility, and it returns an updated dictionary
+        for eligibility, and it returns an updated dictionary.  The invoice items
+        (e.g. as returned by allocateDiscount()) can be passed, so that a voucher
+        that can only be used for some of them is limited to their prices.
         '''
 
         from danceschool.core.models import Customer
@@ -602,7 +605,7 @@ class RegistrationAdjustmentsMixin(object):
         voucher_response = check_voucher.send(
             sender=RegistrationAdjustmentsMixin, voucherId=voucherId,
             customer=customer, validateCustomer=(customer is not None),
-            invoice=invoice
+            invoice=invoice, items=items
         )
 
         voucher_response = [x[1] for x in voucher_response if len(x) > 1 and x[1]]
@@ -624,10 +627,17 @@ class RegistrationAdjustmentsMixin(object):
                     subtotal += invoice.adjustments + (
                         invoice.taxes if invoice.buyerPaysSalesTax else 0
                     )
+                    eligible = voucher_response[0].get('eligible_total_posttax')
+                else:
+                    eligible = voucher_response[0].get('eligible_total')
 
-                total = max(
-                    0, subtotal - voucher_response[0].get('available', 0)
-                )
+                # A voucher that can only be used for some items can be used
+                # for no more than the price of those items.
+                available = voucher_response[0].get('available', 0)
+                if eligible is not None:
+                    available = min(available, max(eligible, 0))
+
+                total = max(0, subtotal - available)
 
             return {
                 'voucherId': voucher_response[0].get('id', None),
@@ -746,29 +756,61 @@ class RegistrationAdjustmentsMixin(object):
             allocateWeights=weights,
         )
 
-    def allocateAdjustments(self, invoice, items, pretax=0, posttax=0, save=False):
+    def allocateAdjustments(
+        self, invoice, items, pretax=0, posttax=0, item_pretax=None,
+        item_posttax=None, save=False
+    ):
         '''
         Apply further reductions in price (e.g. vouchers) to an invoice after
         its discounts have been allocated.  The passed items are the queryset
-        returned by allocateDiscount().  Pre-tax amounts are taken off of each
-        item in proportion to its discounted price (so that an item that is
-        already free is not reduced below zero), and taxes are recalculated.
-        Post-tax amounts are then allocated in proportion to the price of each
-        item including tax.  Returns the updated queryset of invoice items.
+        returned by allocateDiscount().  Pre-tax amounts are taken off of the
+        items first, and taxes are recalculated, and then post-tax amounts are
+        taken off.  Returns the updated queryset of invoice items.
+
+        The amounts that apply to specific invoice items can be passed as
+        dictionaries in the form {invoice item id: amount} (item_pretax and
+        item_posttax).  The rest of each total is allocated among all of the
+        items: pre-tax amounts in proportion to each item's discounted price
+        (so that an item that is already free is not reduced below zero), and
+        post-tax amounts in proportion to each item's price including tax.
         '''
-        if pretax:
+
+        def getWeights(amount, item_amounts, base):
+            '''
+            The amount for each item. The base is the value of each item that
+            any amount not assigned to a specific item is allocated by.
+            '''
             weights = {
-                str(x.id): x.newTotal for x in items if (x.newTotal or 0) > 0
+                k: v for k, v in (item_amounts or {}).items()
+                if v > 0 and k in base
             }
+            remainder = amount - sum(weights.values())
+            total_base = sum([max(v, 0) for v in base.values()])
+            if remainder > 1e-9 and total_base > 0:
+                for k, v in base.items():
+                    if v > 0:
+                        weights[k] = weights.get(k, 0) + remainder * (v / total_base)
+            return weights
+
+        if pretax:
+            weights = getWeights(
+                pretax, item_pretax, {str(x.id): (x.newTotal or 0) for x in items}
+            )
             items = invoice.updateTotals(
                 save=False, allocateAmounts={'total': -1 * pretax},
                 allocateWeights=weights, prior_queryset=items,
             )
-        if posttax or save:
+        if posttax:
+            weights = getWeights(
+                posttax, item_posttax,
+                {str(x.id): (x.newTotal or 0) + (x.newTaxes or 0) for x in items}
+            )
             items = invoice.updateTotals(
                 save=save, allocateAmounts={'adjustments': -1 * posttax},
-                prior_queryset=items,
+                allocateWeights=weights, prior_queryset=items,
             )
+        elif save:
+            items = invoice.updateTotals(save=save, prior_queryset=items)
         return items
 
     def getAddons(self, invoice, registration=None):

@@ -210,11 +210,27 @@ class VoucherRestrictionTests(object):
         SessionVoucher.objects.create(session=session, voucher=self.voucher)
         self.assertUsableOnlyFor(self.series, self.other_series)
 
-    def test_restricted_voucher_refused_if_any_event_does_not_qualify(self):
+    def test_restricted_voucher_used_only_for_events_that_qualify(self):
+        '''
+        A voucher for one class can be used when the cart also has a class
+        that does not qualify, but only for the class that qualifies.
+        '''
         ClassVoucher.objects.create(
             classDescription=self.series.classDescription, voucher=self.voucher
         )
-        self.assertVoucherRefused(self.use_voucher(self.series, self.other_series))
+        response = self.use_voucher(self.series, self.other_series)
+        self.assertVoucherApplied(response, self.voucher, 10)
+
+        reg = self.get_invoice().registration
+        price = self.series.getBasePrice()
+        self.assertAlmostEqual(
+            reg.eventregistration_set.get(event=self.series).invoiceItem.total,
+            price - 10, places=2
+        )
+        self.assertAlmostEqual(
+            reg.eventregistration_set.get(event=self.other_series).invoiceItem.total,
+            price, places=2
+        )
 
 
 class VoucherFormRestrictionsTest(VoucherRestrictionTests, VoucherRestrictionsBase):

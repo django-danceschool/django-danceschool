@@ -27,6 +27,39 @@ from .helpers import awardReferrers, ensureReferralVouchersExist
 logger = logging.getLogger(__name__)
 
 
+def registrationEvents(registration):
+    '''
+    Return the events that the passed Registration is for, which are the
+    events that a voucher restricted to specific classes or events may
+    qualify for.
+    '''
+    if not registration:
+        return Event.objects.none()
+    return Event.objects.filter(
+        id__in=registration.eventregistration_set.values_list('event_id', flat=True)
+    )
+
+
+def cartEvents(cart_items):
+    ''' Return the events in a cart that has not been checked out. '''
+    return Event.objects.filter(
+        id__in=[x.get('item_id') for x in cart_items if x.get('item_type') == 'Event']
+    )
+
+
+def currentValue(item, field):
+    '''
+    The value of a field of an invoice item, as most recently calculated. The
+    invoice items passed with some signals come from Invoice.updateTotals(),
+    which annotates the results of an allocation that has not been saved
+    (e.g. newTotal), and those values are used when they are present.
+    '''
+    value = getattr(item, 'new' + field[0].upper() + field[1:], None)
+    if value is None:
+        value = getattr(item, field, 0)
+    return value or 0
+
+
 @receiver(check_student_info)
 def checkVoucherField(sender, **kwargs):
     '''
@@ -62,22 +95,11 @@ def checkVoucherField(sender, **kwargs):
 
     if invoice and (not registration):
         registration = Registration.objects.filter(invoice=invoice).first()
-    events = Event.objects.none()
 
     if registration:
-        events = Event.objects.filter(
-            eventregistration__registration=registration
-        ).exclude(eventregistration__dropIn=True).values_list('id', flat=True)
-    elif cart_items:
-        events = Event.objects.filter(
-            id__in=[
-                x.get('item_id') for x in cart_items
-                if (
-                    (x.get('item_type') == 'Event') and
-                    (not x.get('drop_in', False))
-                )
-            ]
-        ).values_list('id', flat=True)
+        events = registrationEvents(registration)
+    else:
+        events = cartEvents(cart_items)
 
     # If a discount code with this ID exists, then no further validation can be
     # performed here. Otherwise, ensure that a voucher ID exists matching this
@@ -160,22 +182,11 @@ def checkVoucherCode(sender, **kwargs):
     # above if an error has already been found.
     if invoice and (not registration):
         registration = Registration.objects.filter(invoice=invoice).first()
-    events = Event.objects.none()
 
     if registration:
-        events = Event.objects.filter(
-            eventregistration__registration=registration
-        ).exclude(eventregistration__dropIn=True)
-    elif cart_items:
-        events = Event.objects.filter(
-            id__in=[
-                x.get('item_id') for x in cart_items
-                if (
-                    (x.get('item_type') == 'Event') and
-                    (not x.get('drop_in', False))
-                )
-            ]
-        )
+        events = registrationEvents(registration)
+    else:
+        events = cartEvents(cart_items)
 
     # Use the explicitly-passed payAtDoor when available (e.g. cart preview);
     # fall back to the registration's attribute when we have one.
@@ -185,13 +196,56 @@ def checkVoucherCode(sender, **kwargs):
     # If there is no cart yet (e.g. a voucher code passed in a link to the
     # registration page), then the events cannot be checked yet.  They are
     # checked once there is a cart or a registration.
-    return obj.validate(
+    result = obj.validate(
         customer=customer, events=events,
         payAtDoor=pay_at_door,
         raise_errors=False, return_amount=True,
         validate_customer=validate_customer,
         validate_events=bool(registration or cart_items),
     )
+
+    # A voucher that is restricted to specific classes or events can only be
+    # used for the items that qualify for it, so the amount that can be used
+    # is limited to the price of those items: before tax (eligible_total), and
+    # after tax (eligible_total_posttax), for vouchers applied after tax.
+    # Both are None when there is no limit other than the price of the cart.
+    result['eligible_total'] = None
+    result['eligible_total_posttax'] = None
+    if result.get('status') != 'valid' or not obj.isEventRestricted:
+        return result
+
+    if invoice:
+        items = kwargs.get('items')
+        if items is None:
+            items = invoice.invoiceitem_set.all()
+        items = list(items)
+        eligible = obj.eligibleItemIds(items)
+        if len(eligible) < len(items):
+            buyer_pays = invoice.buyerPaysSalesTax
+            eligible_items = [x for x in items if str(x.id) in eligible]
+            result['eligible_total'] = sum(
+                [currentValue(x, 'total') for x in eligible_items]
+            )
+            result['eligible_total_posttax'] = sum([
+                currentValue(x, 'total') + currentValue(x, 'adjustments') +
+                (currentValue(x, 'taxes') if buyer_pays else 0)
+                for x in eligible_items
+            ])
+    elif cart_items and not obj.appliesToEntireInvoice:
+        # Before checkout there are no invoice items, so the prices of the
+        # events in the cart are used.
+        events_by_id = {x.id: x for x in events}
+        eligible_total = 0
+        for cart_item in cart_items:
+            event = events_by_id.get(cart_item.get('item_id'))
+            if cart_item.get('item_type') == 'Event' and event and obj.eventQualifies(event):
+                eligible_total += (
+                    event.getBasePrice(payAtDoor=pay_at_door) *
+                    (cart_item.get('quantity') or 1)
+                )
+        result['eligible_total'] = eligible_total
+        result['eligible_total_posttax'] = eligible_total
+    return result
 
 
 @receiver(post_student_info)
@@ -231,11 +285,7 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
         kwargs.get('registration') or
         Registration.objects.filter(invoice=invoice).first()
     )
-    events = Event.objects.none()
-    if registration:
-        events = Event.objects.filter(
-            eventregistration__registration=registration
-        ).exclude(eventregistration__dropIn=True)
+    events = registrationEvents(registration)
 
     customer = Customer.objects.filter(
         first_name=invoice.firstName, last_name=invoice.lastName,
@@ -326,15 +376,27 @@ def applyTemporaryVouchers(sender, **kwargs):
     pretax_uses = inOrderOfUse(unapplied.filter(beforeTax=True))
     posttax_uses = inOrderOfUse(unapplied.filter(beforeTax=False))
 
+    # The amounts of the vouchers that are applied to each invoice item, before
+    # and after tax, in the form {invoice item id: amount}.  The totals are
+    # the sums of these.
     response = {
         'total_pretax': 0,
         'total_posttax': 0,
         'items': [],
+        'item_pretax': {},
+        'item_posttax': {},
     }
 
     if not pretax_uses and not posttax_uses:
         logger.debug('No applicable vouchers found.')
         return response
+
+    # The invoice items, with their prices after any discounts.  If the caller
+    # did not pass them, then the saved values are used.
+    items = kwargs.get('items')
+    if items is None:
+        items = invoice.invoiceitem_set.all()
+    items = list(items)
 
     def useVoucher(tvu, remaining):
         ''' Use as much of the voucher as is available and needed. '''
@@ -353,28 +415,50 @@ def applyTemporaryVouchers(sender, **kwargs):
             })
         return amount
 
-    initial_pretax = invoice.total + prior_adjustment
-    remaining_pretax = initial_pretax
+    def allocate(amount, ids, remaining, record):
+        '''
+        Take the amount of a voucher off of the eligible items, in proportion
+        to what remains to be paid for each of them.
+        '''
+        available = sum([remaining[i] for i in ids])
+        if amount <= 0 or available <= 0:
+            return
+        for i in ids:
+            share = amount * (remaining[i] / available)
+            remaining[i] -= share
+            record[i] = record.get(i, 0) + share
+
+    # The price that remains to be paid for each item, before tax.  A prior
+    # adjustment (if one is passed) is taken off of every item in proportion
+    # to its price.
+    remaining_pretax = {str(x.id): max(currentValue(x, 'total'), 0) for x in items}
+    initial_pretax = sum(remaining_pretax.values())
+    if prior_adjustment and initial_pretax > 0:
+        factor = max(initial_pretax + prior_adjustment, 0) / initial_pretax
+        remaining_pretax = {k: v * factor for k, v in remaining_pretax.items()}
 
     for tvu in pretax_uses:
-        amount = useVoucher(tvu, remaining_pretax)
-        remaining_pretax -= amount
+        ids = tvu.voucher.eligibleItemIds(items)
+        amount = useVoucher(tvu, sum([remaining_pretax[i] for i in ids]))
+        allocate(amount, ids, remaining_pretax, response['item_pretax'])
         response['total_pretax'] += amount
 
-    # If the buyer does not pay sales tax, then the price already includes
-    # the tax, so it is not added to the amount that remains to be paid.
-    # Otherwise, the tax is reduced in proportion to the reduction in price
-    # from pre-tax vouchers.  This is exact, because a pre-tax voucher is
-    # allocated among the invoice items in proportion to their prices.
-    taxes = invoice.taxes if invoice.buyerPaysSalesTax else 0
-    if invoice.total > 0:
-        taxes = taxes * (remaining_pretax / invoice.total)
-
-    remaining_posttax = remaining_pretax + taxes + invoice.adjustments
+    # The amount that remains to be paid for each item, after tax.  Tax is
+    # calculated on what remains of the price of each item, at that item's
+    # own rate.  If the buyer does not pay sales tax, then the price already
+    # includes the tax, so it is not added.
+    remaining_posttax = {}
+    for x in items:
+        price = remaining_pretax[str(x.id)]
+        taxes = price * ((x.taxRate or 0) / 100) if invoice.buyerPaysSalesTax else 0
+        remaining_posttax[str(x.id)] = max(
+            price + taxes + currentValue(x, 'adjustments'), 0
+        )
 
     for tvu in posttax_uses:
-        amount = useVoucher(tvu, remaining_posttax)
-        remaining_posttax -= amount
+        ids = tvu.voucher.eligibleItemIds(items)
+        amount = useVoucher(tvu, sum([remaining_posttax[i] for i in ids]))
+        allocate(amount, ids, remaining_posttax, response['item_posttax'])
         response['total_posttax'] += amount
 
     return response

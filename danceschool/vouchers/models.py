@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import Sum
 from django.db.models.query import QuerySet, FlatValuesListIterable
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -105,6 +105,17 @@ class Voucher(models.Model):
     # are logged in).
     doorOnly = models.BooleanField(_('At-the-door Registrations Only'), default=False)
 
+    appliesToEntireInvoice = models.BooleanField(
+        _('Can be used for anything on the invoice'), default=False,
+        help_text=_(
+            'If this voucher is restricted to specific classes or events, then '
+            'by default it can only be used for registrations for those classes '
+            'or events. If checked, then once there is such a registration, the '
+            'voucher can be used for everything on the invoice, including other '
+            'registrations and merchandise.'
+        )
+    )
+
     # Keep track of when vouchers are created
     creationDate = models.DateTimeField(_('Creation Date'), auto_now_add=True)
 
@@ -179,6 +190,95 @@ class Voucher(models.Model):
 
     maxToUse = property(fget=getMaxToUse)
     maxToUse.fget.short_description = _('Maximum amount available for next use')
+
+    @property
+    def isEventRestricted(self):
+        ''' Is this voucher restricted to specific classes or events? '''
+        return (
+            self.classvoucher_set.exists() or
+            self.dancetypevoucher_set.exists() or
+            self.seriescategoryvoucher_set.exists() or
+            self.publiceventcategoryvoucher_set.exists() or
+            self.sessionvoucher_set.exists()
+        )
+
+    def eventQualifies(self, event):
+        '''
+        Can this voucher be used for a registration for the passed event?  An
+        event qualifies if it meets every type of restriction that the voucher
+        has (classes, levels, categories and sessions).
+        '''
+        classDescription = getattr(event, 'classDescription', None)
+        category = getattr(event, 'category', None)
+
+        if self.classvoucher_set.exists() and not self.classvoucher_set.filter(
+            classDescription=classDescription
+        ).exists():
+            return False
+        if self.dancetypevoucher_set.exists() and not self.dancetypevoucher_set.filter(
+            danceTypeLevel=getattr(classDescription, 'danceTypeLevel', None)
+        ).exists():
+            return False
+
+        # Series and public events have different types of category, so an
+        # event of the other type never has a category that qualifies.
+        if self.seriescategoryvoucher_set.exists() and (
+            not isinstance(category, SeriesCategory) or
+            not self.seriescategoryvoucher_set.filter(seriesCategory=category).exists()
+        ):
+            return False
+        if self.publiceventcategoryvoucher_set.exists() and (
+            not isinstance(category, PublicEventCategory) or
+            not self.publiceventcategoryvoucher_set.filter(
+                publicEventCategory=category
+            ).exists()
+        ):
+            return False
+
+        if self.sessionvoucher_set.exists() and not self.sessionvoucher_set.filter(
+            session=getattr(event, 'session', None)
+        ).exists():
+            return False
+        return True
+
+    def eligibleItemIds(self, invoiceItems):
+        '''
+        Return the set of the ids (as strings) of the passed invoice items that
+        this voucher can be used for.  A voucher with no restrictions on
+        classes or events can be used for every item.  Otherwise, it can be
+        used for registrations for the events that qualify, including the
+        events that are included with a qualifying event (e.g. as part of a
+        pass), or for every item if it can be used for the entire invoice and
+        at least one registration qualifies.
+        '''
+        items = list(invoiceItems)
+        if not self.isEventRestricted:
+            return {str(x.id) for x in items}
+
+        def getEvent(item):
+            try:
+                return item.eventRegistration.event
+            except ObjectDoesNotExist:
+                return None
+
+        # Cache the result for each event, since a pass and the events that
+        # it includes are checked together.
+        results = {}
+
+        def itemQualifies(item):
+            if item.parent_item_id:
+                return itemQualifies(item.parent_item)
+            event = getEvent(item)
+            if event is None:
+                return False
+            if event.id not in results:
+                results[event.id] = self.eventQualifies(event)
+            return results[event.id]
+
+        qualifying = {str(x.id) for x in items if itemQualifies(x)}
+        if qualifying and self.appliesToEntireInvoice:
+            return {str(x.id) for x in items}
+        return qualifying
 
     def validate(
         self, customer=None, events=None, payAtDoor=False, raise_errors=True,
@@ -258,91 +358,22 @@ class Voucher(models.Model):
         if errors and raise_errors:
             raise ValidationError(errors)
 
-        event_restricted = (
-            self.classvoucher_set.exists() or
-            self.dancetypevoucher_set.exists() or
-            self.seriescategoryvoucher_set.exists() or
-            self.publiceventcategoryvoucher_set.exists() or
-            self.sessionvoucher_set.exists()
-        )
+        event_restricted = self.isEventRestricted
 
         # Only validate events contents if specified (default is True)
         if validate_events:
             # A voucher that is restricted to specific classes or events can
             # only be used when at least one registration for them is being
-            # made (so not, for example, for merchandise alone).
-            if event_restricted and not events.exists():
+            # made (so not, for example, for merchandise alone).  It is then
+            # only used for the items that qualify for it, unless it can be
+            # used for the entire invoice (see eligibleItemIds()).
+            if event_restricted and not any(self.eventQualifies(x) for x in events):
                 errors.append(
                     ValidationError(
                         _('This voucher can be only used for specific classes or events.'),
                         code='no_eligible_events'
                     )
                 )
-
-            # every series is either in the list or there is no list
-            if self.classvoucher_set.exists():
-                for s in events:
-                    if not self.classvoucher_set.filter(
-                        classDescription=getattr(s, 'classDescription', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes.'),
-                                code='classvoucher_invalid'
-                            )
-                        )
-            if self.dancetypevoucher_set.exists():
-                for s in events:
-                    if not self.dancetypevoucher_set.filter(
-                        danceTypeLevel=getattr(getattr(s, 'classDescription', None), 'danceTypeLevel', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes.'),
-                                code='dancetypevoucher_invalid'
-                            )
-                        )
-            # Series and public events have different types of category, so an
-            # event of the other type never has a category that qualifies.
-            if self.seriescategoryvoucher_set.exists():
-                for s in events:
-                    category = getattr(s, 'category', None)
-                    if not isinstance(category, SeriesCategory) or not (
-                        self.seriescategoryvoucher_set.filter(
-                            seriesCategory=category
-                        ).exists()
-                    ):
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes.'),
-                                code='seriescategoryvoucher_invalid'
-                            )
-                        )
-            if self.publiceventcategoryvoucher_set.exists():
-                for s in events:
-                    category = getattr(s, 'category', None)
-                    if not isinstance(category, PublicEventCategory) or not (
-                        self.publiceventcategoryvoucher_set.filter(
-                            publicEventCategory=category
-                        ).exists()
-                    ):
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific events.'),
-                                code='publiceventcategoryvoucher_invalid'
-                            )
-                        )
-            if self.sessionvoucher_set.exists():
-                for s in events:
-                    if not self.sessionvoucher_set.filter(
-                        session=getattr(s, 'session', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes or events.'),
-                                code='sessionvoucher_invalid'
-                            )
-                        )
         elif event_restricted:
             warnings.append({
                 'code': 'event_restrictions',

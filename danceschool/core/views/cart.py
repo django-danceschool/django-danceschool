@@ -465,7 +465,13 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
             return {
                 'voucher_id': result.get('id'),
                 'voucher_name': result.get('name'),
-                'voucher_amount': float(result.get('available', 0)),
+                # A voucher that can only be used for some of the items in
+                # the cart is limited to the price of those items.
+                'voucher_amount': float(
+                    result.get('available', 0)
+                    if result.get('eligible_total') is None
+                    else min(result.get('available', 0), result['eligible_total'])
+                ),
                 'before_tax': result.get('beforeTax', True),
             }
         elif result.get('status') == 'invalid':
@@ -761,7 +767,13 @@ class CartSummaryView(RegistrationAdjustmentsMixin, TemplateView):
             return {
                 'voucher_id': result.get('id'),
                 'voucher_name': result.get('name'),
-                'voucher_amount': float(result.get('available', 0)),
+                # A voucher that can only be used for some of the items in
+                # the cart is limited to the price of those items.
+                'voucher_amount': float(
+                    result.get('available', 0)
+                    if result.get('eligible_total') is None
+                    else min(result.get('available', 0), result['eligible_total'])
+                ),
                 'before_tax': result.get('beforeTax', True),
             }
         elif result.get('status') == 'invalid':

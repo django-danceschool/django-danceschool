@@ -73,10 +73,15 @@ apply_discount = Signal(
 apply_addons = Signal(''' ['invoice', 'registration'] ''')
 
 # Fires when vouchers or any other direct price adjustments are ready to be applied.
-# Any handler that attaches to this signal should return a name/description of the
-# adjustment as well as the amount of the adjustment, in tuple form as (name, amount).
+# The items argument is the invoice items, with their prices after discounts
+# (which may not have been saved yet).  Any handler that attaches to this signal
+# should return a dictionary with the total amounts of its adjustments before and
+# after tax (total_pretax, total_posttax), a list describing each adjustment
+# (items), and optionally the amount of the adjustments that applies to each
+# invoice item (item_pretax, item_posttax, in the form {invoice item id: amount}).
+# Any amount that is not assigned to an item is allocated among all of the items.
 apply_price_adjustments = Signal(
-    ''' ['invoice', 'registration', 'invoice', 'initial_price'] '''
+    ''' ['invoice', 'registration', 'prior_adjustment', 'items'] '''
 )
 
 # Fires after a Registration is created.

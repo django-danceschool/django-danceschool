@@ -194,7 +194,8 @@ class VoucherAdmin(admin.ModelAdmin):
                 'expirationDate', (
                     'singleUse', 'forFirstTimeCustomersOnly',
                     'forPreviousCustomersOnly', 'doorOnly', 'disabled'
-                )
+                ),
+                'appliesToEntireInvoice',
             ),
         }),
         (_('Other Info'), {

@@ -237,12 +237,15 @@ class RegistrationSummaryView(
         # The return value to this signal should contain any adjustments that
         # need to be made to the price (e.g., from vouchers if the voucher app
         # is installed).  Since the discount is already reflected in the
-        # invoice totals, there is no prior adjustment to report.
+        # invoice totals, there is no prior adjustment to report.  The invoice
+        # items are passed with their discounted prices, which have not been
+        # saved yet.
         adjustment_responses = apply_price_adjustments.send(
             sender=RegistrationSummaryView,
             invoice=invoice,
             registration=reg,
             prior_adjustment=0,
+            items=items_queryset,
         )
 
         combined_response = {
@@ -251,10 +254,23 @@ class RegistrationSummaryView(
             'items': [],
         }
 
+        # A response may also say how much of its adjustment applies to each
+        # invoice item (e.g. a voucher that can only be used for some items).
+        # The rest of each adjustment is allocated among all of the items.
+        item_pretax = {}
+        item_posttax = {}
+
         for response in adjustment_responses:
-            combined_response['total_pretax'] += response[1].get('total_pretax', 0)
-            combined_response['total_posttax'] += response[1].get('total_posttax', 0)
-            combined_response['items'] += response[1].get('items', [])
+            this_response = response[1] or {}
+            combined_response['total_pretax'] += this_response.get('total_pretax', 0)
+            combined_response['total_posttax'] += this_response.get('total_posttax', 0)
+            combined_response['items'] += this_response.get('items', [])
+            for this_items, combined_items in [
+                (this_response.get('item_pretax') or {}, item_pretax),
+                (this_response.get('item_posttax') or {}, item_posttax),
+            ]:
+                for k, v in this_items.items():
+                    combined_items[str(k)] = combined_items.get(str(k), 0) + v
 
         # Allocate the remaining adjustments across the invoice items (which
         # also recalculates the taxes for each item), and save the result.
@@ -263,6 +279,7 @@ class RegistrationSummaryView(
             invoice, items_queryset,
             pretax=combined_response['total_pretax'],
             posttax=combined_response['total_posttax'],
+            item_pretax=item_pretax, item_posttax=item_posttax,
             save=True,
         )
 
@@ -443,7 +460,9 @@ class PartnerRequiredView(RegistrationAdjustmentsMixin, FormView):
         items_queryset = self.allocateDiscount(self.invoice, discounts)
 
         if voucherId:
-            context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
+            context_data['voucher'] = self.getVoucher(
+                voucherId, self.invoice, items=items_queryset
+            )
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
@@ -588,7 +607,9 @@ class MultiRegCustomerNameView(RegistrationAdjustmentsMixin, FormView):
         items_queryset = self.allocateDiscount(self.invoice, discounts)
 
         if voucherId:
-            context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
+            context_data['voucher'] = self.getVoucher(
+                voucherId, self.invoice, items=items_queryset
+            )
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
@@ -756,7 +777,9 @@ class StudentInfoView(RegistrationAdjustmentsMixin, FormView):
         items_queryset = self.allocateDiscount(self.invoice, discounts)
 
         if voucherId:
-            context_data['voucher'] = self.getVoucher(voucherId, self.invoice)
+            context_data['voucher'] = self.getVoucher(
+                voucherId, self.invoice, items=items_queryset
+            )
 
             # Recalculate taxes, but do not save the invoice
             # with the updates, since the voucher will only be applied later.
