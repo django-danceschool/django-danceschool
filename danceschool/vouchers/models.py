@@ -283,11 +283,16 @@ class Voucher(models.Model):
                                 code='dancetypevoucher_invalid'
                             )
                         )
+            # Series and public events have different types of category, so an
+            # event of the other type never has a category that qualifies.
             if self.seriescategoryvoucher_set.exists():
                 for s in events:
-                    if not self.seriescategoryvoucher_set.filter(
-                        seriesCategory=getattr(s, 'category', None)
-                    ).exists():
+                    category = getattr(s, 'category', None)
+                    if not isinstance(category, SeriesCategory) or not (
+                        self.seriescategoryvoucher_set.filter(
+                            seriesCategory=category
+                        ).exists()
+                    ):
                         errors.append(
                             ValidationError(
                                 _('This voucher can be only used for specific classes.'),
@@ -296,9 +301,12 @@ class Voucher(models.Model):
                         )
             if self.publiceventcategoryvoucher_set.exists():
                 for s in events:
-                    if not self.publiceventcategoryvoucher_set.filter(
-                        publicEventCategory=getattr(s, 'category', None)
-                    ).exists():
+                    category = getattr(s, 'category', None)
+                    if not isinstance(category, PublicEventCategory) or not (
+                        self.publiceventcategoryvoucher_set.filter(
+                            publicEventCategory=category
+                        ).exists()
+                    ):
                         errors.append(
                             ValidationError(
                                 _('This voucher can be only used for specific events.'),

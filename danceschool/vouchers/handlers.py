@@ -1,7 +1,6 @@
 from django.apps import apps
 from django.dispatch import receiver
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.db.models import Value, CharField, F
 from django.db.models.query import QuerySet
@@ -209,11 +208,34 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
         logger.debug('No applicable vouchers found.')
         return
 
-    if voucher.disabled:
-        logger.debug('Voucher %s is disabled; skipping.', voucherId)
-        return
-    if voucher.expirationDate and voucher.expirationDate < timezone.now():
-        logger.debug('Voucher %s has expired; skipping.', voucherId)
+    # The voucher code may not have been checked before this point (e.g. it
+    # was passed with the cart, and it was not entered on the customer
+    # information form), so all of the restrictions on the use of the voucher
+    # are checked here before it is applied.
+    registration = (
+        kwargs.get('registration') or
+        Registration.objects.filter(invoice=invoice).first()
+    )
+    events = Event.objects.none()
+    if registration:
+        events = Event.objects.filter(
+            eventregistration__registration=registration
+        ).exclude(eventregistration__dropIn=True)
+
+    customer = Customer.objects.filter(
+        first_name=invoice.firstName, last_name=invoice.lastName,
+        email=invoice.email
+    ).first()
+
+    result = voucher.validate(
+        customer=customer, events=events,
+        payAtDoor=getattr(registration, 'payAtDoor', False),
+        raise_errors=False,
+    )
+    if result.get('status') != 'valid':
+        logger.debug(
+            'Voucher %s cannot be used; skipping. %s', voucherId, result.get('errors')
+        )
         return
 
     tvu = VoucherUse(
