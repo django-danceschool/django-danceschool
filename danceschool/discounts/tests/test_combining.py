@@ -14,12 +14,17 @@ class DiscountCombiningTest(DiscountAllocationBase):
 
     def setUp(self):
         super().setUp()
+        # The ids are given explicitly because the default category is created
+        # by a migration with an explicit id of 1. On PostgreSQL, that leaves
+        # the sequence for new ids at 1, so the first category that is
+        # created without an id fails with a duplicate key.
         self.first = DiscountCategory.objects.get(id=1)
         self.second = DiscountCategory.objects.create(
-            name='Second Category', order=self.first.order + 1
+            id=101, name='Second Category', order=self.first.order + 1
         )
         self.alone = DiscountCategory.objects.create(
-            name='Not Combined', order=self.first.order + 2, cannotCombine=True
+            id=102, name='Not Combined', order=self.first.order + 2,
+            cannotCombine=True
         )
         self.s_a = self.create_series(pricingTier=self.tier_a)
         self.s_b = self.create_series(pricingTier=self.tier_b)
