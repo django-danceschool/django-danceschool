@@ -186,18 +186,29 @@ def getBestDiscount(sender, **kwargs):
 
     # Determine the amount by which the price of each invoice item is reduced.
     # The allocation of the last discount applied already reflects the
-    # discounts in all prior categories. The allocated prices are in the same
-    # order as the list of eligible items, and so are the invoice item ids
-    # (which are not available when a cart is only being previewed).
+    # discounts in all prior categories, and the allocated prices are in the
+    # same order as the list of eligible items.  The discount on each cart
+    # item is shared among the invoice items that make up its price (there is
+    # more than one for an event that includes other events), in proportion to
+    # their prices.  There are no invoice items when a cart is only being
+    # previewed.
     item_discounts = {}
     if best_discounts:
         final_prices = best_discounts[next(reversed(best_discounts))].net_allocated_prices
-        item_ids = cart_kwargs.get('cart_item_ids', [])
 
-        if len(final_prices) == len(initial_prices) == len(item_ids):
-            for item_id, initial, final in zip(item_ids, initial_prices, final_prices):
-                if item_id is not None and initial - final > 0:
-                    item_discounts[item_id] = initial - final
+        if len(final_prices) == len(eligible_list):
+            for cart_item, final in zip(eligible_list, final_prices):
+                this_discount = cart_item['base_price'] - final
+                shares = cart_item.get('item_shares', {})
+                total_shares = sum(shares.values())
+
+                if this_discount <= 0 or not shares:
+                    continue
+                for item_id, share in shares.items():
+                    if total_shares > 0:
+                        item_discounts[item_id] = this_discount * (share / total_shares)
+                    else:
+                        item_discounts[item_id] = this_discount / len(shares)
 
     # Return the list of discounts to be applied (in DiscountInfo tuples), along
     # with the additional price of ineligible items to be added, and the amount

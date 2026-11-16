@@ -84,21 +84,46 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
             ),
             _customer_id=F('customer__id'),
             **_get_coalesced(qs_class=reg.eventregistration_set.model)
-        )
-        event_count_list = [
-            {
+        ).order_by('id')
+
+        # Each registration is its own item in the cart, identified by its
+        # invoice item (item_id), so that two registrations for the same event
+        # are never treated as one item.  They are listed in the order in which
+        # they were created.  When a discount can only be applied to some of
+        # them, checkDiscountCombos() applies it to the items of the first
+        # customer in this list before those of any other customer.  The
+        # item_shares are the invoice items that make up the price of the cart
+        # item, in the form {invoice item id: price}, among which any discount
+        # on the cart item is allocated.
+        event_count_list = []
+        items_by_id = {}
+        included = []
+
+        for x in qs:
+            if getattr(x.invoiceItem, 'parent_item_id', None):
+                included.append(x)
+                continue
+            this_item = {
+                'item_id': x.invoiceItem_id,
                 'event_id': x.event.id, 'event': x.event,
                 'quantity': x.quantity, 'dropIn': x.dropIn,
                 'customer_id': x._customer_id, 'tier': x.tier,
-                'base_price': x.base_price
+                'base_price': x.base_price,
+                'item_shares': {x.invoiceItem_id: x.base_price},
             }
-            for x in qs
-        ]
-        # The invoice item for each entry in the list above (in the same
-        # order), so that discounts can be allocated to specific items. These
-        # are kept separate from the dictionaries above because the matching
-        # of discounts treats identical dictionaries as the same item.
-        item_id_list = [x.invoiceItem_id for x in qs]
+            event_count_list.append(this_item)
+            items_by_id[x.invoiceItem_id] = this_item
+
+        # A registration for an event that is included with another event
+        # (e.g. an event that is part of an all-in pass) is not a separate cart
+        # item.  Its price is a portion of the price of the event that it is
+        # included with, so it is added to that cart item, and it does not
+        # count separately toward any discount.
+        for x in included:
+            parent = items_by_id.get(x.invoiceItem.parent_item_id)
+            if parent:
+                parent['base_price'] += x.base_price
+                parent['item_shares'][x.invoiceItem_id] = x.base_price
     elif cart_items:
         events = Event.objects.filter(
             id__in=[x.get('item_id') for x in cart_items]
@@ -117,16 +142,17 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
         # TODO: Implement logic checking for door registration prior to this
         # function being called.
 
+        # There are no invoice items when a cart is only being previewed, so
+        # each cart item is identified by its position in the cart.
         event_count_list = [
             {
+                'item_id': 'cart_%s' % idx,
                 'event_id': x.get('item_id'),
                 'quantity': x.get('quantity'),
                 'dropIn': x.get('drop_in'),
                 'customer_id': None
-            } for x in cart_items
+            } for idx, x in enumerate(cart_items)
         ]
-        # There are no invoice items when a cart is only being previewed.
-        item_id_list = [None for x in cart_items]
 
         map_events = {x.id: x for x in events}
 
@@ -148,19 +174,10 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
         return
 
     # Split items into eligible (for discounts) and ineligible
-    # The eligible items and their invoice item ids are two parallel lists (the
-    # same length, in the same order), not one list of dictionaries that
-    # include the id. The matching of discounts compares these dictionaries
-    # for equality, so that two registrations for the same event by the same
-    # customer are treated as the same item. An id in the dictionary would
-    # make every item unique and change which discounts apply. The ids are
-    # only used afterward, to allocate a discount to specific invoice items.
-    eligible_items = []
-    eligible_item_ids = []
-    for x, item_id in zip(event_count_list, item_id_list):
-        if x.get('tier') and (not x.get('dropIn', False)):
-            eligible_items.append(x)
-            eligible_item_ids.append(item_id)
+    eligible_items = [
+        x for x in event_count_list
+        if x.get('tier') and (not x.get('dropIn', False))
+    ]
     ineligible_total = sum([
         x.get('base_price', 0) for x in event_count_list
         if (x.get('tier') is None) or (x.get('dropIn', False))
@@ -194,7 +211,6 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
     student = reg is not None and reg.eventregistration_set.filter(student=True).exists()
     return {
         'cart_object_list': eligible_items,
-        'cart_item_ids': eligible_item_ids,
         'ineligible_total': ineligible_total,
         'student': student,
     }
@@ -236,17 +252,21 @@ def checkDiscountCombos(
     # Initialize dictionaries to populate below.
     pointbased_cart_object_lists = {ptgroup: [] for ptgroup in point_groups}
     pointbased_customer_object_lists = {ptgroup: [] for ptgroup in point_groups}
+    # The total points for each cart item, which are used to determine the
+    # fraction of an item that is needed to apply a discount.  These are kept
+    # separately for each item (not for each event), since there can be more
+    # than one registration for the same event.
     total_item_points = {
-        cart_item.get('event_id'): 0 for cart_item in cart_object_list
+        cart_item.get('item_id'): 0 for cart_item in cart_object_list
     }
 
     # Now loop through items to populate the dictionaries.
     for cart_item in cart_object_list:
-        event_id = cart_item.get('event_id')
+        item_id = cart_item.get('item_id')
 
         for ptgroup in point_groups:
             this_points = cart_item.get(f'group_{ptgroup}_points', 0)
-            total_item_points[event_id] += this_points
+            total_item_points[item_id] += this_points
 
             for y in range(0, this_points):
                 pointbased_cart_object_lists[ptgroup].append((cart_item, this_points))
@@ -254,17 +274,28 @@ def checkDiscountCombos(
                 for y in range(0, this_points):
                     pointbased_customer_object_lists[ptgroup].append((cart_item, this_points))
 
-    # Sort the point-based lists in descending order of point values so that the
-    # most "valuable" items toward any discount are listed first.
+    # A discount is applied once, to the first items in these lists that match
+    # it.  So, when there are registrations for more than one customer, all of
+    # the items of one customer are listed before the items of the next (even
+    # if the registrations alternate between customers), so that the discount
+    # goes to one customer's items and is not split among customers.
+    # Customers are in the order of their first item in the cart.  The items of
+    # each customer are in descending order of point values, so that the most
+    # "valuable" items toward any discount are listed first.
+    customer_order = {}
+    for cart_item in cart_object_list:
+        customer_order.setdefault(cart_item.get('customer_id'), len(customer_order))
+
+    def sort_key(x):
+        return (customer_order.get(x[0].get('customer_id'), 0), -1 * x[1])
+
     for k in pointbased_cart_object_lists.keys():
         pointbased_cart_object_lists[k] =[
-            p[0] for p in
-            sorted(pointbased_cart_object_lists[k], key=lambda x: x[1], reverse=True)
+            p[0] for p in sorted(pointbased_cart_object_lists[k], key=sort_key)
         ]
     for k in pointbased_customer_object_lists.keys():
         pointbased_customer_object_lists[k] =[
-            p[0] for p in
-            sorted(pointbased_customer_object_lists[k], key=lambda x: x[1], reverse=True)
+            p[0] for p in sorted(pointbased_customer_object_lists[k], key=sort_key)
         ]
 
     # Discounts that require registration a number of days in advance are evaluated against
@@ -320,7 +351,7 @@ def checkDiscountCombos(
                         match_flag = False
                     elif (
                         z.level and hasattr(y['event'], 'series') and
-                        y.event.series.classDescription.danceTypeLevel != z.level
+                        y['event'].series.classDescription.danceTypeLevel != z.level
                     ):
                         match_flag = False
                     # Check that if the discount combo requires that all elements be a
@@ -370,7 +401,7 @@ def checkDiscountCombos(
             # per point)
             matchedList = unique_dicts(
                 matched_cart_items + additionalItems,
-                keys=['event_id', 'quantity', 'dropIn', 'customer_id']
+                keys=['item_id']
             )
 
             # An item could match only in part, so find out how many times it
@@ -380,7 +411,7 @@ def checkDiscountCombos(
                 (
                     item,
                     float(matched_cart_items.count(item)) /
-                    total_item_points.get(item.get('event_id'), 0)
+                    total_item_points.get(item.get('item_id'), 0)
                 )
                 if item not in additionalItems else (item, 1)
                 for item in matchedList

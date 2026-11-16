@@ -911,12 +911,12 @@ class MixedCartDiscountAllocationTest(BaseDiscountsTest):
         )
 
 
-class DiscountAllocationTest(BaseDiscountsTest):
+class DiscountAllocationBase(BaseDiscountsTest):
     '''
-    A discount must reduce the price of the invoice items that earned it, and
-    no others (unless it is a universally-applied percentage discount). Each
-    test puts a $10 series that earns no discount (A) in the cart along with
-    one or more registrations for a series that does (B).
+    Set up and helper methods for tests of how discounts are allocated among
+    the items on an invoice. This class has no tests of its own. It provides
+    a $10 pricing tier that earns no discount (A), and a $20 pricing tier (B)
+    that is the only one in its point group.
     '''
 
     def setUp(self):
@@ -1023,6 +1023,15 @@ class DiscountAllocationTest(BaseDiscountsTest):
                 )
             )
 
+
+class DiscountAllocationTest(DiscountAllocationBase):
+    '''
+    A discount must reduce the price of the invoice items that earned it, and
+    no others (unless it is a universally-applied percentage discount). Each
+    test puts a $10 series that earns no discount (A) in the cart along with
+    one or more registrations for a series that does (B).
+    '''
+
     def test_two_registrations_for_same_event(self):
         '''
         Two people register for the discounted series on one invoice. Both of
@@ -1041,6 +1050,71 @@ class DiscountAllocationTest(BaseDiscountsTest):
         self.assertItemTotals(response, s_a, [10])
         self.assertItemTotals(response, s_b, [10, 10])
         self.assertAlmostEqual(response.context_data['invoice'].total, 30, places=2)
+
+    def _two_registrations_one_discount(self, names):
+        '''
+        A discount that is earned by one registration applies once to an
+        invoice, and it applies in full to the first registration.
+        '''
+        self.gp['registration__multiRegSeriesRule'] = 'Y'
+        s_b = self.create_series(pricingTier=self.tier_b)
+        self.make_combo(percentDiscount=50)
+
+        response = self.checkout(s_b, s_b, names=names)
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 10, places=2)
+        self.assertItemTotals(response, s_b, [10, 20])
+        self.assertAlmostEqual(response.context_data['invoice'].total, 30, places=2)
+
+    def test_discount_applies_once_for_two_different_people(self):
+        self._two_registrations_one_discount(
+            [('First', 'Person'), ('Second', 'Person')]
+        )
+
+    def test_discount_applies_once_for_same_person_twice(self):
+        self._two_registrations_one_discount([('First', 'Person')])
+
+    def test_discount_goes_to_first_customer_when_customers_alternate(self):
+        '''
+        Two people each register for two series, and their registrations
+        alternate. A discount that is earned by two registrations goes to
+        both of the first person's registrations, and it is not split between
+        the two people.
+        '''
+        self.gp['registration__multiRegSeriesRule'] = 'Y'
+        s_one = self.create_series(pricingTier=self.tier_b)
+        s_two = self.create_series(pricingTier=self.tier_b)
+        combo = self.make_combo(percentDiscount=50)
+        combo.discountcombocomponent_set.update(quantity=10)
+
+        response = self.checkout(
+            s_one, s_one, s_two, s_two,
+            names=[('First', 'Person'), ('Second', 'Person')],
+        )
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 20, places=2)
+        self.assertItemTotals(response, s_one, [10, 20])
+        self.assertItemTotals(response, s_two, [10, 20])
+
+    def test_discount_limited_to_level(self):
+        '''
+        A discount whose component is limited to a class level only applies
+        to a series at that level.
+        '''
+        s_one = self.create_series(
+            pricingTier=self.tier_b, classDescription=self.levelOneClassDescription
+        )
+        s_two = self.create_series(
+            pricingTier=self.tier_b, classDescription=self.levelTwoClassDescription
+        )
+        combo = self.make_combo(percentDiscount=50)
+        combo.discountcombocomponent_set.update(level=self.levelTwo)
+
+        response = self.checkout(s_one, s_two)
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 10, places=2)
+        self.assertItemTotals(response, s_one, [20])
+        self.assertItemTotals(response, s_two, [10])
 
     def test_dollar_discount_is_targeted(self):
         s_a = self.create_series(pricingTier=self.tier_a)
@@ -1103,7 +1177,7 @@ class DiscountAllocationTest(BaseDiscountsTest):
         self.assertAlmostEqual(response.context_data['invoice'].total, 20, places=2)
 
 
-class DiscountAllocationTaxTest(TaxTestMixin, DiscountAllocationTest):
+class DiscountAllocationTaxTest(TaxTestMixin, DiscountAllocationBase):
     '''
     Tax is calculated for each invoice item at its own rate, so the tax on an
     invoice is only correct if a discount is taken off the correct items.
@@ -1155,18 +1229,11 @@ class DiscountAllocationTaxTest(TaxTestMixin, DiscountAllocationTest):
         invoice = self.assertTaxes(response, 10 * 0.1 / 1.1, 10 * 0.03 / 1.03)
         self.assertAlmostEqual(invoice.outstandingBalance, 20, places=4)
 
-    # These are covered by the parent class, and need not be repeated with tax.
-    test_two_registrations_for_same_event = None
-    test_dollar_discount_is_targeted = None
-    test_flat_price_discount_is_targeted = None
-    test_universal_percent_discount_applies_to_all_items = None
-    test_summary_page_reload_gives_same_totals = None
-
 
 @skipUnless(
     apps.is_installed('danceschool.vouchers'), 'The vouchers app is not installed.'
 )
-class DiscountWithVoucherTest(TaxTestMixin, DiscountAllocationTest):
+class DiscountWithVoucherTest(TaxTestMixin, DiscountAllocationBase):
     '''
     A voucher is applied to whatever remains after discounts. Here, series A
     ($10) earns no discount and series B ($20) is 100% off, so only series A
@@ -1293,15 +1360,8 @@ class DiscountWithVoucherTest(TaxTestMixin, DiscountAllocationTest):
         check(self.checkout(self.s_a, self.s_b, discount_code=voucher.voucherId))
         check(self.client.get(reverse('showRegSummary')))
 
-    # These are covered by the parent class, and need not be repeated here.
-    test_two_registrations_for_same_event = None
-    test_dollar_discount_is_targeted = None
-    test_flat_price_discount_is_targeted = None
-    test_universal_percent_discount_applies_to_all_items = None
-    test_summary_page_reload_gives_same_totals = None
 
-
-class DiscountAddOnTest(DiscountAllocationTest):
+class DiscountAddOnTest(DiscountAllocationBase):
     '''
     An event with add-ons (e.g. an all-in pass) is charged at its own price,
     which is allocated among the pass and the events it includes. Discounts
@@ -1349,6 +1409,69 @@ class DiscountAddOnTest(DiscountAllocationTest):
         self.assertItemTotals(response, self.s_two, [10])
         self.assertAlmostEqual(response.context_data['invoice'].total, 50, places=2)
 
+    def _pass_discount(self, expected_discount, **kwargs):
+        '''
+        A pass and the events that it includes are a single item for discount
+        purposes. The discount shown in the cart before checkout is the
+        discount on the invoice, and it is shared among the pass and the
+        included events in proportion to their prices ($60, $20 and $20).
+        '''
+        self.make_combo(group=self.group_pass, **kwargs)
+
+        response = self.client.post(
+            reverse('cart'), content_type='application/json',
+            data=json.dumps({'items': [{
+                'item_type': 'Event', 'item_id': self.s_pass.id,
+                'sku': f'EVENT_{self.s_pass.id}_GENERAL', 'quantity': 1,
+            }]}),
+        )
+        preview = response.json().get('discount_preview') or {}
+        self.assertAlmostEqual(preview.get('total_discount'), expected_discount, places=2)
+
+        response = self.checkout(self.s_pass)
+        remaining = (100 - expected_discount) / 100
+
+        self.assertAlmostEqual(
+            response.context_data['total_discount_amount'], expected_discount, places=2
+        )
+        self.assertItemTotals(response, self.s_pass, [60 * remaining])
+        self.assertItemTotals(response, self.s_one, [20 * remaining])
+        self.assertItemTotals(response, self.s_two, [20 * remaining])
+        self.assertAlmostEqual(
+            response.context_data['invoice'].total, 100 - expected_discount, places=2
+        )
+
+    def test_pass_with_targeted_percent_discount(self):
+        self._pass_discount(50, percentDiscount=50)
+
+    def test_pass_with_flat_price_discount(self):
+        self._pass_discount(
+            20, discountType=DiscountCombo.DiscountType.flatPrice,
+            onlinePrice=80, doorPrice=80,
+        )
+
+    def test_pass_with_dollar_discount(self):
+        self._pass_discount(
+            30, discountType=DiscountCombo.DiscountType.dollarDiscount,
+            dollarDiscount=30,
+        )
+
+    def test_included_events_do_not_earn_discounts(self):
+        '''
+        The events included in a pass are part of the pass, so they do not
+        count separately toward a discount for registering for those events.
+        '''
+        group = PointGroup.objects.create(name='Included events only')
+        PricingTierGroup.objects.create(
+            group=group, pricingTier=self.tier_included, points=5,
+        )
+        self.make_combo(group=group, percentDiscount=50)
+
+        response = self.checkout(self.s_pass)
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 0, places=2)
+        self.assertAlmostEqual(response.context_data['invoice'].total, 100, places=2)
+
     def test_pass_with_full_discount_is_not_negative(self):
         self.make_combo(
             group=self.group_pass, percentDiscount=100, percentUniversallyApplied=True
@@ -1360,10 +1483,3 @@ class DiscountAddOnTest(DiscountAllocationTest):
         self.assertItemTotals(response, self.s_one, [0])
         self.assertItemTotals(response, self.s_two, [0])
         self.assertAlmostEqual(response.context_data['invoice'].total, 0, places=2)
-
-    # These are covered by the parent class, and need not be repeated here.
-    test_two_registrations_for_same_event = None
-    test_dollar_discount_is_targeted = None
-    test_flat_price_discount_is_targeted = None
-    test_universal_percent_discount_applies_to_all_items = None
-    test_summary_page_reload_gives_same_totals = None
