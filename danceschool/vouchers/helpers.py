@@ -11,15 +11,12 @@ from .models import (
 
 
 def generateUniqueVoucherId(prefix):
-    uid = uuid.uuid4()
-    result = prefix + uid.hex[0:8].upper()
-    objs = Voucher.objects.filter(voucherId=result)
-
-    while len(objs) > 0:
-        result = prefix + uid.hex[0:8]
-        objs = Voucher.objects.filter(voucherId=result)
-
-    return result
+    # Generate a new random ID each time, until one is found that is not
+    # already the ID of a voucher.
+    while True:
+        result = prefix + uuid.uuid4().hex[0:8].upper()
+        if not Voucher.objects.filter(voucherId=result).exists():
+            return result
 
 
 def createReferreeVoucher(name, amountPerUse):
@@ -78,7 +75,7 @@ def ensureReferralVouchersExist(customer):
     referrerDiscount = getConstant('referrals__referrerDiscount')
 
     if vrd:
-        vrd.amount = referrerDiscount
+        vrd.referrerBonus = referrerDiscount
         vrd.save()
 
         vrd.referreeVoucher.maxAmountPerUse = referreeDiscount
@@ -93,7 +90,7 @@ def ensureReferralVouchersExist(customer):
         referrerVoucher = createReferrerVoucher(customer)
 
         # create the thing that ties them together
-        vrd = VoucherReferralDiscount.objects.get_or_create(
+        vrd = VoucherReferralDiscount.objects.create(
             referrerVoucher=referrerVoucher,
             referreeVoucher=referreeVoucher,
             referrerBonus=referrerDiscount
