@@ -1,3 +1,6 @@
+import json
+
+from django.urls import reverse
 from django.utils import timezone
 
 from datetime import timedelta
@@ -83,6 +86,33 @@ class DiscountMatchingTest(DiscountAllocationBase):
         self.assertAlmostEqual(response.context_data['total_discount_amount'], 25, places=2)
         self.assertItemTotals(response, s_b, [10])
         self.assertItemTotals(response, s_c, [15])
+
+    def test_drop_in_does_not_earn_discount_in_cart_preview(self):
+        '''
+        Drop-ins are not eligible for discounts, including in the preview of
+        discounts that is shown in the cart before checkout.
+        '''
+        s_b = self.create_series(pricingTier=self.tier_b)
+        s_b.allowDropins = True
+        s_b.save()
+        self.make_combo(percentDiscount=50)
+        self.client.force_login(self.superuser)
+
+        def preview(**kwargs):
+            item = {
+                'item_type': 'Event', 'item_id': s_b.id,
+                'sku': f'EVENT_{s_b.id}_GENERAL', 'quantity': 1,
+            }
+            item.update(kwargs)
+            response = self.client.post(
+                reverse('cart'), content_type='application/json',
+                data=json.dumps({'items': [item], 'payAtDoor': True}),
+            )
+            self.assertEqual(response.status_code, 200)
+            return response.json().get('discount_preview')
+
+        self.assertAlmostEqual(preview()['total_discount'], 10, places=2)
+        self.assertIsNone(preview(dropIn=True))
 
     # -- Weekday --------------------------------------------------------------
 

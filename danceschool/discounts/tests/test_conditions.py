@@ -196,3 +196,38 @@ class DiscountsConditionsTest(BaseDiscountsTest):
         self.assertEqual(response.context_data.get('total_discount_amount'), 0)
         self.assertFalse(response.context_data.get('addonItems'))
         self.assertFalse(response.context_data.get('discount_codes'))
+
+    def test_voucher_code_for_discount_that_does_not_apply(self):
+        '''
+        Entering the voucher code of a discount that does not apply to the
+        items being registered for is an error on the voucher code field.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        # The discount needs more points than one registration provides.
+        self.create_discount(voucherId='ABC123', quantity=10)
+        s = self.create_series(pricingTier=self.defaultPricing)
+
+        response = self.register_to_check_discount(s, voucherId='ABC123')
+
+        self.assertFalse(response.redirect_chain)
+        self.assertTrue(response.context_data['form'].errors.get('gift'))
+
+    def test_flat_price_at_the_door(self):
+        '''
+        A flat price discount has a separate price for registration at the
+        door, which is used for registrations at the door.
+        '''
+        updateConstant('general__discountsEnabled', True)
+        self.create_discount(onlinePrice=30, doorPrice=45)
+        s = self.create_series(pricingTier=self.defaultPricing)
+
+        response = self.register_to_check_discount(s, payAtDoor=True)
+        invoice = response.context_data.get('invoice')
+
+        self.assertEqual(response.redirect_chain, [(reverse('showRegSummary'), 302)])
+        self.assertEqual(invoice.grossTotal, self.defaultPricing.doorPrice)
+        self.assertEqual(invoice.total, 45)
+        self.assertEqual(
+            response.context_data.get('total_discount_amount'),
+            self.defaultPricing.doorPrice - 45
+        )

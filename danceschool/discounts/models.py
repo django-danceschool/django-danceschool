@@ -327,7 +327,9 @@ class DiscountCombo(models.Model):
         elif self.discountType == self.DiscountType.dollarDiscount:
             # Discount the set of applicable items by a specific number of dollars (currency units)
             # Dollar discounts are allocated among the items that were needed to apply the discount.
-            this_price = initial_net_price - self.dollarDiscount
+            # The price cannot be less than zero, and it is limited here (before
+            # it is allocated) so that no item is allocated a negative price.
+            this_price = max(initial_net_price - self.dollarDiscount, 0)
             this_allocated_prices = self.allocateToMatched(
                 allocatedPrices, matchedFractions, this_price
             )

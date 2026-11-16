@@ -149,7 +149,7 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
                 'item_id': 'cart_%s' % idx,
                 'event_id': x.get('item_id'),
                 'quantity': x.get('quantity'),
-                'dropIn': x.get('drop_in'),
+                'dropIn': x.get('dropIn', False),
                 'customer_id': None
             } for idx, x in enumerate(cart_items)
         ]
@@ -164,7 +164,7 @@ def prepareCartObjects(reg=None, invoice=None, cart_items=[], payAtDoor=False):
             item['event'] = mapped
             item['tier'] = mapped.tier
             if item.get('dropIn', False):
-                item['base_price'] = mapped.dropInPrice
+                item['base_price'] = mapped.dropinPrice
             elif payAtDoor:
                 item['base_price'] = mapped.doorPrice
             else:
