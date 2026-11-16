@@ -643,7 +643,10 @@ class RegistrationAdjustmentsMixin(object):
                 'voucherId': voucher_response[0].get('id', None),
                 'voucherName': voucher_response[0].get('name', None),
                 'voucherAmount': subtotal - total,
-                'beforeTax': voucher_response[0].get('beforeTax')
+                'beforeTax': voucher_response[0].get('beforeTax'),
+                # The voucher depends on customer information that has not
+                # been entered yet, so the amount may still change.
+                'customerPending': voucher_response[0].get('customer_pending', False),
             }
         else:
             return {}

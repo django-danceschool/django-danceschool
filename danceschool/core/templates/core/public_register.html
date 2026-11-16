@@ -151,6 +151,7 @@
         discountTotalString: "{% trans 'Total Discounts' %}",
         outstandingBalanceString: "{% trans 'Balance' %}",
         voucherString: "{% trans 'Voucher' %}",
+        voucherPendingString: "{% filter escapejs %}{% trans "This voucher is only for some customers, so this amount is not final until everyone's information has been entered." %}{% endfilter %}",
         dropInString: "{% trans 'Drop-in' %}",
         roleString: "{% trans 'Role' %}",
         cartUrl: "{% url 'cart' %}",

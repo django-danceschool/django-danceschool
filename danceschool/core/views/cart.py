@@ -473,6 +473,7 @@ class CartView(RegistrationAdjustmentsMixin, APIView):
                     else min(result.get('available', 0), result['eligible_total'])
                 ),
                 'before_tax': result.get('beforeTax', True),
+                'customer_pending': result.get('customer_pending', False),
             }
         elif result.get('status') == 'invalid':
             errors = result.get('errors', [])
@@ -775,6 +776,7 @@ class CartSummaryView(RegistrationAdjustmentsMixin, TemplateView):
                     else min(result.get('available', 0), result['eligible_total'])
                 ),
                 'before_tax': result.get('beforeTax', True),
+                'customer_pending': result.get('customer_pending', False),
             }
         elif result.get('status') == 'invalid':
             errors = result.get('errors', [])

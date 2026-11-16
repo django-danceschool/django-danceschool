@@ -267,6 +267,31 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<td>-' + regParams.currencySymbol + fmt(appliedAmount) +
                         '<button type="button" class="close remove-voucher" aria-label="Remove">' +
                         '<span aria-hidden="true">&times;</span></button></td>';
+
+                    // A voucher that depends on customer information (e.g. for
+                    // first-time customers) is not final until that has been
+                    // entered, so a note is shown next to its amount.
+                    if (voucherPreview.customer_pending) {
+                        const pendingText = regParams.voucherPendingString ||
+                            'This amount is not final until customer information has been entered.';
+                        const note = document.createElement('span');
+                        note.className = 'voucher-pending-note ms-1';
+                        note.tabIndex = 0;
+                        note.setAttribute('role', 'note');
+                        note.setAttribute('title', pendingText);
+                        const icon = document.createElement('i');
+                        icon.className = 'fa fa-info-circle';
+                        icon.setAttribute('aria-hidden', 'true');
+                        const hidden = document.createElement('span');
+                        hidden.className = 'visually-hidden';
+                        hidden.textContent = pendingText;
+                        note.appendChild(icon);
+                        note.appendChild(hidden);
+                        tr.children[1].insertBefore(note, tr.children[1].querySelector('.remove-voucher'));
+                        if (window.bootstrap && bootstrap.Tooltip) {
+                            bootstrap.Tooltip.getOrCreateInstance(note);
+                        }
+                    }
                     targetList.appendChild(tr);
                 }
                 if (voucherPreview.before_tax) {

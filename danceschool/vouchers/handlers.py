@@ -244,6 +244,27 @@ def checkVoucherCode(sender, **kwargs):
     # when there is no limit other than the price of the cart.
     result['eligible_total'] = None
     result['eligible_total_posttax'] = None
+
+    # A voucher that depends on who is paying (a specific customer or customer
+    # group), or on who each registration is for (first-time or previous
+    # customers), is pending until that is known, so that the amount shown
+    # for it may still change.
+    attendees_known = False
+    if items is not None and validate_customer:
+        eventRegistrations = []
+        for x in items:
+            if x.parent_item_id:
+                continue
+            try:
+                eventRegistrations.append(x.eventRegistration)
+            except ObjectDoesNotExist:
+                continue
+        attendees_known = all([er.customer_id for er in eventRegistrations])
+    result['customer_pending'] = bool(
+        (not obj.isValidForAnyCustomer and not validate_customer) or
+        (obj.isAttendeeRestricted and not attendees_known)
+    )
+
     if result.get('status') != 'valid':
         return result
 
