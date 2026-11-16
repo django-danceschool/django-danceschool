@@ -963,6 +963,45 @@ class MerchVoucherTest(MerchAdjustmentsBase):
             places=4
         )
 
+    def test_first_time_voucher_does_not_cover_merchandise(self):
+        '''
+        A voucher for first-time customers applies to the registrations of
+        first-time customers, and so not to the jacket, unless it can be used
+        for anything on the invoice.
+        '''
+        from danceschool.vouchers.models import Voucher
+        voucher = Voucher.objects.create(
+            voucherId='NEWBIE', name='New Customer Voucher', originalAmount=50,
+            forFirstTimeCustomersOnly=True,
+        )
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 20, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+
+        voucher.appliesToEntireInvoice = True
+        voucher.save()
+        self.client.get(reverse('showRegSummary'))
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 50, places=2)
+        self.assertAlmostEqual(invoice.total, 10, places=2)
+
+    def test_first_time_voucher_not_usable_for_merchandise_only(self):
+        from danceschool.vouchers.models import Voucher
+        voucher = Voucher.objects.create(
+            voucherId='NEWBIE', name='New Customer Voucher', originalAmount=50,
+            forFirstTimeCustomersOnly=True,
+        )
+
+        self.checkout(self.merch_cart_item(), code=voucher.voucherId)
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 0, places=2)
+        self.assertAlmostEqual(invoice.total, 40, places=2)
+
     def test_voucher_for_specific_class_not_usable_for_merchandise_only(self):
         '''
         A voucher that can only be used for a specific class cannot be used

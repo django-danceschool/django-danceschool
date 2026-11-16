@@ -123,12 +123,26 @@ def checkVoucherField(sender, **kwargs):
             last_name=last,
             email=email).first()
 
+        # If the invoice exists, then the voucher must be usable for at least
+        # one of its items.  If the name of the person that each registration
+        # is for is asked for next, then those people are checked once their
+        # names are known (in applyVoucherCodeTemporarily()).  Otherwise, the
+        # person entering this form is the person that every registration is
+        # for, even if a different person was recorded on an earlier attempt.
+        if not invoice and registration:
+            invoice = registration.invoice
+        invoiceItems = invoice.invoiceitem_set.all() if invoice else None
+        multiReg = getattr(kwargs.get('instance', None), '_multireg', False)
+
         # This will raise any other errors that may be relevant
         try:
             obj.validate(
                 payAtDoor=getattr(registration, 'payAtDoor', False),
                 customer=customer,
-                events=events
+                events=events,
+                invoiceItems=invoiceItems,
+                attendee=customer,
+                checkAttendees=not multiReg,
             )
         except ValidationError as e:
             # Ensures that the error is applied to the correct field
@@ -200,30 +214,43 @@ def checkVoucherCode(sender, **kwargs):
     # If there is no cart yet (e.g. a voucher code passed in a link to the
     # registration page), then the events cannot be checked yet.  They are
     # checked once there is a cart or a registration.
+    if not invoice and registration:
+        invoice = registration.invoice
+
+    # The invoice items, with their prices after any discounts if they were
+    # passed.  The people that the registrations are for are only checked if
+    # the customer is to be checked.
+    items = None
+    if invoice:
+        items = kwargs.get('items')
+        if items is None:
+            items = invoice.invoiceitem_set.all()
+        items = list(items)
+
     result = obj.validate(
         customer=customer, events=events,
         payAtDoor=pay_at_door,
         raise_errors=False, return_amount=True,
         validate_customer=validate_customer,
         validate_events=bool(registration or cart_items),
+        invoiceItems=items, checkAttendees=validate_customer,
     )
 
-    # A voucher that is restricted to specific classes or events can only be
-    # used for the items that qualify for it, so the amount that can be used
-    # is limited to the price of those items: before tax (eligible_total), and
-    # after tax (eligible_total_posttax), for vouchers applied after tax.
-    # Both are None when there is no limit other than the price of the cart.
+    # A voucher that is restricted to specific classes or events, or to
+    # first-time or previous customers, can only be used for the items that
+    # qualify for it, so the amount that can be used is limited to the price
+    # of those items: before tax (eligible_total), and after tax
+    # (eligible_total_posttax), for vouchers applied after tax.  Both are None
+    # when there is no limit other than the price of the cart.
     result['eligible_total'] = None
     result['eligible_total_posttax'] = None
-    if result.get('status') != 'valid' or not obj.isEventRestricted:
+    if result.get('status') != 'valid':
         return result
 
-    if invoice:
-        items = kwargs.get('items')
-        if items is None:
-            items = invoice.invoiceitem_set.all()
-        items = list(items)
-        eligible = obj.eligibleItemIds(items)
+    if items is not None and (
+        obj.isEventRestricted or (obj.isAttendeeRestricted and validate_customer)
+    ):
+        eligible = obj.eligibleItemIds(items, checkAttendees=validate_customer)
         if len(eligible) < len(items):
             buyer_pays = invoice.buyerPaysSalesTax
             eligible_items = [x for x in items if str(x.id) in eligible]
@@ -235,9 +262,12 @@ def checkVoucherCode(sender, **kwargs):
                 (currentValue(x, 'taxes') if buyer_pays else 0)
                 for x in eligible_items
             ])
-    elif cart_items and not obj.appliesToEntireInvoice:
+    elif items is None and cart_items and obj.isEventRestricted and (
+        not obj.appliesToEntireInvoice
+    ):
         # Before checkout there are no invoice items, so the prices of the
-        # events in the cart are used.
+        # events in the cart are used.  (Who each registration is for is not
+        # known yet, so that is not checked here.)
         events_by_id = {x.id: x for x in events}
         eligible_total = 0
         for cart_item in cart_items:
@@ -296,10 +326,14 @@ def applyVoucherCodeTemporarily(sender, **kwargs):
         email=invoice.email
     ).first()
 
+    # By this point, the person that each registration is for is known, and
+    # the conditions on first-time and previous customers are checked for
+    # each of them.
     result = voucher.validate(
         customer=customer, events=events,
         payAtDoor=getattr(registration, 'payAtDoor', False),
         raise_errors=False,
+        invoiceItems=invoice.invoiceitem_set.all(),
     )
     if result.get('status') != 'valid':
         logger.debug(

@@ -15,6 +15,11 @@ from danceschool.core.models import (
 )
 
 
+# Used by Voucher methods to tell an argument that was not passed apart from
+# one that was passed as None.
+NOT_GIVEN = object()
+
+
 class VoucherCategory(models.Model):
     name = models.CharField(_('Name'), max_length=80, unique=True)
     description = models.TextField(_('Description'), null=True, blank=True)
@@ -241,39 +246,84 @@ class Voucher(models.Model):
             return False
         return True
 
-    def eligibleItemIds(self, invoiceItems):
+    @property
+    def isAttendeeRestricted(self):
+        '''
+        Is this voucher only for first-time customers, or only for previous
+        customers?  These conditions apply to the person that each registration
+        is for, while restrictions to specific customers or customer groups
+        apply to the person who is paying.
+        '''
+        return self.forFirstTimeCustomersOnly or self.forPreviousCustomersOnly
+
+    def customerQualifies(self, customer):
+        '''
+        Does the passed customer meet this voucher's conditions on first-time
+        or previous customers?  No customer (e.g. a person who has never
+        registered before) is a first-time customer.
+        '''
+        registered = customer.numEventRegistrations if customer else 0
+        if self.forFirstTimeCustomersOnly and registered > 0:
+            return False
+        if self.forPreviousCustomersOnly and registered == 0:
+            return False
+        return True
+
+    def eligibleItemIds(self, invoiceItems, attendee=NOT_GIVEN, checkAttendees=True):
         '''
         Return the set of the ids (as strings) of the passed invoice items that
-        this voucher can be used for.  A voucher with no restrictions on
-        classes or events can be used for every item.  Otherwise, it can be
-        used for registrations for the events that qualify, including the
-        events that are included with a qualifying event (e.g. as part of a
-        pass), or for every item if it can be used for the entire invoice and
-        at least one registration qualifies.
+        this voucher can be used for.
+
+        A voucher with no restrictions on classes, events, or first-time or
+        previous customers can be used for every item.  Otherwise, it can be
+        used for registrations for the events that qualify, by people who
+        qualify.  Events that are included with another event (e.g. as part of
+        a pass) follow that event.  A voucher that can be used for the entire
+        invoice can be used for every item if at least one registration
+        qualifies.
+
+        The person that each registration is for is the customer recorded for
+        it, unless an attendee is passed, in which case that customer (or None,
+        for someone who has never registered) is used for every registration.
+        If checkAttendees is False, then the people are not checked at all
+        (e.g. before it is known who each registration is for).
         '''
         items = list(invoiceItems)
-        if not self.isEventRestricted:
+        checkAttendees = checkAttendees and self.isAttendeeRestricted
+        if not self.isEventRestricted and not self.isAttendeeRestricted:
             return {str(x.id) for x in items}
 
-        def getEvent(item):
-            try:
-                return item.eventRegistration.event
-            except ObjectDoesNotExist:
-                return None
-
-        # Cache the result for each event, since a pass and the events that
-        # it includes are checked together.
-        results = {}
+        # Cache the result for each event and customer, since a pass and the
+        # events that it includes are checked together.
+        event_results = {}
+        customer_results = {}
 
         def itemQualifies(item):
             if item.parent_item_id:
                 return itemQualifies(item.parent_item)
-            event = getEvent(item)
-            if event is None:
+            try:
+                eventRegistration = item.eventRegistration
+            except ObjectDoesNotExist:
                 return False
-            if event.id not in results:
-                results[event.id] = self.eventQualifies(event)
-            return results[event.id]
+
+            if self.isEventRestricted:
+                event = eventRegistration.event
+                if event.id not in event_results:
+                    event_results[event.id] = self.eventQualifies(event)
+                if not event_results[event.id]:
+                    return False
+
+            if checkAttendees:
+                customer = (
+                    eventRegistration.customer if attendee is NOT_GIVEN
+                    else attendee
+                )
+                key = getattr(customer, 'id', None)
+                if key not in customer_results:
+                    customer_results[key] = self.customerQualifies(customer)
+                if not customer_results[key]:
+                    return False
+            return True
 
         qualifying = {str(x.id) for x in items if itemQualifies(x)}
         if qualifying and self.appliesToEntireInvoice:
@@ -282,7 +332,8 @@ class Voucher(models.Model):
 
     def validate(
         self, customer=None, events=None, payAtDoor=False, raise_errors=True,
-        return_amount=False, validate_customer=True, validate_events=True
+        return_amount=False, validate_customer=True, validate_events=True,
+        invoiceItems=None, attendee=NOT_GIVEN, checkAttendees=True
     ):
         '''
         Check whether this voucher is valid given optional parameters for the
@@ -296,6 +347,14 @@ class Voucher(models.Model):
         Additionally, the method can be specified to skip validation of customer
         or event contents, which may be useful when a customer has not yet been
         specified or events have not yet been selected.
+
+        The customer is the person who is paying.  If the invoice items are
+        passed, then the voucher must be usable for at least one of them (see
+        eligibleItemIds(), which also takes the attendee and checkAttendees
+        arguments), and the conditions on first-time and previous customers
+        are checked for the person that each registration is for, not for the
+        person who is paying.  Without invoice items (e.g. before checkout),
+        the events and the person who is paying are checked.
         '''
 
         errors = []
@@ -359,6 +418,21 @@ class Voucher(models.Model):
             raise ValidationError(errors)
 
         event_restricted = self.isEventRestricted
+        if invoiceItems is not None:
+            invoiceItems = list(invoiceItems)
+
+        first_time_error = ValidationError(
+            _('This voucher can only be used by first time customers.'),
+            code='not_first_time_customer'
+        )
+        previous_customer_error = ValidationError(
+            _(
+                'This voucher can only be used by existing customers.' +
+                '  If you are an existing customer, be sure to register' +
+                ' with the same email address that you have used previously.'
+            ),
+            code='not_existing_customer',
+        )
 
         # Only validate events contents if specified (default is True)
         if validate_events:
@@ -367,12 +441,33 @@ class Voucher(models.Model):
             # made (so not, for example, for merchandise alone).  It is then
             # only used for the items that qualify for it, unless it can be
             # used for the entire invoice (see eligibleItemIds()).
-            if event_restricted and not any(self.eventQualifies(x) for x in events):
+            if invoiceItems is not None:
+                events_qualify = bool(
+                    self.eligibleItemIds(invoiceItems, checkAttendees=False)
+                )
+            else:
+                events_qualify = (
+                    not event_restricted or
+                    any(self.eventQualifies(x) for x in events)
+                )
+
+            if not events_qualify:
                 errors.append(
                     ValidationError(
                         _('This voucher can be only used for specific classes or events.'),
                         code='no_eligible_events'
                     )
+                )
+            elif (
+                invoiceItems is not None and checkAttendees and
+                self.isAttendeeRestricted and
+                not self.eligibleItemIds(invoiceItems, attendee=attendee)
+            ):
+                # No registration is for a person who meets the conditions on
+                # first-time or previous customers.
+                errors.append(
+                    first_time_error if self.forFirstTimeCustomersOnly
+                    else previous_customer_error
                 )
         elif event_restricted:
             warnings.append({
@@ -413,24 +508,15 @@ class Voucher(models.Model):
                         )
                     )
 
-            if self.forFirstTimeCustomersOnly and customer and customer.numEventRegistrations > 0:
+            # Without invoice items, the conditions on first-time and previous
+            # customers are checked for the person who is paying.  Otherwise,
+            # they were checked above for each registration.
+            if invoiceItems is None and not self.customerQualifies(customer):
                 errors.append(
-                    ValidationError(
-                        _('This voucher can only be used by first time customers.'),
-                        code='not_first_time_customer'
-                    )
-                )
-
-            if self.forPreviousCustomersOnly and (not customer or customer.numEventRegistrations == 0):
-                errors.append(
-                    ValidationError(
-                        _(
-                            'This voucher can only be used by existing customers.' +
-                            '  If you are an existing customer, be sure to register' +
-                            ' with the same email address that you have used previously.'
-                        ),
-                        code='not_existing_customer',
-                    )
+                    first_time_error if (
+                        self.forFirstTimeCustomersOnly and
+                        customer and customer.numEventRegistrations > 0
+                    ) else previous_customer_error
                 )
         elif not self.isValidForAnyCustomer:
             warnings.append({

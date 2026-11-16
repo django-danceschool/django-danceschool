@@ -1,7 +1,9 @@
+import json
 from unittest import mock
 import uuid
 
 from django.contrib.auth.models import User
+from django.urls import reverse
 
 from dynamic_preferences.registries import global_preferences_registry
 
@@ -149,21 +151,59 @@ class ReferralProgramTest(BaseVouchersTest):
         self.assertEqual(referral.referrerVoucher.amountLeft, 0)
 
     def test_referee_voucher_is_for_new_customers_only(self):
+        '''
+        The referee voucher cannot be used by an existing customer. When an
+        existing customer registers themselves and a new customer on the same
+        invoice, it applies to the new customer's registration only.
+        '''
         referral = ensureReferralVouchersExist(self.referrer)
         code = referral.referreeVoucher.voucherId
+        existing = ('Existing', 'Customer', 'existing@customer.com')
+        new = ('New', 'Customer', 'new@customer.com')
 
         # Register without the code, to become an existing customer.
-        self.checkout(
-            self.series, name=('Existing', 'Customer'), email='existing@customer.com',
-        )
+        self.checkout(self.series, name=existing[:2], email=existing[2])
         self.pay()
 
         self.new_session()
         response = self.checkout(
-            self.other_series, code=code,
-            name=('Existing', 'Customer'), email='existing@customer.com',
+            self.other_series, code=code, name=existing[:2], email=existing[2],
         )
         self.assertVoucherRefused(response)
+
+        # The existing customer registers for another series, and pays for
+        # the new customer's registration for series B (other_series).
+        self.new_session()
+        s_third = self.create_series(classDescription=self.levelOneClassDescription)
+        self.client.post(
+            reverse('cart'), content_type='application/json',
+            data=json.dumps({
+                'items': [
+                    {
+                        'item_type': 'Event', 'item_id': e.id,
+                        'sku': 'EVENT_%s_GENERAL' % e.id, 'quantity': 1,
+                    } for e in [self.other_series, s_third]
+                ],
+                'checkout': True, 'discount_code': code,
+            }),
+        )
+        self.client.post(reverse('getStudentInfo'), {
+            'firstName': existing[0], 'lastName': existing[1], 'email': existing[2],
+            'agreeToPolicies': True,
+        })
+        reg = self.get_invoice().registration
+        names = {}
+        for er in reg.eventregistration_set.all():
+            person = new if er.event == self.other_series else existing
+            names['er_%s_firstName' % er.id] = person[0]
+            names['er_%s_lastName' % er.id] = person[1]
+            names['er_%s_email' % er.id] = person[2]
+        response = self.client.post(reverse('multiRegNameInfo'), names, follow=True)
+
+        self.assertVoucherApplied(response, referral.referreeVoucher, 5)
+        totals = {er.event_id: er.invoiceItem.total for er in reg.eventregistration_set.all()}
+        self.assertAlmostEqual(totals[self.other_series.id], self.price - 5, places=2)
+        self.assertAlmostEqual(totals[s_third.id], s_third.getBasePrice(), places=2)
 
     def test_unique_voucher_id_avoids_existing_ids(self):
         ''' A new voucher code is never the same as an existing one. '''
