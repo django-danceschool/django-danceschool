@@ -347,7 +347,8 @@ def checkDiscountCombos(
                         match_flag = False
 
                     # Check for matches in weekdays and levels:
-                    elif z.weekday and y['event'].weekday != z.weekday:
+                    # (Monday is weekday number 0, so check for None specifically.)
+                    elif z.weekday is not None and y['event'].weekday != z.weekday:
                         match_flag = False
                     elif (
                         z.level and hasattr(y['event'], 'series') and
@@ -365,12 +366,14 @@ def checkDiscountCombos(
                     # If the discount combo is only available for the first X registrants,
                     # then check that we don't already have X individuals registered.
                     # This includes temporary Registrations (so too many discounts don't get
-                    # handed out if registration is in progress).
+                    # handed out if registration is in progress).  The count does not
+                    # include the registration that is being checked, so the discount is
+                    # no longer available once X others have registered.
                     elif (
                         x.firstXRegistered is not None and
                         y['event'].getNumRegistered(
                             includeTemporaryRegs=True, dateTime=dateTime
-                        ) > x.firstXRegistered
+                        ) >= x.firstXRegistered
                     ):
                         match_flag = False
 

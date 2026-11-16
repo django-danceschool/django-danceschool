@@ -1,5 +1,6 @@
 import json
 
+from django.test import Client
 from django.urls import reverse
 
 from dynamic_preferences.registries import global_preferences_registry
@@ -177,6 +178,8 @@ class DiscountAllocationBase(BaseDiscountsTest):
         }
         if kwargs.get('discount_code'):
             cart_data['discount_code'] = kwargs['discount_code']
+        if kwargs.get('student'):
+            cart_data['student'] = True
 
         response = self.client.post(
             reverse('cart'), data=json.dumps(cart_data),
@@ -184,10 +187,13 @@ class DiscountAllocationBase(BaseDiscountsTest):
         )
         self.assertEqual(response.status_code, 302)
 
-        response = self.client.post(reverse('getStudentInfo'), {
+        info_post = {
             'firstName': names[0][0], 'lastName': names[0][1],
             'email': 'mixed@cart.com', 'agreeToPolicies': True,
-        }, follow=True)
+        }
+        if kwargs.get('student'):
+            info_post['student'] = True
+        response = self.client.post(reverse('getStudentInfo'), info_post, follow=True)
 
         # More than one registration means that the name of the person
         # associated with each registration is requested.
@@ -208,6 +214,22 @@ class DiscountAllocationBase(BaseDiscountsTest):
 
         self.assertEqual(response.redirect_chain[-1][0], reverse('showRegSummary'))
         return response
+
+    def pay(self, response):
+        '''
+        Pay the outstanding balance of the invoice on the summary page, which
+        finalizes the registration. Returns the invoice.
+        '''
+        invoice = Invoice.objects.get(id=response.context_data['invoice'].id)
+        invoice.processPayment(
+            amount=invoice.outstandingBalance, fees=0, paidOnline=False,
+            methodName='Cash',
+        )
+        return Invoice.objects.get(id=invoice.id)
+
+    def new_session(self):
+        ''' Start over with an empty session, as a new visitor to the site. '''
+        self.client = Client()
 
     def items_for(self, response, event):
         ''' The invoice items for all registrations to the passed event. '''
