@@ -1,4 +1,6 @@
-from django.http import HttpResponseRedirect, Http404, HttpResponseBadRequest
+from django.http import (
+    HttpResponseRedirect, Http404, HttpResponseBadRequest, JsonResponse
+)
 from django.template import Template, Context
 from django.views.generic import FormView, DetailView
 from django.contrib.auth.mixins import AccessMixin
@@ -22,6 +24,38 @@ logger = logging.getLogger(__name__)
 # For Viewing Invoices and sending notifications
 
 
+def canViewInvoice(request, invoice):
+    '''
+    Invoices can be viewed only if the validation string is provided, unless
+    the user is logged in and has view_all_invoice permissions.  Returns a
+    (user_has_permissions, user_has_validation_string) tuple; the invoice may
+    be viewed if either is True.
+    '''
+    return (
+        request.user.has_perm('core.view_all_invoices'),
+        request.GET.get('v', None) == invoice.validationString,
+    )
+
+
+class InvoiceBalanceView(AccessMixin, DetailView):
+    '''
+    Returns the current balance of an invoice as JSON, so that a payment page
+    can check that the balance it shows is still correct (e.g. before sending
+    it to a payment app that charges a fixed amount).  Anyone who can view the
+    invoice can see its balance.
+    '''
+    model = Invoice
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not any(canViewInvoice(request, self.object)):
+            return self.handle_no_permission()
+        return JsonResponse({
+            'balance': '%.2f' % self.object.outstandingBalance,
+            'status': self.object.status,
+        })
+
+
 class ViewInvoiceView(AccessMixin, FinancialContextMixin, SiteHistoryMixin, DetailView):
     template_name = 'core/invoice.html'
     model = Invoice
@@ -32,9 +66,8 @@ class ViewInvoiceView(AccessMixin, FinancialContextMixin, SiteHistoryMixin, Deta
         the user is logged in and has view_all_invoice permissions
         '''
         self.object = self.get_object()
-        user_has_permissions = request.user.has_perm('core.view_all_invoices')
-        user_has_validation_string = (
-            request.GET.get('v', None) == self.object.validationString
+        user_has_permissions, user_has_validation_string = canViewInvoice(
+            request, self.object
         )
 
         if user_has_validation_string or user_has_permissions:

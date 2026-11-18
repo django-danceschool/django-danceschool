@@ -4,7 +4,9 @@ from django.contrib import admin
 from .views.feed import EventFeed, json_event_feed
 from .views.actions import SubmissionRedirectView, RepeatEventsView
 from .views.event import IndividualClassView, IndividualPublicEventView, IndividualClassReferralView, IndividualPublicEventReferralView
-from .views.invoice import ViewInvoiceView, InvoiceNotificationView, InvoicePDFView
+from .views.invoice import (
+    ViewInvoiceView, InvoiceNotificationView, InvoicePDFView, InvoiceBalanceView
+)
 from .views.adjustments import RefundProcessingView, RefundConfirmationView, RegistrationTransferProcessingView
 from .views.email import EmailConfirmationView, SendEmailView, getEmailTemplate
 from .views.account import AccountProfileView, OtherAccountProfileView, UserAccountInfo
@@ -164,6 +166,10 @@ urlpatterns = [
     # These URLs are associated with viewing individual invoices and sending notifications
     path('invoice/view/pdf/<uuid:pk>/', InvoicePDFView.as_view(), name='viewInvoicePDF'),
     path('invoice/view/<uuid:pk>/', ViewInvoiceView.as_view(), name='viewInvoice'),
+    path(
+        'invoice/balance/<uuid:pk>/', InvoiceBalanceView.as_view(),
+        name='invoiceBalance'
+    ),
     path(
         'invoice/notify/<uuid:pk>/',
         InvoiceNotificationView.as_view(), name='sendInvoiceNotifications'
