@@ -508,6 +508,19 @@ class ProcessPointOfSalePaymentView(View):
             except (ValueError, ObjectDoesNotExist):
                 logger.warning('Invalid user passed, submissionUser will not be recorded.')
 
+        # The balance that was sent to the Square app to be charged (only for
+        # payments on an existing invoice, from pages loaded after this was
+        # added).
+        expectedBalance = None
+        if 'invoice' in metadata.keys() and metadata.get('expectedBalance') is not None:
+            try:
+                expectedBalance = float(metadata.get('expectedBalance'))
+            except (TypeError, ValueError):
+                logger.warning(
+                    'Invalid expected balance passed from Square app: %s' %
+                    metadata.get('expectedBalance')
+                )
+
         if 'invoice' in metadata.keys():
             try:
                 this_invoice = Invoice.objects.get(id=metadata.get('invoice'))
@@ -551,14 +564,22 @@ class ProcessPointOfSalePaymentView(View):
         if created:
             # We process the payment now, and enqueue the job to retrieve the
             # transaction again once fees have been calculated by Square
-            this_invoice.processPayment(
+            mismatch = this_invoice.processPayment(
                 amount=this_total,
                 fees=0,
                 paidOnline=True,
                 methodName='Square Point of Sale',
                 methodTxn=payment.get('id'),
                 notify=customerEmail,
+                expectedBalance=expectedBalance,
             )
+            # The Square app has already charged the payment, so if it did
+            # not match the balance, staff are notified by email, and the
+            # staff member who took it is also told here.
+            if mismatch:
+                messages.warning(
+                    request, this_invoice.describePaymentMismatch(mismatch)
+                )
             clear_reg_cart(request)
         updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)
 

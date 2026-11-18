@@ -1,13 +1,16 @@
 import json
+from base64 import b64encode
 from unittest import mock
 
 import httpx
 from django.contrib.auth.context_processors import PermWrapper
 from django.contrib.messages import get_messages
+from django.core import mail
 from django.template import RequestContext, Template
 from django.template.loader import render_to_string
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
+from dynamic_preferences.registries import global_preferences_registry
 from square.core.api_error import ApiError
 
 from danceschool.core.constants import REFUND_VALIDATION_STR
@@ -327,6 +330,108 @@ class SquareCheckoutBalanceTest(DefaultSchoolTestCase):
         }))
         self.assertIn('expected_balance: "50.00"', html)
         self.assertIn('sourceUrl: "/register/summary/"', html)
+
+
+class SquarePointOfSaleBalanceTest(DefaultSchoolTestCase):
+    '''
+    The Square app charges the balance that the page was loaded with before
+    the site hears about the payment.  If that no longer matches the balance,
+    the payment is recorded, staff are emailed, and the staff member who took
+    it is warned.
+    '''
+
+    def setUp(self):
+        self.gp = global_preferences_registry.manager()
+        self.gp['contact__businessEmail'] = 'school@example.com'
+        self.invoice = Invoice.objects.create(
+            firstName='Pat', lastName='Payer', email='pat@example.com',
+            grossTotal=50, total=50, status=Invoice.PaymentStatus.unpaid,
+        )
+        self.square = mock.Mock()
+        for target, value in (
+            ('danceschool.payments.square.views.api_client', self.square),
+            ('danceschool.payments.square.views.updateSquareFees', mock.Mock()),
+        ):
+            patcher = mock.patch(target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.client.force_login(self.superuser)
+
+    def callback(self, charged, **metadata):
+        ''' The Square app (on Android) returns after charging this amount. '''
+        payment = mock.Mock(order_id='CLIENT1')
+        payment.dict.return_value = {
+            'id': 'PAYMENT1', 'order_id': 'CLIENT1', 'location_id': 'LOC',
+            'amount_money': {'amount': round(charged * 100)},
+        }
+        self.square.payments.list.return_value = [payment]
+
+        state = {'invoice': str(self.invoice.id), 'sourceUrl': '/register/summary/'}
+        state.update(metadata)
+        response = self.client.get(reverse('processSquarePointOfSale'), {
+            'com.squareup.pos.CLIENT_TRANSACTION_ID': 'CLIENT1',
+            'com.squareup.pos.REQUEST_METADATA': b64encode(json.dumps(state).encode()).decode(),
+        })
+        self.assertEqual(response.status_code, 302)
+        self.invoice.refresh_from_db()
+        return [str(m) for m in get_messages(response.wsgi_request)]
+
+    def notices(self):
+        return [m for m in mail.outbox if 'did not match the balance' in m.subject]
+
+    def test_matching_payment(self):
+        messages = self.callback(50, expectedBalance='50.00')
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertEqual(self.invoice.amountPaid, 50)
+        self.assertEqual(messages, [])
+        self.assertEqual(self.notices(), [])
+
+    def test_balance_raised_after_sending_to_app(self):
+        messages = self.callback(45, expectedBalance='45.00')
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.unpaid)
+        self.assertEqual(self.invoice.outstandingBalance, 5)
+        self.assertEqual(len(self.invoice.data['paymentMismatches']), 1)
+        self.assertTrue(any('is still owed' in m for m in messages), messages)
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_balance_reduced_after_sending_to_app(self):
+        messages = self.callback(55, expectedBalance='55.00')
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertTrue(any('should be refunded' in m for m in messages), messages)
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_page_without_expected_balance(self):
+        ''' A page loaded before this change sends no balance. '''
+        messages = self.callback(50)
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertEqual(messages, [])
+
+    def test_callback_repeated_is_not_reported_again(self):
+        self.callback(45, expectedBalance='45.00')
+        messages = self.callback(45, expectedBalance='45.00')
+        # The warning from the first callback has not been displayed yet
+        # (the redirect is not followed), but no second one is added.
+        self.assertEqual(len([m for m in messages if 'is still owed' in m]), 1)
+        self.assertEqual(self.invoice.amountPaid, 45)
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_button_checks_balance(self):
+        request = RequestFactory().get('/register/summary/')
+        request.user = self.superuser
+        html = Template(
+            '{% load sekizai_tags %}{% include "square/point_of_sale.html" %}'
+            '{% render_block "js" %}'
+        ).render(RequestContext(request, {
+            'user': self.superuser, 'perms': PermWrapper(self.superuser),
+            'invoice': self.invoice, 'payAtDoor': True, 'instance': None,
+            'currencyCode': 'USD', 'returnUrl': 'https://example.com/square/pos/',
+            'squareApplicationId': 'test-app-id',
+        }))
+        self.assertIn('expectedBalance: "50.00"', html)
+        self.assertIn('{}?v={}'.format(
+            reverse('invoiceBalance', args=(self.invoice.id,)),
+            self.invoice.validationString,
+        ), html)
 
 
 class SquarePointOfSaleTemplateTest(DefaultSchoolTestCase):
