@@ -576,7 +576,7 @@ class BackButtonAdjustmentsResetTest(DefaultSchoolTestCase):
         # Simulate the back-button retry path: updateTotals runs again on
         # the still-preliminary invoice, sees saved_adjustments=True, and
         # resets per-item totals/adjustments before re-applying anything.
-        invoice.updateTotals(save=True)
+        invoice.updateTotals(save=True, resetAdjustments=True)
 
         item.refresh_from_db()
         self.assertEqual(
@@ -622,7 +622,7 @@ class BackButtonAdjustmentsResetTest(DefaultSchoolTestCase):
         invoice.refresh_from_db()
         invoice.data['saved_adjustments'] = True
         invoice.save()
-        invoice.updateTotals(save=True)
+        invoice.updateTotals(save=True, resetAdjustments=True)
 
         item.refresh_from_db()
         invoice.refresh_from_db()

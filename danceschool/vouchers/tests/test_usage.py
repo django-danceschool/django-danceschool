@@ -118,6 +118,52 @@ class VoucherBalanceTest(BaseVouchersTest):
         self.assertEqual(invoice.invoiceitem_set.get().adjustments, -8)
         self.assertAlmostEqual(invoice.outstandingBalance, self.price - 8, places=2)
 
+    def test_staff_credit_does_not_remove_voucher_before_reload(self):
+        '''
+        Saving an item before the invoice is paid (e.g. to add a credit in the
+        admin) does not take the voucher off of the price, so the customer
+        can pay from the summary page without reloading it.
+        '''
+        voucher = self.create_voucher(originalAmount=5)
+
+        response = self.checkout(self.series, code=voucher.voucherId)
+        self.assertVoucherApplied(response, voucher, 5)
+
+        item = self.get_invoice().invoiceitem_set.get()
+        item.adjustments = -3
+        item.save()
+
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(invoice.total, self.price - 5, places=2)
+        self.assertAlmostEqual(invoice.adjustments, -3, places=2)
+        self.assertAlmostEqual(invoice.outstandingBalance, self.price - 8, places=2)
+
+        invoice = self.pay()
+        self.assertEqual(invoice.status, Invoice.PaymentStatus.paid)
+        self.assertTrue(invoice.registration.final)
+        self.assertTrue(voucher.voucheruse_set.get().applied)
+
+    def test_partial_payment_keeps_voucher(self):
+        '''
+        Recording the fees for a payment that does not pay the whole balance
+        does not take the voucher off of the price.
+        '''
+        voucher = self.create_voucher(originalAmount=5)
+
+        response = self.checkout(self.series, code=voucher.voucherId)
+        self.assertVoucherApplied(response, voucher, 5)
+
+        invoice = self.get_invoice()
+        invoice.processPayment(
+            amount=10, fees=1, paidOnline=True, methodName='Card',
+        )
+
+        invoice = self.get_invoice()
+        self.assertNotEqual(invoice.status, Invoice.PaymentStatus.paid)
+        self.assertAlmostEqual(invoice.total, self.price - 5, places=2)
+        self.assertAlmostEqual(invoice.fees, 1, places=2)
+        self.assertAlmostEqual(invoice.outstandingBalance, self.price - 15, places=2)
+
     def test_only_latest_voucher_code_is_applied(self):
         '''
         If the customer information form is submitted again with a different

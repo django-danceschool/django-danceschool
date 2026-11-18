@@ -746,6 +746,8 @@ class RegistrationAdjustmentsMixin(object):
         discount applies to, then it is taken off of those items.  Otherwise,
         it is allocated among all items in proportion to their price.  Returns
         the queryset of invoice items produced by Invoice.updateTotals().
+        Any discounts and vouchers that were applied to the invoice previously
+        (e.g. on an earlier load of the same page) are removed first.
         '''
         weights = {
             str(k): v for k, v in details.item_discounts.items() if v > 0
@@ -757,6 +759,7 @@ class RegistrationAdjustmentsMixin(object):
             save=save,
             allocateAmounts={'total': -1 * details.total_amount},
             allocateWeights=weights,
+            resetAdjustments=True,
         )
 
     def allocateAdjustments(

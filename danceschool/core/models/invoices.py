@@ -352,12 +352,16 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     def updateTotals(
         self, save=True, forceSave=False, allocateAmounts={},
-        allocateWeights={}, prior_queryset=None, setAdjustmentsFlag=True
+        allocateWeights={}, prior_queryset=None, setAdjustmentsFlag=True,
+        resetAdjustments=False
     ):
         '''
         This method recalculates the totals from the invoice items associated
         with the invoice.  If the totals have changed, then the invoice is
-        saved.  If an allocate dictionary is passed, then adjustments to each
+        saved.  If resetAdjustments is passed, then any discounts and vouchers
+        that were previously applied are removed first (see below); only the
+        registration process, which applies them again, should pass it.
+        If an allocate dictionary is passed, then adjustments to each
         line item can also be proportionately distributed among the items.  And,
         a dictionary of weights (in {id: value} form) can be passed, which
         allows allocations to be applied to specific items in proportion.
@@ -418,8 +422,13 @@ class Invoice(EmailRecipientMixin, models.Model):
         # data is set later in updateTotals() whenever the invoice is saved.
         # Adjustments that were not made by this method (e.g. a credit entered
         # by staff) are recorded in _persistent_adjustments by
-        # InvoiceItem.save(), and they are kept.
-        saved_adjustments = self.data.pop('saved_adjustments', False)
+        # InvoiceItem.save(), and they are kept.  This is only done when it is
+        # asked for, because otherwise, any other update of the totals (e.g.
+        # saving an item, or recording the fees for a payment) would remove
+        # the discounts and vouchers, and they would not be applied again.
+        saved_adjustments = (
+            resetAdjustments and self.data.pop('saved_adjustments', False)
+        )
         if (saved_adjustments and self.status == self.PaymentStatus.preliminary):
             prior_queryset = self.invoiceitem_set.all()
             prior_queryset.update(
