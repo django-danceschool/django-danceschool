@@ -15,7 +15,8 @@ from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
 from ..models import (
-    EventOccurrence, Event, PublicEvent, Series, Invoice, InvoiceItem, Location,
+    CashPaymentRecord, EventOccurrence, Event, PublicEvent, Series, Invoice,
+    InvoiceItem, Location,
     PublicEventCategory, SeriesCategory, TaxJurisdiction, TaxRule,
 )
 from ..constants import REG_VALIDATION_STR
@@ -449,6 +450,37 @@ class SalesTaxCartTest(TaxTestMixin, DefaultSchoolTestCase):
             content_type='application/json',
         )
         self.assertNotIn('register_id', self._get_invoice().data)
+
+    def test_direct_payment_includes_tax(self):
+        '''
+        A registration that is marked in the session as paid directly records
+        a payment of the whole balance, including the tax when the buyer pays
+        it, so that nothing is left owing.
+        '''
+        self.gp['registration__buyerPaysSalesTax'] = True
+        self._cart_checkout(self.series)
+        self.client.post(reverse('getStudentInfo'), {
+            'firstName': 'Direct', 'lastName': 'Payment',
+            'email': 'direct@payment.com', 'agreeToPolicies': True,
+        })
+        invoice = self._get_invoice()
+        self.assertGreater(invoice.taxes, 0)
+        balance = invoice.outstandingBalance
+        self.assertAlmostEqual(balance, invoice.total + invoice.taxes, places=2)
+
+        session = self.client.session
+        session[REG_VALIDATION_STR].update({
+            'direct_payment': True, 'direct_payment_method': 'Cash',
+        })
+        session.save()
+        response = self.client.get(reverse('showRegSummary'))
+        self.assertTrue(response.context_data['is_complete'])
+
+        invoice = self._get_invoice()
+        payment = CashPaymentRecord.objects.get(invoice=invoice)
+        self.assertAlmostEqual(payment.amount, balance, places=2)
+        self.assertEqual(invoice.status, Invoice.PaymentStatus.paid)
+        self.assertEqual(invoice.outstandingBalance, 0)
 
 
 class TaxBackfillTest(TaxTestMixin, DefaultSchoolTestCase):

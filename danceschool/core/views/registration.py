@@ -335,7 +335,9 @@ class RegistrationSummaryView(
                     forceFinalize=True
                 )
             else:
-                amountPaid = invoice.total
+                # The whole balance is paid, including any sales tax that the
+                # buyer pays and any adjustments (e.g. post-tax vouchers).
+                amountPaid = invoice.outstandingBalance
                 paymentMethod = regSession.get('direct_payment_method', 'Cash')
 
                 this_cash_payment = CashPaymentRecord.objects.create(
