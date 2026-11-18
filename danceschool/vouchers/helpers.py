@@ -1,5 +1,4 @@
 import uuid
-from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 
 from danceschool.core.models import DanceTypeLevel, ClassDescription
@@ -11,25 +10,12 @@ from .models import (
 )
 
 
-def isDiscountCode(code):
-    '''
-    A code that is also the code of a discount belongs to that discount, and
-    a voucher with the same code is ignored.  The admin does not allow a code
-    to be saved for both, but codes saved before that check was added may
-    still be shared.
-    '''
-    if not code or not apps.is_installed('danceschool.discounts'):
-        return False
-    DiscountCombo = apps.get_model('discounts', 'DiscountCombo')
-    return DiscountCombo.objects.filter(voucherId=code).exists()
-
-
 def generateUniqueVoucherId(prefix):
     # Generate a new random ID each time, until one is found that is not
-    # already the ID of a voucher.
+    # already the code of a voucher or a discount.
     while True:
         result = prefix + uuid.uuid4().hex[0:8].upper()
-        if not Voucher.objects.filter(voucherId=result).exists():
+        if not Voucher.codeInUse(result):
             return result
 
 

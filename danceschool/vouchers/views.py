@@ -195,7 +195,7 @@ class VoucherGenerationView(PermissionRequiredMixin, SiteHistoryMixin, FormView)
         while not new:
             # Standard is a ten-letter random string of uppercase letters
             random_string = ''.join(random.choice(string.ascii_uppercase) for z in range(10))
-            if not Voucher.objects.filter(voucherId='%s%s' % (prefix, random_string)).exists():
+            if not Voucher.codeInUse('%s%s' % (prefix, random_string)):
                 new = True
 
         initial = {

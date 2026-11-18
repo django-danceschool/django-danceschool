@@ -17,8 +17,8 @@ from danceschool.core.models import (
 )
 from danceschool.core.constants import getConstant, REG_VALIDATION_STR
 
-from .models import Voucher, VoucherUse
-from .helpers import awardReferrers, ensureReferralVouchersExist, isDiscountCode
+from .models import Voucher, VoucherUse, isDiscountCode
+from .helpers import awardReferrers, ensureReferralVouchersExist
 
 
 # Define logger for this file

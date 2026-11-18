@@ -21,6 +21,20 @@ from danceschool.core.models import (
 NOT_GIVEN = object()
 
 
+def isDiscountCode(code):
+    '''
+    A code that is also the code of a discount belongs to that discount, and
+    a voucher with the same code is ignored.  The admin does not allow a code
+    to be saved for both, and generated voucher codes are never the code of a
+    discount, but codes saved before these checks were added may still be
+    shared.
+    '''
+    if not code or not apps.is_installed('danceschool.discounts'):
+        return False
+    DiscountCombo = apps.get_model('discounts', 'DiscountCombo')
+    return DiscountCombo.objects.filter(voucherId=code).exists()
+
+
 class VoucherCategory(models.Model):
     name = models.CharField(_('Name'), max_length=80, unique=True)
     description = models.TextField(_('Description'), null=True, blank=True)
@@ -135,6 +149,14 @@ class Voucher(models.Model):
     )
 
     @classmethod
+    def codeInUse(cls, code):
+        '''
+        A code is in use if it is the code of a voucher, or of a discount (see
+        isDiscountCode()).  Generated codes are checked with this method.
+        '''
+        return cls.objects.filter(voucherId=code).exists() or isDiscountCode(code)
+
+    @classmethod
     def create_new_code(cls, **kwargs):
         '''
         Creates a new Voucher with a unique voucherId
@@ -145,7 +167,7 @@ class Voucher(models.Model):
         while not new:
             # Standard is a ten-letter random string of uppercase letters
             random_string = ''.join(random.choice(string.ascii_uppercase) for z in range(10))
-            if not Voucher.objects.filter(voucherId='%s%s' % (prefix, random_string)).exists():
+            if not cls.codeInUse('%s%s' % (prefix, random_string)):
                 new = True
 
         return Voucher.objects.create(voucherId='%s%s' % (prefix, random_string), **kwargs)
@@ -556,12 +578,10 @@ class Voucher(models.Model):
         a voucher with that code could never be used.
         '''
         super().clean()
-        if self.voucherId and apps.is_installed('danceschool.discounts'):
-            DiscountCombo = apps.get_model('discounts', 'DiscountCombo')
-            if DiscountCombo.objects.filter(voucherId=self.voucherId).exists():
-                raise ValidationError({'voucherId': _(
-                    'This code is already the code of a discount.'
-                )})
+        if isDiscountCode(self.voucherId):
+            raise ValidationError({'voucherId': _(
+                'This code is already the code of a discount.'
+            )})
 
     def __str__(self):
         return self.name + " " + str(self.id)
