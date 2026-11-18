@@ -91,6 +91,33 @@ class VoucherBalanceTest(BaseVouchersTest):
         invoice = self.get_invoice()
         self.assertAlmostEqual(invoice.total, self.price - 10, places=2)
 
+    def test_staff_credit_is_kept_when_summary_is_reloaded(self):
+        '''
+        A post-tax voucher is applied to the item's adjustments, and so is a
+        credit entered by staff before the invoice is paid.  On a reload of
+        the summary page, the voucher is applied again and the credit is kept.
+        '''
+        voucher = self.create_voucher(originalAmount=5)
+        voucher.beforeTax = False
+        voucher.save()
+
+        response = self.checkout(self.series, code=voucher.voucherId)
+        self.assertVoucherApplied(response, voucher, 5)
+
+        # Staff add a $3 credit, as they would in the admin.
+        item = self.get_invoice().invoiceitem_set.get()
+        self.assertEqual(item.adjustments, -5)
+        item.adjustments = -8
+        item.save()
+
+        response = self.client.get(reverse('showRegSummary'))
+        self.assertEqual(response.status_code, 200)
+        uses = self.get_invoice().voucheruse_set.filter(voucher=voucher)
+        self.assertEqual(uses.get().amount, 5)
+        invoice = self.get_invoice()
+        self.assertEqual(invoice.invoiceitem_set.get().adjustments, -8)
+        self.assertAlmostEqual(invoice.outstandingBalance, self.price - 8, places=2)
+
     def test_only_latest_voucher_code_is_applied(self):
         '''
         If the customer information form is submitted again with a different

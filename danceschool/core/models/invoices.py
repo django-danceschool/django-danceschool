@@ -416,6 +416,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         # prevents the duplicate application of discounts and vouchers by
         # pressing the back button.  The saved_adjustments flag in Invoice
         # data is set later in updateTotals() whenever the invoice is saved.
+        # Adjustments that were not made by this method (e.g. a credit entered
+        # by staff) are recorded in _persistent_adjustments by
+        # InvoiceItem.save(), and they are kept.
         saved_adjustments = self.data.pop('saved_adjustments', False)
         if (saved_adjustments and self.status == self.PaymentStatus.preliminary):
             prior_queryset = self.invoiceitem_set.all()
@@ -425,7 +428,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                     'grossTotal'
                 ),
                 adjustments=Coalesce(
-                    Cast('data___initial_adjustments', models.FloatField()),
+                    Cast('data___persistent_adjustments', models.FloatField()),
                     0, output_field=models.FloatField()
                 )
             )
@@ -968,11 +971,52 @@ class InvoiceItem(models.Model):
             )
         return kwargs
 
+    def __init__(self, *args, **kwargs):
+        '''
+        Keep track of the adjustments as they were loaded, so that a change
+        made by saving this item can be recorded (see save()).  If the field
+        was deferred, then it is not loaded here.
+        '''
+        super().__init__(*args, **kwargs)
+        self._loaded_adjustments = self.__dict__.get('adjustments')
+
+    def recordPersistentAdjustments(self):
+        '''
+        Invoice.updateTotals() applies post-tax vouchers to item adjustments
+        with queryset updates (which do not call save()), and on a reload of
+        the registration summary page, it removes them again by restoring the
+        adjustments to _persistent_adjustments.  Any other change to the
+        adjustments is made by saving the item (e.g. a credit entered by staff
+        in the admin), and it is recorded here so that it is kept.  Because the
+        adjustments may already include a voucher, the change is recorded,
+        not the new value.  Code that applies temporary adjustments must use
+        updateTotals(), or they will be kept as well.
+        '''
+        previous = 0 if self._state.adding else self._loaded_adjustments
+        current = self.__dict__.get('adjustments')
+        if previous is None or current is None:
+            return False
+        change = current - previous
+        if not change:
+            return False
+        self.data = self.data or {}
+        self.data['_persistent_adjustments'] = (
+            self.data.get('_persistent_adjustments', 0) + change
+        )
+        return True
+
     def save(self, *args, **kwargs):
         restrictStatus = kwargs.pop('restrictStatus', True)
         updateTotals = kwargs.pop('updateInvoiceTotals', True)
         if self.invoice.itemsEditable or not restrictStatus:
+            update_fields = kwargs.get('update_fields')
+            if (
+                self.recordPersistentAdjustments() and update_fields is not None
+                and 'data' not in update_fields
+            ):
+                kwargs['update_fields'] = list(update_fields) + ['data']
             super().save(*args, **kwargs)
+            self._loaded_adjustments = self.__dict__.get('adjustments')
             if updateTotals:
                 self.invoice.updateTotals()
 
