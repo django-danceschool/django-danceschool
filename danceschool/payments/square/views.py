@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.contrib import messages
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View, UpdateView
 
 
@@ -61,6 +62,39 @@ class ProcessSquarePaymentView(View):
     (such as gift certificate payment requests).
     '''
 
+    def refuseChangedBalance(self, request, invoice, expectedBalance, sourceUrl):
+        '''
+        If the balance of the invoice is not the one that the payer was shown,
+        then return a response that refuses the payment and sends the payer
+        back to the page that they came from to see the new balance.
+        Otherwise, return None.
+        '''
+        balance = invoice.outstandingBalance
+        if abs(balance - expectedBalance) < 0.01:
+            return None
+
+        logger.warning(
+            'Refused Square Checkout payment on invoice %s: the payer was shown '
+            'a balance of %.2f, but the balance is now %.2f.' % (
+                invoice.id, expectedBalance, balance
+            )
+        )
+        message = _(
+            'The total has changed since this page was loaded, so your card ' +
+            'has not been charged. The amount now due is %(balance)s. Please ' +
+            'review it before paying.'
+        ) % {'balance': '%s%.2f' % (getConstant('general__currencySymbol'), balance)}
+        messages.warning(request, message)
+
+        if not url_has_allowed_host_and_scheme(
+            sourceUrl, allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            sourceUrl = reverse('showRegSummary')
+        return SquareCheckoutErrorResponse(
+            format_html('<p>{}</p>', message), redirect_url=sourceUrl
+        )
+
     def post(self, request, *args, **kwargs):
         logger.info('Received request for Square Checkout payment.')
 
@@ -78,6 +112,7 @@ class ProcessSquarePaymentView(View):
         addSessionInfo = data.get('addSessionInfo', False)
         customerEmail = data.get('customerEmail')
         finalSuccessUrl = data.get('finalSuccessUrl')
+        expectedBalance = data.get('expected_balance')
 
         # Send users back to the invoice to confirm the successful payment.
         # If none is specified, then return to the registration page.
@@ -116,6 +151,18 @@ class ProcessSquarePaymentView(View):
             # including registrations.
             if invoice_id:
                 this_invoice = Invoice.objects.get(id=invoice_id)
+
+                # Do not charge a balance other than the one that the payer
+                # was shown (e.g. if staff changed the invoice while they
+                # were paying, or if it has already been paid).
+                if expectedBalance is not None:
+                    expectedBalance = float(expectedBalance)
+                    refusal = self.refuseChangedBalance(
+                        request, this_invoice, expectedBalance, sourceUrl
+                    )
+                    if refusal:
+                        return refusal
+
                 if this_invoice.status == Invoice.PaymentStatus.preliminary:
                     this_invoice.expirationDate = timezone.now() + timedelta(
                         minutes=getConstant('registration__sessionExpiryMinutes')
@@ -227,6 +274,9 @@ class ProcessSquarePaymentView(View):
             methodName='Square Checkout',
             methodTxn=payment.get('id'),
             notify=customerEmail,
+            # A payment on an existing invoice is meant to pay the balance
+            # that was checked above.
+            expectedBalance=expectedBalance if invoice_id else None,
         )
         clear_reg_cart(request)
         updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)

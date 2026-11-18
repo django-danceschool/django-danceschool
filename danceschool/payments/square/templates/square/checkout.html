@@ -42,6 +42,10 @@
         {% endif %}
         {% if invoice %}
             invoice_id: "{{ invoice.id }}",
+            // The balance shown on this page.  If it has changed by the time
+            // the payment is submitted, then the payment is refused.
+            expected_balance: "{{ invoice.outstandingBalance|stringformat:'.2f' }}",
+            sourceUrl: "{{ request.get_full_path|escapejs }}",
             {% if invoice.email %}
             customerEmail: "{{ invoice.email }}",
             {% endif %}
@@ -124,8 +128,13 @@
           cardButton.disabled = true;
           const token = await tokenize(paymentMethod);
           const paymentResults = await createPayment(token);
-          cardButton.disabled = false;
           displayPaymentMessage(paymentResults.message, paymentResults.status);
+          if (paymentResults.redirect_url) {
+            // E.g. the balance has changed, so reload the page to show it.
+            window.location.href = paymentResults.redirect_url;
+            return;
+          }
+          cardButton.disabled = false;
           updateIdempotencyKey();
         } catch (e) {
           cardButton.disabled = false;

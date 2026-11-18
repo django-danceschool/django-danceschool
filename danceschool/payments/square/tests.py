@@ -4,6 +4,7 @@ from unittest import mock
 import httpx
 from django.contrib.auth.context_processors import PermWrapper
 from django.contrib.messages import get_messages
+from django.template import RequestContext, Template
 from django.template.loader import render_to_string
 from django.test import RequestFactory, override_settings
 from django.urls import reverse
@@ -218,6 +219,114 @@ class SquareAPIUnavailableTest(DefaultSchoolTestCase):
         self.assertEqual(failed['status'], 'error')
         self.assertIn('Unable to retrieve the Square payment', failed['errorMessage'])
         self.assertIn('UNAUTHORIZED', failed['errorMessage'])
+
+
+class SquareCheckoutBalanceTest(DefaultSchoolTestCase):
+    '''
+    A Square Checkout payment on an invoice is refused, without charging the
+    card, if the balance is not the one that the payer was shown.
+    '''
+
+    def setUp(self):
+        self.invoice = Invoice.objects.create(
+            firstName='Pat', lastName='Payer', email='pat@example.com',
+            grossTotal=50, total=50, status=Invoice.PaymentStatus.unpaid,
+        )
+        self.square = mock.Mock()
+        self.square.payments.create.return_value.dict.return_value = {'payment': {
+            'id': 'PAYMENT1', 'order_id': 'ORDER1', 'location_id': 'LOC',
+        }}
+        for target, value in (
+            ('danceschool.payments.square.views.api_client', self.square),
+            ('danceschool.payments.square.views.updateSquareFees', mock.Mock()),
+        ):
+            patcher = mock.patch(target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def pay(self, **data):
+        details = {
+            'invoice_id': str(self.invoice.id), 'sourceId': 'cnon:card',
+            'sourceUrl': '/register/summary/',
+        }
+        details.update(data)
+        return self.client.post(
+            reverse('processSquarePayment'), data=json.dumps(details),
+            content_type='application/json',
+        )
+
+    def assert_refused(self, response, redirect_url='/register/summary/'):
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'error')
+        self.assertIn('has not been charged', response.json()['message'])
+        self.assertEqual(response.json()['redirect_url'], redirect_url)
+        self.square.payments.create.assert_not_called()
+        messages = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any('The amount now due is' in m for m in messages))
+
+    def test_matching_balance_is_charged(self):
+        response = self.pay(expected_balance='50.00')
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.square.payments.create.call_args.kwargs['amount_money']['amount'], 5000
+        )
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertNotIn('paymentMismatches', self.invoice.data)
+
+    def test_increased_balance_is_refused(self):
+        ''' The payer was shown 45, but the balance is now 50. '''
+        self.assert_refused(self.pay(expected_balance='45.00'))
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.amountPaid, 0)
+
+    def test_reduced_balance_is_refused(self):
+        ''' The payer was shown 55, but staff reduced the balance to 50. '''
+        self.assert_refused(self.pay(expected_balance='55.00'))
+
+    def test_paid_invoice_is_not_charged_again(self):
+        ''' E.g. the payment form was submitted a second time. '''
+        self.assertEqual(self.pay(expected_balance='50.00').status_code, 302)
+        self.square.payments.create.reset_mock()
+        self.assert_refused(self.pay(expected_balance='50.00', idempotency_key='second'))
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.amountPaid, 50)
+
+    def test_refusal_does_not_redirect_offsite(self):
+        self.assert_refused(
+            self.pay(expected_balance='45.00', sourceUrl='https://example.org/'),
+            redirect_url=reverse('showRegSummary'),
+        )
+
+    def test_payment_without_expected_balance_is_charged(self):
+        ''' A page that was loaded before this change does not send one. '''
+        self.assertEqual(self.pay().status_code, 302)
+        self.square.payments.create.assert_called_once()
+
+    def test_gift_certificate_is_unaffected(self):
+        response = self.client.post(
+            reverse('processSquarePayment'), data=json.dumps({
+                'sourceId': 'cnon:card', 'transaction_type': 'Gift Certificate',
+                'amount': '25',
+            }), content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            self.square.payments.create.call_args.kwargs['amount_money']['amount'], 2500
+        )
+
+    def test_checkout_form_sends_balance_shown(self):
+        request = RequestFactory().get('/register/summary/')
+        request.user = self.superuser
+        # The script is added to the page's "js" block.
+        html = Template(
+            '{% load sekizai_tags %}{% include "square/checkout.html" %}'
+            '{% render_block "js" %}'
+        ).render(RequestContext(request, {
+            'user': self.superuser, 'invoice': self.invoice, 'instance': None,
+        }))
+        self.assertIn('expected_balance: "50.00"', html)
+        self.assertIn('sourceUrl: "/register/summary/"', html)
 
 
 class SquarePointOfSaleTemplateTest(DefaultSchoolTestCase):
