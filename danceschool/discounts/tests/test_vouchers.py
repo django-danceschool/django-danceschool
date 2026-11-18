@@ -1,7 +1,7 @@
-import unittest
 from unittest import skipUnless
 
 from django.apps import apps
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from danceschool.core.constants import REG_VALIDATION_STR, updateConstant
@@ -158,7 +158,6 @@ class DoubleSubtractionWhenCodeInBothTablesTest(BaseDiscountsTest):
     with no guard for the case where the same code matched both systems.
     '''
 
-    @unittest.expectedFailure
     def test_shared_code_not_double_subtracted(self):
         from danceschool.vouchers.models import Voucher
 
@@ -209,3 +208,57 @@ class DoubleSubtractionWhenCodeInBothTablesTest(BaseDiscountsTest):
                 '(gross {1}); expected at least {2}.'
             ).format(net_total, gross, gross - 10),
         )
+
+    def make_shared_code(self):
+        '''
+        Codes saved before the admin refused shared codes may still be shared,
+        so the voucher is created without checking it.
+        '''
+        from danceschool.vouchers.models import Voucher
+
+        updateConstant('general__discountsEnabled', True)
+        updateConstant('vouchers__enableVouchers', True)
+        self.create_discount(
+            voucherId='DBLCODE',
+            discountType=DiscountCombo.DiscountType.dollarDiscount,
+            dollarDiscount=10,
+        )
+        Voucher.objects.create(
+            voucherId='DBLCODE', name='Shared Code Voucher', originalAmount=5,
+        )
+
+    def test_shared_code_is_a_discount_at_checkout(self):
+        ''' Only the discount is applied, and no use of the voucher is recorded. '''
+        self.make_shared_code()
+        s = self.create_series(pricingTier=self.defaultPricing)
+
+        response = self.register_to_check_discount(s, voucherId='DBLCODE')
+        self.assertEqual(response.redirect_chain[-1][0], reverse('showRegSummary'))
+        invoice = Invoice.objects.get(id=response.context_data['invoice'].id)
+
+        self.assertEqual(invoice.outstandingBalance, s.getBasePrice() - 10)
+        self.assertFalse(invoice.voucheruse_set.exists())
+        self.assertFalse(response.context_data.get('voucher'))
+
+    def test_admin_refuses_shared_code(self):
+        from danceschool.vouchers.models import Voucher
+
+        discount, _ = self.create_discount(
+            voucherId='DISCOUNTCODE',
+            discountType=DiscountCombo.DiscountType.dollarDiscount,
+            dollarDiscount=10,
+        )
+        with self.assertRaises(ValidationError) as cm:
+            Voucher(voucherId='DISCOUNTCODE', name='Voucher', originalAmount=5).clean()
+        self.assertIn('voucherId', cm.exception.message_dict)
+
+        Voucher.objects.create(voucherId='VOUCHERCODE', name='Voucher', originalAmount=5)
+        discount.voucherId = 'VOUCHERCODE'
+        with self.assertRaises(ValidationError) as cm:
+            discount.clean()
+        self.assertIn('voucherId', cm.exception.message_dict)
+
+        # Codes that are not shared are allowed.
+        Voucher(voucherId='OTHERCODE', name='Voucher', originalAmount=5).clean()
+        discount.voucherId = 'OTHERDISCOUNT'
+        discount.clean()

@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.db import models
 from django.db.models import Sum
 from django.db.models.query import QuerySet, FlatValuesListIterable
@@ -548,6 +549,19 @@ class Voucher(models.Model):
             retval['available'] = self.maxToUse
 
         return retval
+
+    def clean(self):
+        '''
+        A code that is also the code of a discount belongs to the discount, so
+        a voucher with that code could never be used.
+        '''
+        super().clean()
+        if self.voucherId and apps.is_installed('danceschool.discounts'):
+            DiscountCombo = apps.get_model('discounts', 'DiscountCombo')
+            if DiscountCombo.objects.filter(voucherId=self.voucherId).exists():
+                raise ValidationError({'voucherId': _(
+                    'This code is already the code of a discount.'
+                )})
 
     def __str__(self):
         return self.name + " " + str(self.id)

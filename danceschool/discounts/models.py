@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
@@ -517,6 +518,19 @@ class DiscountCombo(models.Model):
             self.percentUniversallyApplied = False
 
         super().save(*args, **kwargs)
+
+    def clean(self):
+        '''
+        A voucher with the same code as a discount could never be used, so a
+        discount cannot be given the code of an existing voucher.
+        '''
+        super().clean()
+        if self.voucherId and apps.is_installed('danceschool.vouchers'):
+            Voucher = apps.get_model('vouchers', 'Voucher')
+            if Voucher.objects.filter(voucherId=self.voucherId).exists():
+                raise ValidationError({'voucherId': _(
+                    'This code is already the code of a voucher.'
+                )})
 
     def __str__(self):
         return self.name

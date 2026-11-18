@@ -1,4 +1,5 @@
 import uuid
+from django.apps import apps
 from django.utils.translation import gettext_lazy as _
 
 from danceschool.core.models import DanceTypeLevel, ClassDescription
@@ -8,6 +9,19 @@ from .models import (
     Voucher, CustomerVoucher, VoucherReferralDiscount, VoucherCredit,
     VoucherReferralDiscountUse
 )
+
+
+def isDiscountCode(code):
+    '''
+    A code that is also the code of a discount belongs to that discount, and
+    a voucher with the same code is ignored.  The admin does not allow a code
+    to be saved for both, but codes saved before that check was added may
+    still be shared.
+    '''
+    if not code or not apps.is_installed('danceschool.discounts'):
+        return False
+    DiscountCombo = apps.get_model('discounts', 'DiscountCombo')
+    return DiscountCombo.objects.filter(voucherId=code).exists()
 
 
 def generateUniqueVoucherId(prefix):
