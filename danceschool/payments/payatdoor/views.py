@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.http import HttpResponseRedirect, HttpResponseBadRequest
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -67,12 +68,19 @@ class PayAtDoorView(FormView):
             payerEmail=payerEmail,
             submissionUser=subUser, collectedByUser=receivedBy,
         )
-        invoice.processPayment(
+        # Staff may accept less than the balance, and the invoice is still
+        # marked as paid.  Any difference from the balance (or a change in the
+        # balance since the form was loaded) is reported to staff by email,
+        # and to the staff member who recorded the payment here.
+        mismatch = invoice.processPayment(
             amount=amountPaid, fees=0, paidOnline=False, methodName=paymentMethod,
             submissionUser=subUser, collectedByUser=receivedBy,
             methodTxn='CASHPAYMENT_%s' % this_cash_payment.recordId,
             forceFinalize=True,
+            expectedBalance=form.cleaned_data.get('expectedBalance'),
         )
+        if mismatch:
+            messages.warning(self.request, invoice.describePaymentMismatch(mismatch))
         clear_reg_cart(self.request)
 
         # Send users back to the invoice to confirm the successful payment.

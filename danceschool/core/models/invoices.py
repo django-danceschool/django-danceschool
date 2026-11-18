@@ -308,8 +308,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         A payment processor whose payment was meant to pay the balance in full
         should pass expectedBalance, the balance that the payer was shown.  If
         the balance changed before the payment was recorded (for example,
-        because staff edited the invoice while the customer was paying), or
-        if the payment is more than the balance owed, then the payment is
+        because staff edited the invoice while the customer was paying), if
+        the payment is more than the balance owed, or if forceFinalize marks
+        the invoice as paid while money is still owed, then the payment is
         still recorded, but a record of the mismatch is kept in
         data['paymentMismatches'], staff are notified by email, and that
         record is returned so that the processor can also show a warning.
@@ -347,8 +348,18 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         overpaid = (amount > 0 and self.outstandingBalance <= -epsilon)
 
+        # if this completed the payment (or paid more than was owed), then
+        # mark the invoice as Paid unless told to do otherwise.
+        finalize = (
+            forceFinalize or abs(self.outstandingBalance) < epsilon or overpaid
+        )
+
         mismatch = None
         if overpaid or (
+            # Marked as paid even though money is still owed (e.g. staff
+            # accepted less than the balance at the door).
+            forceFinalize and self.outstandingBalance >= epsilon
+        ) or (
             expectedBalance is not None and
             abs(balanceBefore - expectedBalance) >= epsilon
         ):
@@ -360,14 +371,13 @@ class Invoice(EmailRecipientMixin, models.Model):
                 'expectedBalance': expectedBalance,
                 'balanceBefore': balanceBefore,
                 'balanceAfter': self.outstandingBalance,
+                'invoicePaid': finalize,
             }
             self.data['paymentMismatches'] = (
                 self.data.get('paymentMismatches', []) + [mismatch]
             )
 
-        # if this completed the payment (or paid more than was owed), then
-        # mark the invoice as Paid unless told to do otherwise.
-        if forceFinalize or abs(self.outstandingBalance) < epsilon or overpaid:
+        if finalize:
             self.status = self.PaymentStatus.paid
 
             if getattr(self, 'registration', None):
@@ -424,6 +434,15 @@ class Invoice(EmailRecipientMixin, models.Model):
             ) % {
                 'amount': money(amount), 'extra': money(-balanceAfter),
                 'before': money(balanceBefore),
+            }))
+        elif balanceAfter > 0 and mismatch.get('invoicePaid'):
+            parts.append(str(_(
+                'The payment of %(amount)s was less than the balance owed of ' +
+                '%(before)s. %(after)s is still owed, but the invoice has ' +
+                'been marked as paid.'
+            ) % {
+                'amount': money(amount), 'before': money(balanceBefore),
+                'after': money(balanceAfter),
             }))
         elif balanceAfter > 0:
             parts.append(str(_(

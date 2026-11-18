@@ -112,6 +112,11 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
     invoice = forms.ModelChoiceField(queryset=Invoice.objects.all(), required=True)
 
     amountPaid = forms.FloatField(label=_('Amount Paid'), required=True, min_value=0)
+
+    # The balance that was shown when this form was loaded, so that a change
+    # in the balance before the payment is recorded can be reported.
+    expectedBalance = forms.FloatField(required=False, widget=forms.HiddenInput)
+
     paymentMethod = forms.ChoiceField(
         label=_('Payment method'),
         required=True,
@@ -151,6 +156,7 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
         self.helper.layout = Layout(
             Hidden('submissionUser', subUser),
             Hidden('invoice', invoiceId),
+            'expectedBalance',
             'amountPaid',
             'paymentMethod',
             'payerEmail',
@@ -160,7 +166,8 @@ class DoorPaymentForm(CashPaymentMixin, forms.Form):
 
         kwargs.update(initial={
             'receivedBy': subUser,
-            'amountPaid': initialAmount
+            'amountPaid': initialAmount,
+            'expectedBalance': initialAmount,
         })
 
         super().__init__(*args, **kwargs)
