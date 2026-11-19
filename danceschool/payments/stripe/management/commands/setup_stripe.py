@@ -53,6 +53,15 @@ CHECKING STRIPE INTEGRATION
         else:
             self.stdout.write(self.style.WARNING('Stripe private key not set.'))
 
+        if getattr(settings, 'STRIPE_WEBHOOK_KEY', ''):
+            self.stdout.write('Stripe webhook signing secret set.')
+        else:
+            self.stdout.write(self.style.WARNING(
+                'Stripe webhook signing secret (STRIPE_WEBHOOK_KEY) not set. ' +
+                'Payments that are not completed when the customer returns to ' +
+                'the site will not be recorded.'
+            ))
+
         if client_id and client_secret:
             try:
                 import stripe

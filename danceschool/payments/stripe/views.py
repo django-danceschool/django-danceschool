@@ -310,8 +310,15 @@ def stripe_return(request):
 def webhook(request):
     stripe.api_key = settings.STRIPE_PRIVATE_KEY
     payload = request.body
-    endpoint_secret = settings.STRIPE_WEBHOOK_KEY
+    endpoint_secret = getattr(settings, 'STRIPE_WEBHOOK_KEY', '')
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    if not endpoint_secret:
+        logger.error(
+            'Received a Stripe webhook, but STRIPE_WEBHOOK_KEY is not set, so ' +
+            'it cannot be verified.'
+        )
+        return HttpResponse(status=400)
 
     if not sig_header:
         return HttpResponse(status=400)

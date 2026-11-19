@@ -9,7 +9,7 @@ import stripe
 from django.contrib.messages import get_messages
 from django.core import mail
 from django.template.loader import render_to_string
-from django.test import RequestFactory
+from django.test import RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from dynamic_preferences.registries import global_preferences_registry
@@ -287,6 +287,16 @@ class StripeWebhookTest(StripeTestCase):
             reverse('stripeWebhook'), data='{}', content_type='application/json',
         )
         self.assertEqual(response.status_code, 400)
+
+    @override_settings(STRIPE_WEBHOOK_KEY='')
+    def test_webhook_without_signing_secret_returns_400(self):
+        construct = self.patch('stripe.Webhook.construct_event')
+        response = self.client.post(
+            reverse('stripeWebhook'), data='{}', content_type='application/json',
+            HTTP_STRIPE_SIGNATURE='t=1,v1=x',
+        )
+        self.assertEqual(response.status_code, 400)
+        construct.assert_not_called()
 
     def test_invalid_signature_returns_400(self):
         self.patch(
