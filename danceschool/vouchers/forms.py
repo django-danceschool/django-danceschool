@@ -44,6 +44,6 @@ class VoucherGenerationForm(forms.Form):
 
     def clean_voucherId(self):
         voucherId = self.cleaned_data['voucherId']
-        if Voucher.objects.filter(voucherId=voucherId).exists():
+        if Voucher.codeInUse(voucherId):
             raise forms.ValidationError(_('Invalid voucher code'))
         return voucherId

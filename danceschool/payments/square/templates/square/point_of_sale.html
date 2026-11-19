@@ -49,15 +49,16 @@ $(document).ready(function(){
     {% endif %}
     {% if invoice %}
       invoice: "{{ invoice.id }}",
+      // The balance that is sent to the Square app to be charged.
+      expectedBalance: "{{ invoice.outstandingBalance|stringformat:'.2f' }}",
       {% if invoice.email %}
       customerEmail: "{{ invoice.email }}",
       {% endif %}
     {% endif %}
     
-    sourceUrl: "{{ request.get_full_path }}",
-    {% if instance.successPage.id %}
-      successUrl: "{% page_url instance.successPage %}",
-    {% endif %}
+    sourceUrl: "{{ request.get_full_path|escapejs }}",
+    // The success page is looked up from this plugin on the server.
+    plugin_id: "{{ instance.id|default_if_none:'' }}",
   }
 
   const androidHref = "intent:#Intent;action=com.squareup.pos.action.CHARGE;package=com.squareup;S.com.squareup.pos.WEB_CALLBACK_URI={{ returnUrl }};S.com.squareup.pos.CLIENT_ID={{ squareApplicationId }};S.com.squareup.pos.API_VERSION=v2.0;i.com.squareup.pos.TOTAL_AMOUNT=" + amount + ";S.com.squareup.pos.CURRENCY_CODE={{ currencyCode }};S.com.squareup.pos.TENDER_TYPES=com.squareup.pos.TENDER_CARD,com.squareup.pos.TENDER_CARD_ON_FILE;S.com.squareup.pos.REQUEST_METADATA=" + Base64.encode(JSON.stringify(metadata)) + ";end";
@@ -95,6 +96,48 @@ $(document).ready(function(){
   	    });
   	  	break;
   }
+
+  {% if invoice %}
+  // The Square app charges the amount above, which is the balance when this
+  // page was loaded.  While the page is open, check that the balance has not
+  // changed (e.g. because the invoice was edited elsewhere), and if it has,
+  // stop the button from being used until the page is reloaded.  The check
+  // is done in advance rather than when the button is tapped, so that the
+  // tap still opens the Square app directly.
+  const balanceUrl = "{% url 'invoiceBalance' invoice.id %}?v={{ invoice.validationString }}";
+  let balanceChanged = false;
+
+  $('#square-pos-button').click(function(e) {
+    if (balanceChanged) {
+      e.preventDefault();
+    }
+  });
+
+  function checkBalance() {
+    if (balanceChanged || document.visibilityState !== 'visible') {
+      return;
+    }
+    fetch(balanceUrl, {credentials: 'same-origin'})
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.balance !== metadata.expectedBalance) {
+          balanceChanged = true;
+          $('#square-pos-button').addClass('disabled').attr('aria-disabled', 'true');
+          $('#square-pos-notice').html(
+            "<strong>{% trans 'The balance on this invoice has changed. Reload this page before sending it to the Square app.' %}</strong>"
+          );
+        }
+      })
+      // If the balance cannot be checked (e.g. a brief loss of connection),
+      // leave the button as it is; a payment that does not match the
+      // balance is still reported when the Square app returns.
+      .catch(function(err) { console.warn('Unable to check invoice balance', err); });
+  }
+
+  checkBalance();
+  setInterval(checkBalance, 10000);
+  document.addEventListener('visibilitychange', checkBalance);
+  {% endif %}
 });
 </script>
 {% endaddtoblock %}

@@ -184,10 +184,38 @@ def getBestDiscount(sender, **kwargs):
     if not best_discounts:
         logger.debug('No applicable discounts found.')
 
+    # Determine the amount by which the price of each invoice item is reduced.
+    # The allocation of the last discount applied already reflects the
+    # discounts in all prior categories, and the allocated prices are in the
+    # same order as the list of eligible items.  The discount on each cart
+    # item is shared among the invoice items that make up its price (there is
+    # more than one for an event that includes other events), in proportion to
+    # their prices.  There are no invoice items when a cart is only being
+    # previewed.
+    item_discounts = {}
+    if best_discounts:
+        final_prices = best_discounts[next(reversed(best_discounts))].net_allocated_prices
+
+        if len(final_prices) == len(eligible_list):
+            for cart_item, final in zip(eligible_list, final_prices):
+                this_discount = cart_item['base_price'] - final
+                shares = cart_item.get('item_shares', {})
+                total_shares = sum(shares.values())
+
+                if this_discount <= 0 or not shares:
+                    continue
+                for item_id, share in shares.items():
+                    if total_shares > 0:
+                        item_discounts[item_id] = this_discount * (share / total_shares)
+                    else:
+                        item_discounts[item_id] = this_discount / len(shares)
+
     # Return the list of discounts to be applied (in DiscountInfo tuples), along
-    # with the additional price of ineligible items to be added.
+    # with the additional price of ineligible items to be added, and the amount
+    # of the discount that applies to each invoice item.
     return DiscountCombo.DiscountApplication(
-        [x for x in best_discounts.values()], cart_kwargs.get('ineligible_total')
+        [x for x in best_discounts.values()], cart_kwargs.get('ineligible_total'),
+        item_discounts
     )
 
 
@@ -273,20 +301,31 @@ def applyTemporaryDiscount(sender, **kwargs):
         invoice = kwargs.get('invoice', None)
         reg = Registration.objects.filter(invoice=invoice).first()
 
-    discount = kwargs.pop('discount', None)
-    discountAmount = kwargs.pop('discount_amount', None)
+    discounts = kwargs.pop('discounts', None)
 
-    if not reg or not discount:
+    if not reg or discounts is None:
         logger.warning('Incomplete information passed, discounts not applied.')
         return
 
-    obj = RegistrationDiscount.objects.update_or_create(
-        registration=reg,
-        discount=discount,
-        defaults={'discountAmount': discountAmount, 'applied': False},
-    )[0]
-    logger.debug('Temporary discount record created.')
-    return obj
+    records = [
+        RegistrationDiscount.objects.update_or_create(
+            registration=reg,
+            discount=discount,
+            defaults={'discountAmount': discountAmount, 'applied': False},
+        )[0]
+        for discount, discountAmount in discounts
+    ]
+
+    # A discount that was recorded when the discounts were last determined
+    # may no longer apply (e.g. the customer changed their cart, or the
+    # discount was disabled), so its record is removed.  Records that have
+    # been finalized (applied) are never removed.
+    RegistrationDiscount.objects.filter(registration=reg, applied=False).exclude(
+        id__in=[x.id for x in records]
+    ).delete()
+
+    logger.debug('Temporary discount records updated.')
+    return records
 
 
 @receiver(apply_addons)

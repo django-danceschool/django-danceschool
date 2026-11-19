@@ -2,7 +2,7 @@ import json
 
 from django.urls import reverse
 
-from ..models import Registration, Invoice, EventRole
+from ..models import Registration, Invoice, InvoiceItem, EventRole
 from ..constants import updateConstant, REG_VALIDATION_STR
 from .defaults import DefaultSchoolTestCase
 
@@ -543,3 +543,89 @@ class CartSummaryViewTest(DefaultSchoolTestCase):
         items = self.client.session[REG_VALIDATION_STR]['cart']['items']
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]['sku'], f'EVENT_{series.id}_GENERAL')
+
+
+class BackButtonAdjustmentsResetTest(DefaultSchoolTestCase):
+    '''
+    Reproduces a bug in Invoice.updateTotals where the back-button reset
+    path (invoices.py:416-432) restores each item's `adjustments` from
+    `data._initial_adjustments`, defaulting to 0 when that key is absent.
+    The key is never captured anywhere on the original pass, so any
+    pre-existing non-discount adjustment is silently wiped to 0 on retry.
+    '''
+
+    def test_back_button_preserves_prior_non_discount_adjustments(self):
+        series = self.create_series(pricingTier=self.defaultPricing)
+        invoice = Invoice.objects.create(
+            firstName='Back', lastName='Button', email='back@test.com',
+            grossTotal=series.getBasePrice(),
+            total=series.getBasePrice(),
+            status=Invoice.PaymentStatus.preliminary,
+        )
+        item = InvoiceItem.objects.create(
+            invoice=invoice,
+            grossTotal=series.getBasePrice(),
+            total=series.getBasePrice(),
+            adjustments=-3,
+            data={'_initial_total': series.getBasePrice()},
+        )
+        invoice.adjustments = -3
+        invoice.data['saved_adjustments'] = True
+        invoice.save()
+
+        # Simulate the back-button retry path: updateTotals runs again on
+        # the still-preliminary invoice, sees saved_adjustments=True, and
+        # resets per-item totals/adjustments before re-applying anything.
+        invoice.updateTotals(save=True, resetAdjustments=True)
+
+        item.refresh_from_db()
+        self.assertEqual(
+            item.adjustments, -3,
+            msg=(
+                'Prior non-discount adjustment of -3 was wiped to {0} '
+                'because _initial_adjustments was never captured.'
+            ).format(item.adjustments),
+        )
+
+    def test_adjustment_saved_later_is_kept(self):
+        '''
+        An adjustment that is saved after the item was created (e.g. by staff
+        in the admin) is kept on a reset.  If the item already had a temporary
+        adjustment (e.g. from a post-tax voucher), only the change is kept.
+        '''
+        series = self.create_series(pricingTier=self.defaultPricing)
+        price = series.getBasePrice()
+        invoice = Invoice.objects.create(
+            firstName='Back', lastName='Button', email='back@test.com',
+            status=Invoice.PaymentStatus.preliminary,
+        )
+        item = InvoiceItem.objects.create(
+            invoice=invoice, grossTotal=price, total=price,
+            data={'_initial_total': price},
+        )
+
+        # A temporary adjustment, made the same way as updateTotals() makes
+        # them (with a queryset update, not by saving the item).
+        InvoiceItem.objects.filter(id=item.id).update(adjustments=-5)
+
+        # Staff increase it by 3, as they would in the admin.
+        item = InvoiceItem.objects.get(id=item.id)
+        item.adjustments = -8
+        item.save(updateInvoiceTotals=False)
+        self.assertEqual(item.data['_persistent_adjustments'], -3)
+
+        # Saving it again without a change records nothing more.
+        item = InvoiceItem.objects.get(id=item.id)
+        item.save(updateInvoiceTotals=False)
+        self.assertEqual(item.data['_persistent_adjustments'], -3)
+
+        invoice.refresh_from_db()
+        invoice.data['saved_adjustments'] = True
+        invoice.save()
+        invoice.updateTotals(save=True, resetAdjustments=True)
+
+        item.refresh_from_db()
+        invoice.refresh_from_db()
+        self.assertEqual(item.adjustments, -3)
+        self.assertEqual(item.total, price)
+        self.assertEqual(invoice.adjustments, -3)

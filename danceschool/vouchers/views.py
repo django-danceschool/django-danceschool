@@ -6,6 +6,7 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from django_weasyprint import WeasyTemplateView
 import re
@@ -40,6 +41,21 @@ class GiftCertificateCustomizeView(FormView):
         self.invoice_id = paymentSession.get('invoiceID')
         self.amount = paymentSession.get('amount', 0)
         self.success_url = paymentSession.get('successUrl', reverse('registration'))
+
+        # The payment processor apps look the success URL up on the server
+        # (from the payment form plugin), so it should always be a page on
+        # this site.  Check anyway, so that a payment processor app that takes
+        # it from the browser cannot be used to send the payer to another
+        # site.
+        if not url_has_allowed_host_and_scheme(
+            self.success_url, allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            logger.warning(
+                'Ignoring gift certificate success URL that is not on this site: %s' %
+                self.success_url
+            )
+            self.success_url = reverse('registration')
 
         # Check that Invoice matching passed ID exists
         try:
@@ -98,12 +114,13 @@ class GiftCertificateCustomizeView(FormView):
             'recipientName': recipientName,
             'fromName': fromName,
         }
-        if recipientName:
-            pdf_kwargs.update({})
-
-        response = GiftCertificatePDFView(request=pdf_request).get(request=pdf_request, **pdf_kwargs)
-        response.render()
-        attachment = response.content or None
+        attachment = None
+        if getConstant('vouchers__enableGiftCertificatePDF'):
+            response = GiftCertificatePDFView(request=pdf_request).get(
+                request=pdf_request, **pdf_kwargs
+            )
+            response.render()
+            attachment = response.content or None
 
         if attachment:
             attachment_name = 'gift_certificate.pdf'
@@ -194,7 +211,7 @@ class VoucherGenerationView(PermissionRequiredMixin, SiteHistoryMixin, FormView)
         while not new:
             # Standard is a ten-letter random string of uppercase letters
             random_string = ''.join(random.choice(string.ascii_uppercase) for z in range(10))
-            if not Voucher.objects.filter(voucherId='%s%s' % (prefix, random_string)).exists():
+            if not Voucher.codeInUse('%s%s' % (prefix, random_string)):
                 new = True
 
         initial = {

@@ -774,6 +774,28 @@ class ErrorEmailsTo(StringPreference):
 
 
 @global_preferences_registry.register
+class PaymentMismatchEmailTo(StringPreference):
+    section = email
+    name = 'paymentMismatchEmailTo'
+    verbose_name = _(
+        'Email address that notices of payments that did not match the ' +
+        'balance owed are sent to'
+    )
+    help_text = _(
+        'A notice is sent when a payment is more or less than the balance ' +
+        'that the payer was shown (for example, because the invoice was ' +
+        'changed while they were paying). If no address is specified, the ' +
+        'business email address is used.'
+    )
+    default = ''
+
+    def get_field_kwargs(self):
+        field_kwargs = super().get_field_kwargs()
+        field_kwargs['required'] = False
+        return field_kwargs
+
+
+@global_preferences_registry.register
 class EmailLinkProtocol(ChoicePreference):
     section = email
     name = 'linkProtocol'

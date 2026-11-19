@@ -7,7 +7,11 @@ import unittest
 from django.urls import reverse
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
+from django.core import mail
 from django.db import transaction
+
+from dynamic_preferences.registries import global_preferences_registry
 
 from cms.api import add_plugin
 from cms.models import PageContent
@@ -23,6 +27,7 @@ from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
 # from .cms_plugins import PayAtDoorFormPlugin
 from .constants import ATTHEDOOR_PAYMENTMETHOD_CHOICES
+from .forms import DoorPaymentForm
 
 
 def _get_or_create_alias_with_content(static_code, language, user):
@@ -294,3 +299,77 @@ class PayAtDoorTest(DefaultSchoolTestCase):
         self.assertEqual(invoice.status, invoice.PaymentStatus.unpaid)
         self.assertEqual(invoice.outstandingBalance, s.getBasePrice())
         self.assertTrue(registration.final)
+
+
+class DoorPaymentBalanceTest(DefaultSchoolTestCase):
+    '''
+    Staff may accept any amount at the door, and the invoice is marked as
+    paid.  An amount that is more or less than the balance, or a balance that
+    changed after the form was loaded, is reported to staff by email and to
+    the staff member who recorded it.
+    '''
+
+    def setUp(self):
+        self.gp = global_preferences_registry.manager()
+        self.gp['contact__businessEmail'] = 'school@example.com'
+        self.invoice = Invoice.objects.create(
+            firstName='Pat', lastName='Payer', email='pat@example.com',
+            grossTotal=50, total=50, status=Invoice.PaymentStatus.unpaid,
+        )
+        self.client.force_login(self.superuser)
+
+    def pay(self, amount, **data):
+        post_data = {
+            'submissionUser': self.superuser.id,
+            'invoice': str(self.invoice.id),
+            'amountPaid': amount,
+            'paymentMethod': ATTHEDOOR_PAYMENTMETHOD_CHOICES[0][0],
+            'receivedBy': self.superuser.id,
+        }
+        post_data.update(data)
+        response = self.client.post(reverse('doorPaymentHandler'), post_data)
+        self.assertEqual(response.status_code, 302)
+        self.invoice.refresh_from_db()
+        return [str(m) for m in get_messages(response.wsgi_request)]
+
+    def notices(self):
+        return [m for m in mail.outbox if 'did not match the balance' in m.subject]
+
+    def test_payment_of_balance(self):
+        messages = self.pay(50, expectedBalance=50)
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertEqual(messages, [])
+        self.assertEqual(self.notices(), [])
+
+    def test_less_than_balance_is_paid_and_reported(self):
+        messages = self.pay(40, expectedBalance=50)
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertEqual(self.invoice.outstandingBalance, 10)
+        self.assertTrue(
+            any('still owed, but the invoice has been marked as paid' in m for m in messages),
+            messages
+        )
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_more_than_balance_is_reported(self):
+        messages = self.pay(60, expectedBalance=50)
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+        self.assertTrue(any('should be refunded' in m for m in messages), messages)
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_balance_changed_after_form_was_loaded(self):
+        ''' The form showed 45, and staff collected 45, but the balance is now 50. '''
+        messages = self.pay(45, expectedBalance=45)
+        self.assertTrue(any('changed from' in m for m in messages), messages)
+        self.assertEqual(len(self.notices()), 1)
+
+    def test_form_without_expected_balance(self):
+        ''' A form loaded before this change does not send one. '''
+        self.assertEqual(self.pay(50), [])
+        self.assertEqual(self.invoice.status, Invoice.PaymentStatus.paid)
+
+    def test_form_includes_balance_shown(self):
+        form = DoorPaymentForm(
+            user=self.superuser.id, invoice=str(self.invoice.id), initialAmount=50,
+        )
+        self.assertIn('name="expectedBalance" value="50"', str(form['expectedBalance']))

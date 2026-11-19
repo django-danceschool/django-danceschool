@@ -678,7 +678,7 @@ class MultiRegCustomerNameForm(RegistrationForm):
                 'er_%s_lastName' % er.id: self.cleaned_data.get('er_%s_lastName' % er.base_id),
                 'er_%s_email' % er.id: self.cleaned_data.get('er_%s_email' % er.base_id),
                 'er_%s_phone' % er.id: self.cleaned_data.get('er_%s_phone' % er.base_id, None),
-                'er_%s_student' % er.id: self.cleaned_data.get('er_%s_studetn' % er.base_id, False),
+                'er_%s_student' % er.id: self.cleaned_data.get('er_%s_student' % er.base_id, False),
             })
 
         return self.cleaned_data

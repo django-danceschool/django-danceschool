@@ -1,3 +1,4 @@
+from django.apps import apps
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
@@ -112,9 +113,14 @@ class DiscountCombo(models.Model):
     DiscountInfo.__new__.__defaults__ = ([], )
 
     # A DiscountApplication contains a list of DiscountInfo tuples to be applied, along with an optional
-    # total for ineligible items to be added to the discounted net price at the end.
-    DiscountApplication = namedtuple('DiscountApplication', ['items', 'ineligible_total'])
-    DiscountApplication.__new__.__defaults__ = ([], 0)
+    # total for ineligible items to be added to the discounted net price at the end.  The optional
+    # item_discounts dictionary gives the amount by which the discounts reduce the price of each
+    # invoice item, in the form {invoice item id: amount}, so that discounts are taken off of the
+    # items that they apply to.
+    DiscountApplication = namedtuple(
+        'DiscountApplication', ['items', 'ineligible_total', 'item_discounts']
+    )
+    DiscountApplication.__new__.__defaults__ = ([], 0, {})
 
     name = models.CharField(
         _('Name'), max_length=50, unique=True,
@@ -249,6 +255,43 @@ class DiscountCombo(models.Model):
         )
     )
 
+    @staticmethod
+    def allocateToMatched(allocatedPrices, matchedFractions, netPrice):
+        '''
+        Allocate a discounted net price among items, so that the discount is
+        taken off of the items (or the portions of items) that were needed to
+        apply the discount.  As with the itemTuples of an ApplicableDiscountCode,
+        each of the matchedFractions is the fraction of that item that was
+        needed (1 if the item was needed in its entirety, 0 if it was not
+        needed at all).  The portion of each item that was not needed keeps
+        its price.
+        '''
+        matched = [p * f for p, f in zip(allocatedPrices, matchedFractions)]
+        unmatched = [p * (1 - f) for p, f in zip(allocatedPrices, matchedFractions)]
+        sum_matched = sum(matched)
+        sum_unmatched = sum(unmatched)
+
+        # The amount that is left for the matched portions once the unmatched
+        # portions have kept their price.
+        remainder = netPrice - sum_unmatched
+
+        if sum_matched > 0 and remainder >= 0:
+            return [
+                u + (m * (remainder / sum_matched))
+                for u, m in zip(unmatched, matched)
+            ]
+        elif sum_matched > 0 and sum_unmatched > 0:
+            # The discount is larger than the price of the matched portions, so
+            # those become free and the rest of the discount is taken
+            # proportionately off of everything else.
+            return [u * (netPrice / sum_unmatched) for u in unmatched]
+
+        # Nothing was matched, so allocate proportionately among all items.
+        initial_net_price = sum_unmatched + sum_matched
+        if not initial_net_price:
+            return list(allocatedPrices)
+        return [p * (netPrice / initial_net_price) for p in allocatedPrices]
+
     def applyAndAllocate(self, allocatedPrices, tieredTuples, payAtDoor=False):
         '''
         This method takes an initial allocation of prices across events, and
@@ -257,6 +300,11 @@ class DiscountCombo(models.Model):
         items, and returns both the price and the allocation
         '''
         initial_net_price = sum([x for x in allocatedPrices])
+
+        # The tieredTuples hold the fraction of each item that remains at full
+        # price.  This is the fraction of each item that was needed to apply
+        # the discount (1 if the item was needed in its entirety).
+        matchedFractions = [1 - x[1] for x in tieredTuples]
 
         if self.discountType == self.DiscountType.flatPrice:
             # Flat-price for all applicable items (partial application for items which are
@@ -272,14 +320,20 @@ class DiscountCombo(models.Model):
                     for x in tieredTuples
                 ])
 
-            # Flat prices are allocated equally across all events
-            this_allocated_prices = [x * (this_price / initial_net_price) for x in allocatedPrices]
+            # Flat prices are allocated among the items that were needed to apply the discount.
+            this_allocated_prices = self.allocateToMatched(
+                allocatedPrices, matchedFractions, this_price
+            )
 
         elif self.discountType == self.DiscountType.dollarDiscount:
             # Discount the set of applicable items by a specific number of dollars (currency units)
-            # Dollar discounts are allocated equally across all events.
-            this_price = initial_net_price - self.dollarDiscount
-            this_allocated_prices = [x * (this_price / initial_net_price) for x in allocatedPrices]
+            # Dollar discounts are allocated among the items that were needed to apply the discount.
+            # The price cannot be less than zero, and it is limited here (before
+            # it is allocated) so that no item is allocated a negative price.
+            this_price = max(initial_net_price - self.dollarDiscount, 0)
+            this_allocated_prices = self.allocateToMatched(
+                allocatedPrices, matchedFractions, this_price
+            )
 
         elif self.discountType == DiscountCombo.DiscountType.percentDiscount:
             # Percentage off discounts, which may be applied to all items in the cart,
@@ -464,6 +518,19 @@ class DiscountCombo(models.Model):
             self.percentUniversallyApplied = False
 
         super().save(*args, **kwargs)
+
+    def clean(self):
+        '''
+        A voucher with the same code as a discount could never be used, so a
+        discount cannot be given the code of an existing voucher.
+        '''
+        super().clean()
+        if self.voucherId and apps.is_installed('danceschool.vouchers'):
+            Voucher = apps.get_model('vouchers', 'Voucher')
+            if Voucher.objects.filter(voucherId=self.voucherId).exists():
+                raise ValidationError({'voucherId': _(
+                    'This code is already the code of a voucher.'
+                )})
 
     def __str__(self):
         return self.name

@@ -17,6 +17,7 @@ from ..helpers import getSiteUrl
 from ..signals import invoice_finalized, invoice_cancelled
 from ..mixins import EmailRecipientMixin
 from ..managers import InvoiceManager, InvoiceItemManager
+from ..tasks import sendEmail
 
 logger = logging.getLogger(__name__)
 
@@ -293,15 +294,31 @@ class Invoice(EmailRecipientMixin, models.Model):
     def processPayment(
         self, amount, fees, paidOnline=True, methodName=None, methodTxn=None,
         submissionUser=None, collectedByUser=None, forceFinalize=False,
-        notify=None, epsilon=0.01
+        notify=None, epsilon=0.01, expectedBalance=None
     ):
         '''
         When a payment processor makes a successful payment against an invoice, it can call this method
         which handles status updates, the creation of a final registration object (if applicable), and
         the firing of appropriate registration-related signals.
+
+        A payment that is more than the balance owed also finalizes the
+        invoice, since the payer has paid at least the full price; the extra
+        amount is reported to staff so that it can be refunded.
+
+        A payment processor whose payment was meant to pay the balance in full
+        should pass expectedBalance, the balance that the payer was shown.  If
+        the balance changed before the payment was recorded (for example,
+        because staff edited the invoice while the customer was paying), if
+        the payment is more than the balance owed, or if forceFinalize marks
+        the invoice as paid while money is still owed, then the payment is
+        still recorded, but a record of the mismatch is kept in
+        data['paymentMismatches'], staff are notified by email, and that
+        record is returned so that the processor can also show a warning.
+        Otherwise, this returns None.
         '''
 
         paymentTime = timezone.now()
+        balanceBefore = self.outstandingBalance
 
         logger.info('Processing payment and creating registration objects if applicable.')
 
@@ -329,9 +346,38 @@ class Invoice(EmailRecipientMixin, models.Model):
         if collectedByUser and not self.collectedByUser:
             self.collectedByUser = collectedByUser
 
-        # if this completed the payment, then mark
-        # the invoice as Paid unless told to do otherwise.
-        if forceFinalize or abs(self.outstandingBalance) < epsilon:
+        overpaid = (amount > 0 and self.outstandingBalance <= -epsilon)
+
+        # if this completed the payment (or paid more than was owed), then
+        # mark the invoice as Paid unless told to do otherwise.
+        finalize = (
+            forceFinalize or abs(self.outstandingBalance) < epsilon or overpaid
+        )
+
+        mismatch = None
+        if overpaid or (
+            # Marked as paid even though money is still owed (e.g. staff
+            # accepted less than the balance at the door).
+            forceFinalize and self.outstandingBalance >= epsilon
+        ) or (
+            expectedBalance is not None and
+            abs(balanceBefore - expectedBalance) >= epsilon
+        ):
+            mismatch = {
+                'dateTime': paymentTime.isoformat(),
+                'amount': amount,
+                'methodName': methodName,
+                'methodTxn': methodTxn,
+                'expectedBalance': expectedBalance,
+                'balanceBefore': balanceBefore,
+                'balanceAfter': self.outstandingBalance,
+                'invoicePaid': finalize,
+            }
+            self.data['paymentMismatches'] = (
+                self.data.get('paymentMismatches', []) + [mismatch]
+            )
+
+        if finalize:
             self.status = self.PaymentStatus.paid
 
             if getattr(self, 'registration', None):
@@ -350,14 +396,146 @@ class Invoice(EmailRecipientMixin, models.Model):
         else:
             self.save()
 
+        if mismatch:
+            logger.warning(
+                'Payment on invoice %s did not match the balance: %s' %
+                (self.id, mismatch)
+            )
+            self.notifyPaymentMismatch(mismatch)
+        return mismatch
+
+    def describePaymentMismatch(self, mismatch):
+        '''
+        A description of a record from data['paymentMismatches'] (as returned
+        by processPayment()), for staff.
+        '''
+        symbol = getConstant('general__currencySymbol')
+
+        def money(value):
+            return '%s%.2f' % (symbol, value)
+
+        amount = mismatch['amount']
+        balanceBefore = mismatch['balanceBefore']
+        balanceAfter = mismatch['balanceAfter']
+        expected = mismatch.get('expectedBalance')
+
+        parts = []
+        if expected is not None and abs(balanceBefore - expected) >= 0.01:
+            parts.append(str(_(
+                'The balance owed changed from %(expected)s to %(before)s ' +
+                'after the payer was shown it.'
+            ) % {'expected': money(expected), 'before': money(balanceBefore)}))
+
+        if balanceAfter < 0:
+            parts.append(str(_(
+                'The payment of %(amount)s was %(extra)s more than the balance ' +
+                'owed of %(before)s. The invoice has been marked as paid, and ' +
+                'the extra %(extra)s should be refunded.'
+            ) % {
+                'amount': money(amount), 'extra': money(-balanceAfter),
+                'before': money(balanceBefore),
+            }))
+        elif balanceAfter > 0 and mismatch.get('invoicePaid'):
+            parts.append(str(_(
+                'The payment of %(amount)s was less than the balance owed of ' +
+                '%(before)s. %(after)s is still owed, but the invoice has ' +
+                'been marked as paid.'
+            ) % {
+                'amount': money(amount), 'before': money(balanceBefore),
+                'after': money(balanceAfter),
+            }))
+        elif balanceAfter > 0:
+            parts.append(str(_(
+                'The payment of %(amount)s was less than the balance owed of ' +
+                '%(before)s. %(after)s is still owed, and the invoice has not ' +
+                'been marked as paid.'
+            ) % {
+                'amount': money(amount), 'before': money(balanceBefore),
+                'after': money(balanceAfter),
+            }))
+        else:
+            parts.append(str(_(
+                'The payment of %(amount)s paid the new balance in full.'
+            ) % {'amount': money(amount)}))
+        return ' '.join(parts)
+
+    def emailStaff(self, subject, notice, details):
+        '''
+        Email staff an automated notice about a payment on this invoice.  The
+        email contains the notice, then the lines in details, then details of
+        the invoice.  This is sent to the address in the
+        email__paymentMismatchEmailTo preference, or to the business email
+        address if none is specified.
+        '''
+        if getConstant('email__disableSiteEmails'):
+            logger.info('Not sending payment notice to staff: site emails are disabled.')
+            return
+
+        send_to = (
+            getConstant('email__paymentMismatchEmailTo') or
+            getConstant('contact__businessEmail')
+        )
+        send_from = (
+            getConstant('email__defaultEmailFrom') or
+            getConstant('contact__businessEmail')
+        )
+        if not send_to:
+            logger.error(
+                'Cannot send payment notice to staff because no address has ' +
+                'been specified.'
+            )
+            return
+
+        content = '\n\n'.join([
+            notice,
+            '\n'.join([
+                str(_('Invoice: %s') % self.id),
+                str(_('Name: %s') % self.fullName),
+                str(_('Email: %s') % (self.email or '')),
+            ] + list(details) + [
+                str(_('Invoice status: %s') % self.get_status_display()),
+                str(_('View the invoice: %s') % (
+                    getSiteUrl() + reverse('admin:core_invoice_change', args=[self.id])
+                )),
+            ]),
+        ])
+
+        # Calling the task queues it to be sent.
+        sendEmail(str(subject), content, send_from, to=[send_to])
+
+    def notifyPaymentMismatch(self, mismatch):
+        '''
+        Email staff about a payment that did not match the balance owed (see
+        processPayment()).
+        '''
+        self.emailStaff(
+            _('Payment did not match the balance on invoice %s') % self.id,
+            '\n\n'.join([
+                str(_(
+                    'This is an automated notice that a payment was recorded on ' +
+                    'an invoice for a different amount than the balance owed.'
+                )),
+                self.describePaymentMismatch(mismatch),
+            ]),
+            [
+                str(_('Payment method: %s') % (mismatch.get('methodName') or '')),
+                str(_('Transaction: %s') % (mismatch.get('methodTxn') or '')),
+                str(_('Date/Time: %s') % mismatch.get('dateTime')),
+            ],
+        )
+
     def updateTotals(
         self, save=True, forceSave=False, allocateAmounts={},
-        allocateWeights={}, prior_queryset=None, setAdjustmentsFlag=True
+        allocateWeights={}, prior_queryset=None, setAdjustmentsFlag=True,
+        resetAdjustments=False
     ):
         '''
         This method recalculates the totals from the invoice items associated
         with the invoice.  If the totals have changed, then the invoice is
-        saved.  If an allocate dictionary is passed, then adjustments to each
+        saved.  If resetAdjustments is passed, then any discounts and vouchers
+        that were previously applied are removed first (see below); only the
+        registration process, which applies them again, should pass it.
+        If an allocate dictionary is passed, then adjustments to each
         line item can also be proportionately distributed among the items.  And,
         a dictionary of weights (in {id: value} form) can be passed, which
         allows allocations to be applied to specific items in proportion.
@@ -399,6 +577,9 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         item_keys = ['grossTotal', 'total', 'adjustments', 'fees']
 
+        # Is this call a continuation of a prior call to this method?
+        chained = prior_queryset is not None
+
         # Ignore keys other than the ones that apply to invoice items and
         # also 0 adjustment amounts
         allocateAmounts = {
@@ -413,7 +594,15 @@ class Invoice(EmailRecipientMixin, models.Model):
         # prevents the duplicate application of discounts and vouchers by
         # pressing the back button.  The saved_adjustments flag in Invoice
         # data is set later in updateTotals() whenever the invoice is saved.
-        saved_adjustments = self.data.pop('saved_adjustments', False)
+        # Adjustments that were not made by this method (e.g. a credit entered
+        # by staff) are recorded in _persistent_adjustments by
+        # InvoiceItem.save(), and they are kept.  This is only done when it is
+        # asked for, because otherwise, any other update of the totals (e.g.
+        # saving an item, or recording the fees for a payment) would remove
+        # the discounts and vouchers, and they would not be applied again.
+        saved_adjustments = (
+            resetAdjustments and self.data.pop('saved_adjustments', False)
+        )
         if (saved_adjustments and self.status == self.PaymentStatus.preliminary):
             prior_queryset = self.invoiceitem_set.all()
             prior_queryset.update(
@@ -422,7 +611,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                     'grossTotal'
                 ),
                 adjustments=Coalesce(
-                    Cast('data___initial_adjustments', models.FloatField()),
+                    Cast('data___persistent_adjustments', models.FloatField()),
                     0, output_field=models.FloatField()
                 )
             )
@@ -604,6 +793,13 @@ class Invoice(EmailRecipientMixin, models.Model):
             if getattr(self,k) != new_totals[k]:
                 setattr(self, k, new_totals[k])
                 changed_invoice = True
+
+        # When this call continues from a prior call that was not saved (the
+        # chained variable is set at the top of this method), the totals on
+        # this invoice already reflect that prior call, so they may not appear
+        # to have changed even though they have not been saved.
+        if chained:
+            changed_invoice = True
 
         if (changed_invoice and save) or forceSave:
             if changed_invoice and setAdjustmentsFlag:
@@ -958,11 +1154,52 @@ class InvoiceItem(models.Model):
             )
         return kwargs
 
+    def __init__(self, *args, **kwargs):
+        '''
+        Keep track of the adjustments as they were loaded, so that a change
+        made by saving this item can be recorded (see save()).  If the field
+        was deferred, then it is not loaded here.
+        '''
+        super().__init__(*args, **kwargs)
+        self._loaded_adjustments = self.__dict__.get('adjustments')
+
+    def recordPersistentAdjustments(self):
+        '''
+        Invoice.updateTotals() applies post-tax vouchers to item adjustments
+        with queryset updates (which do not call save()), and on a reload of
+        the registration summary page, it removes them again by restoring the
+        adjustments to _persistent_adjustments.  Any other change to the
+        adjustments is made by saving the item (e.g. a credit entered by staff
+        in the admin), and it is recorded here so that it is kept.  Because the
+        adjustments may already include a voucher, the change is recorded,
+        not the new value.  Code that applies temporary adjustments must use
+        updateTotals(), or they will be kept as well.
+        '''
+        previous = 0 if self._state.adding else self._loaded_adjustments
+        current = self.__dict__.get('adjustments')
+        if previous is None or current is None:
+            return False
+        change = current - previous
+        if not change:
+            return False
+        self.data = self.data or {}
+        self.data['_persistent_adjustments'] = (
+            self.data.get('_persistent_adjustments', 0) + change
+        )
+        return True
+
     def save(self, *args, **kwargs):
         restrictStatus = kwargs.pop('restrictStatus', True)
         updateTotals = kwargs.pop('updateInvoiceTotals', True)
         if self.invoice.itemsEditable or not restrictStatus:
+            update_fields = kwargs.get('update_fields')
+            if (
+                self.recordPersistentAdjustments() and update_fields is not None
+                and 'data' not in update_fields
+            ):
+                kwargs['update_fields'] = list(update_fields) + ['data']
             super().save(*args, **kwargs)
+            self._loaded_adjustments = self.__dict__.get('adjustments')
             if updateTotals:
                 self.invoice.updateTotals()
 

@@ -1,19 +1,20 @@
-{% load cms_tags i18n %}
-{% load static %}
+{% load i18n %}
 
 <div class="door-payment-section">
-    <form action={% url 'stripeSession' %} method="POST" class="my-4">
+    <form action="{% url 'stripeSession' %}" method="POST" class="my-4">
         {% csrf_token %}
-        {% if user.is_authenticated %}
-            <input type="hidden" name="submissionUser" value="{{ user.id }}">
-        {% endif %}
+        {# The success page is looked up from this plugin on the server. #}
+        <input type="hidden" name="plugin_id" value="{{ instance.id }}">
+        <input type="hidden" name="sourceUrl" value="{{ request.get_full_path }}">
         {% if invoice %}
             <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
-            <input type="hidden" name="stripeAmount" value="{{ invoice.outstandingBalance }}">
+            {# The balance shown on this page.  If it has changed by the time #}
+            {# the payment is started, then the payment is refused. #}
+            <input type="hidden" name="expected_balance" value="{{ invoice.outstandingBalance|stringformat:'.2f' }}">
         {% endif %}
         <section class="section">
             <div class="container">
-                <button class="btn btn-primary text-start" style="float: left;" id="submitBtn">{% trans Start payment %}</button>
+                <button class="btn btn-primary text-start" style="float: left;" id="submitBtn">{% trans "Start payment" %}</button>
             </div>
         </section>
     </form>

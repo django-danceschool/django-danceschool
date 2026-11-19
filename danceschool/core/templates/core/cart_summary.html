@@ -108,7 +108,7 @@
             <tbody>
                 <tr>
                     <td><strong>{% trans "Voucher" %}:</strong> {{ voucher_preview.voucher_name }} ({{ voucher_preview.voucher_id }})</td>
-                    <td class="price-adjustment">-{{ currencySymbol }}{{ voucher_preview.voucher_amount|floatformat:2 }}</td>
+                    <td class="price-adjustment">-{{ currencySymbol }}{{ voucher_preview.voucher_amount|floatformat:2 }}{% if voucher_preview.customer_pending %}{% include 'core/base/voucher_pending_note.html' %}{% endif %}</td>
                     <td></td>
                 </tr>
             </tbody>
@@ -128,7 +128,7 @@
         <tbody>
             <tr>
                 <td><strong>{% trans "Voucher" %}:</strong> {{ voucher_preview.voucher_name }} ({{ voucher_preview.voucher_id }})</td>
-                <td class="price-adjustment">-{{ currencySymbol }}{{ voucher_preview.voucher_amount|floatformat:2 }}</td>
+                <td class="price-adjustment">-{{ currencySymbol }}{{ voucher_preview.voucher_amount|floatformat:2 }}{% if voucher_preview.customer_pending %}{% include 'core/base/voucher_pending_note.html' %}{% endif %}</td>
                 <td></td>
             </tr>
         </tbody>

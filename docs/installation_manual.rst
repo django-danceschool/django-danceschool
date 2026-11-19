@@ -287,6 +287,7 @@ For Paypal:
 For Stripe:
 - ``STRIPE_PUBLIC_KEY``
 - ``STRIPE_PRIVATE_KEY``
+- ``STRIPE_WEBHOOK_KEY``
 
 For Square:
 - ``SQUARE_APPLICATION_ID``

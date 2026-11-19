@@ -1,0 +1,15 @@
+{% load i18n %}{% comment %}
+	Shown next to the amount of a voucher that depends on customer information
+	that has not been entered yet (e.g. a voucher for first-time customers),
+	so the amount may still change. The text is visible to screen readers, and
+	the icon shows it as a tooltip when hovered over, tapped, or focused.
+{% endcomment %}{% trans "This voucher is only for some customers, so this amount is not final until everyone's information has been entered." as pending_text %}
+<span class="voucher-pending-note ms-1" tabindex="0" role="note" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ pending_text }}"><i class="fa fa-info-circle" aria-hidden="true"></i><span class="visually-hidden">{{ pending_text }}</span></span>
+<script type="text/javascript">
+	document.addEventListener('DOMContentLoaded', function () {
+		if (!window.bootstrap || !bootstrap.Tooltip) { return; }
+		document.querySelectorAll('.voucher-pending-note[data-bs-toggle="tooltip"]').forEach(function (el) {
+			bootstrap.Tooltip.getOrCreateInstance(el);
+		});
+	});
+</script>

@@ -1,7 +1,6 @@
 {% load cms_tags sekizai_tags i18n %}
 
 {% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
-{% url "customizeGiftCertificate" as certificate_url %}
 
 <div class="card my-4 door-payment-section">
   <h6 class="card-header">
@@ -42,18 +41,16 @@
         {% endif %}
         {% if invoice %}
             invoice_id: "{{ invoice.id }}",
+            // The balance shown on this page.  If it has changed by the time
+            // the payment is submitted, then the payment is refused.
+            expected_balance: "{{ invoice.outstandingBalance|stringformat:'.2f' }}",
+            sourceUrl: "{{ request.get_full_path|escapejs }}",
             {% if invoice.email %}
             customerEmail: "{{ invoice.email }}",
             {% endif %}
         {% endif %}
-        {% if transaction_type == "Gift Certificate" and certificate_url %}
-          successUrl: "{{ certificate_url }}",
-          addSessionInfo: true,
-          finalSuccessUrl: "{% if instance.successPage.id %}{% page_url instance.successPage %}{% endif %}",
-        {% elif instance.successPage.id %}
-          successUrl: "{% page_url instance.successPage %}",
-          addSessionInfo: true,
-        {% endif %}
+        // The success page is looked up from this plugin on the server.
+        plugin_id: "{{ instance.id|default_if_none:'' }}",
       },
     };
 </script>
@@ -124,8 +121,13 @@
           cardButton.disabled = true;
           const token = await tokenize(paymentMethod);
           const paymentResults = await createPayment(token);
-          cardButton.disabled = false;
           displayPaymentMessage(paymentResults.message, paymentResults.status);
+          if (paymentResults.redirect_url) {
+            // E.g. the balance has changed, so reload the page to show it.
+            window.location.href = paymentResults.redirect_url;
+            return;
+          }
+          cardButton.disabled = false;
           updateIdempotencyKey();
         } catch (e) {
           cardButton.disabled = false;

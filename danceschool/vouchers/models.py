@@ -1,7 +1,8 @@
+from django.apps import apps
 from django.db import models
 from django.db.models import Sum
 from django.db.models.query import QuerySet, FlatValuesListIterable
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MinValueValidator, RegexValidator
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -13,6 +14,25 @@ from danceschool.core.models import (
     ClassDescription, DanceTypeLevel, SeriesCategory, PublicEventCategory,
     EventSession, Event
 )
+
+
+# Used by Voucher methods to tell an argument that was not passed apart from
+# one that was passed as None.
+NOT_GIVEN = object()
+
+
+def isDiscountCode(code):
+    '''
+    A code that is also the code of a discount belongs to that discount, and
+    a voucher with the same code is ignored.  The admin does not allow a code
+    to be saved for both, and generated voucher codes are never the code of a
+    discount, but codes saved before these checks were added may still be
+    shared.
+    '''
+    if not code or not apps.is_installed('danceschool.discounts'):
+        return False
+    DiscountCombo = apps.get_model('discounts', 'DiscountCombo')
+    return DiscountCombo.objects.filter(voucherId=code).exists()
 
 
 class VoucherCategory(models.Model):
@@ -105,6 +125,17 @@ class Voucher(models.Model):
     # are logged in).
     doorOnly = models.BooleanField(_('At-the-door Registrations Only'), default=False)
 
+    appliesToEntireInvoice = models.BooleanField(
+        _('Can be used for anything on the invoice'), default=False,
+        help_text=_(
+            'If this voucher is restricted to specific classes or events, then '
+            'by default it can only be used for registrations for those classes '
+            'or events. If checked, then once there is such a registration, the '
+            'voucher can be used for everything on the invoice, including other '
+            'registrations and merchandise.'
+        )
+    )
+
     # Keep track of when vouchers are created
     creationDate = models.DateTimeField(_('Creation Date'), auto_now_add=True)
 
@@ -118,6 +149,14 @@ class Voucher(models.Model):
     )
 
     @classmethod
+    def codeInUse(cls, code):
+        '''
+        A code is in use if it is the code of a voucher, or of a discount (see
+        isDiscountCode()).  Generated codes are checked with this method.
+        '''
+        return cls.objects.filter(voucherId=code).exists() or isDiscountCode(code)
+
+    @classmethod
     def create_new_code(cls, **kwargs):
         '''
         Creates a new Voucher with a unique voucherId
@@ -128,7 +167,7 @@ class Voucher(models.Model):
         while not new:
             # Standard is a ten-letter random string of uppercase letters
             random_string = ''.join(random.choice(string.ascii_uppercase) for z in range(10))
-            if not Voucher.objects.filter(voucherId='%s%s' % (prefix, random_string)).exists():
+            if not cls.codeInUse('%s%s' % (prefix, random_string)):
                 new = True
 
         return Voucher.objects.create(voucherId='%s%s' % (prefix, random_string), **kwargs)
@@ -180,9 +219,144 @@ class Voucher(models.Model):
     maxToUse = property(fget=getMaxToUse)
     maxToUse.fget.short_description = _('Maximum amount available for next use')
 
+    @property
+    def isEventRestricted(self):
+        ''' Is this voucher restricted to specific classes or events? '''
+        return (
+            self.classvoucher_set.exists() or
+            self.dancetypevoucher_set.exists() or
+            self.seriescategoryvoucher_set.exists() or
+            self.publiceventcategoryvoucher_set.exists() or
+            self.sessionvoucher_set.exists()
+        )
+
+    def eventQualifies(self, event):
+        '''
+        Can this voucher be used for a registration for the passed event?  An
+        event qualifies if it meets every type of restriction that the voucher
+        has (classes, levels, categories and sessions).
+        '''
+        classDescription = getattr(event, 'classDescription', None)
+        category = getattr(event, 'category', None)
+
+        if self.classvoucher_set.exists() and not self.classvoucher_set.filter(
+            classDescription=classDescription
+        ).exists():
+            return False
+        if self.dancetypevoucher_set.exists() and not self.dancetypevoucher_set.filter(
+            danceTypeLevel=getattr(classDescription, 'danceTypeLevel', None)
+        ).exists():
+            return False
+
+        # Series and public events have different types of category, so an
+        # event of the other type never has a category that qualifies.
+        if self.seriescategoryvoucher_set.exists() and (
+            not isinstance(category, SeriesCategory) or
+            not self.seriescategoryvoucher_set.filter(seriesCategory=category).exists()
+        ):
+            return False
+        if self.publiceventcategoryvoucher_set.exists() and (
+            not isinstance(category, PublicEventCategory) or
+            not self.publiceventcategoryvoucher_set.filter(
+                publicEventCategory=category
+            ).exists()
+        ):
+            return False
+
+        if self.sessionvoucher_set.exists() and not self.sessionvoucher_set.filter(
+            session=getattr(event, 'session', None)
+        ).exists():
+            return False
+        return True
+
+    @property
+    def isAttendeeRestricted(self):
+        '''
+        Is this voucher only for first-time customers, or only for previous
+        customers?  These conditions apply to the person that each registration
+        is for, while restrictions to specific customers or customer groups
+        apply to the person who is paying.
+        '''
+        return self.forFirstTimeCustomersOnly or self.forPreviousCustomersOnly
+
+    def customerQualifies(self, customer):
+        '''
+        Does the passed customer meet this voucher's conditions on first-time
+        or previous customers?  No customer (e.g. a person who has never
+        registered before) is a first-time customer.
+        '''
+        registered = customer.numEventRegistrations if customer else 0
+        if self.forFirstTimeCustomersOnly and registered > 0:
+            return False
+        if self.forPreviousCustomersOnly and registered == 0:
+            return False
+        return True
+
+    def eligibleItemIds(self, invoiceItems, attendee=NOT_GIVEN, checkAttendees=True):
+        '''
+        Return the set of the ids (as strings) of the passed invoice items that
+        this voucher can be used for.
+
+        A voucher with no restrictions on classes, events, or first-time or
+        previous customers can be used for every item.  Otherwise, it can be
+        used for registrations for the events that qualify, by people who
+        qualify.  Events that are included with another event (e.g. as part of
+        a pass) follow that event.  A voucher that can be used for the entire
+        invoice can be used for every item if at least one registration
+        qualifies.
+
+        The person that each registration is for is the customer recorded for
+        it, unless an attendee is passed, in which case that customer (or None,
+        for someone who has never registered) is used for every registration.
+        If checkAttendees is False, then the people are not checked at all
+        (e.g. before it is known who each registration is for).
+        '''
+        items = list(invoiceItems)
+        checkAttendees = checkAttendees and self.isAttendeeRestricted
+        if not self.isEventRestricted and not self.isAttendeeRestricted:
+            return {str(x.id) for x in items}
+
+        # Cache the result for each event and customer, since a pass and the
+        # events that it includes are checked together.
+        event_results = {}
+        customer_results = {}
+
+        def itemQualifies(item):
+            if item.parent_item_id:
+                return itemQualifies(item.parent_item)
+            try:
+                eventRegistration = item.eventRegistration
+            except ObjectDoesNotExist:
+                return False
+
+            if self.isEventRestricted:
+                event = eventRegistration.event
+                if event.id not in event_results:
+                    event_results[event.id] = self.eventQualifies(event)
+                if not event_results[event.id]:
+                    return False
+
+            if checkAttendees:
+                customer = (
+                    eventRegistration.customer if attendee is NOT_GIVEN
+                    else attendee
+                )
+                key = getattr(customer, 'id', None)
+                if key not in customer_results:
+                    customer_results[key] = self.customerQualifies(customer)
+                if not customer_results[key]:
+                    return False
+            return True
+
+        qualifying = {str(x.id) for x in items if itemQualifies(x)}
+        if qualifying and self.appliesToEntireInvoice:
+            return {str(x.id) for x in items}
+        return qualifying
+
     def validate(
         self, customer=None, events=None, payAtDoor=False, raise_errors=True,
-        return_amount=False, validate_customer=True, validate_events=True
+        return_amount=False, validate_customer=True, validate_events=True,
+        invoiceItems=None, attendee=NOT_GIVEN, checkAttendees=True
     ):
         '''
         Check whether this voucher is valid given optional parameters for the
@@ -196,6 +370,14 @@ class Voucher(models.Model):
         Additionally, the method can be specified to skip validation of customer
         or event contents, which may be useful when a customer has not yet been
         specified or events have not yet been selected.
+
+        The customer is the person who is paying.  If the invoice items are
+        passed, then the voucher must be usable for at least one of them (see
+        eligibleItemIds(), which also takes the attendee and checkAttendees
+        arguments), and the conditions on first-time and previous customers
+        are checked for the person that each registration is for, not for the
+        person who is paying.  Without invoice items (e.g. before checkout),
+        the events and the person who is paying are checked.
         '''
 
         errors = []
@@ -258,71 +440,59 @@ class Voucher(models.Model):
         if errors and raise_errors:
             raise ValidationError(errors)
 
+        event_restricted = self.isEventRestricted
+        if invoiceItems is not None:
+            invoiceItems = list(invoiceItems)
+
+        first_time_error = ValidationError(
+            _('This voucher can only be used by first time customers.'),
+            code='not_first_time_customer'
+        )
+        previous_customer_error = ValidationError(
+            _(
+                'This voucher can only be used by existing customers.' +
+                '  If you are an existing customer, be sure to register' +
+                ' with the same email address that you have used previously.'
+            ),
+            code='not_existing_customer',
+        )
+
         # Only validate events contents if specified (default is True)
         if validate_events:
-            # every series is either in the list or there is no list
-            if self.classvoucher_set.exists():
-                for s in events:
-                    if not self.classvoucher_set.filter(
-                        classDescription=getattr(s, 'classDescription', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes.'),
-                                code='classvoucher_invalid'
-                            )
-                        )
-            if self.dancetypevoucher_set.exists():
-                for s in events:
-                    if not self.dancetypevoucher_set.filter(
-                        danceTypeLevel=getattr(getattr(s, 'classDescription', None), 'danceTypeLevel', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes.'),
-                                code='dancetypevoucher_invalid'
-                            )
-                        )
-            if self.seriescategoryvoucher_set.exists():
-                for s in events:
-                    if not self.seriescategoryvoucher_set.filter(
-                        seriesCategory=getattr(s, 'category', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes.'),
-                                code='seriescategoryvoucher_invalid'
-                            )
-                        )
-            if self.publiceventcategoryvoucher_set.exists():
-                for s in events:
-                    if not self.publiceventcategoryvoucher_set.filter(
-                        publicEventCategory=getattr(s, 'category', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific events.'),
-                                code='publiceventcategoryvoucher_invalid'
-                            )
-                        )
-            if self.sessionvoucher_set.exists():
-                for s in events:
-                    if not self.sessionvoucher_set.filter(
-                        session=getattr(s, 'session', None)
-                    ).exists():
-                        errors.append(
-                            ValidationError(
-                                _('This voucher can be only used for specific classes or events.'),
-                                code='sessionvoucher_invalid'
-                            )
-                        )
-        elif (
-            self.classvoucher_set.exists() or
-            self.dancetypevoucher_set.exists() or
-            self.seriescategoryvoucher_set.exists() or
-            self.publiceventcategoryvoucher_set.exists() or
-            self.sessionvoucher_set.exists()
-        ):
+            # A voucher that is restricted to specific classes or events can
+            # only be used when at least one registration for them is being
+            # made (so not, for example, for merchandise alone).  It is then
+            # only used for the items that qualify for it, unless it can be
+            # used for the entire invoice (see eligibleItemIds()).
+            if invoiceItems is not None:
+                events_qualify = bool(
+                    self.eligibleItemIds(invoiceItems, checkAttendees=False)
+                )
+            else:
+                events_qualify = (
+                    not event_restricted or
+                    any(self.eventQualifies(x) for x in events)
+                )
+
+            if not events_qualify:
+                errors.append(
+                    ValidationError(
+                        _('This voucher can be only used for specific classes or events.'),
+                        code='no_eligible_events'
+                    )
+                )
+            elif (
+                invoiceItems is not None and checkAttendees and
+                self.isAttendeeRestricted and
+                not self.eligibleItemIds(invoiceItems, attendee=attendee)
+            ):
+                # No registration is for a person who meets the conditions on
+                # first-time or previous customers.
+                errors.append(
+                    first_time_error if self.forFirstTimeCustomersOnly
+                    else previous_customer_error
+                )
+        elif event_restricted:
             warnings.append({
                 'code': 'event_restrictions',
                 'message': _('This voucher can be only used for specific classes or events.')
@@ -361,24 +531,15 @@ class Voucher(models.Model):
                         )
                     )
 
-            if self.forFirstTimeCustomersOnly and customer and customer.numEventRegistrations > 0:
+            # Without invoice items, the conditions on first-time and previous
+            # customers are checked for the person who is paying.  Otherwise,
+            # they were checked above for each registration.
+            if invoiceItems is None and not self.customerQualifies(customer):
                 errors.append(
-                    ValidationError(
-                        _('This voucher can only be used by first time customers.'),
-                        code='not_first_time_customer'
-                    )
-                )
-
-            if self.forPreviousCustomersOnly and (not customer or customer.numEventRegistrations == 0):
-                errors.append(
-                    ValidationError(
-                        _(
-                            'This voucher can only be used by existing customers.' +
-                            '  If you are an existing customer, be sure to register' +
-                            ' with the same email address that you have used previously.'
-                        ),
-                        code='not_existing_customer',
-                    )
+                    first_time_error if (
+                        self.forFirstTimeCustomersOnly and
+                        customer and customer.numEventRegistrations > 0
+                    ) else previous_customer_error
                 )
         elif not self.isValidForAnyCustomer:
             warnings.append({
@@ -410,6 +571,17 @@ class Voucher(models.Model):
             retval['available'] = self.maxToUse
 
         return retval
+
+    def clean(self):
+        '''
+        A code that is also the code of a discount belongs to the discount, so
+        a voucher with that code could never be used.
+        '''
+        super().clean()
+        if isDiscountCode(self.voucherId):
+            raise ValidationError({'voucherId': _(
+                'This code is already the code of a discount.'
+            )})
 
     def __str__(self):
         return self.name + " " + str(self.id)

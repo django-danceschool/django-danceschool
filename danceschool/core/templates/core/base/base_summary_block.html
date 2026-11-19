@@ -66,7 +66,7 @@
     <tbody>
         <tr>
             <td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
-            <td class="price-adjustment">-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+            <td class="price-adjustment">-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}{% if voucher.customerPending %}{% include 'core/base/voucher_pending_note.html' %}{% endif %}</td>
         </tr>
     </tbody>
     {% endif %}
@@ -82,7 +82,7 @@
     <tbody>
         <tr>
             <td><strong>{% trans "Voucher" %}:</strong> {{ voucher.voucherName }} ({{ voucher.voucherId }})</td>
-            <td class="price-adjustment">-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}</td>
+            <td class="price-adjustment">-{{ currencySymbol }}{{ voucher.voucherAmount|floatformat:2 }}{% if voucher.customerPending %}{% include 'core/base/voucher_pending_note.html' %}{% endif %}</td>
         </tr>
     </tbody>
     {% endif %}

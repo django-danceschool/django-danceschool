@@ -1,12 +1,16 @@
 import json
+from unittest import skipUnless
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 
 from dynamic_preferences.registries import global_preferences_registry
 
 from danceschool.core.constants import REG_VALIDATION_STR
-from danceschool.core.models import Invoice, Registration, TaxJurisdiction, TaxRule
+from danceschool.core.models import (
+    Invoice, PricingTier, Registration, Series, TaxJurisdiction, TaxRule
+)
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
 from danceschool.register.models import Register
 
@@ -648,3 +652,369 @@ class MerchItemCategoryAdminTest(DefaultSchoolTestCase):
     def test_category_plural_name(self):
         from .models import MerchItemCategory
         self.assertEqual(str(MerchItemCategory._meta.verbose_name_plural), 'Merchandise categories')
+
+
+class MerchAdjustmentsBase(DefaultSchoolTestCase):
+    '''
+    Set up for tests of discounts and vouchers on an invoice that includes
+    merchandise. Merchandise is only sold at the door, so each test checks
+    out a door cart as a staff member. The cart can hold a $40 jacket (merch)
+    and a series with a door price of $20. This class has no tests of its own.
+    '''
+
+    def setUp(self):
+        self.gp = global_preferences_registry.manager()
+        self.client.force_login(self.superuser)
+
+        self.item = MerchItem.objects.create(
+            name='Test Jacket', category=None, defaultPrice=40, disabled=False,
+        )
+        self.variant = MerchItemVariant.objects.create(
+            item=self.item, sku='JACKET-MD', name='Medium', originalQuantity=10,
+        )
+        self.tier = PricingTier.objects.create(
+            name='Merch Test Tier', onlinePrice=20, doorPrice=20, dropinPrice=20,
+        )
+        self.series = self.create_series(pricingTier=self.tier)
+
+    def merch_cart_item(self):
+        return {
+            'item_type': 'MerchItem', 'item_id': self.item.id,
+            'sku': self.variant.sku, 'quantity': 1,
+        }
+
+    def series_cart_item(self):
+        return {
+            'item_type': 'Event', 'item_id': self.series.id,
+            'sku': 'EVENT_%s_GENERAL' % self.series.id, 'quantity': 1,
+        }
+
+    def checkout(self, *items, code=None):
+        '''
+        Check out a door cart with the passed items, and proceed to the
+        registration summary page. Returns the summary page response.
+        '''
+        cart_data = {'items': list(items), 'checkout': True, 'payAtDoor': True}
+        if code:
+            cart_data['discount_code'] = code
+        response = self.client.post(
+            reverse('cart'), data=json.dumps(cart_data),
+            content_type='application/json', follow=True,
+        )
+        if response.redirect_chain[-1][0] == reverse('getStudentInfo'):
+            response = self.client.post(reverse('getStudentInfo'), {
+                'firstName': 'Merch', 'lastName': 'Customer',
+                'email': 'merch@customer.com', 'agreeToPolicies': True,
+            }, follow=True)
+        self.assertEqual(response.redirect_chain[-1][0], reverse('showRegSummary'))
+        return response
+
+    def get_invoice(self):
+        return Invoice.objects.get(
+            id=self.client.session[REG_VALIDATION_STR]['invoice_id']
+        )
+
+    def merch_item(self, invoice):
+        return invoice.invoiceitem_set.get(merchorderitem__isnull=False)
+
+    def series_item(self, invoice):
+        return invoice.invoiceitem_set.get(eventRegistration__isnull=False)
+
+
+@skipUnless(
+    apps.is_installed('danceschool.discounts'), 'The discounts app is not installed.'
+)
+class MerchDiscountTest(MerchAdjustmentsBase):
+    '''
+    Discounts apply only to registrations for events, so merchandise on the
+    same invoice keeps its price.
+    '''
+
+    def setUp(self):
+        super().setUp()
+        self.gp['general__discountsEnabled'] = True
+
+        from danceschool.discounts.models import (
+            PointGroup, PricingTierGroup, DiscountCategory
+        )
+        self.group = PointGroup.objects.create(name='Merch Test Points')
+        PricingTierGroup.objects.create(
+            group=self.group, pricingTier=self.tier, points=5,
+        )
+        self.category = DiscountCategory.objects.get(id=1)
+
+    def tearDown(self):
+        self.gp['general__discountsEnabled'] = False
+
+    def make_discount(self, **kwargs):
+        from danceschool.discounts.models import DiscountCombo, DiscountComboComponent
+        combo = DiscountCombo.objects.create(
+            name='Merch Test Discount', category=self.category, active=True,
+            availableOnline=True, availableAtDoor=True, **kwargs
+        )
+        DiscountComboComponent.objects.create(
+            discountCombo=combo, pointGroup=self.group, quantity=5,
+            allWithinPointGroup=False,
+        )
+        return combo
+
+    def test_discount_does_not_reduce_merchandise(self):
+        from danceschool.discounts.models import DiscountCombo
+        self.make_discount(
+            discountType=DiscountCombo.DiscountType.percentDiscount, percentDiscount=50,
+        )
+
+        response = self.checkout(self.series_cart_item(), self.merch_cart_item())
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 10, places=2)
+        self.assertAlmostEqual(self.series_item(invoice).total, 10, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+        self.assertAlmostEqual(invoice.total, 50, places=2)
+
+    def test_universal_percent_discount_does_not_reduce_merchandise(self):
+        '''
+        A percentage discount that applies to every item in the order still
+        only applies to registrations.
+        '''
+        from danceschool.discounts.models import DiscountCombo
+        self.make_discount(
+            discountType=DiscountCombo.DiscountType.percentDiscount,
+            percentDiscount=50, percentUniversallyApplied=True,
+        )
+
+        response = self.checkout(self.series_cart_item(), self.merch_cart_item())
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 10, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+
+    def test_dollar_discount_larger_than_registration(self):
+        '''
+        A dollar discount larger than the price of the registration makes the
+        registration free, and none of it comes off of the merchandise.
+        '''
+        from danceschool.discounts.models import DiscountCombo
+        self.make_discount(
+            discountType=DiscountCombo.DiscountType.dollarDiscount, dollarDiscount=30,
+        )
+
+        response = self.checkout(self.series_cart_item(), self.merch_cart_item())
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(response.context_data['total_discount_amount'], 20, places=2)
+        self.assertAlmostEqual(self.series_item(invoice).total, 0, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+        self.assertAlmostEqual(invoice.total, 40, places=2)
+
+    def test_discount_does_not_apply_to_merchandise_only(self):
+        from danceschool.discounts.models import DiscountCombo
+        self.make_discount(
+            discountType=DiscountCombo.DiscountType.dollarDiscount, dollarDiscount=5,
+        )
+
+        response = self.checkout(self.merch_cart_item())
+        invoice = self.get_invoice()
+
+        self.assertFalse(response.context_data.get('total_discount_amount'))
+        self.assertAlmostEqual(invoice.total, 40, places=2)
+
+    def test_discount_with_merchandise_and_tax(self):
+        '''
+        The registration and the merchandise are taxed at their own rates on
+        their own prices, after the discount: 10% of the discounted $10
+        registration, and 5% of the $40 jacket.
+        '''
+        from danceschool.discounts.models import DiscountCombo
+        jurisdiction = TaxJurisdiction.objects.create(name='Merch Test', defaultRate=5)
+        TaxRule.objects.create(
+            jurisdiction=jurisdiction,
+            itemType=ContentType.objects.get_for_model(Series), rate=10,
+        )
+        self.defaultLocation.taxJurisdiction = jurisdiction
+        self.defaultLocation.save()
+        self.gp['registration__defaultTaxJurisdiction'] = jurisdiction
+        self.gp['registration__buyerPaysSalesTax'] = True
+        self.make_discount(
+            discountType=DiscountCombo.DiscountType.percentDiscount, percentDiscount=50,
+        )
+        try:
+            self.checkout(self.series_cart_item(), self.merch_cart_item())
+        finally:
+            self.gp['registration__defaultTaxJurisdiction'] = None
+
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(self.series_item(invoice).taxes, 1, places=4)
+        self.assertAlmostEqual(self.merch_item(invoice).taxes, 2, places=4)
+        self.assertAlmostEqual(invoice.taxes, 3, places=4)
+        self.assertAlmostEqual(invoice.outstandingBalance, 53, places=2)
+
+
+@skipUnless(
+    apps.is_installed('danceschool.vouchers'), 'The vouchers app is not installed.'
+)
+class MerchVoucherTest(MerchAdjustmentsBase):
+    ''' A voucher applies to merchandise as well as to registrations. '''
+
+    def setUp(self):
+        super().setUp()
+        self.gp['vouchers__enableVouchers'] = True
+
+    def make_voucher(self, amount, beforeTax=True):
+        from danceschool.vouchers.models import Voucher
+        return Voucher.objects.create(
+            voucherId='MERCH_VOUCHER', name='Merch Test Voucher',
+            originalAmount=amount, beforeTax=beforeTax,
+        )
+
+    def voucher_amount(self, invoice, voucher):
+        use = invoice.voucheruse_set.filter(voucher=voucher).first()
+        return use.amount if use else 0
+
+    def test_voucher_for_merchandise_only(self):
+        voucher = self.make_voucher(15)
+
+        self.checkout(self.merch_cart_item(), code=voucher.voucherId)
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 15, places=2)
+        self.assertAlmostEqual(invoice.total, 25, places=2)
+
+    def test_voucher_shared_by_registration_and_merchandise(self):
+        ''' A $30 voucher on a $60 invoice comes off of each item by price. '''
+        voucher = self.make_voucher(30)
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 30, places=2)
+        self.assertAlmostEqual(self.series_item(invoice).total, 10, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 20, places=2)
+        self.assertAlmostEqual(invoice.total, 30, places=2)
+
+    def test_voucher_larger_than_invoice_makes_it_free(self):
+        voucher = self.make_voucher(100)
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = Invoice.objects.get(id=self.get_invoice().id)
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 60, places=2)
+        self.assertEqual(invoice.outstandingBalance, 0)
+        self.assertEqual(invoice.status, Invoice.PaymentStatus.paid)
+        self.assertEqual(voucher.amountLeft, 40)
+
+    def test_voucher_after_tax_for_merchandise(self):
+        ''' A gift certificate pays for the jacket and its 5% tax. '''
+        jurisdiction = TaxJurisdiction.objects.create(name='Merch Test', defaultRate=5)
+        self.gp['registration__defaultTaxJurisdiction'] = jurisdiction
+        self.gp['registration__buyerPaysSalesTax'] = True
+        voucher = self.make_voucher(100, beforeTax=False)
+        try:
+            self.checkout(self.merch_cart_item(), code=voucher.voucherId)
+        finally:
+            self.gp['registration__defaultTaxJurisdiction'] = None
+
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(invoice.taxes, 2, places=4)
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 42, places=2)
+        self.assertEqual(invoice.outstandingBalance, 0)
+
+    def class_voucher(self, amount, **kwargs):
+        from danceschool.vouchers.models import ClassVoucher
+        voucher = self.make_voucher(amount)
+        for k, v in kwargs.items():
+            setattr(voucher, k, v)
+        voucher.save()
+        ClassVoucher.objects.create(
+            classDescription=self.series.classDescription, voucher=voucher
+        )
+        return voucher
+
+    def test_voucher_for_specific_class_does_not_cover_merchandise(self):
+        ''' A $50 voucher for the $20 class covers the class and not the jacket. '''
+        voucher = self.class_voucher(50)
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 20, places=2)
+        self.assertAlmostEqual(self.series_item(invoice).total, 0, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+        self.assertAlmostEqual(invoice.total, 40, places=2)
+
+    def test_voucher_for_class_and_entire_invoice_covers_merchandise(self):
+        voucher = self.class_voucher(50, appliesToEntireInvoice=True)
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 50, places=2)
+        self.assertAlmostEqual(invoice.total, 10, places=2)
+        self.assertAlmostEqual(
+            invoice.total, sum([x.total for x in invoice.invoiceitem_set.all()]),
+            places=4
+        )
+
+    def test_first_time_voucher_does_not_cover_merchandise(self):
+        '''
+        A voucher for first-time customers applies to the registrations of
+        first-time customers, and so not to the jacket, unless it can be used
+        for anything on the invoice.
+        '''
+        from danceschool.vouchers.models import Voucher
+        voucher = Voucher.objects.create(
+            voucherId='NEWBIE', name='New Customer Voucher', originalAmount=50,
+            forFirstTimeCustomersOnly=True,
+        )
+
+        self.checkout(
+            self.series_cart_item(), self.merch_cart_item(), code=voucher.voucherId
+        )
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 20, places=2)
+        self.assertAlmostEqual(self.merch_item(invoice).total, 40, places=2)
+
+        voucher.appliesToEntireInvoice = True
+        voucher.save()
+        self.client.get(reverse('showRegSummary'))
+        invoice = self.get_invoice()
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 50, places=2)
+        self.assertAlmostEqual(invoice.total, 10, places=2)
+
+    def test_first_time_voucher_not_usable_for_merchandise_only(self):
+        from danceschool.vouchers.models import Voucher
+        voucher = Voucher.objects.create(
+            voucherId='NEWBIE', name='New Customer Voucher', originalAmount=50,
+            forFirstTimeCustomersOnly=True,
+        )
+
+        self.checkout(self.merch_cart_item(), code=voucher.voucherId)
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 0, places=2)
+        self.assertAlmostEqual(invoice.total, 40, places=2)
+
+    def test_voucher_for_specific_class_not_usable_for_merchandise_only(self):
+        '''
+        A voucher that can only be used for a specific class cannot be used
+        to pay for merchandise when no registration is being made.
+        '''
+        from danceschool.vouchers.models import ClassVoucher
+        voucher = self.make_voucher(15)
+        ClassVoucher.objects.create(
+            classDescription=self.series.classDescription, voucher=voucher
+        )
+
+        self.checkout(self.merch_cart_item(), code=voucher.voucherId)
+        invoice = self.get_invoice()
+
+        self.assertAlmostEqual(self.voucher_amount(invoice, voucher), 0, places=2)
+        self.assertAlmostEqual(invoice.total, 40, places=2)

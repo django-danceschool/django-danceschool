@@ -18,6 +18,7 @@ from braces.views import GroupRequiredMixin
 from urllib.parse import quote
 from six import string_types
 import re
+from collections import namedtuple
 from datetime import timedelta
 import logging
 from rest_framework import generics, renderers
@@ -33,6 +34,12 @@ from .signals import (
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+# Returned by RegistrationAdjustmentsMixin.getDiscountDetails()
+DiscountDetails = namedtuple(
+    'DiscountDetails', ['codes', 'total_amount', 'voucher_code', 'item_discounts']
+)
 
 
 class EmailRecipientMixin(object):
@@ -572,11 +579,14 @@ class RegistrationAdjustmentsMixin(object):
     customers_final = False
 
     def getVoucher(
-        self, voucherId, invoice, prior_adjustment=0, first_name=None, last_name=None, email=None
+        self, voucherId, invoice, prior_adjustment=0, first_name=None,
+        last_name=None, email=None, items=None
     ):
         '''
         This method looks for a voucher with the associated voucher ID, it checks
-        for eligibility, and it returns an updated dictionary
+        for eligibility, and it returns an updated dictionary.  The invoice items
+        (e.g. as returned by allocateDiscount()) can be passed, so that a voucher
+        that can only be used for some of them is limited to their prices.
         '''
 
         from danceschool.core.models import Customer
@@ -595,7 +605,7 @@ class RegistrationAdjustmentsMixin(object):
         voucher_response = check_voucher.send(
             sender=RegistrationAdjustmentsMixin, voucherId=voucherId,
             customer=customer, validateCustomer=(customer is not None),
-            invoice=invoice
+            invoice=invoice, items=items
         )
 
         voucher_response = [x[1] for x in voucher_response if len(x) > 1 and x[1]]
@@ -612,38 +622,60 @@ class RegistrationAdjustmentsMixin(object):
                 voucher_response[0].get('available', 0) > 0
             ):
                 if voucher_response[0].get('beforeTax') is False:
-                    subtotal += invoice.taxes + invoice.adjustments
+                    # If the buyer does not pay sales tax, then the price
+                    # already includes the tax.
+                    subtotal += invoice.adjustments + (
+                        invoice.taxes if invoice.buyerPaysSalesTax else 0
+                    )
+                    eligible = voucher_response[0].get('eligible_total_posttax')
+                else:
+                    eligible = voucher_response[0].get('eligible_total')
 
-                total = max(
-                    0, subtotal - voucher_response[0].get('available', 0)
-                )
+                # A voucher that can only be used for some items can be used
+                # for no more than the price of those items.
+                available = voucher_response[0].get('available', 0)
+                if eligible is not None:
+                    available = min(available, max(eligible, 0))
+
+                total = max(0, subtotal - available)
 
             return {
                 'voucherId': voucher_response[0].get('id', None),
                 'voucherName': voucher_response[0].get('name', None),
                 'voucherAmount': subtotal - total,
-                'beforeTax': voucher_response[0].get('beforeTax')
+                'beforeTax': voucher_response[0].get('beforeTax'),
+                # The voucher depends on customer information that has not
+                # been entered yet, so the amount may still change.
+                'customerPending': voucher_response[0].get('customer_pending', False),
             }
         else:
             return {}
 
-    def getDiscounts(
+    def getDiscountDetails(
         self, invoice, registration=None, initial_price=None, voucher_code=None
     ):
         '''
         This method takes a registration and an initial price, and it returns
-        a tuple that contains all the information needed to process any
-        applicable discounts.
+        a DiscountDetails namedtuple that contains all the information needed
+        to process any applicable discounts: the discount codes, the total
+        amount of the discount, the voucher code (if it was not used to access
+        a discount), and a dictionary of the amount of the discount that
+        applies to each invoice item (which is empty if that is not known).
         '''
 
         from danceschool.core.models import Registration
 
         if not registration:
             registration = Registration.objects.filter(invoice=invoice).first()
-        if not initial_price and registration:
-            initial_price = registration.grossTotal
-        else:
-            initial_price = invoice.grossTotal
+
+        # Discounts are measured against the price that is charged for each
+        # item before discounts.  For most items, that is the grossTotal, but
+        # it is not for the events that are included as add-ons to another event.
+        if initial_price is None:
+            items = invoice.invoiceitem_set.all()
+            if registration:
+                items = items.filter(eventRegistration__registration=registration)
+            initial_price = sum([x.initialTotal for x in items])
 
         # The discounts app only applies first-time customer discounts in the
         # final stage, in case the customer information changes.  So, we need
@@ -673,6 +705,7 @@ class RegistrationAdjustmentsMixin(object):
         discount_codes = []
         discounted_total = initial_price
         total_discount_amount = 0
+        item_discounts = {}
 
         try:
             if discount_responses:
@@ -689,6 +722,9 @@ class RegistrationAdjustmentsMixin(object):
                         [getattr(x, 'net_price', initial_price) for x in discount_codes]
                     ) + getattr(discount_responses[0], 'ineligible_total', 0)
                     total_discount_amount = initial_price - discounted_total
+                    item_discounts = dict(
+                        getattr(discount_responses[0], 'item_discounts', None) or {}
+                    )
 
                     # Pop the voucher code from return if it was used to access
                     # a discount.
@@ -699,7 +735,89 @@ class RegistrationAdjustmentsMixin(object):
         except (IndexError, TypeError) as e:
             logger.error('Error in applying discount responses: %s' % e)
 
-        return (discount_codes, total_discount_amount, voucher_code)
+        return DiscountDetails(
+            discount_codes, total_discount_amount, voucher_code, item_discounts
+        )
+
+    def allocateDiscount(self, invoice, details, save=False):
+        '''
+        Apply the discount described by the passed DiscountDetails to the
+        invoice, and recalculate taxes.  If it is known which invoice items the
+        discount applies to, then it is taken off of those items.  Otherwise,
+        it is allocated among all items in proportion to their price.  Returns
+        the queryset of invoice items produced by Invoice.updateTotals().
+        Any discounts and vouchers that were applied to the invoice previously
+        (e.g. on an earlier load of the same page) are removed first.
+        '''
+        weights = {
+            str(k): v for k, v in details.item_discounts.items() if v > 0
+        }
+        if not details.total_amount:
+            weights = {}
+
+        return invoice.updateTotals(
+            save=save,
+            allocateAmounts={'total': -1 * details.total_amount},
+            allocateWeights=weights,
+            resetAdjustments=True,
+        )
+
+    def allocateAdjustments(
+        self, invoice, items, pretax=0, posttax=0, item_pretax=None,
+        item_posttax=None, save=False
+    ):
+        '''
+        Apply further reductions in price (e.g. vouchers) to an invoice after
+        its discounts have been allocated.  The passed items are the queryset
+        returned by allocateDiscount().  Pre-tax amounts are taken off of the
+        items first, and taxes are recalculated, and then post-tax amounts are
+        taken off.  Returns the updated queryset of invoice items.
+
+        The amounts that apply to specific invoice items can be passed as
+        dictionaries in the form {invoice item id: amount} (item_pretax and
+        item_posttax).  The rest of each total is allocated among all of the
+        items: pre-tax amounts in proportion to each item's discounted price
+        (so that an item that is already free is not reduced below zero), and
+        post-tax amounts in proportion to each item's price including tax.
+        '''
+
+        def getWeights(amount, item_amounts, base):
+            '''
+            The amount for each item. The base is the value of each item that
+            any amount not assigned to a specific item is allocated by.
+            '''
+            weights = {
+                k: v for k, v in (item_amounts or {}).items()
+                if v > 0 and k in base
+            }
+            remainder = amount - sum(weights.values())
+            total_base = sum([max(v, 0) for v in base.values()])
+            if remainder > 1e-9 and total_base > 0:
+                for k, v in base.items():
+                    if v > 0:
+                        weights[k] = weights.get(k, 0) + remainder * (v / total_base)
+            return weights
+
+        if pretax:
+            weights = getWeights(
+                pretax, item_pretax, {str(x.id): (x.newTotal or 0) for x in items}
+            )
+            items = invoice.updateTotals(
+                save=False, allocateAmounts={'total': -1 * pretax},
+                allocateWeights=weights, prior_queryset=items,
+            )
+        if posttax:
+            weights = getWeights(
+                posttax, item_posttax,
+                {str(x.id): (x.newTotal or 0) + (x.newTaxes or 0) for x in items}
+            )
+            items = invoice.updateTotals(
+                save=save, allocateAmounts={'adjustments': -1 * posttax},
+                allocateWeights=weights, prior_queryset=items,
+            )
+        elif save:
+            items = invoice.updateTotals(save=save, prior_queryset=items)
+        return items
 
     def getAddons(self, invoice, registration=None):
         '''

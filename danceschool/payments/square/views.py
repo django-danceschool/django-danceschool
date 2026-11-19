@@ -25,13 +25,15 @@ from time import sleep
 
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
-from danceschool.core.helpers import getReturnPage
+from danceschool.core.helpers import (
+    getBalanceChangedMessage, getLocalUrl, getPluginSuccessUrl, getReturnPage
+)
 from danceschool.core.views.cart import clear_reg_cart
 
 
 from .api_client import api_client
 from .forms import CreateInvoiceForm
-from .models import SquarePaymentRecord
+from .models import SquareCheckoutFormModel, SquarePaymentRecord
 from .tasks import updateSquareFees
 
 
@@ -61,6 +63,31 @@ class ProcessSquarePaymentView(View):
     (such as gift certificate payment requests).
     '''
 
+    def refuseChangedBalance(self, request, invoice, expectedBalance, sourceUrl):
+        '''
+        If the balance of the invoice is not the one that the payer was shown,
+        then return a response that refuses the payment and sends the payer
+        back to the page that they came from to see the new balance.
+        Otherwise, return None.
+        '''
+        balance = invoice.outstandingBalance
+        if abs(balance - expectedBalance) < 0.01:
+            return None
+
+        logger.warning(
+            'Refused Square Checkout payment on invoice %s: the payer was shown '
+            'a balance of %.2f, but the balance is now %.2f.' % (
+                invoice.id, expectedBalance, balance
+            )
+        )
+        message = getBalanceChangedMessage(balance)
+        messages.warning(request, message)
+
+        sourceUrl = getLocalUrl(request, sourceUrl, reverse('showRegSummary'))
+        return SquareCheckoutErrorResponse(
+            format_html('<p>{}</p>', message), redirect_url=sourceUrl
+        )
+
     def post(self, request, *args, **kwargs):
         logger.info('Received request for Square Checkout payment.')
 
@@ -75,18 +102,31 @@ class ProcessSquarePaymentView(View):
         transactionType = data.get('transaction_type')
         taxable = data.get('taxable', False)
         sourceUrl = data.get('sourceUrl', reverse('showRegSummary'))
-        addSessionInfo = data.get('addSessionInfo', False)
         customerEmail = data.get('customerEmail')
-        finalSuccessUrl = data.get('finalSuccessUrl')
+        expectedBalance = data.get('expected_balance')
 
-        # Send users back to the invoice to confirm the successful payment.
-        # If none is specified, then return to the registration page.
-        successUrl = data.get(
-            'successUrl',
-            getReturnPage(request.session.get('SITE_HISTORY', {})).get('url')
+        # The pages that the payer is sent to afterwards are not taken from
+        # the browser, so that they cannot be used to send the payer to
+        # another site.  The success page is that of the payment form plugin
+        # that they used, if it has one.
+        pluginSuccessUrl = getPluginSuccessUrl(
+            SquareCheckoutFormModel, data.get('plugin_id')
         )
-        if not successUrl:
-            successUrl = reverse('registration')
+        isGiftCertificate = (not invoice_id and transactionType == 'Gift Certificate')
+        if isGiftCertificate:
+            # The payer customizes their gift certificate, and then goes on
+            # to the success page.
+            successUrl = reverse('customizeGiftCertificate')
+            finalSuccessUrl = pluginSuccessUrl or reverse('registration')
+        else:
+            # Otherwise, send users back to the invoice to confirm the
+            # successful payment.  If none is specified, then return to the
+            # registration page.
+            successUrl = (
+                pluginSuccessUrl or
+                getReturnPage(request.session.get('SITE_HISTORY', {})).get('url') or
+                reverse('registration')
+            )
 
         # If a specific amount to pay has been passed, then allow payment
         # of that amount.
@@ -116,6 +156,18 @@ class ProcessSquarePaymentView(View):
             # including registrations.
             if invoice_id:
                 this_invoice = Invoice.objects.get(id=invoice_id)
+
+                # Do not charge a balance other than the one that the payer
+                # was shown (e.g. if staff changed the invoice while they
+                # were paying, or if it has already been paid).
+                if expectedBalance is not None:
+                    expectedBalance = float(expectedBalance)
+                    refusal = self.refuseChangedBalance(
+                        request, this_invoice, expectedBalance, sourceUrl
+                    )
+                    if refusal:
+                        return refusal
+
                 if this_invoice.status == Invoice.PaymentStatus.preliminary:
                     this_invoice.expirationDate = timezone.now() + timedelta(
                         minutes=getConstant('registration__sessionExpiryMinutes')
@@ -227,20 +279,21 @@ class ProcessSquarePaymentView(View):
             methodName='Square Checkout',
             methodTxn=payment.get('id'),
             notify=customerEmail,
+            # A payment on an existing invoice is meant to pay the balance
+            # that was checked above.
+            expectedBalance=expectedBalance if invoice_id else None,
         )
         clear_reg_cart(request)
         updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)
 
-        if addSessionInfo:
+        if isGiftCertificate:
+            # The gift certificate customization page uses these, and then
+            # sends the payer on to the success page.
             paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
-
             paymentSession.update({
                 'invoiceID': str(this_invoice.id),
                 'amount': this_total,
-                # When finalSuccessUrl is present in the request (gift certificate flow),
-                # successUrl in this flow is the customization page — not a safe post-form
-                # destination. Use finalSuccessUrl instead, falling back to registration.
-                'successUrl': (finalSuccessUrl or reverse('registration')) if 'finalSuccessUrl' in data else successUrl,
+                'successUrl': finalSuccessUrl,
             })
             request.session[PAYMENT_VALIDATION_STR] = paymentSession
 
@@ -407,19 +460,30 @@ class ProcessPointOfSalePaymentView(View):
                 )
                 return HttpResponseRedirect(reverse('showRegSummary'))
 
-        # Other things that can be passed in the metadata
-        sourceUrl = metadata.get('sourceUrl', reverse('showRegSummary'))
+        # Other things that can be passed in the metadata.  The metadata comes
+        # from the page that sent the payment to the Square app, so the pages
+        # that the user is sent to are not taken from it, except for going
+        # back to a page on this site.
+        sourceUrl = getLocalUrl(
+            request, metadata.get('sourceUrl'), reverse('showRegSummary')
+        )
         submissionUserId = metadata.get('userId', getattr(getattr(request, 'user', None), 'id', None))
         transactionType = metadata.get('transaction_type')
         taxable = metadata.get('taxable', False)
-        addSessionInfo = metadata.get('addSessionInfo', False)
         customerEmail = metadata.get('customerEmail')
+        pluginSuccessUrl = getPluginSuccessUrl(
+            SquareCheckoutFormModel, metadata.get('plugin_id')
+        )
+        isGiftCertificate = (
+            'invoice' not in metadata.keys() and transactionType == 'Gift Certificate'
+        )
 
         # Send users back to the invoice to confirm the successful payment.
-        # If none is specified, then return to the registration page.
+        # If none is specified, then go to the success page of the payment
+        # form plugin, or else to the registration page.
         successUrl = (
             getReturnPage(request.session.get('SITE_HISTORY', {})).get('url') or
-            metadata.get('successUrl') or
+            pluginSuccessUrl or
             reverse('registration')
         )
 
@@ -457,6 +521,19 @@ class ProcessPointOfSalePaymentView(View):
                 submissionUser = User.objects.get(id=int(submissionUserId))
             except (ValueError, ObjectDoesNotExist):
                 logger.warning('Invalid user passed, submissionUser will not be recorded.')
+
+        # The balance that was sent to the Square app to be charged (only for
+        # payments on an existing invoice, from pages loaded after this was
+        # added).
+        expectedBalance = None
+        if 'invoice' in metadata.keys() and metadata.get('expectedBalance') is not None:
+            try:
+                expectedBalance = float(metadata.get('expectedBalance'))
+            except (TypeError, ValueError):
+                logger.warning(
+                    'Invalid expected balance passed from Square app: %s' %
+                    metadata.get('expectedBalance')
+                )
 
         if 'invoice' in metadata.keys():
             try:
@@ -501,26 +578,36 @@ class ProcessPointOfSalePaymentView(View):
         if created:
             # We process the payment now, and enqueue the job to retrieve the
             # transaction again once fees have been calculated by Square
-            this_invoice.processPayment(
+            mismatch = this_invoice.processPayment(
                 amount=this_total,
                 fees=0,
                 paidOnline=True,
                 methodName='Square Point of Sale',
                 methodTxn=payment.get('id'),
                 notify=customerEmail,
+                expectedBalance=expectedBalance,
             )
+            # The Square app has already charged the payment, so if it did
+            # not match the balance, staff are notified by email, and the
+            # staff member who took it is also told here.
+            if mismatch:
+                messages.warning(
+                    request, this_invoice.describePaymentMismatch(mismatch)
+                )
             clear_reg_cart(request)
         updateSquareFees.schedule(args=(paymentRecord.pk, ), delay=60)
 
-        if addSessionInfo:
+        if isGiftCertificate:
+            # The payer customizes their gift certificate, and the
+            # customization page then sends them on to the success page.
             paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
-
             paymentSession.update({
                 'invoiceID': str(this_invoice.id),
                 'amount': this_total,
-                'successUrl': successUrl,
+                'successUrl': pluginSuccessUrl or reverse('registration'),
             })
             request.session[PAYMENT_VALIDATION_STR] = paymentSession
+            return HttpResponseRedirect(reverse('customizeGiftCertificate'))
 
         return HttpResponseRedirect(successUrl)
 

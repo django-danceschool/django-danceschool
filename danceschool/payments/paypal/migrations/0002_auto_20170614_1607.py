@@ -45,10 +45,8 @@ class Migration(migrations.Migration):
             model_name='ipnmessage',
             name='priorTransaction',
         ),
-        migrations.RemoveField(
-            model_name='ipnmessage',
-            name='registration',
-        ),
+        # The removal of ipnmessage.registration is left out because that
+        # field is no longer created in 0001 (see the note there).
         migrations.RemoveField(
             model_name='paynowformmodel',
             name='cancellationPage',

@@ -59,19 +59,25 @@ CHECKING PAYPAL INTEGRATION
 
         if mode in ['sandbox', 'live'] and client_id and client_secret:
             try:
-                import paypalrestsdk
-                paypalrestsdk.configure({
-                    'mode': mode or 'sandbox',
-                    'client_id': client_id,
-                    'client_secret': client_secret,
-                })
-                paypalrestsdk.Payment.all({'count': 1})
+                from paypalserversdk.exceptions.api_exception import ApiException
+                from danceschool.payments.paypal.api_client import error_message, get_client
             except ImportError:
-                self.stdout.write(self.style.ERROR('Required paypalrestsdk app not installed.'))
-            except paypalrestsdk.exceptions.UnauthorizedAccess:
-                self.stdout.write(self.style.ERROR('Unauthorized credentials supplied for Paypal API.'))
+                self.stdout.write(self.style.ERROR(
+                    'Required PayPal API package ("paypal-server-sdk") not installed.'
+                ))
             else:
-                self.stdout.write(self.style.SUCCESS('Successfully connected to Paypal using API credentials.'))
+                try:
+                    # Requesting an access token checks the credentials.
+                    get_client().oauth_2.fetch_token()
+                except ApiException as e:
+                    self.stdout.write(self.style.ERROR(
+                        'Unable to connect to Paypal using API credentials: %s' %
+                        error_message(e)
+                    ))
+                else:
+                    self.stdout.write(self.style.SUCCESS(
+                        'Successfully connected to Paypal using API credentials.'
+                    ))
 
         add_paypal_paynow = self.boolean_input(
             'Add Paypal Pay Now link to the registration summary view to ' +

@@ -38,11 +38,19 @@ Paypal
 
 In order to accept and process Paypal payments, you will need to set up
 the credentials for your Paypal account.  The Django Dance School
-project uses the
-`Paypal REST SDK <https://github.com/paypal/PayPal-Python-SDK>`_.
-Older versions of this repository used the Paypal IPN system, but this
-software is no longer maintained, and it is highly recommended that you
-upgrade to using the REST API.
+project uses PayPal's Orders API (v2), through PayPal's
+`Server SDK <https://github.com/paypal/PayPal-Python-Server-SDK>`_, and
+PayPal's JavaScript SDK for the payment button.  Customers approve the
+payment in PayPal's window, and the payment is then taken by your site,
+so if the balance of an invoice changes before that, the customer is
+asked to review the new amount and is not charged.
+
+Older versions of this project used PayPal's v1 Payments API.  Payments
+that were made with it cannot be looked up or refunded from this site;
+refund them in your PayPal account instead.  If PayPal holds a payment as
+pending (for example, an eCheck that has not cleared), it is not
+recorded on the invoice; staff are notified by email, and should record
+it once PayPal completes it.
 
 REST API Setup
 ~~~~~~~~~~~~~~
@@ -157,22 +165,59 @@ Stripe API Setup
    - **Development/manual installation**: Edit ``settings.py`` to add:
      -  ``INSTALLED_APPS``: Uncomment/enter ``danceschool.payments.stripe``
      -  ``STRIPE_PUBLIC_KEY``: Your publishable key.
-     -  ``STRIPE_PRIVATE_KEY``: Your secret key.  **Do not share this value with 
+     -  ``STRIPE_PRIVATE_KEY``: Your secret key.  **Do not share this value with
        anyone, or store it anywhere that could be publicly accessed**
+     -  ``STRIPE_WEBHOOK_KEY``: The signing secret of your webhook endpoint
+        (see step 4).  **Do not share this value either.**
     - **Production template installation**: Instead of modifying ``settings.py``,
-      you can add the values of ``STRIPE_PUBLIC_KEY`` and
-      ``STRIPE_PRIVATE_KEY`` as environment variables in the environment
-      where Django operates:
-      - For Docker, uncomment and enter the values of ``STRIPE_PUBLIC_KEY``
-        and ``STRIPE_PRIVATE_KEY`` into
+      you can add the values of ``STRIPE_PUBLIC_KEY``,
+      ``STRIPE_PRIVATE_KEY`` and ``STRIPE_WEBHOOK_KEY`` as environment
+      variables in the environment where Django operates:
+      - For Docker, uncomment and enter the values of ``STRIPE_PUBLIC_KEY``,
+        ``STRIPE_PRIVATE_KEY`` and ``STRIPE_WEBHOOK_KEY`` into
         ``env.default``, using the guidelines above.  These values
         will be loaded into the environment of your Docker container.
       - For Heroku, use the web interface to add the environment variables
-        ``STRIPE_PUBLIC_KEY`` and ``STRIPE_PRIVATE_KEY``
-        using the guidelnes above.
+        ``STRIPE_PUBLIC_KEY``, ``STRIPE_PRIVATE_KEY`` and
+        ``STRIPE_WEBHOOK_KEY`` using the guidelines above.
       - Once these environment variables are specified, the
         ``danceschool.payments.stripe`` app will then be automatically
         enabled.
+4. Set up a webhook, so that Stripe tells your site about payments.
+   Most payments are recorded when the customer returns to your site
+   from Stripe, but the webhook records a payment even if the customer
+   closes their browser first, and it records payments that take time to
+   complete (such as bank payments).
+
+   - In the Stripe dashboard, go to "Developers", then "Webhooks", and
+     add an endpoint.
+   - For the endpoint URL, enter your site's address followed by
+     ``/stripe/webhook/`` (for example,
+     ``https://www.example.com/stripe/webhook/``).
+   - Select these events:
+
+     - ``checkout.session.completed``
+     - ``checkout.session.async_payment_succeeded``
+     - ``checkout.session.async_payment_failed``
+     - ``checkout.session.expired``
+
+   - Once the endpoint is created, reveal its "Signing secret" (it
+     begins with ``whsec_``), and use it as the value of
+     ``STRIPE_WEBHOOK_KEY``.  Requests that are not signed with it are
+     rejected.
+   - Test mode and live mode have separate webhook endpoints and signing
+     secrets, so set up the one that matches your API keys.  To test on
+     your own computer, the `Stripe CLI <https://docs.stripe.com/stripe-cli>`_
+     can forward webhooks to your development server
+     (``stripe listen --forward-to localhost:8000/stripe/webhook/``), and
+     prints the signing secret to use.
+
+   Customers are sent to Stripe's own Checkout page to pay.  A Checkout
+   session stays open for as long as a registration is held (the
+   "Temporary registration data expires after __ minutes" preference,
+   within Stripe's limits of 30 minutes to 24 hours).  If the balance of an invoice changes before the
+   customer starts to pay, they are asked to review the new amount, and if
+   it changes after they have started, staff are notified by email.
 
 Adding a Stripe "Checkout Now" button to the registration page
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

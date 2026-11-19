@@ -66,7 +66,12 @@ class Migration(migrations.Migration):
                 ('finalRegistration', models.OneToOneField(null=True, on_delete=django.db.models.deletion.CASCADE, to='core.Registration', verbose_name='Final Registration')),
                 ('paypalInvoice', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='paypal.Invoice', verbose_name='Paypal-Submitted Invoice')),
                 ('priorTransaction', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='subsequenttransactions', to='paypal.IPNMessage')),
-                ('registration', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='core.TemporaryRegistration', verbose_name='Initial Temporary Registration')),
+                # A 'registration' field (a ForeignKey to
+                # core.TemporaryRegistration) was created here and removed in
+                # 0002.  It is left out because core.TemporaryRegistration no
+                # longer exists by the time this migration runs on a new
+                # database.  Databases that have already applied these
+                # migrations are not affected.
             ],
             options={
                 'permissions': (('allocate_refunds', 'Can allocate Paypal refunds to individual registration items'),),
