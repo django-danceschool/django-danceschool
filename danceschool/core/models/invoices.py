@@ -459,15 +459,16 @@ class Invoice(EmailRecipientMixin, models.Model):
             ) % {'amount': money(amount)}))
         return ' '.join(parts)
 
-    def notifyPaymentMismatch(self, mismatch):
+    def emailStaff(self, subject, notice, details):
         '''
-        Email staff about a payment that did not match the balance owed (see
-        processPayment()).  This is sent to the address in the
+        Email staff an automated notice about a payment on this invoice.  The
+        email contains the notice, then the lines in details, then details of
+        the invoice.  This is sent to the address in the
         email__paymentMismatchEmailTo preference, or to the business email
         address if none is specified.
         '''
         if getConstant('email__disableSiteEmails'):
-            logger.info('Not sending payment mismatch notice: site emails are disabled.')
+            logger.info('Not sending payment notice to staff: site emails are disabled.')
             return
 
         send_to = (
@@ -480,25 +481,18 @@ class Invoice(EmailRecipientMixin, models.Model):
         )
         if not send_to:
             logger.error(
-                'Cannot send payment mismatch notice because no address has ' +
+                'Cannot send payment notice to staff because no address has ' +
                 'been specified.'
             )
             return
 
-        subject = str(_('Payment did not match the balance on invoice %s') % self.id)
         content = '\n\n'.join([
-            str(_(
-                'This is an automated notice that a payment was recorded on ' +
-                'an invoice for a different amount than the balance owed.'
-            )),
-            self.describePaymentMismatch(mismatch),
+            notice,
             '\n'.join([
                 str(_('Invoice: %s') % self.id),
                 str(_('Name: %s') % self.fullName),
                 str(_('Email: %s') % (self.email or '')),
-                str(_('Payment method: %s') % (mismatch.get('methodName') or '')),
-                str(_('Transaction: %s') % (mismatch.get('methodTxn') or '')),
-                str(_('Date/Time: %s') % mismatch.get('dateTime')),
+            ] + list(details) + [
                 str(_('Invoice status: %s') % self.get_status_display()),
                 str(_('View the invoice: %s') % (
                     getSiteUrl() + reverse('admin:core_invoice_change', args=[self.id])
@@ -507,7 +501,28 @@ class Invoice(EmailRecipientMixin, models.Model):
         ])
 
         # Calling the task queues it to be sent.
-        sendEmail(subject, content, send_from, to=[send_to])
+        sendEmail(str(subject), content, send_from, to=[send_to])
+
+    def notifyPaymentMismatch(self, mismatch):
+        '''
+        Email staff about a payment that did not match the balance owed (see
+        processPayment()).
+        '''
+        self.emailStaff(
+            _('Payment did not match the balance on invoice %s') % self.id,
+            '\n\n'.join([
+                str(_(
+                    'This is an automated notice that a payment was recorded on ' +
+                    'an invoice for a different amount than the balance owed.'
+                )),
+                self.describePaymentMismatch(mismatch),
+            ]),
+            [
+                str(_('Payment method: %s') % (mismatch.get('methodName') or '')),
+                str(_('Transaction: %s') % (mismatch.get('methodTxn') or '')),
+                str(_('Date/Time: %s') % mismatch.get('dateTime')),
+            ],
+        )
 
     def updateTotals(
         self, save=True, forceSave=False, allocateAmounts={},
