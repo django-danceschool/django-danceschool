@@ -1,19 +1,22 @@
 from django.conf import settings
-from django.http import JsonResponse, HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
-from django.core.exceptions import ObjectDoesNotExist
-from django.shortcuts import redirect
-from django.urls import reverse
+from django.contrib import messages
 from django.contrib.auth.models import User
-from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
 from danceschool.core.models import Invoice
 from danceschool.core.views.cart import clear_reg_cart
 
-from .models import StripeCharge
+from .models import StripeCharge, StripeChargeFormModel
 
 import stripe
 import logging
@@ -23,48 +26,68 @@ from datetime import timedelta
 # Define logger for this file
 logger = logging.getLogger(__name__)
 
+GIFT_CERTIFICATE = 'Gift Certificate'
 
-def handle_stripe_checkout(request):
 
+def get_success_url(plugin_id):
+    '''
+    The page to send the payer to after a successful payment: the success
+    page of the payment form plugin that they used.  This is looked up on the
+    server, rather than accepted from the browser, so that it cannot be used
+    to send the payer to another site.
+    '''
+    try:
+        instance = StripeChargeFormModel.objects.get(id=int(plugin_id))
+    except (TypeError, ValueError, ObjectDoesNotExist):
+        return reverse('registration')
+    if instance.successPage:
+        return instance.successPage.get_absolute_url()
+    return reverse('registration')
+
+
+def get_local_url(request, url, fallback):
+    ''' Return url if it is on this site, otherwise fallback. '''
+    if url and url_has_allowed_host_and_scheme(
+        url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return url
+    return fallback
+
+
+@require_POST
+def create_checkout_session(request):
+    '''
+    Create a Stripe Checkout session for a payment, and send the payer to
+    Stripe to pay.  A payment is either on an existing invoice (including a
+    registration), or a new purchase with an amount and transaction type
+    (such as a gift certificate).
+    '''
     logger.info('Received request for Stripe Checkout payment.')
+    stripe.api_key = settings.STRIPE_PRIVATE_KEY
 
-    stripeToken = request.POST.get('stripeToken')
-    stripeEmail = request.POST.get('stripeEmail')
-    submissionUserId = request.POST.get('submissionUser')
     amount = request.POST.get('stripeAmount')
     invoice_id = request.POST.get('invoice_id')
     transactionType = request.POST.get('transaction_type')
     taxable = request.POST.get('taxable', False)
-    addSessionInfo = request.POST.get('addSessionInfo', False)
-    customizeUrl = request.POST.get('customizeUrl')
-    successUrl = request.POST.get('successUrl', reverse('registration'))
+    plugin_id = request.POST.get('plugin_id')
+    submissionUser = request.user if request.user.is_authenticated else None
 
-    # Parse if a specific submission user is indicated
-    submissionUser = None
-    if submissionUserId:
-        try:
-            submissionUser = User.objects.get(id=int(submissionUserId))
-        except (ValueError, ObjectDoesNotExist):
-            logger.warning('Invalid user passed, submissionUser will not be recorded.')
+    # Payers who leave Stripe without paying go back to the page that they
+    # came from.
+    if invoice_id:
+        sourceFallback = reverse('showRegSummary')
+    else:
+        sourceFallback = reverse('registration')
+    sourceUrl = get_local_url(request, request.POST.get('sourceUrl'), sourceFallback)
 
-    # If a specific amount to pay has been passed, then allow payment
-    # of that amount.
-    if amount:
+    # A specific amount can only be paid for a new purchase (such as a gift
+    # certificate); a payment on an invoice pays its balance.
+    if amount and not invoice_id:
         try:
-            if isinstance(amount, list):
-                amount = float(amount[0])
-            else:
-                amount = float(amount)
+            amount = float(amount)
         except ValueError:
             logger.error('Invalid amount passed')
             return HttpResponseBadRequest()
-
-    # If the details of this transaction are to be entered into session info, then
-    # the view must redirect to an interim URL (e.g. for gift certificates) that
-    # handles that data
-    if addSessionInfo and not customizeUrl:
-        logger.error('Request to pass session info without specifying interim URL.')
-        return HttpResponseBadRequest()
 
     try:
         # Invoice transactions are usually payment on an existing invoice,
@@ -77,21 +100,19 @@ def handle_stripe_checkout(request):
                 )
             this_invoice.status = Invoice.PaymentStatus.unpaid
             this_description = _('Invoice Payment: %s' % this_invoice.id)
-            if not amount:
-                amount = this_invoice.outstandingBalance
             this_invoice.save()
         # All other transactions require both a transaction type and an amount to be specified
-        elif not transactionType or not amount:
-            logger.error('Insufficient information passed to createPaypalPayment view.')
+        elif not transactionType or not amount or amount <= 0:
+            logger.error('Insufficient information passed to create_checkout_session view.')
             raise ValueError
         else:
             # Gift certificates automatically get a nicer invoice description
-            if transactionType == 'Gift Certificate':
+            if transactionType == GIFT_CERTIFICATE:
                 this_description = _('Gift Certificate Purchase')
             else:
                 this_description = transactionType
             this_invoice = Invoice.create_from_item(
-                float(amount),
+                amount,
                 this_description,
                 submissionUser=submissionUser,
                 calculate_taxes=(taxable is not False),
@@ -101,333 +122,213 @@ def handle_stripe_checkout(request):
     except (ValueError, ObjectDoesNotExist) as e:
         logger.error(
             'Invalid invoice/amount information passed to ' +
-            'handle_stripe_checkout view: (%s, %s)' % (
-                invoice_id, amount
-            )
+            'create_checkout_session view: (%s, %s)' % (invoice_id, amount)
         )
         logger.error(e)
         return HttpResponseBadRequest()
 
-    this_invoice.status = Invoice.PaymentStatus.unpaid
-
     # round() rather than int(), because int() truncates (e.g. int(19.99 * 100) is 1998).
-    this_total = round(min(this_invoice.outstandingBalance, amount) * 100)
-    charge = None
+    this_total = round(this_invoice.outstandingBalance * 100)
+    if this_total <= 0:
+        messages.info(request, _('There is no balance to pay on this invoice.'))
+        return HttpResponseRedirect(sourceUrl)
+
+    # Stripe only stores strings in metadata.  Metadata is kept by Stripe
+    # and returned with the session, so it is not under the payer's control.
+    metadata = {
+        'invoice_id': str(this_invoice.id),
+        'plugin_id': str(plugin_id or ''),
+        'submissionUser': str(submissionUser.id) if submissionUser else '',
+        'giftCertificate': 'true' if transactionType == GIFT_CERTIFICATE else '',
+    }
+
+    session_kwargs = {
+        'mode': 'payment',
+        'client_reference_id': str(this_invoice.id),
+        'metadata': metadata,
+        'line_items': [{
+            'quantity': 1,
+            'price_data': {
+                'currency': getConstant('general__currencyCode').lower(),
+                'unit_amount': this_total,
+                'product_data': {'name': str(this_description)},
+            },
+        }],
+        # Stripe replaces {CHECKOUT_SESSION_ID} with the session id.
+        'success_url': (
+            request.build_absolute_uri(reverse('stripeReturn')) +
+            '?session_id={CHECKOUT_SESSION_ID}'
+        ),
+        'cancel_url': request.build_absolute_uri(sourceUrl),
+    }
+    if this_invoice.email:
+        session_kwargs['customer_email'] = this_invoice.email
 
     try:
-        # Use Stripe's library to make requests...
-        charge = stripe.Charge.create(
-            amount=this_total,
-            currency=getConstant('general__currencyCode'),
-            description=this_description,
-            source=stripeToken,
-        )
-
-    except stripe.error.CardError as e:
-        # Since it's a decline, stripe.error.CardError will be caught
-        body = e.json_body
-        err = body['error']
-        logger.error('Stripe CardError %s: %s' % (e.http_status, err))
-    except stripe.error.RateLimitError as e:
-        # Too many requests made to the API too quickly
-        body = e.json_body
-        err = body['error']
-        logger.error('Stripe RateLimitError %s: %s' % (e.http_status, err))
-    except stripe.error.InvalidRequestError as e:
-        # Invalid parameters were supplied to Stripe's API
-        body = e.json_body
-        err = body['error']
-        logger.error('Stripe InvalidRequestError %s: %s' % (e.http_status, err))
-    except stripe.error.AuthenticationError as e:
-        # Authentication with Stripe's API failed
-        # (maybe you changed API keys recently)
-        body = e.json_body
-        err = body['error']
-        logger.error('Stripe AuthenticationError %s: %s' % (e.http_status, err))
-    except stripe.error.APIConnectionError as e:
-        # Network communication with Stripe failed
-        body = e.json_body
-        err = body['error']
-        logger.error('Stripe APIConnectionError %s: %s' % (e.http_status, err))
+        checkout_session = stripe.checkout.Session.create(**session_kwargs)
     except stripe.error.StripeError as e:
-        # Display a very generic error to the user, and maybe send
-        # yourself an email
-        body = e.json_body
-        err = body['error']
-        logger.error('Stripe StripeError %s: %s' % (e.http_status, err))
+        logger.error('Unable to create Stripe Checkout session: %s' % e)
+        messages.error(request, _(
+            'Unable to start the payment with Stripe. Please try again, or ' +
+            'contact us if the problem continues.'
+        ))
+        return HttpResponseRedirect(sourceUrl)
 
-    if charge:
+    return HttpResponseRedirect(checkout_session.url, status=303)
+
+
+def fulfill_checkout(session_id):
+    '''
+    Record the payment for a Stripe Checkout session, if it has been paid.
+    This is called both when the payer returns to the site and when Stripe
+    sends the webhook, whichever comes first, so it records each payment only
+    once.  Returns (session, invoice), or (session, None) if the session is
+    not for an invoice on this site.
+    '''
+    session = stripe.checkout.Session.retrieve(
+        session_id, expand=['payment_intent.latest_charge.balance_transaction'],
+    )
+    metadata = session.metadata or {}
+
+    try:
+        invoice_id = metadata['invoice_id']
+    except KeyError:
+        # A session created by something other than this site.
+        return session, None
+
+    if session.payment_status != 'paid':
+        return session, Invoice.objects.filter(id=invoice_id).first()
+
+    charge = session.payment_intent.latest_charge
+
+    with transaction.atomic():
+        # Lock the invoice, so that the return view and the webhook cannot
+        # both record the payment at the same time.
+        invoice = Invoice.objects.select_for_update().get(id=invoice_id)
+        if StripeCharge.objects.filter(chargeId=charge.id).exists():
+            return session, invoice
+
+        user = None
+        if metadata.get('submissionUser'):
+            user = User.objects.filter(id=metadata['submissionUser']).first()
+
         StripeCharge.objects.create(
             chargeId=charge.id,
             status=charge.status,
-            submissionUser=submissionUser,
-            invoice=this_invoice,
+            submissionUser=user,
+            invoice=invoice,
         )
-
-        # To determine the fees applied, we also need to get the balanceTransaction
-        # that reports them.
-        balanceTransaction = stripe.BalanceTransaction.retrieve(charge.balance_transaction)
-
-        this_invoice.processPayment(
+        invoice.processPayment(
             amount=charge.amount / 100,
-            fees=balanceTransaction.fee / 100,
+            fees=charge.balance_transaction.fee / 100,
             paidOnline=True,
             methodName='Stripe Checkout',
             methodTxn=charge.id,
-            submissionUser=submissionUser,
-            notify=stripeEmail,
+            submissionUser=user,
+            notify=session.customer_details.email if session.customer_details else None,
         )
-        clear_reg_cart(request)
+    return session, invoice
 
-        if addSessionInfo:
-            paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
 
-            paymentSession.update({
-                'invoiceID': str(this_invoice.id),
-                'amount': charge.amount / 100,
-                'successUrl': successUrl,
-            })
-            request.session[PAYMENT_VALIDATION_STR] = paymentSession
-            return HttpResponseRedirect(customizeUrl)
+@require_GET
+def stripe_return(request):
+    '''
+    Stripe sends the payer here after they pay.  Record the payment (if the
+    webhook has not done so already), clear the registration, and send them
+    on to the success page (or to customize their gift certificate).
+    '''
+    stripe.api_key = settings.STRIPE_PRIVATE_KEY
+    session_id = request.GET.get('session_id')
+    if not session_id:
+        return HttpResponseBadRequest()
 
+    try:
+        session, invoice = fulfill_checkout(session_id)
+    except stripe.error.StripeError as e:
+        logger.error('Unable to retrieve Stripe Checkout session %s: %s' % (session_id, e))
+        messages.error(request, _(
+            'We were unable to confirm your payment with Stripe. If you were ' +
+            'charged, you will receive a confirmation by email.'
+        ))
+        return HttpResponseRedirect(reverse('registration'))
+
+    if not invoice:
+        return HttpResponseBadRequest()
+
+    metadata = session.metadata or {}
+    successUrl = get_success_url(metadata.get('plugin_id'))
+
+    if session.payment_status != 'paid':
+        # E.g. a bank payment that takes time to complete; the webhook
+        # records it when it does.
+        messages.info(request, _(
+            'Your payment is being processed. You will receive a confirmation ' +
+            'by email when it is complete.'
+        ))
         return HttpResponseRedirect(successUrl)
 
-    else:
-        this_invoice.status = Invoice.PaymentStatus.error
-        this_invoice.save()
-        return JsonResponse(err)
+    clear_reg_cart(request)
+
+    if metadata.get('giftCertificate'):
+        paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
+        paymentSession.update({
+            'invoiceID': str(invoice.id),
+            'amount': session.amount_total / 100,
+            'successUrl': successUrl,
+        })
+        request.session[PAYMENT_VALIDATION_STR] = paymentSession
+        return HttpResponseRedirect(reverse('customizeGiftCertificate'))
+
+    return HttpResponseRedirect(successUrl)
 
 
+# Stripe calls this, so it cannot send a CSRF token; the request is verified
+# by its signature instead.
 @csrf_exempt
-def create_checkout_session(request):
-    if request.method == 'POST':
-        domain_url = settings.DOMAIN_URL
-        stripe.api_key = settings.STRIPE_PRIVATE_KEY
-
-        logger.info('Received request for Stripe Checkout payment.')
-        submissionUserId = request.POST.get('submissionUser')
-        amount = request.POST.get('stripeAmount')
-        invoice_id = request.POST.get('invoice_id')
-        transactionType = request.POST.get('transaction_type')
-        taxable = request.POST.get('taxable', False)
-        addSessionInfo = request.POST.get('addSessionInfo', False)
-        customizeUrl = request.POST.get('customizeUrl')
-        successUrl = request.POST.get('successUrl', reverse('registration'))
-
-        # Parse if a specific submission user is indicated
-        submissionUser = None
-        if submissionUserId:
-            try:
-                submissionUser = User.objects.get(id=int(submissionUserId))
-            except (ValueError, ObjectDoesNotExist):
-                logger.warning('Invalid user passed, submissionUser will not be recorded.')
-
-        # If a specific amount to pay has been passed, then allow payment
-        # of that amount.
-        if amount:
-            try:
-                if isinstance(amount, list):
-                    amount = float(amount[0])
-                else:
-                    amount = float(amount)
-            except ValueError:
-                logger.error('Invalid amount passed')
-                return HttpResponseBadRequest()
-
-        # If the details of this transaction are to be entered into session info, then
-        # the view must redirect to an interim URL (e.g. for gift certificates) that
-        # handles that data
-        if addSessionInfo and not customizeUrl:
-            logger.error('Request to pass session info without specifying interim URL.')
-            return HttpResponseBadRequest()
-
-        try:
-            # Invoice transactions are usually payment on an existing invoice,
-            # including registrations.
-            if invoice_id:
-                this_invoice = Invoice.objects.get(id=invoice_id)
-                if this_invoice.status == Invoice.PaymentStatus.preliminary:
-                    this_invoice.expirationDate = timezone.now() + timedelta(
-                        minutes=getConstant('registration__sessionExpiryMinutes')
-                    )
-                this_invoice.status = Invoice.PaymentStatus.unpaid
-                this_description = _('Invoice Payment: %s' % this_invoice.id)
-                if not amount:
-                    amount = this_invoice.outstandingBalance
-                this_invoice.save()
-            # All other transactions require both a transaction type and an amount to be specified
-            elif not transactionType or not amount:
-                logger.error('Insufficient information passed to createPaypalPayment view.')
-                raise ValueError
-            else:
-                # Gift certificates automatically get a nicer invoice description
-                if transactionType == 'Gift Certificate':
-                    this_description = _('Gift Certificate Purchase')
-                else:
-                    this_description = transactionType
-                this_invoice = Invoice.create_from_item(
-                    float(amount),
-                    this_description,
-                    submissionUser=submissionUser,
-                    calculate_taxes=(taxable is not False),
-                    transactionType=transactionType,
-                    status=Invoice.PaymentStatus.unpaid,
-                )
-        except (ValueError, ObjectDoesNotExist) as e:
-            logger.error(
-                'Invalid invoice/amount information passed to ' +
-                'handle_stripe_checkout view: (%s, %s)' % (
-                    invoice_id, amount
-                )
-            )
-            logger.error(e)
-            return HttpResponseBadRequest()
-
-        this_invoice.status = Invoice.PaymentStatus.unpaid
-        stripeEmail = this_invoice.email
-        this_total = round(min(this_invoice.outstandingBalance, amount) * 100)
-        try:
-            # Create new Checkout Session for the order
-            # Other optional params include:
-            # [billing_address_collection] - to display billing address details on the page
-            # [customer] - if you have an existing Stripe Customer ID
-            # [payment_intent_data] - capture the payment later
-            # [customer_email] - prefill the email input in the form
-            # For full details see https://stripe.com/docs/api/checkout/sessions/create
-
-            metadata = {
-                'invoice_id': this_invoice.id,
-                'submissionUser': submissionUser.id if submissionUser else None,
-                'stripeEmail': stripeEmail,
-                'addSessionInfo': addSessionInfo if addSessionInfo else None,
-                'successUrl': domain_url + successUrl,
-                'customizeUrl': customizeUrl if customizeUrl else None,
-            }
-            # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
-            checkout_session = stripe.checkout.Session.create(
-                client_reference_id=request.user.id if request.user.is_authenticated else None,
-                success_url=domain_url + successUrl,
-                cancel_url=domain_url + '/registration/summary/',
-                payment_method_types=['card'],
-                mode='payment',
-                customer_email=stripeEmail,
-                metadata=metadata,
-                line_items=[
-                    {
-                        'name': this_description,
-                        'quantity': 1,
-                        'currency': getConstant('general__currencyCode'),
-                        'amount': this_total,
-                    }
-                ]
-            )
-        except Exception as e:
-            return str(e)
-
-        return redirect(checkout_session.url, code=303)
-
-
-# You can find your endpoint's secret in your webhook settings
-@csrf_exempt
+@require_POST
 def webhook(request):
+    stripe.api_key = settings.STRIPE_PRIVATE_KEY
     payload = request.body
     endpoint_secret = settings.STRIPE_WEBHOOK_KEY
-    sig_header = request.META['HTTP_STRIPE_SIGNATURE']
-    event = None
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+
+    if not sig_header:
+        return HttpResponse(status=400)
 
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, endpoint_secret
         )
-
-    except ValueError as e:
+    except ValueError:
         # Invalid payload
         return HttpResponse(status=400)
-
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.error.SignatureVerificationError:
         # Invalid signature
         return HttpResponse(status=400)
 
-    # Handle the checkout.session.completed event
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        if session.payment_status == "paid":
-            payment_intent = stripe.PaymentIntent.retrieve(session['payment_intent'])
-            charges = payment_intent['charges']
-            metadata = session['metadata']
-            for charge in charges:
-                finish_order(charge, metadata, request)
+    session = event['data']['object']
 
-    elif event['type'] == 'checkout.session.async_payment_succeeded':
-        session = event['data']['object']
-        if session.payment_status == "paid":
-            payment_intent = stripe.PaymentIntent.retrieve(session['payment_intent'])
-            charges = payment_intent['charges']
-            metadata = session['metadata']
-            for charge in charges:
-                finish_order(charge, metadata, request)
+    if event['type'] in [
+        'checkout.session.completed', 'checkout.session.async_payment_succeeded'
+    ]:
+        fulfill_checkout(session['id'])
 
-    elif event['type'] == 'checkout.session.async_payment_failed':
-        session = event['data']['object']
-        metadata = session['metadata']
-        invoice = Invoice.objects.get(id=metadata['invoice_id'])
-        invoice.status = Invoice.PaymentStatus.error
-        invoice.save()
-
-    elif event['type'] == 'checkout.session.expired':
-        session = event['data']['object']
-        metadata = session['metadata']
-        invoice = Invoice.objects.get(id=metadata['invoice_id'])
-        invoice.status = Invoice.PaymentStatus.error
-        invoice.save()
+    elif event['type'] in [
+        'checkout.session.async_payment_failed', 'checkout.session.expired'
+    ]:
+        # Only an invoice that is still waiting for this payment is marked as
+        # an error; it may since have been paid in some other way.
+        invoice_id = (session.get('metadata') or {}).get('invoice_id')
+        invoice = Invoice.objects.filter(id=invoice_id).first() if invoice_id else None
+        if (
+            invoice and invoice.status == Invoice.PaymentStatus.unpaid and
+            not invoice.amountPaid
+        ):
+            invoice.status = Invoice.PaymentStatus.error
+            invoice.save()
 
     # Passed signature verification
     return HttpResponse(status=200)
-
-
-def finish_order(charge, metadata, request):
-    invoice = Invoice.objects.get(id=metadata['invoice_id'])
-    if 'submissionUser' in metadata:
-        user = User.objects.get(id=metadata['submissionUser'])
-    else:
-        user = None
-
-    StripeCharge.objects.create(
-        chargeId=charge.id,
-        status=charge.status,
-        submissionUser=user,
-        invoice=invoice,
-    )
-
-    # To determine the fees applied, we also need to get the balanceTransaction
-    # that reports them.
-    balanceTransaction = stripe.BalanceTransaction.retrieve(charge.balance_transaction)
-
-    invoice.processPayment(
-        amount=charge.amount / 100,
-        fees=balanceTransaction.fee / 100,
-        paidOnline=True,
-        methodName='Stripe Checkout',
-        methodTxn=charge.id,
-        submissionUser=user,
-        notify=metadata['stripeEmail'],
-    )
-    clear_reg_cart(request)
-
-    if 'addSessionInfo' in metadata:
-        paymentSession = request.session.get(PAYMENT_VALIDATION_STR, {})
-
-        paymentSession.update({
-            'invoiceID': str(invoice.id),
-            'amount': charge.amount / 100,
-            'successUrl': metadata['successUrl'],
-        })
-        request.session[PAYMENT_VALIDATION_STR] = paymentSession
-        if 'customizeUrl' in metadata:
-            return HttpResponseRedirect(metadata['customizeUrl'])
-
-    if 'successUrl' in metadata:
-        return HttpResponseRedirect(metadata['successUrl'])
 
 
 class SuccessView(TemplateView):
