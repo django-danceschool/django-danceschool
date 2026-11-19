@@ -44,10 +44,10 @@ class GiftCertificateCustomizeViewSessionKeysTest(DefaultSchoolTestCase):
 
     def test_success_url_must_be_on_this_site(self):
         '''
-        Stripe and Square look the success URL in the session up on the
-        server, but PayPal still takes it from its form (PR #179), and another
-        payment processor app could too, so a page on another site is replaced
-        by the registration page.
+        The payment processor apps look the success URL in the session up on
+        the server (PR #179), but another payment processor app could take it
+        from the browser, so a page on another site is replaced by the
+        registration page.
         '''
         invoice = Invoice.objects.create(
             grossTotal=10, total=10, amountPaid=10,

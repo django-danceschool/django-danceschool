@@ -38,11 +38,19 @@ Paypal
 
 In order to accept and process Paypal payments, you will need to set up
 the credentials for your Paypal account.  The Django Dance School
-project uses the
-`Paypal REST SDK <https://github.com/paypal/PayPal-Python-SDK>`_.
-Older versions of this repository used the Paypal IPN system, but this
-software is no longer maintained, and it is highly recommended that you
-upgrade to using the REST API.
+project uses PayPal's Orders API (v2), through PayPal's
+`Server SDK <https://github.com/paypal/PayPal-Python-Server-SDK>`_, and
+PayPal's JavaScript SDK for the payment button.  Customers approve the
+payment in PayPal's window, and the payment is then taken by your site,
+so if the balance of an invoice changes before that, the customer is
+asked to review the new amount and is not charged.
+
+Older versions of this project used PayPal's v1 Payments API.  Payments
+that were made with it cannot be looked up or refunded from this site;
+refund them in your PayPal account instead.  If PayPal holds a payment as
+pending (for example, an eCheck that has not cleared), it is not
+recorded on the invoice; staff are notified by email, and should record
+it once PayPal completes it.
 
 REST API Setup
 ~~~~~~~~~~~~~~
