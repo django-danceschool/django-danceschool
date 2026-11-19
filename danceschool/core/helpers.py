@@ -1,8 +1,10 @@
 from django.contrib.sites.models import Site
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.mail import send_mail
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils.http import url_has_allowed_host_and_scheme
 
 import logging
 from itertools import chain
@@ -13,6 +15,35 @@ from .signals import collect_purchasable_items
 
 # Define logger for this file
 logger = logging.getLogger(__name__)
+
+
+def getLocalUrl(request, url, fallback):
+    '''
+    Return url if it is a page on this site, and otherwise fallback.  Use
+    this for any URL that comes from the browser before redirecting to it.
+    '''
+    if url and url_has_allowed_host_and_scheme(
+        url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return url
+    return fallback
+
+
+def getPluginSuccessUrl(model, plugin_id):
+    '''
+    The URL of the success page of the payment form plugin instance of this
+    model with this id, or None if there is no such instance or it has no
+    success page.  Payment processors look this up on the server, rather
+    than accepting a success URL from the browser, so that it cannot be used
+    to send the payer to another site.
+    '''
+    try:
+        instance = model.objects.get(id=int(plugin_id))
+    except (TypeError, ValueError, ObjectDoesNotExist):
+        return None
+    if instance.successPage:
+        return instance.successPage.get_absolute_url()
+    return None
 
 
 def getSiteUrl():

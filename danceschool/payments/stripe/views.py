@@ -6,13 +6,13 @@ from django.db import transaction
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
 from django.urls import reverse
 from django.utils import timezone
-from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
+from danceschool.core.helpers import getLocalUrl, getPluginSuccessUrl
 from danceschool.core.models import Invoice
 from danceschool.core.views.cart import clear_reg_cart
 
@@ -32,26 +32,12 @@ GIFT_CERTIFICATE = 'Gift Certificate'
 def get_success_url(plugin_id):
     '''
     The page to send the payer to after a successful payment: the success
-    page of the payment form plugin that they used.  This is looked up on the
-    server, rather than accepted from the browser, so that it cannot be used
-    to send the payer to another site.
+    page of the payment form plugin that they used.
     '''
-    try:
-        instance = StripeChargeFormModel.objects.get(id=int(plugin_id))
-    except (TypeError, ValueError, ObjectDoesNotExist):
-        return reverse('registration')
-    if instance.successPage:
-        return instance.successPage.get_absolute_url()
-    return reverse('registration')
-
-
-def get_local_url(request, url, fallback):
-    ''' Return url if it is on this site, otherwise fallback. '''
-    if url and url_has_allowed_host_and_scheme(
-        url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
-    ):
-        return url
-    return fallback
+    return (
+        getPluginSuccessUrl(StripeChargeFormModel, plugin_id) or
+        reverse('registration')
+    )
 
 
 @require_POST
@@ -78,7 +64,7 @@ def create_checkout_session(request):
         sourceFallback = reverse('showRegSummary')
     else:
         sourceFallback = reverse('registration')
-    sourceUrl = get_local_url(request, request.POST.get('sourceUrl'), sourceFallback)
+    sourceUrl = getLocalUrl(request, request.POST.get('sourceUrl'), sourceFallback)
 
     # A specific amount can only be paid for a new purchase (such as a gift
     # certificate); a payment on an invoice pays its balance.

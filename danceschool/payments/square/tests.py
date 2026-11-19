@@ -1,5 +1,6 @@
 import json
 from base64 import b64encode
+from types import SimpleNamespace
 from unittest import mock
 
 import httpx
@@ -13,7 +14,7 @@ from django.urls import reverse
 from dynamic_preferences.registries import global_preferences_registry
 from square.core.api_error import ApiError
 
-from danceschool.core.constants import REFUND_VALIDATION_STR
+from danceschool.core.constants import PAYMENT_VALIDATION_STR, REFUND_VALIDATION_STR
 from danceschool.core.models import Invoice
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
 
@@ -30,6 +31,15 @@ PAYMENT = {
     'id': 'PAYMENT_CACHED', 'amount_money': {'amount': 2500, 'currency': 'USD'},
     'processing_fee': [{'amount_money': {'amount': 100}}],
 }
+
+
+def plugin_success_page(url):
+    ''' Any Square payment form plugin that is looked up has this success page. '''
+    instance = SimpleNamespace(successPage=mock.Mock(**{'get_absolute_url.return_value': url}))
+    return mock.patch(
+        'danceschool.payments.square.views.SquareCheckoutFormModel.objects.get',
+        return_value=instance,
+    )
 
 
 def fake_client(get=None, refund=None):
@@ -318,6 +328,39 @@ class SquareCheckoutBalanceTest(DefaultSchoolTestCase):
             self.square.payments.create.call_args.kwargs['amount_money']['amount'], 2500
         )
 
+    def test_redirects_are_not_taken_from_browser(self):
+        ''' PR #179: the success page comes from the plugin, on the server. '''
+        with plugin_success_page('/thanks/') as get:
+            response = self.pay(
+                expected_balance='50.00', plugin_id='7',
+                successUrl='https://evil.example/x', finalSuccessUrl='https://evil.example/y',
+                addSessionInfo=True,
+            )
+        get.assert_called_once_with(id=7)
+        self.assertRedirects(response, '/thanks/', fetch_redirect_response=False)
+        self.assertNotIn(PAYMENT_VALIDATION_STR, self.client.session)
+
+    def test_without_plugin_success_page(self):
+        response = self.pay(expected_balance='50.00', successUrl='https://evil.example/x')
+        self.assertRedirects(response, reverse('registration'), fetch_redirect_response=False)
+
+    def test_gift_certificate_goes_to_customization(self):
+        with plugin_success_page('/thanks/'):
+            response = self.client.post(
+                reverse('processSquarePayment'), data=json.dumps({
+                    'sourceId': 'cnon:card', 'transaction_type': 'Gift Certificate',
+                    'amount': '25', 'plugin_id': '7',
+                    'successUrl': 'https://evil.example/x',
+                    'finalSuccessUrl': 'https://evil.example/y',
+                }), content_type='application/json',
+            )
+        self.assertRedirects(
+            response, reverse('customizeGiftCertificate'), fetch_redirect_response=False
+        )
+        paymentSession = self.client.session[PAYMENT_VALIDATION_STR]
+        self.assertEqual(paymentSession['successUrl'], '/thanks/')
+        self.assertEqual(paymentSession['amount'], 25)
+
     def test_checkout_form_sends_balance_shown(self):
         request = RequestFactory().get('/register/summary/')
         request.user = self.superuser
@@ -414,6 +457,33 @@ class SquarePointOfSaleBalanceTest(DefaultSchoolTestCase):
         self.assertEqual(len([m for m in messages if 'is still owed' in m]), 1)
         self.assertEqual(self.invoice.amountPaid, 45)
         self.assertEqual(len(self.notices()), 1)
+
+    def test_success_page_from_plugin(self):
+        ''' PR #179: the success page comes from the plugin, not the metadata. '''
+        with plugin_success_page('/thanks/'):
+            payment = mock.Mock(order_id='CLIENT1')
+            payment.dict.return_value = {
+                'id': 'PAYMENT1', 'order_id': 'CLIENT1', 'location_id': 'LOC',
+                'amount_money': {'amount': 5000},
+            }
+            self.square.payments.list.return_value = [payment]
+            state = {
+                'invoice': str(self.invoice.id), 'plugin_id': '7',
+                'successUrl': 'https://evil.example/x',
+            }
+            response = self.client.get(reverse('processSquarePointOfSale'), {
+                'com.squareup.pos.CLIENT_TRANSACTION_ID': 'CLIENT1',
+                'com.squareup.pos.REQUEST_METADATA': b64encode(json.dumps(state).encode()).decode(),
+            })
+        self.assertRedirects(response, '/thanks/', fetch_redirect_response=False)
+
+    def test_error_returns_only_to_this_site(self):
+        state = {'invoice': str(self.invoice.id), 'sourceUrl': 'https://evil.example/x'}
+        response = self.client.get(reverse('processSquarePointOfSale'), {
+            'com.squareup.pos.ERROR_CODE': 'com.squareup.pos.ERROR_TRANSACTION_CANCELED',
+            'com.squareup.pos.REQUEST_METADATA': b64encode(json.dumps(state).encode()).decode(),
+        })
+        self.assertRedirects(response, reverse('showRegSummary'), fetch_redirect_response=False)
 
     def test_button_checks_balance(self):
         request = RequestFactory().get('/register/summary/')

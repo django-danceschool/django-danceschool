@@ -42,8 +42,11 @@ class GiftCertificateCustomizeView(FormView):
         self.amount = paymentSession.get('amount', 0)
         self.success_url = paymentSession.get('successUrl', reverse('registration'))
 
-        # The success URL can come from the browser (e.g. through a payment
-        # processor's form), so only send the payer to a page on this site.
+        # Stripe and Square look the success URL up on the server (from the
+        # payment form plugin), but PayPal still takes it from its form, so
+        # only send the payer to a page on this site.  This also guards
+        # against any other payment processor app that takes it from the
+        # browser.
         if not url_has_allowed_host_and_scheme(
             self.success_url, allowed_hosts={request.get_host()},
             require_https=request.is_secure(),
