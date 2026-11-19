@@ -12,7 +12,9 @@ from django.views.decorators.http import require_GET, require_POST
 from django.views.generic import TemplateView
 
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
-from danceschool.core.helpers import getLocalUrl, getPluginSuccessUrl
+from danceschool.core.helpers import (
+    getBalanceChangedMessage, getLocalUrl, getPluginSuccessUrl
+)
 from danceschool.core.models import Invoice
 from danceschool.core.views.cart import clear_reg_cart
 
@@ -56,6 +58,7 @@ def create_checkout_session(request):
     transactionType = request.POST.get('transaction_type')
     taxable = request.POST.get('taxable', False)
     plugin_id = request.POST.get('plugin_id')
+    expectedBalance = request.POST.get('expected_balance') if invoice_id else None
     submissionUser = request.user if request.user.is_authenticated else None
 
     # Payers who leave Stripe without paying go back to the page that they
@@ -80,6 +83,23 @@ def create_checkout_session(request):
         # including registrations.
         if invoice_id:
             this_invoice = Invoice.objects.get(id=invoice_id)
+
+            # Do not start a payment of a balance other than the one that the
+            # payer was shown (e.g. if staff changed the invoice while they
+            # were paying, or if it has already been paid).
+            if expectedBalance is not None:
+                expectedBalance = float(expectedBalance)
+                balance = this_invoice.outstandingBalance
+                if abs(balance - expectedBalance) >= 0.01:
+                    logger.warning(
+                        'Refused Stripe Checkout payment on invoice %s: the payer '
+                        'was shown a balance of %.2f, but the balance is now %.2f.' % (
+                            this_invoice.id, expectedBalance, balance
+                        )
+                    )
+                    messages.warning(request, getBalanceChangedMessage(balance))
+                    return HttpResponseRedirect(sourceUrl)
+
             if this_invoice.status == Invoice.PaymentStatus.preliminary:
                 this_invoice.expirationDate = timezone.now() + timedelta(
                     minutes=getConstant('registration__sessionExpiryMinutes')
@@ -126,12 +146,21 @@ def create_checkout_session(request):
         'plugin_id': str(plugin_id or ''),
         'submissionUser': str(submissionUser.id) if submissionUser else '',
         'giftCertificate': 'true' if transactionType == GIFT_CERTIFICATE else '',
+        # The balance that is charged, so that a payment that no longer
+        # matches the balance when it is made can be reported to staff.
+        'expectedBalance': '%.2f' % this_invoice.outstandingBalance if invoice_id else '',
     }
+
+    # The balance can change while the session is open, so it is kept open
+    # for as long as a registration is held (Stripe allows from 30 minutes to
+    # 24 hours), not Stripe's default of 24 hours.
+    expiryMinutes = min(max(getConstant('registration__sessionExpiryMinutes'), 30), 24 * 60)
 
     session_kwargs = {
         'mode': 'payment',
         'client_reference_id': str(this_invoice.id),
         'metadata': metadata,
+        'expires_at': int((timezone.now() + timedelta(minutes=expiryMinutes)).timestamp()),
         'line_items': [{
             'quantity': 1,
             'price_data': {
@@ -212,6 +241,12 @@ def fulfill_checkout(session_id):
             methodTxn=charge.id,
             submissionUser=user,
             notify=session.customer_details.email if session.customer_details else None,
+            # Nobody may be watching when the webhook records the payment,
+            # so a mismatch with the balance is reported to staff by email.
+            expectedBalance=(
+                float(metadata['expectedBalance'])
+                if metadata.get('expectedBalance') else None
+            ),
         )
     return session, invoice
 

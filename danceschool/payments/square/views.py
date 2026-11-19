@@ -25,7 +25,9 @@ from time import sleep
 
 from danceschool.core.models import Invoice, InvoiceItem
 from danceschool.core.constants import getConstant, PAYMENT_VALIDATION_STR
-from danceschool.core.helpers import getLocalUrl, getPluginSuccessUrl, getReturnPage
+from danceschool.core.helpers import (
+    getBalanceChangedMessage, getLocalUrl, getPluginSuccessUrl, getReturnPage
+)
 from danceschool.core.views.cart import clear_reg_cart
 
 
@@ -78,11 +80,7 @@ class ProcessSquarePaymentView(View):
                 invoice.id, expectedBalance, balance
             )
         )
-        message = _(
-            'The total has changed since this page was loaded, so your card ' +
-            'has not been charged. The amount now due is %(balance)s. Please ' +
-            'review it before paying.'
-        ) % {'balance': '%s%.2f' % (getConstant('general__currencySymbol'), balance)}
+        message = getBalanceChangedMessage(balance)
         messages.warning(request, message)
 
         sourceUrl = getLocalUrl(request, sourceUrl, reverse('showRegSummary'))

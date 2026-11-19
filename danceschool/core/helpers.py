@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.translation import gettext as _
 
 import logging
 from itertools import chain
@@ -27,6 +28,18 @@ def getLocalUrl(request, url, fallback):
     ):
         return url
     return fallback
+
+
+def getBalanceChangedMessage(balance):
+    '''
+    The message shown to a payer whose payment is refused because the balance
+    is no longer the one that they were shown.
+    '''
+    return _(
+        'The total has changed since this page was loaded, so your card ' +
+        'has not been charged. The amount now due is %(balance)s. Please ' +
+        'review it before paying.'
+    ) % {'balance': '%s%.2f' % (getConstant('general__currencySymbol'), balance)}
 
 
 def getPluginSuccessUrl(model, plugin_id):
