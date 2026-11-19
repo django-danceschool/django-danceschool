@@ -42,6 +42,25 @@ class GiftCertificateCustomizeViewSessionKeysTest(DefaultSchoolTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    def test_success_url_must_be_on_this_site(self):
+        '''
+        The success URL in the session can come from the browser, through the
+        payment processors' forms (PR #179), so a page on another site is
+        replaced by the registration page.
+        '''
+        invoice = Invoice.objects.create(
+            grossTotal=10, total=10, amountPaid=10,
+            status=Invoice.PaymentStatus.paid,
+        )
+        for url, expected in [
+            ('/done/', '/done/'),
+            ('https://evil.example/x', reverse('registration')),
+            ('//evil.example/x', reverse('registration')),
+        ]:
+            self._set_payment_session(invoice, amount=10, success_url=url)
+            response = self.client.get(reverse('customizeGiftCertificate'))
+            self.assertEqual(response.context_data['view'].success_url, expected, url)
+
     def test_unpaid_invoice_returns_400(self):
         '''
         Sanity-check the second guard: even with correct keys, an unpaid

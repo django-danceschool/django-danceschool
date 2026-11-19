@@ -6,6 +6,7 @@ from django.db import IntegrityError
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from django_weasyprint import WeasyTemplateView
 import re
@@ -40,6 +41,18 @@ class GiftCertificateCustomizeView(FormView):
         self.invoice_id = paymentSession.get('invoiceID')
         self.amount = paymentSession.get('amount', 0)
         self.success_url = paymentSession.get('successUrl', reverse('registration'))
+
+        # The success URL can come from the browser (e.g. through a payment
+        # processor's form), so only send the payer to a page on this site.
+        if not url_has_allowed_host_and_scheme(
+            self.success_url, allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            logger.warning(
+                'Ignoring gift certificate success URL that is not on this site: %s' %
+                self.success_url
+            )
+            self.success_url = reverse('registration')
 
         # Check that Invoice matching passed ID exists
         try:
