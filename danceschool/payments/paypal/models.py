@@ -5,10 +5,16 @@ from cms.models.pluginmodel import CMSPlugin
 from cms.models.fields import PageField
 
 import logging
-from paypalrestsdk import Payment, Sale
+import uuid
+
+from paypalserversdk.exceptions.api_exception import ApiException
+from paypalserversdk.models.money import Money
+from paypalserversdk.models.refund_request import RefundRequest
 
 from danceschool.core.models import PaymentRecord
 from danceschool.core.constants import getConstant
+
+from . import api_client
 
 
 # Define logger for this file
@@ -18,12 +24,17 @@ logger = logging.getLogger(__name__)
 class PaypalPaymentRecord(PaymentRecord):
     '''
     Keeps a local record of Paypal transactions so that they can be looked up
-    using the REST API.
+    using the REST API.  paymentId is the id of the PayPal order, and
+    captureId is the id of the payment once it has been captured.  Records
+    of payments made with PayPal's older v1 Payments API have a paymentId
+    beginning with "PAY-" and no captureId; they can no longer be looked up
+    or refunded from this site.
     '''
 
     paymentId = models.CharField(_('Paypal Payment ID'), max_length=50, unique=True)
     payerId = models.CharField(_('Paypal Payer ID'), max_length=50, null=True, blank=True)
     status = models.CharField(_('Current status'), max_length=30, null=True, blank=True)
+    captureId = models.CharField(_('Paypal Capture ID'), max_length=50, null=True, blank=True)
 
     @property
     def methodName(self):
@@ -40,83 +51,102 @@ class PaypalPaymentRecord(PaymentRecord):
         '''
         return self.paymentId
 
-    def getPayment(self):
-        return Payment.find(self.paymentId)
+    @property
+    def legacy(self):
+        ''' A payment made with PayPal's older v1 Payments API. '''
+        return (self.paymentId or '').startswith('PAY-')
 
-    def getSaleIds(self):
-        ids = []
-        payment = self.getPayment()
-        for t in payment.transactions:
-            for r in t.related_resources:
-                if hasattr(r, 'sale') and r.sale:
-                    ids.append(r.sale.id)
-        return ids
+    @property
+    def api_error(self):
+        ''' Why the details of this payment could not be retrieved, if they could not. '''
+        if self.legacy:
+            return str(_(
+                'this payment was made with an older PayPal integration, so it ' +
+                'must be looked up and refunded in your PayPal account'
+            ))
+        return getattr(self, '_api_error', None)
 
-    def getRefundIds(self):
-        ids = []
-        payment = self.getPayment()
-        for t in payment.transactions:
-            for r in t.related_resources:
-                if hasattr(r, 'refund') and r.refund:
-                    ids.append(r.refund.id)
-        return ids
+    def getOrder(self):
+        ''' The PayPal order for this payment, or None if it cannot be retrieved. '''
+        if self.legacy:
+            return None
+        try:
+            return api_client.get_client().orders.get_order({'id': self.paymentId}).body
+        except ApiException as e:
+            self._api_error = api_client.error_message(e)
+            logger.error('Unable to retrieve PayPal order %s: %s' % (self.paymentId, self._api_error))
+            return None
 
     @property
     def netAmountPaid(self):
-        payment = self.getPayment()
-        return sum([float(t.amount.total) for t in payment.transactions])
+        order = self.getOrder()
+        if not order:
+            return None
+        payments = order.purchase_units[0].payments
+        captured = sum([
+            float(x.amount.value) for x in (getattr(payments, 'captures', None) or [])
+            if x.status == 'COMPLETED'
+        ])
+        refunded = sum([
+            float(x.amount.value) for x in (getattr(payments, 'refunds', None) or [])
+            if x.status in ['COMPLETED', 'PENDING']
+        ])
+        return captured - refunded
 
     def getPayerEmail(self):
-        payment = self.getPayment
-        return payment.payer.email
+        order = self.getOrder()
+        payer = getattr(order, 'payer', None)
+        return getattr(payer, 'email_address', None)
 
     def refund(self, amount=None):
-        saleIds = self.getSaleIds()
-        refundData = []
+        if self.legacy or not self.captureId:
+            return [{'status': 'error', 'errors': [{
+                'code': 'not_refundable',
+                'message': str(_('No refund was attempted: %s.') % (
+                    self.api_error or _('this payment was never captured')
+                )),
+            }]}]
 
-        leftToRefund = amount or 0
-        for this_id in saleIds:
-            # No need to continue if the full amount requested has been refunded
-            if amount is not None and leftToRefund <= 0:
-                break
+        body = RefundRequest()
+        if amount is not None:
+            body = RefundRequest(amount=Money(
+                currency_code=getConstant('general__currencyCode'),
+                value='%.2f' % amount,
+            ))
 
-            this_sale = Sale.find(this_id)
+        try:
+            refund = api_client.get_client().payments.refund_captured_payment({
+                'capture_id': self.captureId,
+                'body': body,
+                # Ensures that the same refund is not made twice if the
+                # request is retried.
+                'paypal_request_id': str(uuid.uuid4()),
+                'prefer': 'return=representation',
+            }).body
+        except ApiException as e:
+            message = api_client.error_message(e)
+            logger.error('Error processing PayPal refund: %s' % message)
+            return [{'status': 'error', 'errors': [{'code': 'paypal_error', 'message': message}]}]
 
-            if amount is not None:
-                this_amount = min(float(this_sale.amount.total), leftToRefund)
+        if refund.status not in ['COMPLETED', 'PENDING']:
+            logger.error('PayPal refund %s has status %s.' % (refund.id, refund.status))
+            return [{'status': 'error', 'errors': [{
+                'code': refund.status,
+                'message': str(_('PayPal reported the refund as %s') % refund.status),
+            }]}]
 
-                refund = this_sale.refund({
-                    'amount': {
-                        'total': '{0:.2f}'.format(this_amount),
-                        'currency': getConstant('general__currencyCode'),
-                    }
-                })
-            else:
-                refund = this_sale.refund()
+        logger.info('Refund successfully processed.')
 
-            if refund.success():
-                logger.info('Refund successfully processed.')
-
-                refundData.append({
-                    'status': 'success',
-                    'refund_id': refund.id,
-                    'sale_id': refund.sale_id,
-                    'refundAmount': float(refund.amount.total),
-
-                    # This is (annoyingly) hard-coded for now because the Paypal REST API does
-                    # not yet report fees in the event of a refund.  Hopefully this can be removed
-                    # soon.
-                    'fees': -1 * (
-                        (float(this_sale.transaction_fee.value) - getConstant('paypal__fixedTransactionFee')) *
-                        (float(refund.amount.total) / float(this_sale.amount.total))
-                    ),
-                })
-                leftToRefund -= this_amount
-            else:
-                logger.error('Error processing refund.')
-                refundData.append({'status': 'error', 'errors': refund.error})
-
-        return refundData
+        # PayPal returns part of its fee when a payment is refunded, so the
+        # fees on the invoice go down by that amount.
+        breakdown = getattr(refund, 'seller_payable_breakdown', None)
+        fee = getattr(breakdown, 'paypal_fee', None)
+        return [{
+            'status': 'success',
+            'refund_id': refund.id,
+            'refundAmount': float(refund.amount.value),
+            'fees': -1 * float(fee.value) if fee else 0,
+        }]
 
     class Meta:
         verbose_name = _('Paypal payment record')

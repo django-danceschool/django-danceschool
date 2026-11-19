@@ -1,57 +1,87 @@
-{% load cms_tags sekizai_tags i18n %}
-
+{% load sekizai_tags i18n %}
+{% comment %}
+The PayPal button, using PayPal's JavaScript SDK.  The server creates the
+order (for the balance of the invoice, or for the amount entered for a gift
+certificate) and captures it once the payer approves it.  The gift
+certificate form includes this template with gift_certificate=True, and has
+an input named "amount".
+{% endcomment %}
 {% trans "An unknown error has occurred. Please try again, or notify us if you continue to have an issue." as unknown_error %}
 
 <div class="door-payment-section">
-<div id="error_payment"></div>
+<div id="error_payment" role="alert"></div>
 <div id="paypal-button" class="my-4"></div>
 </div>
 
 {% addtoblock "js" %}
-    <script src="https://www.paypalobjects.com/api/checkout.js"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id|urlencode }}&currency={{ currencyCode|urlencode }}&intent=capture"></script>
 {% endaddtoblock %}
 {% addtoblock "js" %}
     <script type="text/javascript">
+    (function() {
+        const unknownError = "{{ unknown_error|escapejs }}";
 
-        paypal.Button.render({
+        function showError(message) {
+            const box = document.getElementById('error_payment');
+            box.className = 'alert alert-danger';
+            box.textContent = message || unknownError;
+        }
 
-            env: '{{ paypal_mode }}',
+        // Send a request to the site, and return its JSON response.  An
+        // error response is thrown, so that the PayPal button stops.
+        function post(url, params) {
+            return fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'X-CSRFToken': "{{ csrf_token }}"},
+                body: new URLSearchParams(params),
+            }).then(function(response) {
+                return response.json().catch(function() { return {}; }).then(function(data) {
+                    if (!response.ok) { throw data; }
+                    return data;
+                });
+            });
+        }
 
-            commit: true, // Show a 'Pay Now' button
+        function handleError(err) {
+            showError(err && err.message);
+            if (err && err.redirect_url) {
+                window.location.assign(err.redirect_url);
+            }
+        }
 
-            payment: function() {
-                return paypal.request.post('{% url "createPaypalPayment" %}', {
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
-                    {% if user.is_authenticated %}
-                    user_id: {{ user.id }},
-                    {% endif %}
-                    {% if invoice %}
-                    invoice_id: '{{ invoice.id }}',
-                    {% endif %}
-                }).then(function(data) {
+        paypal.Buttons({
+            createOrder: function() {
+                const params = {
+                    // The success page is looked up from this plugin on the server.
+                    plugin_id: "{{ instance.id|default_if_none:'' }}",
+                    sourceUrl: "{{ request.get_full_path|escapejs }}",
+                };
+                {% if gift_certificate %}
+                params.transaction_type = 'Gift Certificate';
+                params.amount = document.querySelector('input[name=amount]').value;
+                {% elif invoice %}
+                params.invoice_id = "{{ invoice.id }}";
+                // The balance shown on this page.  If it has changed, then
+                // the payment is refused.
+                params.expected_balance = "{{ invoice.outstandingBalance|stringformat:'.2f' }}";
+                {% endif %}
+                return post("{% url 'createPaypalOrder' %}", params).then(function(data) {
                     return data.id;
                 });
             },
 
-            onAuthorize: function(data) {
-                return paypal.request.post('{% url "executePaypalPayment" %}', {
-                    csrfmiddlewaretoken: '{{ csrf_token }}',
-                    paymentID: data.paymentID,
-                    payerID: data.payerID,
-                }).then(function() {
-                    {% if instance.successPage %}
-                    window.location.replace('{% page_url instance.successPage.id %}');
-                    {% else %}
-                    window.location.replace('/');
-                    {% endif %}
-                });
+            onApprove: function(data) {
+                return post("{% url 'capturePaypalOrder' %}", {orderID: data.orderID})
+                    .then(function(result) {
+                        if (result.message) { showError(result.message); }
+                        window.location.assign(result.redirect_url);
+                    })
+                    .catch(handleError);
             },
 
-            onError: function(err) {
-                $('#error_payment').addClass('alert alert-danger');
-                $('#error_payment').text('{{ unknown_error }}');
-            }
-
-        }, '#paypal-button');
+            onError: handleError,
+        }).render('#paypal-button');
+    })();
     </script>
 {% endaddtoblock %}
