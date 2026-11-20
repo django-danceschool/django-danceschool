@@ -5,7 +5,7 @@ from django.core.management import call_command
 from django.urls import reverse
 
 from ..constants import REFUND_VALIDATION_STR
-from ..models import Invoice, InvoiceItem
+from ..models import EventRegistration, Invoice, InvoiceItem, Registration
 from .defaults import DefaultSchoolTestCase
 
 
@@ -292,6 +292,68 @@ class RefundTaxTest(RefundTestBase):
         invoice, (item,) = self.make_invoice(rate=0)
         self.refund(invoice, {item: 40})
         self.assertRefund(item, refunded_taxes=0, net=60)
+
+
+class PassRefundTest(RefundTestBase):
+    '''
+    The price of a pass is allocated among the pass and the events that it
+    includes, each of which has its own registration.  When the pass is
+    refunded in full, the registrations for the included events are
+    cancelled as well, even when none of the price was allocated to them.
+    '''
+
+    def make_pass_invoice(self, allocations):
+        '''
+        A paid, untaxed invoice for a pass, with the passed totals for the
+        pass and for each event that it includes.
+        '''
+        invoice = Invoice.objects.create(buyerPaysSalesTax=True)
+        registration = Registration.objects.create(invoice=invoice, final=True)
+        parent = EventRegistration(registration=registration, event=self.create_series())
+        parent.save(grossTotal=allocations[0], total=allocations[0])
+        registrations = [parent]
+        for total in allocations[1:]:
+            er = EventRegistration(registration=registration, event=self.create_series())
+            er.save(grossTotal=50, total=total, parent_id=parent.id)
+            registrations.append(er)
+        invoice.status = Invoice.PaymentStatus.unpaid
+        invoice.updateTotals(save=True)
+        invoice.processPayment(amount=invoice.outstandingBalance, fees=0)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, Invoice.PaymentStatus.paid)
+        return invoice, registrations
+
+    def assertCancelled(self, registrations, expected):
+        self.assertEqual(
+            [EventRegistration.objects.get(id=x.id).cancelled for x in registrations],
+            expected
+        )
+
+    def test_full_refund_of_pass(self):
+        invoice, ers = self.make_pass_invoice([60, 20, 20])
+        self.refund(invoice, {x.invoiceItem: x.invoiceItem.total for x in ers})
+        self.assertEqual(invoice.status, Invoice.PaymentStatus.fullRefund)
+        self.assertCancelled(ers, [True, True, True])
+
+    def test_full_refund_of_pass_with_unpriced_included_events(self):
+        invoice, ers = self.make_pass_invoice([100, 0, 0])
+        self.refund(invoice, {ers[0].invoiceItem: 100})
+        self.assertEqual(invoice.status, Invoice.PaymentStatus.fullRefund)
+        self.assertCancelled(ers, [True, True, True])
+
+    def test_partial_refund_of_pass(self):
+        invoice, ers = self.make_pass_invoice([60, 20, 20])
+        self.refund(invoice, {ers[0].invoiceItem: 30})
+        self.assertCancelled(ers, [False, False, False])
+
+    def test_included_event_still_paid_for(self):
+        '''
+        An included event that still has an amount paid for it is not
+        cancelled when only the pass is refunded.
+        '''
+        invoice, ers = self.make_pass_invoice([60, 20, 0])
+        self.refund(invoice, {ers[0].invoiceItem: 60})
+        self.assertCancelled(ers, [True, False, True])
 
 
 class CheckRefundsCommandTest(RefundTestBase):

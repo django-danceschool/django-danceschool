@@ -257,9 +257,19 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
             header_list.append(
                 _('Registrations: {role}'.format(role=str(role or _('Unspecified')).title()))
             )
+        revenue_columns = [
+            ('gross', _('Revenues: Gross Value')),
+            ('netOfDiscounts', _('Revenues: Net of Discounts')),
+            ('adjustments', _('Revenues: Adjustments')),
+            ('fees', _('Revenues: Fees')),
+            ('taxesCollected', _('Revenues: Taxes Collected')),
+            ('revenue', _('Revenues: Revenue')),
+            ('refunds', _('Revenues: Refunds')),
+            ('taxes', _('Revenues: Taxes Owed')),
+            ('net', _('Revenues: Net Revenue')),
+        ]
+        header_list += [x[1] for x in revenue_columns]
         header_list += [
-            _('Revenues: Gross'),
-            _('Revenues: Net'),
             _('Expenses: Instruction'),
             _('Expenses: Venue'),
             _('Expenses: Other'),
@@ -275,9 +285,8 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
             ]
             for role in roles:
                 this_row_data.append(x.get('registrations', {}).get(role, 0))
+            this_row_data += [x['revenues'][key] for key, label in revenue_columns]
             this_row_data += [
-                x['revenues']['gross'],
-                x['revenues']['net'],
                 x['expenses']['instruction'],
                 x['expenses']['venue'],
                 x['expenses']['other'],

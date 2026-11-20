@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.db.models import Sum, Count, Q, Min
+from django.db.models import Sum, Count, Q, Min, F
 from django.db.models.functions import TruncDate, TruncMonth
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +13,7 @@ import pytz
 
 from danceschool.core.constants import getConstant
 from danceschool.core.models import Registration, Event, EventOccurrence, EventStaffMember
+from danceschool.core.utils.tax import refundedTaxesExpression
 from danceschool.core.utils.timezone import ensure_timezone, ensure_localtime
 
 from ..constants import EXPENSE_BASES
@@ -29,8 +30,9 @@ def prepareFinancialStatement(year=None):
     expenses_ytd = list(
         ExpenseItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values()
     )[0]
+    # Net of refunds and of the sales tax that is owed.
     revenues_ytd = list(
-        RevenueItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('total')).values()
+        RevenueItem.objects.filter(accrualDate__year=filter_year).aggregate(Sum('net')).values()
     )[0]
     expenses_awaiting_approval = list(
         ExpenseItem.objects.filter(
@@ -300,20 +302,30 @@ def prepareStatementByEvent(paginate=True, **kwargs):
         this_event_statement['registrations'] = {'total': event.numRegistered, }
         this_event_statement['registrations'].update(event.numRegisteredByRole)
 
-        # The calculation of net vs. gross revenue for each registration item is
-        # done in models.py via model methods.  Any discounts are applied
-        # equally to each event.
+        # Gross value counts only registrations that are not cancelled, as
+        # the registrations are counted.  Revenue is what the customer paid
+        # (including any sales tax that the buyer paid), after adjustments and
+        # fees.  Net revenue is revenue less refunds and the sales tax that is
+        # owed after refunds (see netRevenueExpression).
+        # (The names of the sums cannot be those of the fields.)
         event_revs = event.revenueitem_set.aggregate(
-            Sum('grossTotal'), Sum('total'), Sum('adjustments'), Sum('fees'), Sum('net')
+            gross_sum=Sum(
+                'grossTotal', filter=~Q(invoiceItem__eventRegistration__cancelled=True)
+            ),
+            netOfDiscounts_sum=Sum('total'),
+            adjustments_sum=Sum('adjustments'),
+            fees_sum=Sum('fees'),
+            taxesCollected_sum=Sum('taxes', filter=Q(buyerPaysSalesTax=True)),
+            refunds_sum=Sum('refunds'),
+            taxes_sum=Sum(F('taxes') - refundedTaxesExpression('buyerPaysSalesTax')),
+            net_sum=Sum('net'),
         )
-
-        this_event_statement['revenues'] = {
-            'gross': event_revs['grossTotal__sum'] or 0,
-            'netOfDiscounts': event_revs['total__sum'] or 0,
-            'adjustments': event_revs['adjustments__sum'] or 0,
-            'fees': event_revs['fees__sum'] or 0,
-            'net': event_revs['net__sum'] or 0,
-        }
+        revenues = {k[:-len('_sum')]: v or 0 for k, v in event_revs.items()}
+        revenues['revenue'] = (
+            revenues['netOfDiscounts'] + revenues['adjustments'] - revenues['fees'] +
+            revenues['taxesCollected']
+        )
+        this_event_statement['revenues'] = revenues
 
         allocated_venue_expenses = ExpenseItem.objects.filter(
             event__isnull=True,

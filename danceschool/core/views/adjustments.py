@@ -1,5 +1,6 @@
 from django.http import HttpResponseRedirect
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django.contrib import messages
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse
@@ -99,7 +100,9 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         recorded).  They are allocated across the items in proportion to the
         amount of the refund that was requested for each item (item_refunds,
         in the form {invoice item id: amount}).  An item that is refunded in
-        full, and is for an event registration, cancels the registration.
+        full, and is for an event registration, cancels the registration, as
+        well as those of the items included with it (e.g. the events included
+        with a pass) that have nothing remaining paid for them.
         '''
         this_request = [
             x for x in refund_data[self.first_new_refund:] if x.get('status') == 'success'
@@ -124,15 +127,32 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         if not total_applied:
             return
 
-        refunded_items = self.invoice.invoiceitem_set.filter(
-            id__in=list(weights.keys())
+        # The events that a pass includes are cancelled with the pass when
+        # nothing remains paid for them, including when none of the price
+        # of the pass was allocated to them.
+        refunded_ids = list(weights.keys())
+        items = self.invoice.invoiceitem_set.filter(
+            Q(id__in=refunded_ids) | Q(parent_item__id__in=refunded_ids)
         ).select_related('eventRegistration')
-        for this_item in refunded_items:
-            remaining = this_item.total + this_item.adjustments - this_item.refunds
+
+        def remaining(item):
+            amount = item.total + item.adjustments - item.refunds
             if self.invoice.buyerPaysSalesTax:
-                remaining += this_item.taxes
+                amount += item.taxes
+            return amount
+
+        fully_refunded = [
+            x for x in items if str(x.id) in refunded_ids and abs(remaining(x)) < 0.01
+        ]
+        fully_refunded_ids = [x.id for x in fully_refunded]
+        fully_refunded += [
+            x for x in items if
+            x.parent_item_id in fully_refunded_ids and
+            x.id not in fully_refunded_ids and abs(remaining(x)) < 0.01
+        ]
+        for this_item in fully_refunded:
             this_eventreg = getattr(this_item, 'eventRegistration', None)
-            if abs(remaining) < 0.01 and this_eventreg:
+            if this_eventreg:
                 this_eventreg.cancelled = True
                 this_eventreg.save()
 
