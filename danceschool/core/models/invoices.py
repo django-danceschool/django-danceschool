@@ -567,8 +567,10 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         Because of the recalculation of taxes, we have to calculate all of the
         various line items whenever we are allocating amounts.  Unless weights
-        are specified, changes to the grossTotal or the total price are
-        allocated based on the ratio of grossTotal across invoice items. New
+        are specified, changes to the grossTotal are allocated based on the
+        ratio of grossTotal across invoice items, and changes to the total
+        price are allocated based on the ratio of the total price (or of the
+        grossTotal, if no item has a total price). New
         taxes are always calculated based on the new total price after any
         changes (to ensure consistent application of tax rates).  Changes to the
         adjustments line are then allocated based on the ratio of the
@@ -742,8 +744,14 @@ class Invoice(EmailRecipientMixin, models.Model):
             F('oldGrossTotal') + (F('grossTotalRatio') * allocateAmounts.get('grossTotal', 0))
         )
 
+        # Changes to the total price are allocated in proportion to the price
+        # at which each item is sold, which can differ from its grossTotal
+        # (e.g. an event included with a pass, or a free item).  Only when no
+        # item has a price is the grossTotal used.
         if allocateWeights and allocateAmounts.get('total'):
             pretax_annotations['totalRatio'] = F('allocationWeight')
+        elif old_totals['total'] > 0:
+            pretax_annotations['totalRatio'] = (F('oldTotal')/old_totals['total'])
         elif new_totals['grossTotal'] == 0:
             pretax_annotations['totalRatio'] = proportional
         else:
