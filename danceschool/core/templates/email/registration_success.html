@@ -7,7 +7,8 @@ Thank you for registering with {{ businessName }}!  We have received and process
 
 Total, Net of Discounts: {{ currencySymbol }}{{ total|floatformat:2 }}{% if taxes %}
 Taxes: {{ currencySymbol }}{{ taxes|floatformat:2 }}{% endif %}{% if adjustments %}
-Adjustments/Refunds: {{ currencySymbol }}{{ adjustments|floatformat:2 }}{% endif %}
+Adjustments: {% if adjustments < 0 %}-{% endif %}{{ currencySymbol }}{{ adjustments|floatformat:2|cut:"-" }}{% endif %}{% if refunds %}
+Refunds: -{{ currencySymbol }}{{ refunds|floatformat:2 }}{% endif %}
 
 {% if thisPaymentAmount %}This Payment Amount: {{ currencySymbol }}{{ thisPaymentAmount|floatformat:2 }}
 {% endif %}Total Amount paid: {{ currencySymbol }}{{ amountPaid|floatformat:2 }}

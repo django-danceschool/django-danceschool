@@ -16,7 +16,8 @@ Creation Date: {{ creationDate|date:"F jS, g:i A" }}
 Status: {{ status }}
 Total, Net of Discounts: {{ currencySymbol }}{{ total|floatformat:2 }}{% if taxes %}
 Taxes: {{ currencySymbol }}{{ taxes|floatformat:2 }}{% endif %}{% if adjustments %}
-Adjustments/Refunds: {{ currencySymbol }}{{ adjustments|floatformat:2 }}{% endif %}
+Adjustments: {% if adjustments < 0 %}-{% endif %}{{ currencySymbol }}{{ adjustments|floatformat:2|cut:"-" }}{% endif %}{% if refunds %}
+Refunds: -{{ currencySymbol }}{{ refunds|floatformat:2 }}{% endif %}
 
 Amount Paid {{ currencySymbol }}{{ amountPaid|floatformat:2 }}
 Outstanding Balance: {{ currencySymbol }}{{ outstandingBalance|floatformat:2 }}
