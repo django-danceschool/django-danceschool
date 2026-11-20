@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from braces.views import PermissionRequiredMixin, StaffuserRequiredMixin
 
-from ..models import Invoice, Registration, EventRegistration
+from ..models import Invoice, Registration
 from ..forms.adjustments import RefundForm, RegistrationTransferForm
 from ..constants import REFUND_VALIDATION_STR
 from ..mixins import FinancialContextMixin, AdminSuccessURLMixin
@@ -78,7 +78,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
         })
         return context
 
-    def refund_failed(self, refund_data, failed, adjustment_amounts):
+    def refund_failed(self, refund_data, failed, item_refunds):
         '''
         Stop after a failed refund: report it, record it on the invoice, and
         apply only the refunds that already succeeded.
@@ -88,39 +88,78 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
 
         messages.error(self.request, failed.get('errorMessage'))
 
-        self.invoice.data['refunds'] = refund_data
-
-        total_applied = sum([x.get('refundAmount', 0) for x in refund_data if x.get('status') == 'success'])
-        total_fees = sum([x.get('fees', 0) for x in refund_data if x.get('status') == 'success'])
-
-        # Allocate whatever amount was previously successful across the
-        # items for which the refund was requested.
-        self.invoice.amountPaid -= total_applied
-
-        self.invoice.updateTotals(
-            save=True,
-            allocateAmounts={
-                'adjustments': -1*total_applied,
-                'fees': total_fees,
-            },
-            allocateWeights=adjustment_amounts
-        )
+        self.record_refunds(refund_data, item_refunds)
         self.request.session.pop(REFUND_VALIDATION_STR, None)
         return HttpResponseRedirect(self.get_success_url())
+
+    def record_refunds(self, refund_data, item_refunds):
+        '''
+        Record the refunds that succeeded in this request (refund_data also
+        lists the earlier refunds of the invoice, which have already been
+        recorded).  They are allocated across the items in proportion to the
+        amount of the refund that was requested for each item (item_refunds,
+        in the form {invoice item id: amount}).  An item that is refunded in
+        full, and is for an event registration, cancels the registration.
+        '''
+        this_request = [
+            x for x in refund_data[self.first_new_refund:] if x.get('status') == 'success'
+        ]
+        total_applied = sum([x.get('refundAmount', 0) for x in this_request])
+        total_fees = sum([x.get('fees', 0) for x in this_request])
+        weights = {k: v for k, v in item_refunds.items() if v > 0}
+
+        self.invoice.data['refunds'] = refund_data
+        self.invoice.amountPaid -= total_applied
+
+        if total_applied or total_fees:
+            self.invoice.updateTotals(
+                save=True,
+                allocateAmounts={'refunds': total_applied, 'fees': total_fees},
+                allocateWeights=weights,
+            )
+        if total_applied and abs(self.invoice.refundableAmount) < 0.01:
+            self.invoice.status = Invoice.PaymentStatus.fullRefund
+        self.invoice.save()
+
+        if not total_applied:
+            return
+
+        refunded_items = self.invoice.invoiceitem_set.filter(
+            id__in=list(weights.keys())
+        ).select_related('eventRegistration')
+        for this_item in refunded_items:
+            remaining = this_item.total + this_item.adjustments - this_item.refunds
+            if self.invoice.buyerPaysSalesTax:
+                remaining += this_item.taxes
+            this_eventreg = getattr(this_item, 'eventRegistration', None)
+            if abs(remaining) < 0.01 and this_eventreg:
+                this_eventreg.cancelled = True
+                this_eventreg.save()
 
     def process_refund(self):
 
         refund_data = self.invoice.data.get('refunds', [])
 
+        # The refunds listed from here on are the ones made by this request.
+        self.first_new_refund = len(refund_data)
+
         total_refund_amount = self.form_data['total_refund_amount']
         initial_refund_amount = self.form_data['initial_refund_amount']
         amount_to_refund = max(total_refund_amount - initial_refund_amount, 0)
 
-        # Identify the items to which refunds should be allocated and update the adjustments line
-        # for those items.  Fees are also allocated across the items for which the refund was requested.
+        # Identify the items to which refunds should be allocated.  The form
+        # gives the total refunded for each item, including earlier refunds,
+        # so the refund requested now is the difference.  Fees are also
+        # allocated across the items for which the refund was requested.
         refund_items = self.form_data.items()
         item_refund_data = [(k.split('_')[2], v) for k, v in refund_items if k.startswith('item_refundamount_')]
-        adjustment_amounts = {x[0]: float(x[1]) for x in item_refund_data}
+        previous_refunds = {
+            str(x.id): x.refunds for x in self.invoice.invoiceitem_set.all()
+        }
+        adjustment_amounts = {
+            x[0]: max(float(x[1] or 0) - previous_refunds.get(x[0], 0), 0)
+            for x in item_refund_data
+        }
 
         # Keep track of total refund fees as well as how much reamins to be
         # refunded as we iterate through payments to refund them.
@@ -219,45 +258,7 @@ class RefundConfirmationView(FinancialContextMixin, AdminSuccessURLMixin, Permis
                   'Check invoice and payment processor records for details.')
                 )
 
-        self.invoice.data['refunds'] = refund_data
-
-        total_applied = sum([x.get('refundAmount', 0) for x in refund_data if x.get('status') == 'success'])
-        total_fees = sum([x.get('fees', 0) for x in refund_data if x.get('status') == 'success'])
-
-        self.invoice.amountPaid -= total_applied
-
-        if abs(
-            self.invoice.total + (self.invoice.taxes * self.invoice.buyerPaysSalesTax) +
-            self.invoice.adjustments - total_applied
-        ) < 0.01:
-            self.invoice.status = Invoice.PaymentStatus.fullRefund
-
-        # Allocate whatever amount was previously successful across the
-        # items for which the refund was requested.
-        items = self.invoice.updateTotals(
-            save=True,
-            allocateAmounts={
-                'adjustments': -1*total_applied,
-                'fees': total_fees,
-            },
-            allocateWeights=adjustment_amounts
-        )
-
-        # If the refund is a complete refund and is associated with a registration,
-        # then cancel the EventRegistration entirely.
-        eventregs = EventRegistration.objects.filter(invoiceItem__in=items)
-        for this_item in items:
-            this_eventreg = eventregs.filter(invoiceItem=this_item).first()
-
-            if (
-                abs(
-                    this_item.total + this_item.adjustments +
-                    (this_item.taxes * self.invoice.buyerPaysSalesTax)
-                ) < 0.01 and this_eventreg
-            ):
-                this_eventreg.cancelled = True
-                this_eventreg.save()
-
+        self.record_refunds(refund_data, adjustment_amounts)
         self.request.session.pop(REFUND_VALIDATION_STR, None)
         return HttpResponseRedirect(self.get_success_url())
 

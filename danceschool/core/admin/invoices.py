@@ -51,11 +51,18 @@ class InvoiceItemInline(admin.StackedInline):
     ]
     fields = [
         'id',
-        ('description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees', 'adjustments'),
+        (
+            'description', 'grossTotal', 'total', 'taxRate', 'taxes', 'fees',
+            'adjustments', 'refunds',
+        ),
         'taxJurisdiction',
     ]
     add_readonly_fields = ['fees', ]
-    readonly_fields = ['id', 'grossTotal', 'total', 'taxRate', 'taxes', 'taxJurisdiction', 'fees']
+    # Refunds are recorded by processing a refund, not by editing the item.
+    readonly_fields = [
+        'id', 'grossTotal', 'total', 'taxRate', 'taxes', 'taxJurisdiction',
+        'fees', 'refunds',
+    ]
 
     def has_add_permission(self, request, obj=None):
         '''
@@ -103,9 +110,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ['id', 'comments']
     ordering = ['-modifiedDate', ]
     readonly_fields = [
-        'id', 'recipientInfo', 'total', 'adjustments', 'taxes', 'fees',
-        'netRevenue', 'outstandingBalance', 'creationDate', 'modifiedDate',
-        'links', 'submissionUser', 'collectedByUser'
+        'id', 'recipientInfo', 'total', 'adjustments', 'refunds', 'taxes',
+        'refundedTaxes', 'fees', 'netRevenue', 'outstandingBalance',
+        'creationDate', 'modifiedDate', 'links', 'submissionUser',
+        'collectedByUser'
     ]
     view_on_site = True
 
@@ -118,7 +126,10 @@ class InvoiceAdmin(admin.ModelAdmin):
         }),
         (_('Financial Details'), {
             'classes': ('collapse', ),
-            'fields': ('total', 'adjustments', 'taxes', 'fees', 'netRevenue'),
+            'fields': (
+                'total', 'adjustments', 'refunds', 'taxes', 'refundedTaxes',
+                'fees', 'netRevenue',
+            ),
         }),
         (_('Dates'), {
             'classes': ('collapse', ),

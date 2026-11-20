@@ -77,16 +77,19 @@ class Registration(EmailRecipientMixin, models.Model):
             reg_grossTotal=Coalesce(Sum(F('grossTotal')*F('from_reg')), 0, output_field=models.FloatField()),
             reg_total=Coalesce(Sum(F('total')*F('from_reg')), 0, output_field=models.FloatField()),
             reg_adjustments=Coalesce(Sum(F('adjustments')*F('from_reg')), 0, output_field=models.FloatField()),
+            reg_refunds=Coalesce(Sum(F('refunds')*F('from_reg')), 0, output_field=models.FloatField()),
             reg_taxes=Coalesce(Sum(F('taxes')*F('from_reg')), 0, output_field=models.FloatField()),
             reg_fees=Coalesce(Sum(F('fees')*F('from_reg')), 0, output_field=models.FloatField()),
             other_grossTotal=Coalesce(Sum(F('grossTotal')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
             other_total=Coalesce(Sum(F('total')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
             other_adjustments=Coalesce(Sum(F('adjustments')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
+            other_refunds=Coalesce(Sum(F('refunds')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
             other_taxes=Coalesce(Sum(F('taxes')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
             other_fees=Coalesce(Sum(F('fees')*(1 - F('from_reg'))), 0, output_field=models.FloatField()),
             grossTotal=Coalesce(Sum(F('grossTotal')), 0, output_field=models.FloatField()),
             total=Coalesce(Sum(F('total')), 0, output_field=models.FloatField()),
             adjustments=Coalesce(Sum(F('adjustments')), 0, output_field=models.FloatField()),
+            refunds=Coalesce(Sum(F('refunds')), 0, output_field=models.FloatField()),
             taxes=Coalesce(Sum(F('taxes')), 0, output_field=models.FloatField()),
             fees=Coalesce(Sum(F('fees')), 0, output_field=models.FloatField()),
         )
@@ -201,7 +204,7 @@ class Registration(EmailRecipientMixin, models.Model):
     def refundFlag(self):
         if (
             not hasattr(self, 'invoice') or
-            self.invoice.adjustments != 0 or
+            self.invoice.adjustments != 0 or self.invoice.refunds != 0 or
             (apps.is_installed('danceschool.financial') and self.invoice.revenueRefundsReported != 0)
         ):
             return True
@@ -562,6 +565,7 @@ class EventRegistration(EmailRecipientMixin, models.Model):
         if (
             not hasattr(self, 'invoiceItem') or
             self.invoiceItem.invoice.adjustments != 0 or
+            self.invoiceItem.invoice.refunds != 0 or
             (
                 apps.is_installed('danceschool.financial') and
                 self.invoiceItem.revenueRefundsReported != 0

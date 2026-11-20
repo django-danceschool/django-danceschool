@@ -29,6 +29,7 @@ from danceschool.core.helpers import (
     getBalanceChangedMessage, getLocalUrl, getPluginSuccessUrl, getReturnPage
 )
 from danceschool.core.views.cart import clear_reg_cart
+from danceschool.core.utils.timezone import ensure_localtime
 
 
 from .api_client import api_client
@@ -678,7 +679,7 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
                 description=_('Square payment'),
                 grossTotal=self.object.grossAmountPaid,
                 total=self.object.grossAmountPaid,
-                adjustments=-1*self.object.netRefund,
+                refunds=self.object.netRefund,
                 fees=self.object.netFees,
             )
         else:
@@ -699,7 +700,7 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
                         grossTotal=item.get('gross_sales_money',{}).get('amount', 0) / (100*quantity),
                         total=this_total,
                         taxes=item.get('total_tax_money',{}).get('amount', 0) / (100*quantity),
-                        adjustments=-1*self.object.netRefund*(this_total / line_item_total),
+                        refunds=self.object.netRefund*(this_total / line_item_total),
                         fees=self.object.netFees*(this_total / line_item_total)
                     )
 
@@ -713,6 +714,19 @@ class ViewOrCreateInvoiceView(PermissionRequiredMixin, UpdateView):
                             paymentMethod='Square App',
                             receivedDate=self.object.apiPaymentCreated,
                         )
+        # A refund that was made in Square is listed with the refunds that are
+        # made through the refund form, as the payment processor reported it.
+        if self.object.netRefund:
+            new_invoice.data['refunds'] = [{
+                'datetime': str(ensure_localtime(timezone.now())),
+                'id': self.object.recordId,
+                'methodName': self.object.methodName,
+                'status': 'success',
+                'refundAmount': self.object.netRefund,
+                'fees': 0,
+                'note': str(_('Refunded in Square before this invoice was created.')),
+            }]
+
         # Now that invoice items have been created, update the invoice totals to
         # match the sum of item totals.
         new_invoice.status = Invoice.PaymentStatus.paid

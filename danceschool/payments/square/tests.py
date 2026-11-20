@@ -197,6 +197,34 @@ class SquareAPIUnavailableTest(DefaultSchoolTestCase):
         messages = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(any('Cannot create an invoice' in m and 'UNAUTHORIZED' in m for m in messages))
 
+    def test_created_invoice_records_square_refund(self):
+        '''
+        A refund made in Square before the invoice is created is recorded as
+        a refund (not as an adjustment), along with the refunds that payment
+        processors report, so that check_refunds finds that they match.
+        '''
+        self.use_client(fake_client(get=ApiError(status_code=401, body=UNAUTHORIZED)))
+        record = SquarePaymentRecord.objects.create(
+            paymentId='PAYMENT_REFUNDED', locationId='LOC',
+            data={'apiPaymentResponse': dict(
+                PAYMENT, id='PAYMENT_REFUNDED', refunded_money={'amount': 500},
+            )},
+        )
+        self.client.force_login(self.superuser)
+        self.client.post(
+            reverse('viewOrCreatePaymentInvoice', args=(record.pk,)), {'comments': ''}
+        )
+        record.refresh_from_db()
+        invoice = record.invoice
+        self.assertIsNotNone(invoice)
+        self.assertAlmostEqual(invoice.refunds, 5)
+        self.assertAlmostEqual(invoice.adjustments, 0)
+        self.assertAlmostEqual(invoice.invoiceitem_set.get().refunds, 5)
+        self.assertEqual(
+            [(x['status'], x['refundAmount']) for x in invoice.data['refunds']],
+            [('success', 5)],
+        )
+
     def confirm_refund(self, record):
         record.invoice = self.invoice
         record.save()

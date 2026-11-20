@@ -99,7 +99,7 @@ class FinancialAppConfig(AppConfig):
         @property
         def revenueRefundsReported(self):
             if hasattr(self, 'revenueitem') and self.revenueitem:
-                return -1 * self.revenueitem.adjustments
+                return self.revenueitem.refunds - self.revenueitem.adjustments
             return 0
         InvoiceItem.add_to_class('revenueRefundsReported', revenueRefundsReported)
 

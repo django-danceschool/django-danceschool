@@ -2,7 +2,9 @@
 This file contains custom managers and querysets for various core models.
 '''
 from django.db import models
-from django.db.models import Case, When, Q, F
+from django.db.models import Q
+
+from .utils.tax import netRevenueExpression
 
 
 class InvoiceQuerySet(models.QuerySet):
@@ -24,14 +26,14 @@ class InvoiceQuerySet(models.QuerySet):
 
 
 class InvoiceManager(models.Manager):
-    ''' Use InvoiceQuerySet to allow deletion only of preliminary invoices. '''
+    '''
+    Use InvoiceQuerySet to allow deletion only of preliminary invoices.  The
+    net revenue of an invoice is not annotated, because the tax that is
+    refunded is added up over its items (see Invoice.netRevenue).
+    '''
     def get_queryset(self):
         return InvoiceQuerySet(self.model, using=self._db).annotate(
             _items_editable=Q(status__in=['0', 'U']),
-            net = (
-                F('total') + F('adjustments') - F('fees') -
-                Case(When(Q(buyerPaysSalesTax=False), then=F('taxes')), default=0.0)
-            )
         )
 
 
@@ -39,8 +41,5 @@ class InvoiceItemManager(models.Manager):
     ''' Add net annotation '''
     def get_queryset(self):
         return super().get_queryset().select_related('invoice').annotate(
-            net = (
-                F('total') + F('adjustments') - F('fees') -
-                Case(When(Q(invoice__buyerPaysSalesTax=False), then=F('taxes')), default=0.0)
-            )
+            net=netRevenueExpression('invoice__buyerPaysSalesTax'),
         )

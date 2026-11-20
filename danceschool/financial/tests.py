@@ -390,6 +390,41 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('Test Jurisdiction', response.content.decode('utf8'))
 
+    def test_taxes_by_jurisdiction_with_refund(self):
+        '''
+        A refund is subtracted from sales and tax: $55 of the $110 paid for a
+        $100 item taxed at 10% is a refund of $50 of sales and $5 of tax.
+        Other adjustments (e.g. a credit) are still shown separately.
+        '''
+        jurisdiction = TaxJurisdiction.objects.create(name='Test Jurisdiction', defaultRate=10)
+        invoice = Invoice.objects.create(
+            status=Invoice.PaymentStatus.unpaid, buyerPaysSalesTax=True
+        )
+        item = InvoiceItem.objects.create(
+            invoice=invoice, description='Taxed', grossTotal=100, total=100,
+            taxRate=10, taxes=10, taxJurisdiction=jurisdiction, adjustments=-2,
+        )
+        invoice.updateTotals(save=True)
+        invoice.processPayment(amount=invoice.outstandingBalance, fees=0)
+        invoice.amountPaid -= 55
+        invoice.updateTotals(
+            save=True, allocateAmounts={'refunds': 55},
+            allocateWeights={str(item.id): 55},
+        )
+
+        self.client.login(username=self.superuser.username, password='pass')
+        response = self.client.get(reverse('taxesByJurisdiction') + '?basis=accrualDate')
+        totals = response.context_data['totals']
+        self.assertEqual(len(totals), 1)
+        self.assertAlmostEqual(totals[0]['sales'], 50)
+        self.assertAlmostEqual(totals[0]['taxable_sales'], 50)
+        self.assertAlmostEqual(totals[0]['tax'], 5)
+        self.assertAlmostEqual(totals[0]['refunds'], 50)
+        self.assertAlmostEqual(totals[0]['adjustments'], -2)
+
+        response = self.client.get(reverse('taxesByJurisdictionCSV') + '?basis=accrualDate')
+        self.assertIn('50.0', response.content.decode('utf8'))
+
     def test_summary_byevent(self):
         s = self.create_series()
         response = self.client.get(reverse('financesByEvent'))
