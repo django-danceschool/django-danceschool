@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Sum, F, Case, When, Value
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Cast, Coalesce
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -96,8 +96,22 @@ class Registration(EmailRecipientMixin, models.Model):
 
     @property
     def discounted(self):
-        details = self.invoiceDetails
-        return details['reg_grossTotal'] != details['reg_total']
+        '''
+        Whether a discount was applied, measured against the total before
+        discounts (not the gross total, which counts the events included with
+        a pass at their own price).
+        '''
+        details = self.invoice.invoiceitem_set.annotate(
+            from_reg=Case(
+                When(eventRegistration__registration__id=self.id, then=Value(1.0)),
+                default=Value(0.0), output_field=models.FloatField()
+            ),
+            initial=Coalesce(Cast('data___initial_total', models.FloatField()), 'grossTotal'),
+        ).aggregate(
+            reg_initialTotal=Coalesce(Sum(F('initial')*F('from_reg')), 0, output_field=models.FloatField()),
+            reg_total=Coalesce(Sum(F('total')*F('from_reg')), 0, output_field=models.FloatField()),
+        )
+        return abs(details['reg_initialTotal'] - details['reg_total']) >= 0.005
     discounted.fget.short_description = _('Is discounted')
 
     @property
@@ -532,10 +546,15 @@ class EventRegistration(EmailRecipientMixin, models.Model):
 
     @property
     def discounted(self):
-        return (
-            getattr(self.invoiceItem, 'grossTotal', 0) !=
-            getattr(self.invoiceItem, 'total', 0)
-        )
+        '''
+        Whether a discount was applied.  The price of an event that is
+        included with a pass is its share of the price of the pass, which is
+        not a discount.
+        '''
+        item = getattr(self, 'invoiceItem', None)
+        if not item:
+            return False
+        return abs(float(item.initialTotal) - item.total) >= 0.005
     discounted.fget.short_description = _('Is discounted')
 
     @property

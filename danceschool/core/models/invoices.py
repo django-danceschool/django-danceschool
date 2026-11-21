@@ -201,13 +201,27 @@ class Invoice(EmailRecipientMixin, models.Model):
     netRevenue.fget.short_description = _('Net revenue')
 
     @property
+    def initialTotal(self):
+        '''
+        The total price before discounts.  This can be less than the gross
+        total, because an event that is included with a pass keeps its own
+        price as its gross total (see InvoiceItem.netAllocationAdjustment).
+        '''
+        return self.invoiceitem_set.aggregate(initial=Coalesce(
+            Sum(Coalesce(Cast('data___initial_total', models.FloatField()), 'grossTotal')),
+            0, output_field=models.FloatField()
+        ))['initial']
+    initialTotal.fget.short_description = _('Total before discounts')
+
+    @property
     def discounted(self):
-        return (self.total != self.grossTotal)
+        return abs(self.initialTotal - self.total) >= 0.005
     discounted.fget.short_description = _('Is discounted')
 
     @property
     def discountPercentage(self):
-        return 1 - (self.total / self.grossTotal)
+        initial = self.initialTotal
+        return (1 - (self.total / initial)) if initial else 0
     discountPercentage.fget.short_description = _('Discount percentage')
 
     @property

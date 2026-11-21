@@ -2,7 +2,7 @@ import json
 
 from django.urls import reverse
 
-from danceschool.core.models import EventAddOn
+from danceschool.core.models import EventAddOn, Invoice, Registration
 
 from ..models import PointGroup, PricingTierGroup, DiscountCombo
 from .base import DiscountAllocationBase
@@ -81,6 +81,31 @@ class DiscountAddOnTest(DiscountAllocationBase):
 
         pass_item = self.assertPassItems(response, [60, 50, 50], [30, 10, 10])
         self.assertAlmostEqual(pass_item.netAllocationAdjustment, -60, places=2)
+
+    def assertDiscounted(self, response, expected):
+        '''
+        The registrations, the registration and the invoice are discounted
+        only when a discount was applied, not because a pass costs less than
+        the events that it includes.
+        '''
+        invoice = Invoice.objects.get(id=response.context_data['invoice'].id)
+        registration = Registration.objects.get(invoice=invoice)
+        for er in registration.eventregistration_set.all():
+            self.assertEqual(er.discounted, expected, er.event)
+        self.assertEqual(registration.discounted, expected)
+        self.assertEqual(invoice.discounted, expected)
+
+    def test_pass_is_not_discounted(self):
+        self.assertDiscounted(self.checkout(self.s_pass), False)
+
+    def test_discounted_pass_is_discounted(self):
+        self.make_combo(
+            group=self.group_pass, percentDiscount=50, percentUniversallyApplied=True
+        )
+        response = self.checkout(self.s_pass)
+        self.assertDiscounted(response, True)
+        invoice = Invoice.objects.get(id=response.context_data['invoice'].id)
+        self.assertAlmostEqual(invoice.discountPercentage, 0.5, places=4)
 
     def test_pass_with_universal_percent_discount(self):
         ''' 50% off of a $100 pass is $50, however the price is allocated. '''
