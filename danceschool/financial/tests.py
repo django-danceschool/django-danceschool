@@ -6,12 +6,14 @@ from django.urls import reverse
 from django.conf import settings
 from django.utils import timezone
 
+import csv
+import io
 from datetime import timedelta
 from dynamic_preferences.registries import global_preferences_registry
 
 from danceschool.core.models import (
     EventOccurrence, EventStaffMember, Series, Invoice, InvoiceItem,
-    TaxJurisdiction,
+    TaxJurisdiction, Registration, EventRegistration,
 )
 from danceschool.core.utils.timezone import ensure_localtime
 from danceschool.core.tests.defaults import DefaultSchoolTestCase
@@ -390,6 +392,41 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('Test Jurisdiction', response.content.decode('utf8'))
 
+    def test_taxes_by_jurisdiction_with_refund(self):
+        '''
+        A refund is subtracted from sales and tax: $55 of the $110 paid for a
+        $100 item taxed at 10% is a refund of $50 of sales and $5 of tax.
+        Other adjustments (e.g. a credit) are still shown separately.
+        '''
+        jurisdiction = TaxJurisdiction.objects.create(name='Test Jurisdiction', defaultRate=10)
+        invoice = Invoice.objects.create(
+            status=Invoice.PaymentStatus.unpaid, buyerPaysSalesTax=True
+        )
+        item = InvoiceItem.objects.create(
+            invoice=invoice, description='Taxed', grossTotal=100, total=100,
+            taxRate=10, taxes=10, taxJurisdiction=jurisdiction, adjustments=-2,
+        )
+        invoice.updateTotals(save=True)
+        invoice.processPayment(amount=invoice.outstandingBalance, fees=0)
+        invoice.amountPaid -= 55
+        invoice.updateTotals(
+            save=True, allocateAmounts={'refunds': 55},
+            allocateWeights={str(item.id): 55},
+        )
+
+        self.client.login(username=self.superuser.username, password='pass')
+        response = self.client.get(reverse('taxesByJurisdiction') + '?basis=accrualDate')
+        totals = response.context_data['totals']
+        self.assertEqual(len(totals), 1)
+        self.assertAlmostEqual(totals[0]['sales'], 50)
+        self.assertAlmostEqual(totals[0]['taxable_sales'], 50)
+        self.assertAlmostEqual(totals[0]['tax'], 5)
+        self.assertAlmostEqual(totals[0]['refunds'], 50)
+        self.assertAlmostEqual(totals[0]['adjustments'], -2)
+
+        response = self.client.get(reverse('taxesByJurisdictionCSV') + '?basis=accrualDate')
+        self.assertIn('50.0', response.content.decode('utf8'))
+
     def test_summary_byevent(self):
         s = self.create_series()
         response = self.client.get(reverse('financesByEvent'))
@@ -397,6 +434,177 @@ class FinancialSummariesTest(DefaultSchoolTestCase):
         self.client.login(username=self.superuser.username, password='pass')
         response = self.client.get(reverse('financesByEvent'))
         self.assertEqual(response.status_code, 200)
+
+
+class FinancesByEventRevenueTest(DefaultSchoolTestCase):
+    '''
+    The statement by event shows three revenue figures for each event:
+    - Gross value: the gross total of the registrations that are not
+      cancelled, as registrations are counted.
+    - Revenue: what the customer paid (including sales tax that the buyer
+      paid), after adjustments and fees.
+    - Net revenue: revenue less refunds and the sales tax that is owed after
+      refunds.
+    '''
+
+    def setUp(self):
+        self.client.login(username=self.superuser.username, password='pass')
+        self.event = self.create_series()
+
+    def register(self, total, rate=10, buyer_pays=True, fees=0):
+        ''' A paid registration for self.event at the passed price. '''
+        invoice = Invoice.objects.create(buyerPaysSalesTax=buyer_pays)
+        registration = Registration.objects.create(invoice=invoice, final=True)
+        er = EventRegistration(registration=registration, event=self.event)
+        er.save(grossTotal=total, total=total)
+        item = er.invoiceItem
+        item.taxRate = rate
+        item.calculateTaxes()
+        item.save(updateInvoiceTotals=False)
+        invoice.status = Invoice.PaymentStatus.unpaid
+        invoice.updateTotals(save=True)
+        invoice.processPayment(amount=invoice.outstandingBalance, fees=fees)
+        invoice.refresh_from_db()
+        return invoice, er
+
+    def refund(self, invoice, er, amount, cancel=True):
+        invoice.amountPaid -= amount
+        invoice.updateTotals(
+            save=True, allocateAmounts={'refunds': amount},
+            allocateWeights={str(er.invoiceItem.id): amount},
+        )
+        if cancel:
+            er.cancelled = True
+            er.save()
+
+    def statement(self):
+        response = self.client.get(reverse('financesByEvent'))
+        rows = {
+            x['event'].id: x for x in response.context_data['statement']['statementByEvent']
+        }
+        return response, rows[self.event.id]
+
+    def assertRevenues(self, row, **expected):
+        revenues = row['revenues']
+        for key, value in expected.items():
+            self.assertAlmostEqual(revenues[key], value, places=2, msg=key)
+        # Net revenue is revenue less refunds and the tax that is owed.
+        self.assertAlmostEqual(
+            revenues['revenue'] - revenues['refunds'] - revenues['taxes'],
+            revenues['net'], places=2
+        )
+
+    def test_cancelled_refunded_registration(self):
+        '''
+        Two $100 registrations with 10% tax paid by the buyer, and $3 of fees
+        each. One is refunded in full ($110) and cancelled: it is no longer
+        counted in the gross value, but what was paid for it is still revenue.
+        '''
+        self.register(100, fees=3)
+        invoice, er = self.register(100, fees=3)
+        self.refund(invoice, er, 110)
+
+        response, row = self.statement()
+        self.assertEqual(row['registrations']['total'], 1)
+        self.assertRevenues(
+            row, gross=100, revenue=214, refunds=110, taxes=10, net=94,
+            taxesCollected=20, fees=6,
+        )
+
+    def test_partial_refund(self):
+        ''' A registration that is partly refunded and kept is counted in full. '''
+        invoice, er = self.register(100, fees=3)
+        self.refund(invoice, er, 55, cancel=False)
+
+        response, row = self.statement()
+        self.assertRevenues(row, gross=100, revenue=107, refunds=55, taxes=5, net=47)
+
+    def test_cancelled_without_refund(self):
+        ''' A cancelled registration that was not refunded keeps its revenue. '''
+        invoice, er = self.register(100, fees=3)
+        er.cancelled = True
+        er.save()
+
+        response, row = self.statement()
+        self.assertEqual(row['registrations']['total'], 0)
+        self.assertRevenues(row, gross=0, revenue=107, refunds=0, taxes=10, net=97)
+
+    def test_seller_pays_tax(self):
+        '''
+        When the seller pays the tax, the $110 paid includes $10 of tax, which
+        is owed until it is refunded.
+        '''
+        self.register(110, buyer_pays=False, fees=3)
+        response, row = self.statement()
+        self.assertRevenues(
+            row, gross=110, revenue=107, refunds=0, taxes=10, net=97, taxesCollected=0
+        )
+
+        invoice, er = self.register(110, buyer_pays=False, fees=3)
+        self.refund(invoice, er, 110)
+        response, row = self.statement()
+        self.assertRevenues(row, gross=110, revenue=214, refunds=110, taxes=10, net=94)
+
+    def test_revenue_without_registration(self):
+        ''' Other revenue for the event counts toward each figure. '''
+        RevenueItem.objects.create(
+            event=self.event, grossTotal=50, total=50, description='Sponsorship',
+            category=RevenueCategory.objects.create(name='Sponsorships'),
+        )
+        response, row = self.statement()
+        self.assertRevenues(row, gross=50, revenue=50, refunds=0, taxes=0, net=50)
+
+    def test_school_revenues_ytd_is_net_revenue(self):
+        self.register(100, fees=3)
+        invoice, er = self.register(100, fees=3)
+        self.refund(invoice, er, 110)
+
+        response, row = self.statement()
+        self.assertAlmostEqual(response.context_data['statement']['revenues_ytd'], 94, places=2)
+
+        response = self.client.get(reverse('financesByMonth'))
+        self.assertAlmostEqual(response.context_data['statement']['revenues_ytd'], 94, places=2)
+
+    def test_page_columns(self):
+        self.register(100, fees=3)
+        response, row = self.statement()
+        content = response.content.decode('utf8')
+        self.assertIn(
+            '<td>Gross Value</td><td>Revenue</td><td>Net Revenue</td><td>Instruction</td>',
+            content
+        )
+        self.assertNotIn('Net of Discounts', content)
+
+        # Each row has the three figures in the same order.
+        cells = [
+            '%.2f' % row['revenues'][x] for x in ['gross', 'revenue', 'net']
+        ]
+        self.assertEqual(cells, ['100.00', '107.00', '97.00'])
+        self.assertIn(
+            '\n'.join('\t\t<td>%s</td>' % x for x in cells), content
+        )
+
+    def test_csv_columns(self):
+        self.register(100, fees=3)
+        invoice, er = self.register(100, fees=3)
+        self.refund(invoice, er, 110)
+
+        response = self.client.get(reverse('financesByEventCSV'))
+        rows = list(csv.DictReader(io.StringIO(response.content.decode('utf-8-sig'))))
+        row = [x for x in rows if x['Event'] == self.event.name][0]
+        expected = {
+            'Revenues: Gross Value': 100,
+            'Revenues: Net of Discounts': 200,
+            'Revenues: Adjustments': 0,
+            'Revenues: Fees': 6,
+            'Revenues: Taxes Collected': 20,
+            'Revenues: Revenue': 214,
+            'Revenues: Refunds': 110,
+            'Revenues: Taxes Owed': 10,
+            'Revenues: Net Revenue': 94,
+        }
+        for key, value in expected.items():
+            self.assertAlmostEqual(float(row[key]), value, places=2, msg=key)
 
 
 class ExpenseItemGenerationTest(DefaultSchoolTestCase):

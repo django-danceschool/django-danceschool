@@ -326,7 +326,7 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
     )
     readonly_fields = (
         'netRevenue', 'submissionUserLink', 'relatedRevItemsLink', 'eventLink',
-        'invoiceNumber', 'invoiceLink'
+        'invoiceNumber', 'invoiceLink', 'refunds', 'refundedTaxes',
     )
     actions = ('markReceived', 'markNotReceived')
 
@@ -334,7 +334,8 @@ class RevenueItemAdmin(EventLinkMixin, admin.ModelAdmin):
         (_('Basic Info'), {
             'fields': (
                 'category', 'description', 'grossTotal', 'total', 'adjustments',
-                'taxes', 'taxJurisdiction', 'fees', 'netRevenue', 'paymentMethod',
+                'refunds', 'taxes', 'refundedTaxes', 'taxJurisdiction', 'fees',
+                'netRevenue', 'paymentMethod',
                 'receivedFrom', 'invoiceNumber', 'comments'
             )
         }),

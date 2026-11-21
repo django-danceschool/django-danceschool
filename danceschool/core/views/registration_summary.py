@@ -140,6 +140,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
                 grossTotal=Coalesce(Sum('grossTotal'), 0, output_field=FloatField()),
                 total=Coalesce(Sum('total'), 0, output_field=FloatField()),
                 adjustments=Coalesce(Sum('adjustments'), 0, output_field=FloatField()),
+                refunds=Coalesce(Sum('refunds'), 0, output_field=FloatField()),
                 taxes=Coalesce(Sum('taxes'), 0, output_field=FloatField()),
                 fees=Coalesce(Sum('fees'), 0, output_field=FloatField()),
             )
@@ -209,7 +210,7 @@ class EventRegistrationSummaryView(PermissionRequiredMixin, SiteHistoryMixin, De
                 round(invoice.total, 2) != round(details.get('total', 0), 2)
             )
             warning = item_mismatch or invoice.unpaid or invoice.outstandingBalance != 0
-            refund = details.get('adjustments', 0) != 0
+            refund = details.get('adjustments', 0) != 0 or details.get('refunds', 0) != 0
 
             # Financial app adds per-invoiceitem revenue checks. Using the
             # registration's own invoiceItem (select_related + revenueitem prefetched)
@@ -360,12 +361,12 @@ class EventRegistrationJsonView(PermissionRequiredMixin, ListView):
             ('registration', [
                 'id', 'refundFlag', 'grossTotal', 'total', 'discounted', 'url',
                 ('invoice', [
-                    'id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees',
-                    'outstandingBalance', 'statusLabel', 'url'
+                    'id', 'grossTotal', 'total', 'adjustments', 'refunds', 'taxes',
+                    'fees', 'outstandingBalance', 'statusLabel', 'url'
                 ]),
             ]),
             ('invoiceItem', [
-                'id', 'grossTotal', 'total', 'adjustments', 'taxes', 'fees',
+                'id', 'grossTotal', 'total', 'adjustments', 'refunds', 'taxes', 'fees',
                 'revenueMismatch', 'revenueNotYetReceived', 'revenueReceived',
                 'revenueReported'
             ]),

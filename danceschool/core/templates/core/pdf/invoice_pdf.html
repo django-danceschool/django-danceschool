@@ -62,9 +62,15 @@
 	<td>{{ currencySymbol }}{{ object.fees|floatformat:"2" }}</td>
 </tr>
 <tr>
-	<td>{% trans "Adjustments/Refunds" %}</td>
+	<td>{% trans "Adjustments" %}</td>
 	<td>{{ currencySymbol }}{{ object.adjustments|floatformat:"2" }}</td>
 </tr>
+{% if object.refunds %}
+<tr>
+	<td>{% trans "Refunds" %}</td>
+	<td>-&nbsp;{{ currencySymbol }}{{ object.refunds|floatformat:"2" }}</td>
+</tr>
+{% endif %}
 
 </table>
 
@@ -81,6 +87,7 @@
 		<th>{% trans "Taxes" %}</th>
 		<th>{% trans "Fees" %}</th>
 		<th>{% trans "Adjustments" %}</th>
+		<th>{% trans "Refunds" %}</th>
 	</tr>
 </thead>
 <tbody>
@@ -92,11 +99,13 @@
 		<td>{{ currencySymbol }}{{ item.taxesWithAllocation|floatformat:"2" }}{% if item.taxJurisdiction %} <small>({{ item.taxJurisdiction.label }})</small>{% endif %}</td>
 		<td>{{ currencySymbol }}{{ item.feesWithAllocation|floatformat:"2" }}</td>
 		<td>{{ currencySymbol }}{{ item.adjustmentsWithAllocation|floatformat:"2" }}</td>
+		<td>{{ currencySymbol }}{{ item.refundsWithAllocation|floatformat:"2" }}</td>
 	</tr>
 	{% for child_item in item.child_items.all %}
 		<tr class="child-items">
 			<td>{{ child_item.name }}</td>
 			<td>{{ currencySymbol }}{{ child_item.grossTotal|floatformat:"2" }}</td>
+			<td></td>
 			<td></td>
 			<td></td>
 			<td></td>

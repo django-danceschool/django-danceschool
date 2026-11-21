@@ -37,13 +37,13 @@
 <table class="table">
 <thead>
 	<tr>
-		<th rowspan="2" colspan="2">{% trans "Event" %}</th><th colspan="{{ roles|length }}">{% trans "# Registrations" %}</th><th colspan="2">{% trans "Event Revenue" %}</th><th colspan="3">{% trans "Event Expenses" %}</th><th rowspan="2">{% trans "Net Profit" %}</th>
+		<th rowspan="2" colspan="2">{% trans "Event" %}</th><th colspan="{{ roles|length }}">{% trans "# Registrations" %}</th><th colspan="3">{% trans "Event Revenue" %}</th><th colspan="3">{% trans "Event Expenses" %}</th><th rowspan="2">{% trans "Net Profit" %}</th>
 	</tr>
 	<tr>
 		{% for this_role in roles %}
 			<td>{{ this_role|title }}</td>
 		{% endfor %}
-		<td>{% trans "Gross" %}</td><td>{% trans "Net of Discounts" %}</td><td>{% trans "Instruction" %}</td><td>{% trans "Venue Rental" %}</td><td>{% trans "Total" %}</td>
+		<td>{% trans "Gross Value" %}</td><td>{% trans "Revenue" %}</td><td>{% trans "Net Revenue" %}</td><td>{% trans "Instruction" %}</td><td>{% trans "Venue Rental" %}</td><td>{% trans "Total" %}</td>
 	</tr>
 </thead>
 <tbody>
@@ -63,6 +63,7 @@
 			<td>{{ this_event.registrations|get_item:this_role }}</td>
 		{% endfor %}
 		<td>{{ this_event.revenues.gross|floatformat:2 }}</td>
+		<td>{{ this_event.revenues.revenue|floatformat:2 }}</td>
 		<td>{{ this_event.revenues.net|floatformat:2 }}</td>
 		<td>{{ this_event.expenses.instruction|floatformat:2 }}</td>
 		<td>{{ this_event.expenses.venue|floatformat:2 }}</td>

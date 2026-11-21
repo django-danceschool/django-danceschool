@@ -38,9 +38,11 @@ class RefundForm(forms.ModelForm):
 
             self.fields["item_cancelled_%s" % item.id] = forms.BooleanField(
                 label=_('Cancelled'), required=False, initial=initial)
+            # Each amount is the total refunded for the item, including the
+            # refunds that have already been made.
             self.fields['item_refundamount_%s' % item.id] = forms.FloatField(
                 label=_('Refund Amount'), required=False,
-                initial=(-1) * item.adjustments, min_value=0, max_value=item_max
+                initial=item.refunds, min_value=0, max_value=item_max
             )
 
         self.fields['comments'] = forms.CharField(
@@ -61,7 +63,7 @@ class RefundForm(forms.ModelForm):
         )
 
         self.fields['initial_refund_amount'] = forms.FloatField(
-            required=True, initial=(-1) * this_invoice.adjustments,
+            required=True, initial=this_invoice.refunds,
             min_value=0, max_value=this_invoice.amountPaid + this_invoice.refunds,
             widget=forms.HiddenInput()
         )

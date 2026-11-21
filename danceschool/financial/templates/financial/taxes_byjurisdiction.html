@@ -31,7 +31,7 @@
 </div>
 
 <p class="text-muted">
-	{% blocktrans %}Sales are shown before tax. Refunds and other adjustments are shown separately and are not subtracted from sales or tax. Items with no jurisdiction were sold when no tax jurisdiction applied.{% endblocktrans %}
+	{% blocktrans %}Sales are shown before tax. Refunds are subtracted from sales and tax: the part of a refund that was sales tax is in proportion to the tax on the amount paid, and the rest is shown under Refunds Before Tax. Other adjustments (e.g. credits, and refunds made before refunds were recorded separately) are shown separately and are not subtracted from sales or tax. Items with no jurisdiction were sold when no tax jurisdiction applied.{% endblocktrans %}
 </p>
 
 <div class="card mt-4">
@@ -45,7 +45,8 @@
 			<th>{% trans "Sales Before Tax" %}</th>
 			<th>{% trans "Taxable Sales" %}</th>
 			<th>{% trans "Tax" %}</th>
-			<th>{% trans "Refunds/Adjustments" %}</th>
+			<th>{% trans "Refunds Before Tax" %}</th>
+			<th>{% trans "Other Adjustments" %}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -56,10 +57,11 @@
 			<td>{{ row.sales|floatformat:2 }}</td>
 			<td>{{ row.taxable_sales|floatformat:2 }}</td>
 			<td>{{ row.tax|floatformat:2 }}</td>
+			<td>{{ row.refunds|floatformat:2 }}</td>
 			<td>{{ row.adjustments|floatformat:2 }}</td>
 		</tr>
 	{% empty %}
-		<tr><td colspan="6">{% trans "No revenues were found for this period." %}</td></tr>
+		<tr><td colspan="7">{% trans "No revenues were found for this period." %}</td></tr>
 	{% endfor %}
 	</tbody>
 	</table>
@@ -78,7 +80,8 @@
 			<th>{% trans "Sales Before Tax" %}</th>
 			<th>{% trans "Taxable Sales" %}</th>
 			<th>{% trans "Tax" %}</th>
-			<th>{% trans "Refunds/Adjustments" %}</th>
+			<th>{% trans "Refunds Before Tax" %}</th>
+			<th>{% trans "Other Adjustments" %}</th>
 		</tr>
 	</thead>
 	<tbody>
@@ -90,10 +93,11 @@
 			<td>{{ row.sales|floatformat:2 }}</td>
 			<td>{{ row.taxable_sales|floatformat:2 }}</td>
 			<td>{{ row.tax|floatformat:2 }}</td>
+			<td>{{ row.refunds|floatformat:2 }}</td>
 			<td>{{ row.adjustments|floatformat:2 }}</td>
 		</tr>
 	{% empty %}
-		<tr><td colspan="7">{% trans "No revenues were found for this period." %}</td></tr>
+		<tr><td colspan="8">{% trans "No revenues were found for this period." %}</td></tr>
 	{% endfor %}
 	</tbody>
 	</table>

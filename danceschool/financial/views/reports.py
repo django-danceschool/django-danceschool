@@ -18,6 +18,7 @@ from danceschool.core.models import StaffMember, Event, EventOccurrence
 from danceschool.core.mixins import StaffMemberObjectMixin, FinancialContextMixin
 from danceschool.core.utils.timezone import ensure_timezone
 from danceschool.core.utils.requests import getIntFromGet, getDateTimeFromGet
+from danceschool.core.utils.tax import refundedTaxesExpression
 
 from ..models import ExpenseItem, RevenueItem
 from ..helpers.reports import (
@@ -256,9 +257,19 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
             header_list.append(
                 _('Registrations: {role}'.format(role=str(role or _('Unspecified')).title()))
             )
+        revenue_columns = [
+            ('gross', _('Revenues: Gross Value')),
+            ('netOfDiscounts', _('Revenues: Net of Discounts')),
+            ('adjustments', _('Revenues: Adjustments')),
+            ('fees', _('Revenues: Fees')),
+            ('taxesCollected', _('Revenues: Taxes Collected')),
+            ('revenue', _('Revenues: Revenue')),
+            ('refunds', _('Revenues: Refunds')),
+            ('taxes', _('Revenues: Taxes Owed')),
+            ('net', _('Revenues: Net Revenue')),
+        ]
+        header_list += [x[1] for x in revenue_columns]
         header_list += [
-            _('Revenues: Gross'),
-            _('Revenues: Net'),
             _('Expenses: Instruction'),
             _('Expenses: Venue'),
             _('Expenses: Other'),
@@ -274,9 +285,8 @@ class FinancesByEventView(PermissionRequiredMixin, TemplateView):
             ]
             for role in roles:
                 this_row_data.append(x.get('registrations', {}).get(role, 0))
+            this_row_data += [x['revenues'][key] for key, label in revenue_columns]
             this_row_data += [
-                x['revenues']['gross'],
-                x['revenues']['net'],
                 x['expenses']['instruction'],
                 x['expenses']['venue'],
                 x['expenses']['other'],
@@ -438,11 +448,15 @@ class TaxesByJurisdictionView(PermissionRequiredMixin, TemplateView):
             items = items.filter(**{'%s__year' % basis: year})
 
         # When the seller pays sales tax, the tax is included in the total, so
-        # it is subtracted in order to report sales before tax.
+        # it is subtracted in order to report sales before tax.  A refund
+        # includes tax in proportion to the tax on the amount paid, so the
+        # sales and the tax that were refunded are both subtracted.
+        refunded_taxes = refundedTaxesExpression('buyerPaysSalesTax')
+        refunded_sales = F('refunds') - refunded_taxes
         pretax = F('total') - Case(
             When(buyerPaysSalesTax=False, then=F('taxes')),
             default=Value(0.0), output_field=FloatField()
-        )
+        ) - refunded_sales
 
         rows = items.annotate(month=TruncMonth(basis)).values(
             'month', 'taxJurisdiction', 'taxJurisdiction__name',
@@ -452,7 +466,8 @@ class TaxesByJurisdictionView(PermissionRequiredMixin, TemplateView):
             taxable_sales=Coalesce(
                 Sum(pretax, filter=Q(taxes__gt=0)), 0.0, output_field=FloatField()
             ),
-            tax=Coalesce(Sum('taxes'), 0.0, output_field=FloatField()),
+            tax=Coalesce(Sum(F('taxes') - refunded_taxes), 0.0, output_field=FloatField()),
+            refunds=Coalesce(Sum(refunded_sales), 0.0, output_field=FloatField()),
             adjustments=Coalesce(Sum('adjustments'), 0.0, output_field=FloatField()),
         ).order_by('-month', 'taxJurisdiction__name')
 
@@ -465,6 +480,7 @@ class TaxesByJurisdictionView(PermissionRequiredMixin, TemplateView):
                 'sales': x['sales'],
                 'taxable_sales': x['taxable_sales'],
                 'tax': x['tax'],
+                'refunds': x['refunds'],
                 'adjustments': x['adjustments'],
             }
             for x in rows
@@ -489,9 +505,9 @@ class TaxesByJurisdictionView(PermissionRequiredMixin, TemplateView):
         for row in rows:
             this_total = totals.setdefault(row['jurisdiction_id'], {
                 'jurisdiction': row['jurisdiction'], 'num_items': 0,
-                'sales': 0, 'taxable_sales': 0, 'tax': 0, 'adjustments': 0,
+                'sales': 0, 'taxable_sales': 0, 'tax': 0, 'refunds': 0, 'adjustments': 0,
             })
-            for key in ['num_items', 'sales', 'taxable_sales', 'tax', 'adjustments']:
+            for key in ['num_items', 'sales', 'taxable_sales', 'tax', 'refunds', 'adjustments']:
                 this_total[key] += row[key]
 
         kwargs.update({
@@ -519,14 +535,15 @@ class TaxesByJurisdictionView(PermissionRequiredMixin, TemplateView):
 
         writer.writerow([
             _('Month'), _('Tax Jurisdiction'), _('Items'), _('Sales Before Tax'),
-            _('Taxable Sales'), _('Tax'), _('Refunds/Adjustments'),
+            _('Taxable Sales'), _('Tax'), _('Refunds Before Tax'), _('Other Adjustments'),
         ])
         for row in context['rows']:
             writer.writerow([
                 row['month'].strftime('%Y-%m') if row['month'] else '',
                 row['jurisdiction'], row['num_items'],
                 round(row['sales'], 2), round(row['taxable_sales'], 2),
-                round(row['tax'], 2), round(row['adjustments'], 2),
+                round(row['tax'], 2), round(row['refunds'], 2),
+                round(row['adjustments'], 2),
             ])
         return response
 

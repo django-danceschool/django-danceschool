@@ -18,6 +18,7 @@ from ..signals import invoice_finalized, invoice_cancelled
 from ..mixins import EmailRecipientMixin
 from ..managers import InvoiceManager, InvoiceItemManager
 from ..tasks import sendEmail
+from ..utils.tax import getNetRevenue, getRefundedTaxes
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,17 @@ class Invoice(EmailRecipientMixin, models.Model):
     total = models.FloatField(
         _('Total billed amount'), validators=[MinValueValidator(0)], default=0
     )
-    adjustments = models.FloatField(_('Refunds/adjustments'), default=0)
+    adjustments = models.FloatField(
+        _('Adjustments'), default=0,
+        help_text=_(
+            'Post-tax changes to the amount owed, such as gift certificates ' +
+            'and credits.'
+        ),
+    )
+    refunds = models.FloatField(
+        _('Amount refunded'), validators=[MinValueValidator(0)], default=0,
+        help_text=_('Including any sales tax that was refunded.'),
+    )
     taxes = models.FloatField(_('Taxes'), validators=[MinValueValidator(0)], default=0)
     fees = models.FloatField(_('Processing fees'), validators=[MinValueValidator(0)], default=0)
     buyerPaysSalesTax = models.BooleanField(_('Buyer pays sales tax'), default=False)
@@ -105,8 +116,7 @@ class Invoice(EmailRecipientMixin, models.Model):
     data = models.JSONField(_('Additional data'), blank=True, default=dict)
 
     # This custom manager prevents deletion of Invoices that are not preliminary,
-    # even using queryset methods. It also adds a net annotation so net revenue
-    # is calculated consistently.
+    # even using queryset methods.
     objects = InvoiceManager()
 
     @property
@@ -141,16 +151,32 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     @property
     def outstandingBalance(self):
-        balance = self.total + self.adjustments - self.amountPaid
+        '''
+        A refund reduces the amount paid, and the amount owed by the same
+        amount, so that the balance is unchanged.
+        '''
+        balance = self.total + self.adjustments - self.refunds - self.amountPaid
         if self.buyerPaysSalesTax:
             balance += self.taxes
         return round(balance, 2)
     outstandingBalance.fget.short_description = _('Outstanding balance')
 
     @property
-    def refunds(self):
-        return -1 * self.adjustments
-    refunds.fget.short_description = _('Amount refunded')
+    def refundableAmount(self):
+        ''' The amount that has been paid for this invoice, less refunds. '''
+        amount = self.total + self.adjustments - self.refunds
+        if self.buyerPaysSalesTax:
+            amount += self.taxes
+        return amount
+
+    @property
+    def refundedTaxes(self):
+        '''
+        The sales tax included in the refunds of this invoice.  Each item may
+        be taxed at its own rate, so this is the sum over the items.
+        '''
+        return sum([x.refundedTaxes for x in self.invoiceitem_set.all()])
+    refundedTaxes.fget.short_description = _('Sales tax refunded')
 
     @property
     def unallocatedAdjustments(self):
@@ -168,22 +194,34 @@ class Invoice(EmailRecipientMixin, models.Model):
 
     @property
     def netRevenue(self):
-        net = getattr(self, 'net', None)
-        if net is None:
-            net = self.total - self.fees + self.adjustments
-            if not self.buyerPaysSalesTax:
-                net -= self.taxes
-        return net
+        return getNetRevenue(
+            self.total, self.adjustments, self.fees, self.refunds, self.taxes,
+            self.buyerPaysSalesTax, refundedTaxes=self.refundedTaxes,
+        )
     netRevenue.fget.short_description = _('Net revenue')
 
     @property
+    def initialTotal(self):
+        '''
+        The total price before discounts.  This can be less than the gross
+        total, because an event that is included with a pass keeps its own
+        price as its gross total (see InvoiceItem.netAllocationAdjustment).
+        '''
+        return self.invoiceitem_set.aggregate(initial=Coalesce(
+            Sum(Coalesce(Cast('data___initial_total', models.FloatField()), 'grossTotal')),
+            0, output_field=models.FloatField()
+        ))['initial']
+    initialTotal.fget.short_description = _('Total before discounts')
+
+    @property
     def discounted(self):
-        return (self.total != self.grossTotal)
+        return abs(self.initialTotal - self.total) >= 0.005
     discounted.fget.short_description = _('Is discounted')
 
     @property
     def discountPercentage(self):
-        return 1 - (self.total / self.grossTotal)
+        initial = self.initialTotal
+        return (1 - (self.total / initial)) if initial else 0
     discountPercentage.fget.short_description = _('Discount percentage')
 
     @property
@@ -262,6 +300,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             'grossTotal': self.grossTotal,
             'total': self.total,
             'adjustments': self.adjustments,
+            'refunds': self.refunds,
             'taxes': self.taxes,
             'fees': self.fees,
             'comments': self.comments,
@@ -542,16 +581,21 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         Because of the recalculation of taxes, we have to calculate all of the
         various line items whenever we are allocating amounts.  Unless weights
-        are specified, changes to the grossTotal or the total price are
-        allocated based on the ratio of grossTotal across invoice items. New
+        are specified, changes to the grossTotal are allocated based on the
+        ratio of grossTotal across invoice items, and changes to the total
+        price are allocated based on the ratio of the total price (or of the
+        grossTotal, if no item has a total price). New
         taxes are always calculated based on the new total price after any
         changes (to ensure consistent application of tax rates).  Changes to the
         adjustments line are then allocated based on the ratio of the
         newTotal + newTax for each item, and changes to fees are then allocated
         based on the updated ratio of total + tax + adjustments for each item.
+        Refunds are allocated in the same way as fees.  They do not change the
+        tax on an item, which is the tax on the sale (see
+        InvoiceItem.refundedTaxes).
 
         When specific weights are specified, allocations must be either all
-        pre-tax or all post-tax.  This prevents issues associated with things
+        pre-tax or all post-tax (adjustments, refunds and fees).  This prevents issues associated with things
         such as applying full-price after tax vouchers at the same time as
         discounts that might affect the calculation of tax.  This method returns
         a queryset of invoice items with annotations that indicate the outcome
@@ -575,7 +619,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             raise ValueError(_('Invalid allocation weight identifier passed. to updateTotals()'))
         '''
 
-        item_keys = ['grossTotal', 'total', 'adjustments', 'fees']
+        item_keys = ['grossTotal', 'total', 'adjustments', 'refunds', 'fees']
 
         # Is this call a continuation of a prior call to this method?
         chained = prior_queryset is not None
@@ -631,6 +675,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 oldTotal=F('newTotal'),
                 oldTaxes=F('newTaxes'),
                 oldAdjustments=F('newAdjustments'),
+                oldRefunds=F('newRefunds'),
                 oldFees=F('newFees'),
             )
         else:
@@ -639,6 +684,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 oldTotal=F('total'),
                 oldTaxes=F('taxes'),
                 oldAdjustments=F('adjustments'),
+                oldRefunds=F('refunds'),
                 oldFees=F('fees'),
             )
 
@@ -646,7 +692,9 @@ class Invoice(EmailRecipientMixin, models.Model):
         # pre-tax or post-tax, but not both.
         if allocateWeights:
             pretax_allocations = [x for x in allocateAmounts.keys() if x in ['grossTotal', 'total']]
-            posttax_allocations = [x for x in allocateAmounts.keys() if x in ['adjustments', 'fees']]
+            posttax_allocations = [
+                x for x in allocateAmounts.keys() if x in ['adjustments', 'refunds', 'fees']
+            ]
 
             if pretax_allocations and posttax_allocations:
                 raise ValueError(_(
@@ -678,7 +726,7 @@ class Invoice(EmailRecipientMixin, models.Model):
             ) for k,k2 in [
                 ('grossTotal', 'oldGrossTotal'), ('total', 'oldTotal'),
                 ('taxes', 'oldTaxes'), ('adjustments', 'oldAdjustments'),
-                ('fees', 'oldFees'),
+                ('refunds', 'oldRefunds'), ('fees', 'oldFees'),
             ]
         }
 
@@ -710,8 +758,14 @@ class Invoice(EmailRecipientMixin, models.Model):
             F('oldGrossTotal') + (F('grossTotalRatio') * allocateAmounts.get('grossTotal', 0))
         )
 
+        # Changes to the total price are allocated in proportion to the price
+        # at which each item is sold, which can differ from its grossTotal
+        # (e.g. an event included with a pass, or a free item).  Only when no
+        # item has a price is the grossTotal used.
         if allocateWeights and allocateAmounts.get('total'):
             pretax_annotations['totalRatio'] = F('allocationWeight')
+        elif old_totals['total'] > 0:
+            pretax_annotations['totalRatio'] = (F('oldTotal')/old_totals['total'])
         elif new_totals['grossTotal'] == 0:
             pretax_annotations['totalRatio'] = proportional
         else:
@@ -768,6 +822,15 @@ class Invoice(EmailRecipientMixin, models.Model):
 
         posttax_annotations['newFees'] = F('oldFees') + (F('feesRatio') * allocateAmounts.get('fees', 0))
 
+        if allocateWeights and allocateAmounts.get('refunds'):
+            posttax_annotations['refundsRatio'] = F('allocationWeight')
+        else:
+            posttax_annotations['refundsRatio'] = F('feesRatio')
+
+        posttax_annotations['newRefunds'] = F('oldRefunds') + (
+            F('refundsRatio') * allocateAmounts.get('refunds', 0)
+        )
+
         items = items.annotate(**posttax_annotations)
 
         if save or forceSave:
@@ -776,6 +839,7 @@ class Invoice(EmailRecipientMixin, models.Model):
                 'total': F('newTotal'),
                 'taxes': F('newTaxes'),
                 'adjustments': F('newAdjustments'),
+                'refunds': F('newRefunds'),
                 'fees': F('newFees'),
             }
             items.update(**updates)
@@ -990,7 +1054,17 @@ class InvoiceItem(models.Model):
     total = models.FloatField(
         _('Total billed amount'), validators=[MinValueValidator(0)], default=0
     )
-    adjustments = models.FloatField(_('Refunds/adjustments'), default=0)
+    adjustments = models.FloatField(
+        _('Adjustments'), default=0,
+        help_text=_(
+            'Post-tax changes to the amount owed, such as gift certificates ' +
+            'and credits.'
+        ),
+    )
+    refunds = models.FloatField(
+        _('Amount refunded'), validators=[MinValueValidator(0)], default=0,
+        help_text=_('Including any sales tax that was refunded.'),
+    )
 
     taxRate = models.FloatField(
         _('Sales tax rate'), validators=[MinValueValidator(0)], default=0,
@@ -1076,6 +1150,21 @@ class InvoiceItem(models.Model):
         )
 
     @property
+    def refundsWithAllocation(self):
+        return (
+            self.refunds +
+            (self.child_items.aggregate(Sum('refunds')).get('refunds__sum',0) or 0)
+        )
+
+    @property
+    def refundedTaxes(self):
+        ''' The sales tax included in the refunds of this item. '''
+        return getRefundedTaxes(
+            self.refunds, self.total, self.taxes, self.invoice.buyerPaysSalesTax
+        )
+    refundedTaxes.fget.short_description = _('Sales tax refunded')
+
+    @property
     def netAllocationAdjustment(self):
         '''
         This is the difference in allocated gross and net totals before discounts
@@ -1088,9 +1177,10 @@ class InvoiceItem(models.Model):
     def netRevenue(self):
         net = getattr(self, 'net', None)
         if net is None:
-            net = self.total - self.fees + self.adjustments
-            if not self.invoice.buyerPaysSalesTax:
-                net -= self.taxes
+            net = getNetRevenue(
+                self.total, self.adjustments, self.fees, self.refunds,
+                self.taxes, self.invoice.buyerPaysSalesTax,
+            )
         return net
     netRevenue.fget.short_description = _('Net revenue')
 
@@ -1143,6 +1233,7 @@ class InvoiceItem(models.Model):
             'grossTotal': self.grossTotal,
             'total': self.total,
             'adjustments': self.adjustments,
+            'refunds': self.refunds,
             'taxes': self.taxes,
             'fees': self.fees,
         })

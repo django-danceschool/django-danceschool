@@ -10,6 +10,7 @@ from filer.models import Folder
 
 from danceschool.core.models import Event, InvoiceItem
 from danceschool.core.constants import getConstant
+from danceschool.core.utils.tax import getNetRevenue, getRefundedTaxes
 
 from ..managers import RevenueItemManager
 from .parties import TransactionParty
@@ -73,11 +74,19 @@ class RevenueItem(models.Model):
     adjustments = models.FloatField(
         _('Adjustments'),
         help_text=_(
-            'Record any ex-post adjustments to the amount (e.g. refunds) in ' +
+            'Record any ex-post adjustments to the amount (e.g. credits) in ' +
             'this field.  A positive amount increases the netRevenue, a ' +
             'negative amount reduces the netRevenue.'
         ),
         default=0
+    )
+    refunds = models.FloatField(
+        _('Amount refunded'),
+        help_text=_(
+            'Including any sales tax that was refunded.  The tax that was ' +
+            'refunded is in proportion to the tax on the amount paid.'
+        ),
+        validators=[MinValueValidator(0)], default=0
     )
     fees = models.FloatField(
         _('Fees'),
@@ -175,11 +184,20 @@ class RevenueItem(models.Model):
         ''' Use the database annotation where possible. '''
         net = getattr(self, 'net', None)
         if net is None:
-            net = (self.total or 0) + self.adjustments - self.fees
-            if not self.buyerPaysSalesTax:
-                net -= self.taxes
+            net = getNetRevenue(
+                self.total, self.adjustments, self.fees, self.refunds,
+                self.taxes, self.buyerPaysSalesTax,
+            )
         return net
     netRevenue.fget.short_description = _('Net revenue')
+
+    @property
+    def refundedTaxes(self):
+        ''' The sales tax included in the refunds of this item. '''
+        return getRefundedTaxes(
+            self.refunds, self.total, self.taxes, self.buyerPaysSalesTax
+        )
+    refundedTaxes.fget.short_description = _('Sales tax refunded')
 
     @property
     def allocationByOccurrence(self):

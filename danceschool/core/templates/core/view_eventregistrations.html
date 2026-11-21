@@ -141,7 +141,10 @@
 				<strong>{% trans "Gross" %}:</strong> {{ reg.invoiceItem.grossTotal|floatformat:2 }} <br />
 				<strong>{% trans "Net" %}:</strong> {{ reg.invoiceItem.total|floatformat:2 }}
 				{% if reg.refundFlag %}<br />
-				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ reg.invoiceItem.adjustments|floatformat:2 }}
+				<strong>{% trans "Adjustments" %}:</strong> {{ reg.invoiceItem.adjustments|floatformat:2 }}
+				{% if reg.invoiceItem.refunds %}<br />
+				<strong>{% trans "Refunds" %}:</strong> {{ reg.invoiceItem.refunds|floatformat:2 }}
+				{% endif %}
 				{% endif %}
 				{% if reg.invoiceItem.revenueMismatch or reg.invoiceItem.revenueNotYetReceived %}<br />
 				<strong>{% trans "Recorded Revenue" %}:</strong> {{ reg.invoiceItem.revenueReported|floatformat:2 }}<br />
@@ -180,7 +183,10 @@
 				 	{{ details.total|floatformat:2 }}
 				{% endif %}
 				{% if reg_flags.refundFlag %}<br />
-				<strong>{% trans "Adjustments/Refunds" %}:</strong> {{ details.adjustments|floatformat:2 }}
+				<strong>{% trans "Adjustments" %}:</strong> {{ details.adjustments|floatformat:2 }}
+				{% if details.refunds %}<br />
+				<strong>{% trans "Refunds" %}:</strong> {{ details.refunds|floatformat:2 }}
+				{% endif %}
 				{% endif %}
 				{% if reg.registration.invoice.outstandingBalance != 0 %}<br />
 				<strong>{% trans "Invoice Status" %}:</strong> {{ reg.registration.invoice.get_status_display }}<br />
