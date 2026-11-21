@@ -43,6 +43,45 @@ class DiscountAddOnTest(DiscountAllocationBase):
         self.assertItemTotals(response, self.s_two, [20])
         self.assertAlmostEqual(response.context_data['invoice'].total, 100, places=2)
 
+    def assertPassItems(self, response, gross, totals):
+        items = [
+            self.items_for(response, event)[0]
+            for event in [self.s_pass, self.s_one, self.s_two]
+        ]
+        for item, this_gross, this_total in zip(items, gross, totals):
+            self.assertAlmostEqual(item.grossTotal, this_gross, places=2)
+            self.assertAlmostEqual(item.total, this_total, places=2)
+        return items[0]
+
+    def test_included_events_keep_their_own_price(self):
+        '''
+        By design, the item for each included event keeps the event's own
+        price ($50) as its gross total, while its total is its share of the
+        price of the pass ($20).  The difference is the savings from buying
+        the pass instead of the events on their own, which the registration
+        summary shows as "Net Savings": $160 of events for $100.
+        '''
+        response = self.checkout(self.s_pass)
+
+        pass_item = self.assertPassItems(response, [60, 50, 50], [60, 20, 20])
+        self.assertAlmostEqual(pass_item.grossTotalWithAllocation, 160, places=2)
+        self.assertAlmostEqual(pass_item.netAllocationAdjustment, -60, places=2)
+        self.assertContains(response, 'Net Savings')
+        self.assertAlmostEqual(response.context_data['invoice'].grossTotal, 160, places=2)
+
+    def test_discount_does_not_change_the_savings(self):
+        '''
+        A discount on the pass reduces the totals, but not the gross totals or
+        the savings from buying the pass.
+        '''
+        self.make_combo(
+            group=self.group_pass, percentDiscount=50, percentUniversallyApplied=True
+        )
+        response = self.checkout(self.s_pass)
+
+        pass_item = self.assertPassItems(response, [60, 50, 50], [30, 10, 10])
+        self.assertAlmostEqual(pass_item.netAllocationAdjustment, -60, places=2)
+
     def test_pass_with_universal_percent_discount(self):
         ''' 50% off of a $100 pass is $50, however the price is allocated. '''
         self.make_combo(
